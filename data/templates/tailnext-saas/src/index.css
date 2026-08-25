@@ -1,0 +1,21 @@
+
+:root{--bg:#ffffff;--fg:#0f172a;--muted:#64748b;--accent:#4f46e5;--soft:#eef2ff;font-family:"Segoe UI",system-ui,sans-serif}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg)}
+.top{display:flex;justify-content:space-between;align-items:center;padding:1rem 1.5rem;border-bottom:1px solid #e2e8f0}
+.brand{font-weight:800;color:var(--accent)}
+.btn{background:var(--accent);color:#fff;border:0;border-radius:.7rem;padding:.7rem 1.1rem;font-weight:700}
+.hero{display:grid;grid-template-columns:1fr 1fr;gap:2rem;max-width:1100px;margin:0 auto;padding:3rem 1.5rem;align-items:center}
+.hero h1{font-size:clamp(2rem,5vw,3.2rem);letter-spacing:-.03em;margin:.5rem 0 1rem}
+.hero p{color:var(--muted)}
+.hero img{width:100%;border-radius:1rem}
+.logos{display:flex;gap:1rem;align-items:center;flex-wrap:wrap;margin-top:1.5rem}
+.logos img{height:28px;width:auto}
+.section{max-width:1100px;margin:0 auto;padding:2rem 1.5rem}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
+.card{background:var(--soft);border-radius:1rem;padding:1.25rem;border:1px solid #e0e7ff}
+.card h3{margin:.4rem 0}
+.muted{color:var(--muted)}
+.price{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
+.price article{border:1px solid #e2e8f0;border-radius:1rem;padding:1.25rem}
+.price .hot{border-color:var(--accent);box-shadow:0 10px 30px rgba(79,70,229,.15)}
+@media(max-width:900px){.hero,.grid3,.price{grid-template-columns:1fr}}

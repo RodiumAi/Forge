@@ -1,0 +1,126 @@
+from collections.abc import Generator
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+
+from app.config import get_settings
+
+settings = get_settings()
+
+engine = create_engine(settings.database_url, pool_pre_ping=True)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+class Base(DeclarativeBase):
+    pass
+
+
+def get_db() -> Generator[Session, None, None]:
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+def init_db() -> None:
+    from app import models  # noqa: F401
+    from sqlalchemy import text
+
+    Base.metadata.create_all(bind=engine)
+    # Lightweight local schema upgrades (no Alembic yet).
+    statements = [
+        "ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS rodium_sub VARCHAR(64)",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS name VARCHAR(200)",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT",
+        "ALTER TABLE users ALTER COLUMN avatar_url TYPE TEXT",
+        "CREATE UNIQUE INDEX IF NOT EXISTS ix_users_rodium_sub ON users (rodium_sub)",
+        "ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS rodium_access_token_encrypted TEXT",
+        "ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS rodium_refresh_token_encrypted TEXT",
+        "ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS rodium_token_expires_at TIMESTAMPTZ",
+        "ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS rodium_wallet_json TEXT",
+        "ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS rodium_api_keys_json TEXT",
+        "ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS selected_rodium_api_key_id VARCHAR(64)",
+        """
+        CREATE TABLE IF NOT EXISTS site_usage_days (
+            id UUID PRIMARY KEY,
+            user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
+            day VARCHAR(10) NOT NULL,
+            emails_sent INTEGER NOT NULL DEFAULT 0,
+            storage_bytes INTEGER NOT NULL DEFAULT 0
+        )
+        """,
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_site_usage_day
+        ON site_usage_days (user_id, project_id, day)
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS stored_objects (
+            id UUID PRIMARY KEY,
+            user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
+            object_key TEXT NOT NULL,
+            content_type VARCHAR(200) NOT NULL DEFAULT 'application/octet-stream',
+            byte_size INTEGER NOT NULL DEFAULT 0,
+            public_url TEXT NOT NULL,
+            adapter VARCHAR(32) NOT NULL DEFAULT 's3',
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+        """,
+        "ALTER TABLE projects ADD COLUMN IF NOT EXISTS design_brief TEXT",
+        "ALTER TABLE projects ADD COLUMN IF NOT EXISTS template_id VARCHAR(64)",
+        "ALTER TABLE projects ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ",
+        "ALTER TABLE site_usage_days ADD COLUMN IF NOT EXISTS page_views INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE site_usage_days ADD COLUMN IF NOT EXISTS unique_visitors INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE messages ADD COLUMN IF NOT EXISTS thinking_text TEXT",
+        "ALTER TABLE messages ADD COLUMN IF NOT EXISTS steps_json TEXT",
+        "ALTER TABLE messages ADD COLUMN IF NOT EXISTS file_ops_json TEXT",
+        "ALTER TABLE messages ADD COLUMN IF NOT EXISTS task_class VARCHAR(64)",
+        "ALTER TABLE messages ADD COLUMN IF NOT EXISTS model_slug VARCHAR(128)",
+        "ALTER TABLE messages ADD COLUMN IF NOT EXISTS effort_label VARCHAR(32)",
+        """
+        CREATE TABLE IF NOT EXISTS agent_runs (
+            id UUID PRIMARY KEY,
+            chat_id UUID NOT NULL REFERENCES chats(id) ON DELETE CASCADE,
+            project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+            user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            mode VARCHAR(16) NOT NULL DEFAULT 'agent',
+            status VARCHAR(32) NOT NULL DEFAULT 'running',
+            prompt TEXT NOT NULL DEFAULT '',
+            clarify_json TEXT,
+            answers_json TEXT,
+            plan_json TEXT,
+            task_class VARCHAR(64),
+            model_slug VARCHAR(128),
+            cursor_task_index INTEGER NOT NULL DEFAULT 0,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+        """,
+        "CREATE INDEX IF NOT EXISTS ix_agent_runs_chat_id ON agent_runs (chat_id)",
+        """
+        CREATE TABLE IF NOT EXISTS model_catalog (
+            slug VARCHAR(128) PRIMARY KEY,
+            provider VARCHAR(32) NOT NULL,
+            tier VARCHAR(32) NOT NULL,
+            role VARCHAR(16) NOT NULL DEFAULT 'text',
+            status VARCHAR(16) NOT NULL DEFAULT 'active',
+            context_tokens INTEGER NOT NULL DEFAULT 0,
+            max_output_tokens INTEGER NOT NULL DEFAULT 0,
+            price_in_per_m DOUBLE PRECISION,
+            price_out_per_m DOUBLE PRECISION,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+        """,
+        "UPDATE user_settings SET default_model = 'google/gemini-3.7-flash' WHERE default_model = 'openai/gpt-4o'",
+    ]
+    with engine.begin() as conn:
+        for sql in statements:
+            conn.execute(text(sql))
+
+    from app.services.orchestration.catalog import seed_model_catalog
+
+    with SessionLocal() as session:
+        seed_model_catalog(session)

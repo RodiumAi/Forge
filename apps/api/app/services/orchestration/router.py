@@ -1,0 +1,141 @@
+"""Minimal task classifier + routing table (Gemini text, gpt-image-2 for images)."""
+
+from __future__ import annotations
+
+import re
+from dataclasses import dataclass
+
+from app.config import get_settings
+
+# Effort labels shown in UI — never expose model slugs.
+EFFORT_LABELS = {
+    "lite": "Rapide",
+    "primary": "Standard",
+    "escalation": "Approfondi",
+    "image": "Image",
+}
+
+
+@dataclass(frozen=True)
+class Route:
+    task_class: str
+    model: str
+    tier: str
+    effort_label: str
+    is_image: bool = False
+
+
+# Only explicit *generation* intents — not "image attached" / reference screenshots.
+_IMAGE_GENERATE_RE = re.compile(
+    r"\b("
+    r"génér(?:e|er|ation)\s+(?:une?\s+)?(?:image|illustration|logo|photo|visuel|bannière|banner)|"
+    r"generate\s+(?:an?\s+)?(?:image|illustration|logo|photo|banner)|"
+    r"crée(?:r)?\s+(?:une?\s+)?(?:image|illustration|logo|photo)|"
+    r"create\s+(?:an?\s+)?(?:image|illustration|logo|photo)|"
+    r"dessine(?:[- ]moi)?|"
+    r"draw\s+(?:me\s+)?(?:an?\s+)?(?:image|logo|illustration)"
+    r")\b",
+    re.I,
+)
+_SCAFFOLD_RE = re.compile(
+    r"\b(crée(?:r)?\s+(?:un\s+)?(?:site|app|page)|create\s+(?:a\s+)?(?:website|app|page)|"
+    r"from\s+scratch|from scratch|nouveau\s+projet|landing\s*page|scaffold)\b",
+    re.I,
+)
+_SMALL_RE = re.compile(
+    r"\b(change|renomme|rename|couleur|color|fix\s+typo|typo|padding|margin|texte\s+du|"
+    r"update\s+the\s+title|bouton|button\s+label)\b",
+    re.I,
+)
+
+_ATTACH_NOISE_RE = re.compile(
+    r"\[(?:Files|Fichiers|Image attached|Image jointe|Reference screenshot|Capture de référence|"
+    r"PDF attached[^\]]*|PDF joint[^\]]*)[^\]]*\]|"
+    r"###\s+(?:Markdown file|Fichier Markdown|PDF content|Contenu PDF|Text file|Fichier texte)"
+    r"[^\n]*\n[\s\S]*?(?=\n###|\n\[|\Z)",
+    re.I,
+)
+
+_REFERENCE_ATTACH_RE = re.compile(
+    r"\[(?:Reference screenshot|Capture de référence|Image attached|Image jointe|Files|Fichiers):|"
+    r"###\s+(?:Markdown file|Fichier Markdown|PDF content|Contenu PDF|Text file|Fichier texte)",
+    re.I,
+)
+
+
+def strip_attachment_noise(user_text: str) -> str:
+    """Remove attachment markers so classification uses the user's real intent."""
+    text = _ATTACH_NOISE_RE.sub(" ", user_text or "")
+    # Drop the reference-instruction paragraphs that follow screenshot markers.
+    text = re.sub(
+        r"This is a REFERENCE screenshot[\s\S]*?(?=\n\n|\Z)",
+        " ",
+        text,
+        flags=re.I,
+    )
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def has_reference_attachments(user_text: str) -> bool:
+    return bool(_REFERENCE_ATTACH_RE.search(user_text or ""))
+
+
+def classify_task(user_text: str) -> str:
+    raw = user_text or ""
+    text = strip_attachment_noise(raw)
+    if not text:
+        # Attachments-only message → treat as code/design edit using the refs.
+        if has_reference_attachments(raw):
+            return "code.edit.medium"
+        return "code.edit.medium"
+    if _IMAGE_GENERATE_RE.search(text):
+        return "image.generate"
+    if _SCAFFOLD_RE.search(text) or len(text) > 400:
+        if _SCAFFOLD_RE.search(text) or ("page" in text.lower() and "crée" in text.lower()):
+            return "code.scaffold"
+    if len(text) < 120 and _SMALL_RE.search(text):
+        return "code.edit.small"
+    if len(text) > 800:
+        return "code.edit.large"
+    return "code.edit.medium"
+
+
+def route_task(task_class: str) -> Route:
+    settings = get_settings()
+    lite = "google/gemini-3.1-flash-lite"
+    flash = settings.default_model or "google/gemini-3.7-flash"
+    image = settings.default_image_model or "openai/gpt-image-2"
+
+    table: dict[str, tuple[str, str]] = {
+        "intent.classify": (lite, "lite"),
+        "plan.scaffold": (flash, "primary"),
+        "plan.feature": (flash, "primary"),
+        "code.scaffold": (flash, "primary"),
+        "code.section": (flash, "primary"),
+        "code.assemble": (lite, "lite"),
+        "code.edit.small": (lite, "lite"),
+        "code.edit.medium": (flash, "primary"),
+        "code.edit.large": (flash, "primary"),
+        "code.fix.build": (flash, "primary"),
+        "code.fix.runtime": (flash, "primary"),
+        "text.copy": (lite, "lite"),
+        "text.summarize": (lite, "lite"),
+        "text.micro": (lite, "lite"),
+        "image.generate": (image, "image"),
+        "coherence.pass": (lite, "lite"),
+    }
+    model, tier = table.get(task_class, (flash, "primary"))
+    return Route(
+        task_class=task_class,
+        model=model,
+        tier=tier,
+        effort_label=EFFORT_LABELS.get(tier, "Standard"),
+        is_image=task_class == "image.generate",
+    )
+
+
+def classify_and_route(user_text: str, *, force_scaffold: bool = False) -> Route:
+    text = strip_attachment_noise(user_text or "")
+    if force_scaffold and text and not _IMAGE_GENERATE_RE.search(text):
+        return route_task("code.scaffold")
+    return route_task(classify_task(user_text))

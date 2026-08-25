@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sarab Restaurant</title>
+<style>
+
+:root{--bg:#fff8f3;--fg:#1a1a1a;--muted:#6b7280;--accent:#e11d2e;--orange:#f2620a;--card:#fff;--border:#f3e7df;
+font-family:"Segoe UI",system-ui,sans-serif}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg)}
+a{color:inherit;text-decoration:none}
+.top{background:#fff;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:.85rem 1.5rem;gap:1rem;position:sticky;top:0;z-index:5}
+.brand{display:flex;align-items:center;gap:.65rem;font-family:Georgia,serif;font-size:1.35rem;font-weight:700}
+.logo{width:2.2rem;height:2.2rem;border-radius:999px;background:var(--orange);display:grid;place-items:center;color:#fff;font-size:.85rem}
+.nav{display:flex;gap:1rem;flex-wrap:wrap;color:var(--muted);font-size:.9rem}
+.btn{background:var(--accent);color:#fff;border:0;border-radius:999px;padding:.7rem 1.1rem;font-weight:700;cursor:pointer}
+.hero{display:grid;grid-template-columns:1.1fr .9fr;gap:2rem;padding:2.5rem 1.5rem;align-items:center;max-width:1100px;margin:0 auto}
+.eyebrow{color:var(--orange);font-weight:700;text-transform:uppercase;letter-spacing:.08em;font-size:.75rem}
+.hero h1{font-family:Georgia,serif;font-size:clamp(2.2rem,5vw,3.6rem);line-height:1.1;margin:.4rem 0 1rem}
+.hero p{color:var(--muted);max-width:34rem}
+.actions{display:flex;gap:.75rem;flex-wrap:wrap;margin-top:1.25rem}
+.ghost{background:#fff;border:1px solid var(--border);color:var(--fg);border-radius:999px;padding:.7rem 1.1rem;font-weight:600}
+.hero-card{background:#fff;border-radius:1.25rem;overflow:hidden;box-shadow:0 20px 50px rgba(225,29,46,.12)}
+.hero-card img{width:100%;height:280px;object-fit:cover}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;max-width:1100px;margin:0 auto;padding:0 1.5rem 2rem}
+.stats article{background:#fff;border-radius:1rem;padding:1rem;border:1px solid var(--border)}
+.stats strong{display:block;font-size:1.4rem;color:var(--accent)}
+.section{max-width:1100px;margin:0 auto;padding:2rem 1.5rem}
+.section h2{font-family:Georgia,serif;font-size:clamp(1.6rem,3vw,2.2rem);margin:0 0 .5rem}
+.section > p{color:var(--muted);margin:0 0 1.25rem}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
+.card{background:#fff;border-radius:1rem;overflow:hidden;border:1px solid var(--border);box-shadow:0 8px 24px rgba(0,0,0,.04)}
+.card img{width:100%;height:160px;object-fit:cover}
+.card .body{padding:1rem}
+.cat{color:var(--orange);font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.price{color:var(--accent);font-weight:800;font-size:1.15rem}
+.row{display:flex;justify-content:space-between;align-items:center;margin-top:.75rem}
+.plus{width:2.2rem;height:2.2rem;border-radius:999px;background:var(--accent);color:#fff;border:0;font-size:1.2rem}
+.offer{display:grid;grid-template-columns:1.1fr .9fr;gap:1.5rem;background:#1a1a1a;color:#fff;border-radius:1.25rem;overflow:hidden;margin:1.5rem}
+.offer .txt{padding:2rem}
+.offer img{width:100%;height:100%;min-height:240px;object-fit:cover}
+@media(max-width:900px){.hero,.offer,.grid3,.stats{grid-template-columns:1fr}}
+
+html,body{overflow:hidden} a,button{pointer-events:none}
+img{max-width:100%;display:block}
+</style></head><body>
+
+<header class="top"><div class="brand"><span class="logo">S</span>Sarab</div><button class="btn">Order Now</button></header>
+<section class="hero"><div><p class="eyebrow">#1 Rated</p><h1>Delicious Fast Food for Every Moment</h1><p>Bold flavors from premium ingredients.</p></div>
+<div class="hero-card"><img src="public/07-banner-img.jpg" alt=""/></div></section>
+
+</body></html>

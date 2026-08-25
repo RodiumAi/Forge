@@ -1,0 +1,26 @@
+{
+  "id": "bloom-shop",
+  "title": {
+    "en": "Bloom Shop",
+    "fr": "Bloom Shop"
+  },
+  "description": {
+    "en": "Sneaker storefront with product grid and newsletter.",
+    "fr": "Boutique sneakers avec grille produits et newsletter."
+  },
+  "tags": [
+    "ecommerce",
+    "fashion",
+    "shop"
+  ],
+  "preview": "preview.html",
+  "bootHint": {
+    "en": "Adapt Bloom: products, prices and brand voice.",
+    "fr": "Adapte Bloom : produits, prix et ton de marque."
+  },
+  "accent": "#111111",
+  "bg": "#f7f7f5",
+  "fg": "#111111",
+  "muted": "#6b7280",
+  "tone": "Clean retail, modern catalog."
+}

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Bloom Shop</title>
+<style>
+
+:root{--bg:#f7f7f5;--fg:#111;--muted:#6b7280;--accent:#111;--card:#fff;font-family:"Segoe UI",system-ui,sans-serif}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg)}
+.top{display:flex;justify-content:space-between;align-items:center;padding:1rem 1.5rem;background:#fff;border-bottom:1px solid #eee}
+.brand{font-weight:800;letter-spacing:.04em}
+.hero{padding:3rem 1.5rem 1.5rem;max-width:1100px;margin:0 auto;text-align:center}
+.hero h1{font-size:clamp(2.4rem,6vw,4rem);margin:.4rem 0;letter-spacing:-.03em}
+.hero p{color:var(--muted);max-width:34rem;margin:0 auto}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem;max-width:1100px;margin:0 auto;padding:1.5rem}
+.card{background:#fff;border-radius:1rem;overflow:hidden;border:1px solid #eee}
+.card img{width:100%;height:180px;object-fit:cover;background:#eee}
+.card .body{padding:1rem}
+.price{font-weight:800}
+.btn{width:100%;margin-top:.75rem;background:#111;color:#fff;border:0;border-radius:.6rem;padding:.7rem;font-weight:700}
+.news{max-width:640px;margin:2rem auto 3rem;background:#111;color:#fff;border-radius:1rem;padding:2rem;text-align:center}
+
+html,body{overflow:hidden} a,button{pointer-events:none}
+img{max-width:100%;display:block}
+</style></head><body>
+
+<header class="top"><strong class="brand">BLOOMSHOP</strong></header>
+<section class="hero"><h1>Step Into Style</h1><p>Premium sneakers for every stride.</p></section>
+<section class="grid"><article class="card"><img src="public/01-photo-1579338559194-a162d19bf842.jpg" alt=""/><div class="body"><h3>AirFlex Runner</h3><div class="price">$89.00</div></div></article>
+<article class="card"><img src="public/02-photo-1608667508764-33cf0726b13a.jpg" alt=""/><div class="body"><h3>Urban Street Pro</h3><div class="price">$99.00</div></div></article>
+<article class="card"><img src="public/04-photo-1512374382149-233c42b6a83b.jpg" alt=""/><div class="body"><h3>Volt Edge</h3><div class="price">$119.00</div></div></article></section>
+
+</body></html>

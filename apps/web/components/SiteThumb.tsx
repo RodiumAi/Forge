@@ -1,0 +1,201 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { apiBase, getToken } from "@/lib/api";
+
+type Props = {
+  /** Absolute or API-relative URL for HTML preview */
+  src?: string | null;
+  /** Authenticated API path (fetched as HTML for srcDoc) */
+  authPath?: string | null;
+  title?: string;
+  className?: string;
+};
+
+type CacheEntry = { html: string; at: number };
+
+const HTML_CACHE = new Map<string, CacheEntry>();
+const HTML_TTL_MS = 10 * 60 * 1000;
+const INFLIGHT = new Map<string, Promise<string>>();
+
+function cacheKey(src?: string | null, authPath?: string | null) {
+  return authPath || src || "";
+}
+
+function readCache(key: string): string | null {
+  const hit = HTML_CACHE.get(key);
+  if (!hit) return null;
+  if (Date.now() - hit.at > HTML_TTL_MS) {
+    HTML_CACHE.delete(key);
+    return null;
+  }
+  return hit.html;
+}
+
+function writeCache(key: string, html: string) {
+  HTML_CACHE.set(key, { html, at: Date.now() });
+  // Bound memory: drop oldest when large
+  if (HTML_CACHE.size > 80) {
+    const first = HTML_CACHE.keys().next().value;
+    if (first) HTML_CACHE.delete(first);
+  }
+}
+
+export function invalidateThumbCache(match?: string) {
+  if (!match) {
+    HTML_CACHE.clear();
+    return;
+  }
+  for (const key of [...HTML_CACHE.keys()]) {
+    if (key.includes(match)) HTML_CACHE.delete(key);
+  }
+}
+
+async function fetchThumbHtml(src?: string | null, authPath?: string | null): Promise<string> {
+  const key = cacheKey(src, authPath);
+  const cached = readCache(key);
+  if (cached) return cached;
+
+  const existing = INFLIGHT.get(key);
+  if (existing) return existing;
+
+  const path = authPath || src;
+  if (!path) throw new Error("empty");
+
+  const promise = (async () => {
+    const url = path.startsWith("http") ? path : `${apiBase()}${path}`;
+    const headers: HeadersInit = {};
+    const token = getToken();
+    if (authPath && token) headers.Authorization = `Bearer ${token}`;
+
+    const res = await fetch(url, { headers });
+    if (!res.ok) throw new Error(String(res.status));
+    let text = await res.text();
+    if (!text.trim()) throw new Error("empty");
+
+    const match = url.match(/\/templates\/([^/]+)\/preview/);
+    if (match) {
+      const mediaBase = `${apiBase()}/templates/${match[1]}/media/`;
+      text = text
+        .replace(/(src=["'])public\//gi, `$1${mediaBase}`)
+        .replace(/(url\(["']?)public\//gi, `$1${mediaBase}`);
+      if (!/<base\s/i.test(text)) {
+        text = text.replace(/<head([^>]*)>/i, `<head$1><base href="${mediaBase}">`);
+      }
+    }
+
+    writeCache(key, text);
+    return text;
+  })();
+
+  INFLIGHT.set(key, promise);
+  try {
+    return await promise;
+  } finally {
+    INFLIGHT.delete(key);
+  }
+}
+
+/**
+ * Scaled homepage thumbnail via srcDoc (avoids cross-origin iframe blanks).
+ * HTML is cached in-memory and only fetched when the card is visible.
+ */
+export function SiteThumb({ src, authPath, title, className }: Props) {
+  const shellRef = useRef<HTMLDivElement>(null);
+  const key = cacheKey(src, authPath);
+  const [visible, setVisible] = useState(false);
+  const [html, setHtml] = useState<string | null>(() => (key ? readCache(key) : null));
+  const [failed, setFailed] = useState(false);
+  const [scale, setScale] = useState(0.25);
+
+  useEffect(() => {
+    const el = shellRef.current;
+    if (!el) return;
+    const update = () => {
+      const w = el.clientWidth || 320;
+      setScale(Math.max(0.08, w / 1280));
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const el = shellRef.current;
+    if (!el) return;
+    if (typeof IntersectionObserver === "undefined") {
+      setVisible(true);
+      return;
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setVisible(true);
+          io.disconnect();
+        }
+      },
+      { rootMargin: "120px 0px", threshold: 0.01 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+    if (!key) {
+      setHtml(null);
+      setFailed(true);
+      return;
+    }
+
+    const warm = readCache(key);
+    if (warm) {
+      setHtml(warm);
+      setFailed(false);
+    } else {
+      setHtml(null);
+      setFailed(false);
+    }
+
+    if (!visible) return;
+
+    void (async () => {
+      try {
+        const text = await fetchThumbHtml(src, authPath);
+        if (!alive) return;
+        setHtml(text);
+        setFailed(false);
+      } catch {
+        if (alive && !readCache(key)) setFailed(true);
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, [src, authPath, key, visible]);
+
+  return (
+    <div
+      ref={shellRef}
+      className={`site-thumb ${className || ""}`.trim()}
+      aria-hidden
+      style={{ ["--thumb-scale" as string]: String(scale) }}
+    >
+      {html ? (
+        <div className="site-thumb-scaler">
+          <iframe
+            srcDoc={html}
+            title={title || "Preview"}
+            tabIndex={-1}
+            sandbox=""
+            loading="lazy"
+          />
+        </div>
+      ) : (
+        <div className={`site-thumb-fallback ${failed ? "is-failed" : "is-loading"}`} />
+      )}
+    </div>
+  );
+}

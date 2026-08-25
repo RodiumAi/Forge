@@ -1,0 +1,118 @@
+"use client";
+
+import { useEffect, useRef } from "react";
+import dynamic from "next/dynamic";
+import type { OnMount } from "@monaco-editor/react";
+import { monacoLanguageForPath } from "./file-icons";
+
+const Monaco = dynamic(() => import("@monaco-editor/react"), {
+  ssr: false,
+  loading: () => <div className="code-editor-loading">…</div>,
+});
+
+type Props = {
+  path: string;
+  value: string;
+  onChange: (value: string) => void;
+  onSave?: () => void;
+};
+
+const FORGE_THEME = "forge-dark";
+
+export function CodeEditor({ path, value, onChange, onSave }: Props) {
+  const language = monacoLanguageForPath(path);
+  const onSaveRef = useRef(onSave);
+  useEffect(() => {
+    onSaveRef.current = onSave;
+  }, [onSave]);
+
+  const handleMount: OnMount = (editor, monaco) => {
+    monaco.editor.defineTheme(FORGE_THEME, {
+      base: "vs-dark",
+      inherit: true,
+      rules: [
+        { token: "comment", foreground: "6A9955", fontStyle: "italic" },
+        { token: "string", foreground: "CE9178" },
+        { token: "keyword", foreground: "C586C0" },
+        { token: "number", foreground: "B5CEA8" },
+        { token: "regexp", foreground: "D16969" },
+        { token: "type", foreground: "4EC9B0" },
+        { token: "class", foreground: "4EC9B0" },
+        { token: "function", foreground: "DCDCAA" },
+        { token: "variable", foreground: "9CDCFE" },
+        { token: "constant", foreground: "4FC1FF" },
+        { token: "tag", foreground: "569CD6" },
+        { token: "attribute.name", foreground: "9CDCFE" },
+        { token: "attribute.value", foreground: "CE9178" },
+        { token: "delimiter.html", foreground: "808080" },
+        { token: "metatag", foreground: "569CD6" },
+      ],
+      colors: {
+        "editor.background": "#0d1117",
+        "editor.foreground": "#e6edf3",
+        "editorLineNumber.foreground": "#484f58",
+        "editorLineNumber.activeForeground": "#8b949e",
+        "editorCursor.foreground": "#f2620a",
+        "editor.selectionBackground": "#264f78",
+        "editor.inactiveSelectionBackground": "#1f3a57",
+        "editor.lineHighlightBackground": "#161b22",
+        "editorIndentGuide.background1": "#21262d",
+        "editorIndentGuide.activeBackground1": "#30363d",
+        "editorWidget.background": "#161b22",
+        "editorSuggestWidget.background": "#161b22",
+        "editorSuggestWidget.border": "#30363d",
+        "scrollbarSlider.background": "#30363d88",
+        "scrollbarSlider.hoverBackground": "#484f5888",
+      },
+    });
+    monaco.editor.setTheme(FORGE_THEME);
+
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+      onSaveRef.current?.();
+    });
+
+    monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
+      jsx: monaco.languages.typescript.JsxEmit.ReactJSX,
+      allowNonTsExtensions: true,
+      target: monaco.languages.typescript.ScriptTarget.ESNext,
+      moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
+      esModuleInterop: true,
+    });
+    monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
+      jsx: monaco.languages.typescript.JsxEmit.ReactJSX,
+      allowNonTsExtensions: true,
+      target: monaco.languages.typescript.ScriptTarget.ESNext,
+    });
+  };
+
+  return (
+    <div className="code-monaco-wrap">
+      <Monaco
+        key={path}
+        height="100%"
+        language={language}
+        theme={FORGE_THEME}
+        value={value}
+        onChange={(v) => onChange(v ?? "")}
+        onMount={handleMount}
+        options={{
+          fontSize: 13,
+          fontFamily: 'ui-monospace, SFMono-Regular, "Cascadia Code", Menlo, Consolas, monospace',
+          fontLigatures: true,
+          minimap: { enabled: false },
+          scrollBeyondLastLine: false,
+          automaticLayout: true,
+          tabSize: 2,
+          wordWrap: "on",
+          padding: { top: 12, bottom: 12 },
+          renderLineHighlight: "line",
+          cursorBlinking: "smooth",
+          smoothScrolling: true,
+          bracketPairColorization: { enabled: true },
+          guides: { bracketPairs: true, indentation: true },
+          stickyScroll: { enabled: true },
+        }}
+      />
+    </div>
+  );
+}
