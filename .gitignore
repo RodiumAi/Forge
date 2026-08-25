@@ -1,0 +1,12 @@
+.env
+.env.local
+docker-compose.override.yml
+data/projects/*
+!data/projects/.gitkeep
+**/__pycache__/
+**/.venv/
+**/node_modules/
+**/.next/
+**/dist/
+*.pyc
+.DS_Store

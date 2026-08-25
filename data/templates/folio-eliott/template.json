@@ -1,0 +1,26 @@
+{
+  "id": "folio-eliott",
+  "title": {
+    "en": "Eliott Portfolio",
+    "fr": "Portfolio Eliott"
+  },
+  "description": {
+    "en": "Dark freelance portfolio with work grid and about.",
+    "fr": "Portfolio freelance sombre avec travaux et à propos."
+  },
+  "tags": [
+    "portfolio",
+    "freelance",
+    "dark"
+  ],
+  "preview": "preview.html",
+  "bootHint": {
+    "en": "Adapt Eliott: name, services, case studies and contact.",
+    "fr": "Adapte Eliott : nom, services, études de cas et contact."
+  },
+  "accent": "#a3e635",
+  "bg": "#0b0b0c",
+  "fg": "#f5f5f5",
+  "muted": "#a1a1aa",
+  "tone": "Confident, minimal, creative."
+}

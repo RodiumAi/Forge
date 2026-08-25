@@ -1,0 +1,26 @@
+{
+  "id": "podux-podcast",
+  "title": {
+    "en": "Podux Podcast",
+    "fr": "Podux Podcast"
+  },
+  "description": {
+    "en": "Podcast platform landing with episodes and listen CTAs.",
+    "fr": "Landing podcast avec épisodes et CTA d’écoute."
+  },
+  "tags": [
+    "podcast",
+    "media",
+    "audio"
+  ],
+  "preview": "preview.html",
+  "bootHint": {
+    "en": "Adapt Podux: show name, episode titles and subscribe CTA.",
+    "fr": "Adapte Podux : nom du show, titres d’épisodes et CTA."
+  },
+  "accent": "#8b5cf6",
+  "bg": "#0b1020",
+  "fg": "#f8fafc",
+  "muted": "#94a3b8",
+  "tone": "Tech community, energetic."
+}

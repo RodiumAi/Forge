@@ -1,0 +1,26 @@
+{
+  "id": "tailnext-saas",
+  "title": {
+    "en": "TailNext SaaS",
+    "fr": "TailNext SaaS"
+  },
+  "description": {
+    "en": "Next/Tailwind marketing site with features and pricing.",
+    "fr": "Site marketing Next/Tailwind avec features et pricing."
+  },
+  "tags": [
+    "saas",
+    "marketing",
+    "landing"
+  ],
+  "preview": "preview.html",
+  "bootHint": {
+    "en": "Adapt TailNext: product name, feature cards and plans.",
+    "fr": "Adapte TailNext : nom produit, features et plans."
+  },
+  "accent": "#4f46e5",
+  "bg": "#ffffff",
+  "fg": "#0f172a",
+  "muted": "#64748b",
+  "tone": "Product marketing, clear hierarchy."
+}

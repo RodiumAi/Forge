@@ -1,0 +1,158 @@
+name: forge-web
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: forge-web-postgres
+    restart: unless-stopped
+    ports:
+      - "${FORGE_WEB_POSTGRES_PORT:-5434}:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-forge}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-forge}
+      POSTGRES_DB: ${POSTGRES_DB:-forge_web}
+      POSTGRES_INITDB_ARGS: "--locale=C --encoding=UTF8"
+    volumes:
+      - forge_web_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-forge} -d ${POSTGRES_DB:-forge_web}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    container_name: forge-web-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-rodiumdev}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-rodiumdev123}
+      MINIO_SERVER_URL: http://localhost:9000
+      MINIO_BROWSER_REDIRECT_URL: http://localhost:9001
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - forge_web_minio_data:/data
+
+  minio-init:
+    image: minio/mc:RELEASE.2025-04-16T18-13-26Z
+    container_name: forge-web-minio-init
+    depends_on:
+      minio:
+        condition: service_started
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-rodiumdev}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-rodiumdev123}
+    volumes:
+      - ./infra/local/minio-init.sh:/init.sh:ro
+    entrypoint: ["/bin/sh", "/init.sh"]
+    restart: "no"
+
+  valkey:
+    image: valkey/valkey:8-alpine
+    container_name: forge-web-valkey
+    command: valkey-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    ports:
+      - "${FORGE_WEB_VALKEY_PORT:-6380}:6379"
+    volumes:
+      - forge_web_valkey_data:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  mailpit:
+    image: axllent/mailpit:v1.22
+    container_name: forge-web-mailpit
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "1"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+      MP_MAX_MESSAGES: "5000"
+    ports:
+      - "${FORGE_WEB_MAILPIT_SMTP_PORT:-11025}:1025"
+      - "${FORGE_WEB_MAILPIT_UI_PORT:-18025}:8025"
+
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    container_name: forge-web-api
+    restart: unless-stopped
+    ports:
+      - "${FORGE_WEB_API_PORT:-8100}:8000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-forge}:${POSTGRES_PASSWORD:-forge}@postgres:5432/${POSTGRES_DB:-forge_web}
+      PROJECTS_ROOT: /data/projects
+      CORS_ORIGINS: http://localhost:3100,http://127.0.0.1:3100,http://localhost:8080
+      OBJECT_STORE_ENDPOINT: http://minio:9000
+      OBJECT_STORE_PUBLIC_ENDPOINT: http://localhost:9000
+      OBJECT_STORE_ACCESS_KEY: ${MINIO_ROOT_USER:-rodiumdev}
+      OBJECT_STORE_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-rodiumdev123}
+      OBJECT_STORE_ADDRESSING: path
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      REDIS_URL: redis://valkey:6379/0
+      API_BASE_URL: http://localhost:8100
+      TEMPLATES_ROOT: /data/templates
+    volumes:
+      - ./data/projects:/data/projects
+      - ./data/templates:/data/templates:ro
+      - ./infra/local:/srv/infra:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+      mailpit:
+        condition: service_started
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8100}
+    container_name: forge-web-ui
+    restart: unless-stopped
+    ports:
+      - "${FORGE_WEB_UI_PORT:-3100}:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8100}
+    depends_on:
+      - api
+
+  caddy:
+    image: caddy:2.9-alpine
+    container_name: forge-web-caddy
+    depends_on:
+      - api
+      - minio
+    volumes:
+      - ./infra/local/Caddyfile:/etc/caddy/Caddyfile:ro
+      - forge_web_caddy_data:/data
+    ports:
+      - "${FORGE_WEB_CADDY_PORT:-8080}:80"
+
+  adminer:
+    image: adminer:4
+    container_name: forge-web-adminer
+    restart: unless-stopped
+    ports:
+      - "${FORGE_WEB_ADMINER_PORT:-8089}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  forge_web_pg_data:
+  forge_web_minio_data:
+  forge_web_valkey_data:
+  forge_web_caddy_data:

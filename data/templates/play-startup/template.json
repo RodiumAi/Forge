@@ -1,0 +1,26 @@
+{
+  "id": "play-startup",
+  "title": {
+    "en": "Play Startup",
+    "fr": "Play Startup"
+  },
+  "description": {
+    "en": "SaaS/startup multipage feel: features, pricing, team, blog.",
+    "fr": "Style SaaS/startup : features, pricing, équipe, blog."
+  },
+  "tags": [
+    "startup",
+    "saas",
+    "astro"
+  ],
+  "preview": "preview.html",
+  "bootHint": {
+    "en": "Adapt Play: product story, pricing tiers, team and posts.",
+    "fr": "Adapte Play : histoire produit, tarifs, équipe et articles."
+  },
+  "accent": "#4a6cf7",
+  "bg": "#ffffff",
+  "fg": "#111827",
+  "muted": "#6b7280",
+  "tone": "Startup marketing, trustworthy."
+}
