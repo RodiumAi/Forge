@@ -47,22 +47,6 @@ class UserSettings(Base):
     user: Mapped[User] = relationship(back_populates="settings")
 
 
-class UserConnector(Base):
-    __tablename__ = "user_connectors"
-
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
-    )
-    connector_id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    credentials_encrypted: Mapped[str] = mapped_column(Text, nullable=False)
-    credentials_hint: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
-    )
-
-    user: Mapped[User] = relationship()
-
-
 class Project(Base):
     __tablename__ = "projects"
 

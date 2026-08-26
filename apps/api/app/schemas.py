@@ -101,10 +101,22 @@ class LogoutResponse(BaseModel):
 class SettingsOut(BaseModel):
     has_rodium_key: bool
     rodium_key_hint: str | None = None
+    default_model: str | None = None
 
 
 class SettingsUpdate(BaseModel):
     rodium_api_key: str | None = None
+
+
+class RodiumKeyOut(BaseModel):
+    configured: bool
+    managed: bool = False
+    credentials_hint: str | None = None
+    supports_test: bool = True
+
+
+class RodiumKeyUpdate(BaseModel):
+    api_key: str | None = None
 
 
 class RodiumTestRequest(BaseModel):
@@ -114,47 +126,6 @@ class RodiumTestRequest(BaseModel):
 class RodiumTestResponse(BaseModel):
     ok: bool
     message: str
-
-
-class ConnectorFieldOut(BaseModel):
-    id: str
-    label: str
-    secret: bool = True
-    placeholder: str = ""
-    required: bool = True
-
-
-class ConnectorOut(BaseModel):
-    id: str
-    name: str
-    category: str
-    description: str
-    use_case: str
-    auth_type: str
-    configured: bool
-    supports_test: bool = False
-    managed: bool = False
-    removable: bool = True
-    credentials_hint: str | None = None
-    fields: list[ConnectorFieldOut] = []
-    fallback_provider: str | None = None
-    warning: str | None = None
-    quota_used: int | None = None
-    quota_limit: int | None = None
-    quota_unit: str | None = None
-
-
-class ConnectorTestRequest(BaseModel):
-    credentials: dict[str, str] = Field(default_factory=dict)
-
-
-class ConnectorTestResponse(BaseModel):
-    ok: bool
-    message: str
-
-
-class ConnectorUpdate(BaseModel):
-    credentials: dict[str, str] = Field(default_factory=dict)
 
 
 class PluginOut(BaseModel):

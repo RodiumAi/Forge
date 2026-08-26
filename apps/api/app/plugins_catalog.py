@@ -1,16 +1,22 @@
-"""Forge plugin catalog — npm/UI packages available by family for codegen."""
+"""Forge plugin catalog — UI packages available by family for codegen.
+
+Versions are NOT declared here: they come from ``runtime/packages.json`` via
+``runtime_manifest``, so the catalog shown to the model can never drift from the
+AST allowlist or the browser import map.
+"""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 
+from app.runtime_manifest import package_version
+
 
 @dataclass(frozen=True)
 class PluginDefinition:
     id: str
-    family: str  # icons | animation | forms | ui | ai
+    family: str  # icons | animation | forms | ui
     package: str
-    version: str
     when_to_use_en: str
     when_to_use_fr: str
     import_example: str
@@ -18,13 +24,20 @@ class PluginDefinition:
     # If True, package goes in dependencies; else patterns-only (no npm install).
     installable: bool = True
 
+    @property
+    def version(self) -> str | None:
+        """Pin from the shared manifest, or None for patterns-only plugins."""
+        if not self.installable:
+            return None
+        return package_version(self.package)
+
+
 
 PLUGINS: tuple[PluginDefinition, ...] = (
     PluginDefinition(
         id="lucide",
         family="icons",
         package="lucide-react",
-        version="^0.468.0",
         when_to_use_en="All UI icons (nav, actions, empty states). Never use emoji as icons.",
         when_to_use_fr="Toutes les icônes UI (nav, actions, états vides). Jamais d’emoji comme icône.",
         import_example='import { ArrowRight, Menu } from "lucide-react";',
@@ -34,7 +47,6 @@ PLUGINS: tuple[PluginDefinition, ...] = (
         id="framer-motion",
         family="animation",
         package="framer-motion",
-        version="^11.15.0",
         when_to_use_en="Page transitions, section reveals, micro-interactions. Prefer subtle motion.",
         when_to_use_fr="Transitions de page, révélations de sections, micro-interactions. Motion subtil.",
         import_example='import { motion } from "framer-motion";',
@@ -44,7 +56,6 @@ PLUGINS: tuple[PluginDefinition, ...] = (
         id="react-hook-form",
         family="forms",
         package="react-hook-form",
-        version="^7.54.0",
         when_to_use_en="Contact forms, multi-field forms, validation UX.",
         when_to_use_fr="Formulaires de contact, formulaires multi-champs, UX de validation.",
         import_example='import { useForm } from "react-hook-form";',
@@ -53,7 +64,6 @@ PLUGINS: tuple[PluginDefinition, ...] = (
         id="zod",
         family="forms",
         package="zod",
-        version="^3.24.0",
         when_to_use_en="Schema validation with react-hook-form (@hookform/resolvers/zod).",
         when_to_use_fr="Validation de schéma avec react-hook-form (@hookform/resolvers/zod).",
         import_example='import { z } from "zod";',
@@ -62,7 +72,6 @@ PLUGINS: tuple[PluginDefinition, ...] = (
         id="hookform-resolvers",
         family="forms",
         package="@hookform/resolvers",
-        version="^3.9.0",
         when_to_use_en="Bridge zod schemas into react-hook-form.",
         when_to_use_fr="Brancher les schémas zod sur react-hook-form.",
         import_example='import { zodResolver } from "@hookform/resolvers/zod";',
@@ -71,7 +80,6 @@ PLUGINS: tuple[PluginDefinition, ...] = (
         id="shadcn-patterns",
         family="ui",
         package="shadcn",
-        version="patterns",
         when_to_use_en=(
             "Accessible UI patterns (Button, Input, Card, Dialog) implemented as local "
             "components with plain CSS — do NOT run shadcn CLI; copy patterns into src/components/ui/."
@@ -84,54 +92,24 @@ PLUGINS: tuple[PluginDefinition, ...] = (
         installable=False,
     ),
     PluginDefinition(
-        id="rodiumai-openai",
-        family="ai",
-        package="openai",
-        version="^4.77.0",
+        id="react-router",
+        family="ui",
+        package="react-router-dom",
         when_to_use_en=(
-            "AI features inside the generated app. Use OpenAI-compatible client with "
-            "baseURL pointing to RodiumAi API and the user's Rodium key via env "
-            "(VITE_RODIUMAI_API_KEY / RODIUMAI_API_KEY). Never hardcode secrets."
+            "Multi-page prototypes. Wrap the app in <BrowserRouter> and declare <Routes> "
+            "in App.tsx; put one component per page under src/pages/."
         ),
         when_to_use_fr=(
-            "Fonctions IA dans l’app générée. Client OpenAI-compatible avec baseURL "
-            "RodiumAi et clé via env (VITE_RODIUMAI_API_KEY / RODIUMAI_API_KEY). "
-            "Jamais de secrets en dur."
+            "Prototypes multi-pages. Enrober l'app dans <BrowserRouter> et déclarer les "
+            "<Routes> dans App.tsx ; un composant par page dans src/pages/."
         ),
-        import_example=(
-            'import OpenAI from "openai";\n'
-            "const client = new OpenAI({ apiKey: import.meta.env.VITE_RODIUMAI_API_KEY, "
-            'baseURL: import.meta.env.VITE_RODIUMAI_BASE_URL, dangerouslyAllowBrowser: true });'
-        ),
+        import_example='import { BrowserRouter, Routes, Route, Link } from "react-router-dom";',
     ),
 )
 
-FAMILY_ORDER = ("icons", "animation", "forms", "ui", "ai", "data")
+FAMILY_ORDER = ("icons", "animation", "forms", "ui")
 
 
-# Append data SDKs used with connectors (installable when codegen needs them)
-_DATA_PLUGINS = (
-    PluginDefinition(
-        id="firebase-sdk",
-        family="data",
-        package="firebase",
-        version="^11.1.0",
-        when_to_use_en="Firebase Auth / Firestore client when the Firebase connector is active.",
-        when_to_use_fr="Client Firebase Auth / Firestore quand le connecteur Firebase est actif.",
-        import_example='import { initializeApp } from "firebase/app";',
-    ),
-    PluginDefinition(
-        id="supabase-js",
-        family="data",
-        package="@supabase/supabase-js",
-        version="^2.47.0",
-        when_to_use_en="Supabase client when the Supabase connector is active.",
-        when_to_use_fr="Client Supabase quand le connecteur Supabase est actif.",
-        import_example='import { createClient } from "@supabase/supabase-js";',
-    ),
-)
-
-PLUGINS = PLUGINS + _DATA_PLUGINS
 PLUGIN_BY_ID = {p.id: p for p in PLUGINS}
 PLUGIN_BY_PACKAGE = {p.package: p for p in PLUGINS if p.installable}
 

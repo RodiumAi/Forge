@@ -1,0 +1,43 @@
+{
+  "$comment": "SINGLE SOURCE OF TRUTH for the closed package manifest of generated apps. Read by app/runtime_manifest.py (AST allowlist) AND runtime/importmap.mjs (browser import map). Never edit one without the other -- there is no other list.",
+  "reactVersion": "18.3.1",
+  "cdn": "https://esm.sh",
+  "packages": {
+    "react": {
+      "version": "18.3.1",
+      "browser": true,
+      "subpaths": ["jsx-runtime", "jsx-dev-runtime"]
+    },
+    "react-dom": {
+      "version": "18.3.1",
+      "browser": true,
+      "subpaths": ["client"]
+    },
+    "lucide-react": { "version": "0.468.0", "browser": true, "peerReact": true },
+    "react-router-dom": { "version": "7.1.1", "browser": true, "peerReact": true },
+    "@tanstack/react-query": { "version": "5.62.0", "browser": true, "peerReact": true },
+    "framer-motion": { "version": "11.15.0", "browser": true, "peerReact": true },
+    "react-hook-form": { "version": "7.54.0", "browser": true, "peerReact": true },
+    "@hookform/resolvers": {
+      "version": "3.9.0",
+      "browser": true,
+      "peerReact": true,
+      "subpaths": ["zod"]
+    },
+    "recharts": { "version": "2.15.0", "browser": true, "peerReact": true },
+    "sonner": { "version": "1.7.1", "browser": true, "peerReact": true },
+    "cmdk": { "version": "1.0.4", "browser": true, "peerReact": true },
+    "embla-carousel-react": { "version": "8.5.1", "browser": true, "peerReact": true },
+    "zod": { "version": "3.24.1", "browser": true },
+    "clsx": { "version": "2.1.1", "browser": true },
+    "tailwind-merge": { "version": "2.6.0", "browser": true },
+    "class-variance-authority": { "version": "0.7.1", "browser": true },
+    "date-fns": { "version": "4.1.0", "browser": true },
+
+    "vite": { "version": "5.4.11", "browser": false },
+    "@vitejs/plugin-react": { "version": "4.3.4", "browser": false },
+    "typescript": { "version": "5.6.3", "browser": false },
+    "@types/react": { "version": "18.3.12", "browser": false },
+    "@types/react-dom": { "version": "18.3.1", "browser": false }
+  }
+}

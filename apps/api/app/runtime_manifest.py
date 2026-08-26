@@ -1,42 +1,46 @@
-"""Closed package manifest for generated Vite/React apps (AST allowlist)."""
+"""Closed package manifest for generated apps (AST allowlist).
+
+The package list lives in ``runtime/packages.json`` — the SAME file the browser
+import map is generated from (``runtime/importmap.mjs``). This guarantees that a
+bare import accepted by the validator is actually resolvable at runtime, which
+used to drift and produce IMPORT_NOT_IN_MANIFEST crashes on valid code.
+"""
 
 from __future__ import annotations
 
-from app.plugins_catalog import catalog_package_versions
+import json
+from functools import lru_cache
+from pathlib import Path
 
-# Core scaffold packages always allowed (relative + these bare imports).
-_CORE_ALLOWED: dict[str, str] = {
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "vite": "^5.4.11",
-    "@vitejs/plugin-react": "^4.3.4",
-    "typescript": "^5.6.3",
-    "@types/react": "^18.3.12",
-    "@types/react-dom": "^18.3.1",
-}
-
-# Additional runtime packages from the Sites spec (fonction.md §11) that we
-# allow even if not yet in plugins_catalog.
-_SPEC_EXTRA: dict[str, str] = {
-    "react-router-dom": "^7.1.1",
-    "clsx": "^2.1.1",
-    "tailwind-merge": "^2.6.0",
-    "class-variance-authority": "^0.7.1",
-    "date-fns": "^4.1.0",
-    "recharts": "^2.15.0",
-    "sonner": "^1.7.1",
-    "cmdk": "^1.0.4",
-    "embla-carousel-react": "^8.5.1",
-    "@tanstack/react-query": "^5.62.0",
-}
+_MANIFEST_PATH = Path(__file__).resolve().parent.parent / "runtime" / "packages.json"
 
 
+@lru_cache(maxsize=1)
+def _manifest() -> dict:
+    with _MANIFEST_PATH.open("r", encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+@lru_cache(maxsize=1)
 def allowed_packages() -> dict[str, str]:
-    """package → version pin (catalog wins over extras)."""
-    out = dict(_CORE_ALLOWED)
-    out.update(_SPEC_EXTRA)
-    out.update(catalog_package_versions())
-    return out
+    """package -> caret version pin, for every package in the shared manifest."""
+    return {
+        name: f"^{spec['version']}"
+        for name, spec in _manifest()["packages"].items()
+    }
+
+
+@lru_cache(maxsize=1)
+def browser_packages() -> frozenset[str]:
+    """Packages resolvable in the browser import map (subset of allowed)."""
+    return frozenset(
+        name for name, spec in _manifest()["packages"].items() if spec.get("browser")
+    )
+
+
+def package_version(package: str) -> str | None:
+    """Caret pin for a single package, or None if not in the manifest."""
+    return allowed_packages().get(package)
 
 
 def is_relative_or_alias(spec: str) -> bool:
@@ -62,4 +66,30 @@ FORBIDDEN_BARE_PREFIXES = (
     "process",
     "vm",
     "module",
+)
+
+# Backend SDKs are structurally impossible in a frontend-only prototype: they are
+# not in the manifest, and naming them explicitly gives a far better error message
+# than a generic "unknown package".
+FORBIDDEN_BACKEND_PACKAGES = (
+    "firebase",
+    "firebase-admin",
+    "@supabase/supabase-js",
+    "@supabase/auth-helpers-react",
+    "stripe",
+    "@stripe/stripe-js",
+    "resend",
+    "nodemailer",
+    "cloudinary",
+    "aws-sdk",
+    "@aws-sdk/client-s3",
+    "mongodb",
+    "mongoose",
+    "pg",
+    "mysql2",
+    "prisma",
+    "@prisma/client",
+    "openai",
+    "express",
+    "next",
 )

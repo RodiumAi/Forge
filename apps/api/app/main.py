@@ -1,3 +1,6 @@
+import logging
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -8,7 +11,6 @@ from app.routers import (
     auth,
     chats,
     comments,
-    connectors,
     design,
     files,
     plugins,
@@ -16,15 +18,32 @@ from app.routers import (
     projects,
     publish,
     seo,
-    sites,
     templates,
 )
 from app.routers import settings as settings_router
 from app.services.preview_babel import runtime_public_dir
 
+logger = logging.getLogger(__name__)
+
 config = get_settings()
 
-app = FastAPI(title="Forge Web API", version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    config.projects_path.mkdir(parents=True, exist_ok=True)
+    config.templates_path.mkdir(parents=True, exist_ok=True)
+    init_db()
+    yield
+    # Shutdown: never leak child processes / thread pools across restarts.
+    try:
+        from app.services.cpu_pool import shutdown_cpu_pool
+
+        shutdown_cpu_pool()
+    except Exception:  # pragma: no cover - best effort
+        logger.warning("cpu pool shutdown failed", exc_info=True)
+
+
+app = FastAPI(title="Forge Web API", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -37,7 +56,6 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(settings_router.router)
-app.include_router(connectors.router)
 app.include_router(plugins.router)
 app.include_router(templates.router)
 app.include_router(projects.router)
@@ -48,18 +66,10 @@ app.include_router(files.router)
 app.include_router(comments.router)
 app.include_router(publish.router)
 app.include_router(preview.router)
-app.include_router(sites.router)
 
 _runner_dir = runtime_public_dir()
 if _runner_dir.is_dir():
     app.mount("/runner", StaticFiles(directory=str(_runner_dir), html=True), name="runner")
-
-
-@app.on_event("startup")
-def on_startup() -> None:
-    config.projects_path.mkdir(parents=True, exist_ok=True)
-    config.templates_path.mkdir(parents=True, exist_ok=True)
-    init_db()
 
 
 @app.get("/health")

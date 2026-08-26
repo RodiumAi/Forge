@@ -41,6 +41,23 @@ const WIDTH: Record<ViewportMode, string> = {
 const TOOL_RETRY_DELAYS_MS = [50, 150, 400, 800, 1600, 3200];
 const NAV_RETRY_DELAYS_MS = [0, 120, 350, 700, 1400, 2800];
 
+/**
+ * Origin of the preview iframe, or null when it cannot be determined.
+ *
+ * The iframe runs LLM-generated code, so every postMessage must be addressed to
+ * (and accepted from) that exact origin — never "*". A wildcard would let any
+ * embedded document read the source bundle or forge visual-edit commands.
+ */
+function previewOrigin(previewSrc: string | null): string | null {
+  if (!previewSrc) return null;
+  try {
+    const origin = new URL(previewSrc, window.location.href).origin;
+    return origin && origin !== "null" ? origin : null;
+  } catch {
+    return null;
+  }
+}
+
 export function PreviewPane({
   previewSrc,
   previewPath = "/",
@@ -90,20 +107,16 @@ export function PreviewPane({
   // Babel runner: push source bundle into the iframe (origin = API).
   useEffect(() => {
     if (previewMode !== "babel_runner" || !previewSrc || !projectId) return;
+    const targetOrigin = previewOrigin(previewSrc);
+    if (!targetOrigin) return;
 
-    async function pushRender() {
+    async function pushRender(target: string) {
       const win = frameRef.current?.contentWindow;
       if (!win) return;
       try {
         const bundle = await api<{ files: Record<string, string>; entry: string }>(
           `/projects/${projectId}/source-bundle`,
         );
-        let targetOrigin = "*";
-        try {
-          targetOrigin = new URL(previewSrc).origin;
-        } catch {
-          /* keep * */
-        }
         setBabelError(null);
         win.postMessage(
           {
@@ -111,7 +124,7 @@ export function PreviewPane({
             files: bundle.files,
             entry: bundle.entry || "src/main.tsx",
           },
-          targetOrigin === "null" ? "*" : targetOrigin,
+          target,
         );
       } catch (err) {
         console.error("babel render push failed", err);
@@ -121,11 +134,12 @@ export function PreviewPane({
     }
 
     function onMessage(e: MessageEvent) {
+      if (e.origin !== targetOrigin) return;
       const data = e.data;
       if (!data || typeof data !== "object") return;
       if (data.type === "forge:ready") {
         runnerReadyRef.current = true;
-        void pushRender();
+        void pushRender(targetOrigin);
       }
       if (data.type === "forge:mounted") {
         setLoadError(false);
@@ -146,7 +160,7 @@ export function PreviewPane({
 
     window.addEventListener("message", onMessage);
     const t = window.setTimeout(() => {
-      void pushRender();
+      void pushRender(targetOrigin);
     }, 400);
     return () => {
       window.removeEventListener("message", onMessage);
@@ -190,9 +204,10 @@ export function PreviewPane({
 
   function postPreviewNavigate(path: string) {
     const win = frameRef.current?.contentWindow;
-    if (!win) return;
+    const target = previewOrigin(previewSrc);
+    if (!win || !target) return;
     try {
-      win.postMessage({ type: "forge-preview-navigate", path }, "*");
+      win.postMessage({ type: "forge-preview-navigate", path }, target);
     } catch {
       /* ignore */
     }
@@ -238,10 +253,11 @@ export function PreviewPane({
 
   function postTool(tool: PreviewTool | null) {
     const win = frameRef.current?.contentWindow;
-    if (!win) return;
+    const target = previewOrigin(previewSrc);
+    if (!win || !target) return;
     try {
-      win.postMessage({ type: "forge-tool-mode", tool }, "*");
-      win.postMessage({ type: "forge-tool-ping" }, "*");
+      win.postMessage({ type: "forge-tool-mode", tool }, target);
+      win.postMessage({ type: "forge-tool-ping" }, target);
     } catch {
       /* ignore */
     }
@@ -299,7 +315,10 @@ export function PreviewPane({
   }, [previewTool, previewSrc]);
 
   useEffect(() => {
+    const trustedOrigin = previewOrigin(previewSrc);
     function onMessage(ev: MessageEvent) {
+      // The iframe executes model-generated code: only accept its exact origin.
+      if (!trustedOrigin || ev.origin !== trustedOrigin) return;
       const data = ev.data;
       if (!data || typeof data !== "object") return;
       const type = data.type;
@@ -356,7 +375,7 @@ export function PreviewPane({
     }
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [t]);
+  }, [t, previewSrc]);
 
   const toolActive = Boolean(previewTool);
   const showToolHint = Boolean(previewTool && previewSrc && bridgeSynced);
@@ -400,6 +419,11 @@ export function PreviewPane({
                 title="preview"
                 src={previewSrc}
                 className="builder-preview-frame"
+                // `allow-same-origin` is required: the runner needs a real origin so
+                // both sides can pin postMessage to it (a sandboxed opaque origin
+                // reports "null" and forces a wildcard, which is worse). The iframe
+                // is served from the API origin, which holds no browser credentials —
+                // the session token lives in the builder origin only.
                 sandbox={
                   previewMode === "babel_runner"
                     ? "allow-scripts allow-same-origin allow-forms allow-modals allow-popups"
