@@ -89,6 +89,12 @@ import {
   type RunLive,
 } from "@/lib/firebase/live";
 import { firebaseEnabled } from "@/lib/firebase/client";
+import { readSseStream } from "@/lib/sse";
+import {
+  initialStreamState,
+  reduceStreamEvent,
+  type ChatStreamState,
+} from "@/lib/chat-stream";
 
 type Project = {
   id: string;
@@ -170,33 +176,6 @@ function dedupeMessages(msgs: Message[]): Message[] {
   return out;
 }
 
-async function readSseStream(
-  res: Response,
-  onEvent: (payload: Record<string, unknown>) => void | Promise<void>,
-) {
-  if (!res.body) throw new Error("No stream body");
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const parts = buffer.split("\n\n");
-    buffer = parts.pop() || "";
-    for (const part of parts) {
-      const line = part.trim();
-      if (!line.startsWith("data: ")) continue;
-      let payloadEvent: Record<string, unknown>;
-      try {
-        payloadEvent = JSON.parse(line.slice(6)) as Record<string, unknown>;
-      } catch {
-        continue;
-      }
-      await onEvent(payloadEvent);
-    }
-  }
-}
 
 function friendlyStreamError(err: unknown, fallback: string, rodiumExpired: string): string {
   const raw = err instanceof Error ? err.message : String(err || fallback);
@@ -905,236 +884,139 @@ export default function ProjectPage() {
     if (e.dataTransfer.files?.length) addFiles(e.dataTransfer.files);
   }
 
+  /**
+   * Per-stream accumulator. The pure transitions live in `lib/chat-stream.ts`
+   * (covered by tests); this only performs the side effects the reducer asks
+   * for and mirrors the result into React state.
+   */
   const handleStreamEvent = useCallback(
     (
       payloadEvent: Record<string, unknown>,
-      ctx: {
-        assistantRef: { value: string };
-        thinkingRef: { value: string };
-        ops: FileOp[];
-        stepsSnapshot: AgentStep[];
-        effortRef: { value: string | null };
-        appliedRef: { value: boolean };
+      session: {
+        stateRef: { current: ChatStreamState };
         userPayload: string;
         clearBootOnce: () => void;
       },
     ) => {
-      const type = String(payloadEvent.type || "");
-      if (
-        type === "user_message" ||
-        type === "step" ||
-        type === "token" ||
-        type === "route" ||
-        type === "clarify" ||
-        type === "plan"
-      ) {
-        ctx.clearBootOnce();
+      const before = session.stateRef.current;
+      const { state, effects } = reduceStreamEvent(before, payloadEvent, {
+        streamErrorLabel: t("streamError"),
+        emptySummaryLabel:
+          locale === "en" ? "Here is what was put in place." : "Voici ce qui a été mis en place.",
+      });
+      session.stateRef.current = state;
+
+      if (state !== before) {
+        setStreaming(state.streaming);
+        setStreamThinking(state.thinking);
+        setStreamSteps(state.steps);
+        setStreamOps(state.ops);
+        setStreamWarnings(state.warnings);
+        setStreamEffort(state.effort);
+        setPlanTasks(state.planTasks);
+        setPlanNeedsConfirm(state.planNeedsConfirm);
+        setClarifyQuestions(state.clarify);
+        if (state.activeRunId !== before.activeRunId) setActiveRunId(state.activeRunId);
+        // The stream only ever releases the composer (clarify / plan awaiting
+        // confirmation); `busy` is otherwise owned by the callers.
+        if (before.busy && !state.busy) setBusy(false);
       }
-      if (type === "user_message" && typeof payloadEvent.run_id === "string") {
-        setActiveRunId(payloadEvent.run_id);
-        streamingRunIdRef.current = payloadEvent.run_id;
-        ignoredRunIdsRef.current.delete(payloadEvent.run_id);
-      }
-      if (type === "token") {
-        ctx.assistantRef.value += String(payloadEvent.content || "");
-        setStreaming(ctx.assistantRef.value);
-      } else if (type === "thinking") {
-        ctx.thinkingRef.value += String(payloadEvent.delta || "");
-        setStreamThinking(ctx.thinkingRef.value);
-      } else if (type === "step") {
-        const step = {
-          id: String(payloadEvent.id),
-          label: String(payloadEvent.label || ""),
-          status: String(payloadEvent.status || "running"),
-        } as AgentStep;
-        const idx = ctx.stepsSnapshot.findIndex((s) => s.id === step.id);
-        if (idx === -1) ctx.stepsSnapshot.push(step);
-        else ctx.stepsSnapshot[idx] = step;
-        setStreamSteps((prev) => {
-          const withoutBoot = prev.filter((s) => s.id !== "boot");
-          const i = withoutBoot.findIndex((s) => s.id === step.id);
-          if (i === -1) return [...withoutBoot, step];
-          const next = [...withoutBoot];
-          next[i] = step;
-          return next;
-        });
-        // Keep plan checklist in sync when dispatcher emits task:* steps.
-        if (step.id.startsWith("task:")) {
-          const tid = step.id.slice("task:".length);
-          setPlanTasks((prev) =>
-            prev.map((task) =>
-              String(task.id) === tid
-                ? { ...task, status: step.status, title: step.label || task.title }
-                : task,
-            ),
-          );
-        }
-      } else if (type === "route") {
-        ctx.effortRef.value = (payloadEvent.effort_label as string) || null;
-        setStreamEffort(ctx.effortRef.value);
-      } else if (type === "clarify") {
-        if (typeof payloadEvent.run_id === "string") setActiveRunId(payloadEvent.run_id);
-        const questions = Array.isArray(payloadEvent.questions)
-          ? (payloadEvent.questions as ClarifyQuestion[])
-          : [];
-        setClarifyQuestions(questions);
-        setPlanNeedsConfirm(false);
-        setBusy(false);
-      } else if (type === "plan") {
-        if (typeof payloadEvent.run_id === "string") setActiveRunId(payloadEvent.run_id);
-        const tasks = Array.isArray(payloadEvent.tasks)
-          ? (payloadEvent.tasks as PlanTask[])
-          : [];
-        const needs = Boolean(payloadEvent.needs_confirm);
-        const normalized = tasks.map((task, i) => ({
-          ...task,
-          id: String(task.id || `task_${i + 1}`),
-          status: task.status || "pending",
-        }));
-        // Auto-run: show first task as running immediately so the UI is not silent.
-        if (!needs && normalized.length) {
-          normalized[0] = { ...normalized[0], status: "running" };
-        }
-        setPlanTasks(normalized);
-        setPlanNeedsConfirm(needs);
-        setClarifyQuestions([]);
-        if (needs) setBusy(false);
-      } else if (type === "plan_task") {
-        const tid = String(payloadEvent.id || "");
-        const status = String(payloadEvent.status || "running");
-        const label = String(payloadEvent.label || "");
-        setPlanTasks((prev) =>
-          prev.map((task) =>
-            String(task.id) === tid
-              ? { ...task, status, title: label || task.title }
-              : task,
-          ),
-        );
-      } else if (type === "file_write") {
-        ctx.appliedRef.value = true;
-        ctx.ops.push({ op: "write", path: String(payloadEvent.path) });
-        setStreamOps([...ctx.ops]);
-        void refreshRoutes();
-        schedulePreviewRefresh();
-        if (!previewUrl && !previewBusy) void startPreview();
-      } else if (type === "file_delete") {
-        ctx.appliedRef.value = true;
-        ctx.ops.push({ op: "delete", path: String(payloadEvent.path) });
-        setStreamOps([...ctx.ops]);
-        schedulePreviewRefresh();
-      } else if (type === "preview_refresh") {
-        schedulePreviewRefresh();
-      } else if (type === "warning") {
-        // Import violations and repair warnings had no UI at all: they were
-        // emitted by the backend and silently dropped by the client.
-        const violation =
-          payloadEvent.violation && typeof payloadEvent.violation === "object"
-            ? (payloadEvent.violation as { code?: string; path?: string })
-            : null;
-        setStreamWarnings((prev) => [
-          ...prev,
-          {
-            code: violation?.code,
-            path: violation?.path,
-            message: String(payloadEvent.message || ""),
-          },
-        ]);
-      } else if (type === "error") {
-        const message = String(payloadEvent.message || t("streamError"));
-        if (message === "cancelled") {
-          setPlanTasks([]);
-          setPlanNeedsConfirm(false);
-          setActiveRunId(null);
-          return;
-        }
-        setPlanTasks((prev) => {
-          const base = Array.isArray(payloadEvent.plan)
-            ? (payloadEvent.plan as PlanTask[]).map((task, i) => ({
-                ...task,
-                id: String(task.id || `task_${i + 1}`),
-                status: task.status || "pending",
-              }))
-            : prev;
-          const updated = base.map((task) =>
-            task.status === "running" ? { ...task, status: "error" } : task,
-          );
-          const canResume = updated.some(
-            (task) => task.status === "pending" || task.status === "error",
-          );
-          setPlanNeedsConfirm(canResume);
-          return updated;
-        });
-        throw new Error(message);
-      } else if (type === "done") {
-        const summary = typeof payloadEvent.summary === "string" ? payloadEvent.summary : "";
-        const content =
-          summary.trim() ||
-          ctx.assistantRef.value.trim() ||
-          (locale === "en"
-            ? "Here is what was put in place."
-            : "Voici ce qui a été mis en place.");
-        setStreamSummary(content);
-        const finalPlan = Array.isArray(payloadEvent.plan)
-          ? (payloadEvent.plan as PlanTask[]).map((task) => ({
-              ...task,
-              status: task.status || "done",
-            }))
-          : [];
-        setPlanNeedsConfirm(false);
-        setClarifyQuestions([]);
-        setPlanTasks([]);
-        setActiveRunId(null);
-        setMessages((m) => {
-          const withoutDupUser = ctx.userPayload.trim()
-            ? m.filter(
-                (x) =>
-                  !(x.role === "user" && x.content === ctx.userPayload && x.id !== "boot-user"),
-              )
-            : m;
-          const withUser =
-            !ctx.userPayload.trim() ||
-            withoutDupUser.some((x) => x.role === "user" && x.content === ctx.userPayload)
-              ? withoutDupUser
-              : [
-                  ...withoutDupUser,
-                  { id: `local-${Date.now()}`, role: "user", content: ctx.userPayload },
-                ];
-          return [
-            ...withUser.map((x) =>
-              x.id === "boot-user" ? { ...x, id: `local-boot-${Date.now()}` } : x,
-            ),
-            {
-              id: `asst-${Date.now()}`,
-              role: "assistant",
-              content,
-              thinking_text: ctx.thinkingRef.value || null,
-              steps_json: JSON.stringify(ctx.stepsSnapshot),
-              file_ops_json: JSON.stringify(ctx.ops),
-              plan_json: finalPlan.length ? JSON.stringify(finalPlan) : null,
-              effort_label: ctx.effortRef.value || (payloadEvent.effort_label as string) || null,
-            },
-          ];
-        });
-        setStreaming("");
-        setStreamThinking("");
-        setStreamSteps([]);
-        setStreamOps([]);
-    setStreamWarnings([]);
-        setStreamEffort(null);
-        setStreamSummary("");
-        const appliedList = Array.isArray(payloadEvent.applied)
-          ? (payloadEvent.applied as unknown[])
-          : [];
-        if (ctx.appliedRef.value || appliedList.length) {
-          void forcePreviewRefresh({ restart: true });
-          setMainMode("preview");
-          setMobilePane("workspace");
-          setPreviewTool(null);
-          syncBuilderUrl({ mainMode: "preview", mobilePane: "workspace", previewTool: null });
+
+      let failure: string | null = null;
+
+      for (const effect of effects) {
+        switch (effect.kind) {
+          case "clear-boot":
+            session.clearBootOnce();
+            break;
+          case "run-started":
+            streamingRunIdRef.current = effect.runId;
+            ignoredRunIdsRef.current.delete(effect.runId);
+            break;
+          case "refresh-routes":
+            void refreshRoutes();
+            break;
+          case "schedule-preview-refresh":
+            schedulePreviewRefresh();
+            break;
+          case "ensure-preview-started":
+            if (!previewUrl && !previewBusy) void startPreview();
+            break;
+          case "cancelled":
+            break;
+          case "error":
+            failure = effect.message;
+            break;
+          case "finalize": {
+            const { content, plan, thinking, steps, ops, effort, applied } = effect.payload;
+            setStreamSummary(content);
+            setMessages((m) => {
+              const withoutDupUser = session.userPayload.trim()
+                ? m.filter(
+                    (x) =>
+                      !(
+                        x.role === "user" &&
+                        x.content === session.userPayload &&
+                        x.id !== "boot-user"
+                      ),
+                  )
+                : m;
+              const withUser =
+                !session.userPayload.trim() ||
+                withoutDupUser.some((x) => x.role === "user" && x.content === session.userPayload)
+                  ? withoutDupUser
+                  : [
+                      ...withoutDupUser,
+                      { id: `local-${Date.now()}`, role: "user", content: session.userPayload },
+                    ];
+              return [
+                ...withUser.map((x) =>
+                  x.id === "boot-user" ? { ...x, id: `local-boot-${Date.now()}` } : x,
+                ),
+                {
+                  id: `asst-${Date.now()}`,
+                  role: "assistant",
+                  content,
+                  thinking_text: thinking || null,
+                  steps_json: JSON.stringify(steps),
+                  file_ops_json: JSON.stringify(ops),
+                  plan_json: plan.length ? JSON.stringify(plan) : null,
+                  effort_label: effort,
+                },
+              ];
+            });
+            setStreamSummary("");
+            if (applied) {
+              void forcePreviewRefresh({ restart: true });
+              setMainMode("preview");
+              setMobilePane("workspace");
+              setPreviewTool(null);
+              syncBuilderUrl({
+                mainMode: "preview",
+                mobilePane: "workspace",
+                previewTool: null,
+              });
+            }
+            break;
+          }
         }
       }
+
+      // Thrown after the state sync so the plan checklist shows the failure,
+      // then caught by the caller which renders the retryable error bubble.
+      if (failure) throw new Error(failure);
     },
-    [forcePreviewRefresh, locale, previewBusy, previewUrl, schedulePreviewRefresh, startPreview, syncBuilderUrl, t],
+    [
+      forcePreviewRefresh,
+      locale,
+      previewBusy,
+      previewUrl,
+      refreshRoutes,
+      schedulePreviewRefresh,
+      startPreview,
+      syncBuilderUrl,
+      t,
+    ],
   );
 
   const subscribeRunEvents = useCallback(
@@ -1162,12 +1044,14 @@ export default function ProjectPage() {
         if (!res.ok || !res.body) {
           throw new Error(res.statusText || t("streamError"));
         }
-        const assistantRef = { value: "" };
-        const thinkingRef = { value: "" };
-        const effortRef = { value: streamEffort };
-        const appliedRef = { value: false };
-        const ops: FileOp[] = [...streamOps];
-        const stepsSnapshot: AgentStep[] = [...streamSteps];
+        const stateRef = {
+          current: {
+            ...initialStreamState(),
+            steps: [...streamSteps],
+            ops: [...streamOps],
+            effort: streamEffort,
+          },
+        };
         await readSseStream(res, async (payloadEvent) => {
           if (
             String(payloadEvent.type || "") === "error" &&
@@ -1178,12 +1062,7 @@ export default function ProjectPage() {
             return;
           }
           handleStreamEvent(payloadEvent, {
-            assistantRef,
-            thinkingRef,
-            ops,
-            stepsSnapshot,
-            effortRef,
-            appliedRef,
+            stateRef,
             userPayload: "",
             clearBootOnce: () => undefined,
           });
@@ -1480,12 +1359,7 @@ export default function ProjectPage() {
           throw new Error(detail || res.statusText);
         }
 
-        const assistantRef = { value: "" };
-        const thinkingRef = { value: "" };
-        const effortRef = { value: null as string | null };
-        const appliedRef = { value: false };
-        const ops: FileOp[] = [];
-        const stepsSnapshot: AgentStep[] = [];
+        const stateRef = { current: initialStreamState() };
         let bootCleared = false;
         const clearBootOnce = () => {
           if (bootCleared || !opts.bootKey) return;
@@ -1496,12 +1370,7 @@ export default function ProjectPage() {
 
         await readSseStream(res, async (payloadEvent) => {
           handleStreamEvent(payloadEvent, {
-            assistantRef,
-            thinkingRef,
-            ops,
-            stepsSnapshot,
-            effortRef,
-            appliedRef,
+            stateRef,
             userPayload: payload,
             clearBootOnce,
           });
@@ -1563,20 +1432,17 @@ export default function ProjectPage() {
         if (!res.ok || !res.body) {
           throw new Error(res.statusText);
         }
-        const assistantRef = { value: "" };
-        const thinkingRef = { value: "" };
-        const effortRef = { value: streamEffort };
-        const appliedRef = { value: false };
-        const ops: FileOp[] = [...streamOps];
-        const stepsSnapshot: AgentStep[] = [...streamSteps];
+        const stateRef = {
+          current: {
+            ...initialStreamState(),
+            steps: [...streamSteps],
+            ops: [...streamOps],
+            effort: streamEffort,
+          },
+        };
         await readSseStream(res, async (payloadEvent) => {
           handleStreamEvent(payloadEvent, {
-            assistantRef,
-            thinkingRef,
-            ops,
-            stepsSnapshot,
-            effortRef,
-            appliedRef,
+            stateRef,
             userPayload: "",
             clearBootOnce: () => undefined,
           });
@@ -1647,20 +1513,16 @@ export default function ProjectPage() {
         }
         throw new Error(detail);
       }
-      const assistantRef = { value: "" };
-      const thinkingRef = { value: "" };
-      const effortRef = { value: streamEffort };
-      const appliedRef = { value: false };
-      const ops: FileOp[] = [];
-      const stepsSnapshot: AgentStep[] = [...streamSteps];
+      const stateRef = {
+          current: {
+            ...initialStreamState(),
+            steps: [...streamSteps],
+            effort: streamEffort,
+          },
+        };
       await readSseStream(res, async (payloadEvent) => {
         handleStreamEvent(payloadEvent, {
-          assistantRef,
-          thinkingRef,
-          ops,
-          stepsSnapshot,
-          effortRef,
-          appliedRef,
+          stateRef,
           userPayload: "",
           clearBootOnce: () => undefined,
         });
