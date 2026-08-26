@@ -1,0 +1,47 @@
+line-length = 110
+target-version = "py312"
+src = ["."]
+exclude = [".venv", "runtime", "__pycache__"]
+
+[lint]
+# Explicit select: ruff's defaults drift between releases, and a CI gate must be
+# deterministic across versions.
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # import sorting
+    "UP",   # pyupgrade
+    "B",    # bugbear
+    "SIM",  # simplify
+    "DTZ",  # naive datetimes
+    "PIE",
+    "RUF",
+]
+
+ignore = [
+    # FastAPI's whole DI model is `x = Depends(...)` in the signature.
+    "B008",
+    # Long strings are mostly LLM prompts; wrapping them hurts readability.
+    "E501",
+    # The product is bilingual FR/EN: accented and typographic characters in
+    # user-facing strings are intentional, not homoglyph mistakes.
+    "RUF001",
+    "RUF002",
+    "RUF003",
+    # `async with client(...) as c:` then `async with c.stream(...)` reads better
+    # nested than flattened, because the inner context depends on the outer.
+    "SIM117",
+]
+
+[lint.per-file-ignores]
+# Prompt modules are prose, not code.
+"app/prompts/*.py" = ["E501", "W291", "W293"]
+"app/i18n.py" = ["E501"]
+
+[lint.isort]
+known-first-party = ["app"]
+
+[format]
+quote-style = "double"
+indent-style = "space"

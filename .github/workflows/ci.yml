@@ -1,0 +1,112 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "refonte/**"]
+  pull_request:
+    branches: [main]
+
+# A new push on the same branch cancels the previous run.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    name: API (lint + import)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: apps/api/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install ruff==0.16.4
+
+      - name: Ruff lint
+        run: ruff check app
+
+      - name: Ruff format check
+        run: ruff format --check app
+
+      - name: Import the app
+        # Catches broken imports and router wiring without needing a database:
+        # FastAPI builds the whole route table at import time.
+        env:
+          ENVIRONMENT: test
+        run: python -c "import app.main as m; print(f'{len(m.app.routes)} routes')"
+
+  web:
+    name: Web (lint + typecheck + build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: TypeScript
+        run: npm run typecheck
+
+      - name: Build
+        env:
+          DOCKER_BUILD: "1"
+          FORGE_FONT_MODE: fallback
+          NEXT_PUBLIC_API_URL: http://localhost:8100
+        run: npm run build
+
+  runtime:
+    name: Runtime manifest (Python/JS parity)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Runtime unit tests
+        working-directory: apps/api/runtime
+        run: |
+          npm ci
+          npm test --if-present
+
+      - name: Import map and AST allowlist must agree
+        # These two derive from runtime/packages.json. If they ever drift again,
+        # a package can pass validation at write time and still fail to resolve
+        # in the browser (IMPORT_NOT_IN_MANIFEST on valid code).
+        run: python scripts/check_manifest_parity.py
+
+  compose:
+    name: Docker compose
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate compose file
+        run: docker compose config --quiet
