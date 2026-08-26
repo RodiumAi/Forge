@@ -259,6 +259,8 @@ export default function ProjectPage() {
   const [streamSummary, setStreamSummary] = useState("");
   const [showJumpToBottom, setShowJumpToBottom] = useState(false);
   const [codeOpenPath, setCodeOpenPath] = useState<string | null>(null);
+  const [filesRevision, setFilesRevision] = useState(0);
+  const codeDirtyRef = useRef(false);
   const [dragActive, setDragActive] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const dragDepth = useRef(0);
@@ -674,6 +676,9 @@ export default function ProjectPage() {
       const rev = typeof live?.rev === "number" ? live.rev : -1;
       if (rev < 0 || rev === lastRev) return;
       lastRev = rev;
+      // Also refresh the code editor's file tree, which used to stay frozen on
+      // its mount-time snapshot while the agent created/deleted files.
+      setFilesRevision(rev);
       void refreshRoutes();
       void forcePreviewRefresh({ softStart: true, remount: true });
     });
@@ -1830,6 +1835,11 @@ export default function ProjectPage() {
         }
         mainMode={mainMode}
         onModeChange={(mode) => {
+          // Leaving the code view unmounts CodePane; without this guard the
+          // unsaved buffer was dropped with no warning at all.
+          if (mainMode === "code" && mode !== "code" && codeDirtyRef.current) {
+            if (!window.confirm(t("codeUnsavedConfirm"))) return;
+          }
           setMainMode(mode);
           setMobilePane("workspace");
           const nextTool = mode !== "preview" ? null : previewTool;
@@ -2315,6 +2325,10 @@ export default function ProjectPage() {
           <CodePane
             projectId={projectId}
             openPath={codeOpenPath}
+            filesRevision={filesRevision}
+            onDirtyChange={(d) => {
+              codeDirtyRef.current = d;
+            }}
             onSaved={() => {
               void refreshRoutes();
               void forcePreviewRefresh({ restart: true });

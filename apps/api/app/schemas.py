@@ -275,6 +275,8 @@ class FileNode(BaseModel):
 class FileContent(BaseModel):
     path: str
     content: str
+    # Optimistic-concurrency token (short content hash).
+    version: str = ""
 
 
 class PreviewStatus(BaseModel):

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import os
 import tempfile
 from pathlib import Path
@@ -84,11 +85,32 @@ def delete_file(project_id: str, relative: str) -> None:
         pass
 
 
+class BinaryFileError(ValueError):
+    """The file exists but is not UTF-8 text (image, font, archive...)."""
+
+
 def read_file(project_id: str, relative: str) -> str:
     path = safe_resolve(project_id, relative)
     if not path.is_file():
         raise FileNotFoundError(relative)
-    return path.read_text(encoding="utf-8")
+    try:
+        return path.read_text(encoding="utf-8")
+    except UnicodeDecodeError as exc:
+        # Opening a PNG from the file tree used to bubble up as a raw 500.
+        raise BinaryFileError(relative) from exc
+
+
+def content_version(project_id: str, relative: str) -> str:
+    """Short content hash, used as an optimistic-concurrency token.
+
+    The editor sends back the version it loaded; a mismatch means the agent (or
+    another tab) rewrote the file meanwhile, and the save is refused instead of
+    silently discarding that work.
+    """
+    path = safe_resolve(project_id, relative)
+    if not path.is_file():
+        return ""
+    return hashlib.sha256(path.read_bytes()).hexdigest()[:16]
 
 
 def list_files(project_id: str) -> dict[str, str]:
