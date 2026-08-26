@@ -12,6 +12,8 @@ import type { FileNode } from "./types";
 type Props = {
   projectId: string;
   onSaved?: (path: string) => void;
+  /** File to open on mount / when it changes (deep-link from the chat). */
+  openPath?: string | null;
 };
 
 function TreeItem({
@@ -74,7 +76,7 @@ function TreeItem({
   );
 }
 
-export function CodePane({ projectId, onSaved }: Props) {
+export function CodePane({ projectId, onSaved, openPath }: Props) {
   const { t } = useI18n();
   const [tree, setTree] = useState<FileNode[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
@@ -102,6 +104,15 @@ export function CodePane({ projectId, onSaved }: Props) {
   useEffect(() => {
     void loadTree();
   }, [loadTree]);
+
+  // Deep-link: clicking a file op in the chat opens it here.
+  const openPathRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!openPath || openPath === openPathRef.current) return;
+    openPathRef.current = openPath;
+    void openFile(openPath);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openPath]);
 
   async function openFile(path: string) {
     if (dirty && selected && !window.confirm(t("codeUnsavedConfirm"))) {

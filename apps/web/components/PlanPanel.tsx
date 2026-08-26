@@ -79,8 +79,15 @@ export function PlanPanel({
         </span>
       </div>
 
-      <div className="plan-progress" aria-hidden={!isExecuting && !doneCount}>
-        <div className="plan-progress-track">
+      <div className="plan-progress">
+        <div
+          className="plan-progress-track"
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={total}
+          aria-valuenow={doneCount}
+          aria-valuetext={`${doneCount}/${total}`}
+        >
           <div
             className={`plan-progress-fill${isExecuting ? " pulse" : ""}`}
             style={{ width: `${isExecuting && progress === 0 ? 8 : progress}%` }}

@@ -26,6 +26,7 @@ import { useI18n } from "@/lib/i18n/I18nProvider";
 import {
   AgentActivityPanel,
   type AgentStep,
+  type AgentWarning,
   type FileOp,
 } from "@/components/AgentActivityPanel";
 import { ClarifyCard, type ClarifyQuestion } from "@/components/ClarifyCard";
@@ -251,9 +252,11 @@ export default function ProjectPage() {
     initialBoot ? [{ id: "boot", label: "…", status: "running" }] : [],
   );
   const [streamOps, setStreamOps] = useState<FileOp[]>([]);
+  const [streamWarnings, setStreamWarnings] = useState<AgentWarning[]>([]);
   const [streamEffort, setStreamEffort] = useState<string | null>(null);
   const [streamSummary, setStreamSummary] = useState("");
   const [showJumpToBottom, setShowJumpToBottom] = useState(false);
+  const [codeOpenPath, setCodeOpenPath] = useState<string | null>(null);
   const [hasUnread, setHasUnread] = useState(false);
   const [busy, setBusy] = useState(() => Boolean(initialBoot));
   const [loading, setLoading] = useState(true);
@@ -788,6 +791,17 @@ export default function ProjectPage() {
     container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
   }, []);
 
+  /** Open a file touched by the agent in the code editor. */
+  const openFileInEditor = useCallback(
+    (path: string) => {
+      setCodeOpenPath(path);
+      setMainMode("code");
+      setMobilePane("workspace");
+      syncBuilderUrl({ mainMode: "code", mobilePane: "workspace" });
+    },
+    [syncBuilderUrl],
+  );
+
   // New user message → pin back to bottom so the reply is visible.
   useEffect(() => {
     const last = messages[messages.length - 1];
@@ -964,6 +978,23 @@ export default function ProjectPage() {
         ctx.ops.push({ op: "delete", path: String(payloadEvent.path) });
         setStreamOps([...ctx.ops]);
         schedulePreviewRefresh();
+      } else if (type === "preview_refresh") {
+        schedulePreviewRefresh();
+      } else if (type === "warning") {
+        // Import violations and repair warnings had no UI at all: they were
+        // emitted by the backend and silently dropped by the client.
+        const violation =
+          payloadEvent.violation && typeof payloadEvent.violation === "object"
+            ? (payloadEvent.violation as { code?: string; path?: string })
+            : null;
+        setStreamWarnings((prev) => [
+          ...prev,
+          {
+            code: violation?.code,
+            path: violation?.path,
+            message: String(payloadEvent.message || ""),
+          },
+        ]);
       } else if (type === "error") {
         const message = String(payloadEvent.message || t("streamError"));
         if (message === "cancelled") {
@@ -1044,6 +1075,7 @@ export default function ProjectPage() {
         setStreamThinking("");
         setStreamSteps([]);
         setStreamOps([]);
+    setStreamWarnings([]);
         setStreamEffort(null);
         setStreamSummary("");
         const appliedList = Array.isArray(payloadEvent.applied)
@@ -1222,6 +1254,7 @@ export default function ProjectPage() {
     setStreamThinking("");
     setStreamSteps([]);
     setStreamOps([]);
+    setStreamWarnings([]);
     setStreamEffort(null);
     setPlanTasks((prev) =>
       prev.map((task) => (task.status === "running" ? { ...task, status: "pending" } : task)),
@@ -1310,6 +1343,7 @@ export default function ProjectPage() {
           : [],
       );
       setStreamOps([]);
+    setStreamWarnings([]);
       setStreamEffort(null);
       setMessages((m) => {
         if (isBranch) {
@@ -1445,6 +1479,7 @@ export default function ProjectPage() {
         setStreamThinking("");
         setStreamSteps([]);
         setStreamOps([]);
+    setStreamWarnings([]);
         setStreamEffort(null);
         setClarifyQuestions([]);
       } finally {
@@ -1893,6 +1928,7 @@ export default function ProjectPage() {
                       thinking={m.thinking_text || ""}
                       fileOps={ops}
                       effortLabel={m.effort_label}
+                      onOpenFile={openFileInEditor}
                     />
                   )}
                   {m.role === "assistant" && msgPlan.length > 0 ? (
@@ -1934,8 +1970,11 @@ export default function ProjectPage() {
                   steps={streamSteps}
                   thinking={streamThinking}
                   fileOps={streamOps}
+                  warnings={streamWarnings}
                   effortLabel={streamEffort}
                   streaming={busy && !awaitingHitl}
+                  live
+                  onOpenFile={openFileInEditor}
                 />
                 {planTasks.length > 0 && (
                   <PlanPanel
@@ -2199,6 +2238,7 @@ export default function ProjectPage() {
           <ErrorBoundary label="Code editor" resetKey={projectId}>
           <CodePane
             projectId={projectId}
+            openPath={codeOpenPath}
             onSaved={() => {
               void refreshRoutes();
               void forcePreviewRefresh({ restart: true });

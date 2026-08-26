@@ -129,6 +129,11 @@ export const dictionaries = {
     errorGeneric: "Error",
     chatLogLabel: "Conversation",
     chatJumpToLatest: "Jump to latest",
+    agentStepsSummary: "{n} steps · {d}",
+    agentStepsSummaryError: "{n} failed",
+    fileOpOpen: "Open in editor",
+    fileOpsMore: "+{n} more",
+    fileOpsLess: "Show less",
     errorBoundaryTitle: "Something went wrong",
     errorBoundaryBody:
       "This page hit an unexpected error. Your project files are safe — every change is checkpointed.",
@@ -574,6 +579,11 @@ export const dictionaries = {
     errorGeneric: "Erreur",
     chatLogLabel: "Conversation",
     chatJumpToLatest: "Revenir en bas",
+    agentStepsSummary: "{n} étapes · {d}",
+    agentStepsSummaryError: "{n} en échec",
+    fileOpOpen: "Ouvrir dans l'éditeur",
+    fileOpsMore: "+{n} autres",
+    fileOpsLess: "Réduire",
     errorBoundaryTitle: "Une erreur est survenue",
     errorBoundaryBody:
       "Cette page a rencontré une erreur inattendue. Vos fichiers sont intacts — chaque modification est sauvegardée en checkpoint.",
