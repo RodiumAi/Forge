@@ -30,6 +30,7 @@ import {
 } from "@/components/AgentActivityPanel";
 import { ClarifyCard, type ClarifyQuestion } from "@/components/ClarifyCard";
 import { DesignCharterSlideover } from "@/components/DesignCharterSlideover";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { GenerationCollapse } from "@/components/GenerationCollapse";
 import { PlanPanel, type PlanTask } from "@/components/PlanPanel";
 import { PromptFileChips } from "@/components/PromptFileChips";
@@ -2110,6 +2111,7 @@ export default function ProjectPage() {
         </aside>
 
         {mainMode === "preview" && (
+          <ErrorBoundary label="Preview" resetKey={previewKey}>
           <PreviewPane
             previewSrc={previewSrc}
             previewPath={previewPath}
@@ -2184,8 +2186,10 @@ export default function ProjectPage() {
               ) : null
             }
           />
+          </ErrorBoundary>
         )}
         {mainMode === "code" && (
+          <ErrorBoundary label="Code editor" resetKey={projectId}>
           <CodePane
             projectId={projectId}
             onSaved={() => {
@@ -2193,8 +2197,10 @@ export default function ProjectPage() {
               void forcePreviewRefresh({ restart: true });
             }}
           />
+          </ErrorBoundary>
         )}
         {mainMode === "files" && (
+          <ErrorBoundary label="Files" resetKey={projectId}>
           <FilesPane
             projectId={projectId}
             onChanged={() => {
@@ -2202,8 +2208,10 @@ export default function ProjectPage() {
               void forcePreviewRefresh({ restart: true });
             }}
           />
+          </ErrorBoundary>
         )}
         {mainMode === "options" && (
+          <ErrorBoundary label="Options" resetKey={optionsSection}>
           <OptionsPane
             projectId={projectId}
             projectName={project?.name || ""}
@@ -2232,6 +2240,7 @@ export default function ProjectPage() {
               syncBuilderUrl({ designOpen: true });
             }}
           />
+          </ErrorBoundary>
         )}
       </div>
 
