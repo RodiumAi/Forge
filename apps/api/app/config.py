@@ -95,20 +95,6 @@ class Settings(BaseSettings):
     site_jwt_master_secret: str | None = "ZGV2LWp3dC1tYXN0ZXItc2VjcmV0LWNoYW5nZS1tZQ=="
     site_jwt_master_secret_previous: str | None = None
 
-    # Email (Mailpit local / SES or Resend in production)
-    mail_provider: Literal["smtp", "ses", "resend"] = "smtp"
-    smtp_host: str | None = "127.0.0.1"
-    smtp_port: int = 11025
-    smtp_user: str | None = None
-    smtp_password: str | None = None
-    smtp_tls: bool = False
-    mail_from: str = "no-reply@sites.rodiumai.local"
-    mail_transport: str = "smtp"
-    ses_region: str = "eu-west-1"
-    ses_from_email: str = "forge@rodiumai.io"
-    ses_from_name: str = "Forge"
-    resend_api_key: str = ""
-
     # Queue (Valkey / Redis Streams — same impl local and prod)
     queue_provider: Literal["redis"] = "redis"
     redis_url: str = "redis://127.0.0.1:6380/0"
@@ -130,7 +116,6 @@ class Settings(BaseSettings):
     # Path to service account JSON for production; unused when emulator env is set.
     google_application_credentials: str = ""
 
-    managed_email_daily_limit: int = 25
     managed_storage_bytes_limit: int = 500 * 1024 * 1024
 
     @property
@@ -206,6 +191,9 @@ class Settings(BaseSettings):
         return self._rodium_oidc_server_base + "/api/v1/oauth/revoke"
 
 
+_DEV_SECRET_KEYS = {"dev-secret-change-me", "dev-secret-forge-web", "", None}
+
+
 @lru_cache
 def get_settings() -> Settings:
     s = Settings()
@@ -213,11 +201,17 @@ def get_settings() -> Settings:
     if s.environment == "production":
         assert s.key_provider == "kms", "KEY_PROVIDER doit être kms en production"
         assert s.secret_provider == "aws_secrets_manager", "SECRET_PROVIDER invalide en production"
-        assert s.mail_provider != "smtp", "SMTP interdit en production"
         assert s.dev_master_key is None, "DEV_MASTER_KEY doit être absente en production"
         assert not s.object_store_endpoint or "minio" not in (s.object_store_endpoint or ""), (
             "OBJECT_STORE_ENDPOINT MinIO interdit en production"
         )
+        # Le JWT de session ne doit jamais être signé avec une clé de développement.
+        assert s.secret_key not in _DEV_SECRET_KEYS, "SECRET_KEY de développement interdite en production"
+        assert len(s.secret_key) >= 32, "SECRET_KEY doit faire au moins 32 caractères en production"
+        # ENCRYPTION_KEY doit être distincte : sinon compromettre le JWT compromet
+        # aussi les clés API RodiumAi et les refresh tokens chiffrés au repos.
+        assert s.encryption_key, "ENCRYPTION_KEY est obligatoire en production"
+        assert s.encryption_key != s.secret_key, "ENCRYPTION_KEY doit différer de SECRET_KEY"
     return s
 
 

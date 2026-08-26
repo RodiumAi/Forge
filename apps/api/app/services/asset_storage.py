@@ -10,7 +10,7 @@ from app.config import get_settings
 from app.errors import provider_not_configured
 from app.models import Project, StoredObject, User
 from app.services import s3 as s3_service
-from app.services.capabilities import assert_managed_storage_quota, storage_provider
+from app.services.capabilities import assert_managed_storage_quota
 
 
 def asset_display_name(object_key: str) -> str:
@@ -36,10 +36,7 @@ def upload_project_asset(
             "Object store (S3/MinIO). Start MinIO or configure OBJECT_STORE_* / AWS_* env vars."
         )
 
-    adapter, _creds = storage_provider(db, user)
-    if adapter != "cloudinary":
-        assert_managed_storage_quota(db, user, len(body))
-        adapter = "s3"
+    assert_managed_storage_quota(db, user, len(body))
 
     safe_name = (filename or "image.png").replace("\\", "/").split("/")[-1]
     object_key = s3_service.build_object_key(
@@ -55,7 +52,7 @@ def upload_project_asset(
         content_type=content_type,
         byte_size=len(body),
         public_url=public_url,
-        adapter=adapter,
+        adapter="s3",
     )
     db.add(row)
     db.commit()

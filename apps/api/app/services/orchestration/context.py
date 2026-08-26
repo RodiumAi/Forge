@@ -7,7 +7,7 @@ from typing import Any
 
 from app.prompts.system import THEME_QUALITY_HINT, system_prompt_with_design
 from app.services.attachments import enrich_user_message_with_vision
-from app.services.connector_recipes import format_prototype_plugins_layer
+from app.services.prototype_mode import format_prototype_plugins_layer
 from app.services.filesystem import list_files, read_file
 from app.services.ai_rules import ensure_ai_rules_md, load_ai_rules_md
 
@@ -259,8 +259,8 @@ async def build_llm_messages(
     selected = select_files(user_query, files, k=4)
     layer3 = _selected_file_blocks(files, selected)
 
-    # Prototype mode: UI plugins only — no backend connector recipes.
-    plugins_connectors_layer = format_prototype_plugins_layer(locale=locale)
+    # Prototype mode: UI plugins only — frontend-only platform, no backend wiring.
+    prototype_layer = format_prototype_plugins_layer(locale=locale)
 
     # Always strip forge-write bodies — recent turns used to send 100k+ chars and break the stream.
     early = history[:-6]
@@ -271,7 +271,7 @@ async def build_llm_messages(
 
     messages: list[dict[str, Any]] = [
         {"role": "system", "content": layer1},
-        {"role": "system", "content": plugins_connectors_layer},
+        {"role": "system", "content": prototype_layer},
         {"role": "system", "content": layer2},
         {"role": "system", "content": layer3},
     ]

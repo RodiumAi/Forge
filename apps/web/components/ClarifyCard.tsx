@@ -8,8 +8,6 @@ export type ClarifyQuestion = {
   id: string;
   prompt: string;
   options: ClarifyOption[];
-  connector_id?: string;
-  href?: string;
 };
 
 type Props = {
@@ -59,13 +57,6 @@ export function ClarifyCard({ questions, busy = false, onSubmit }: Props) {
         {questions.map((q) => (
           <fieldset key={q.id} className="clarify-question" disabled={busy}>
             <legend>{formatInlineMarkdown(q.prompt)}</legend>
-            {q.href ? (
-              <p className="clarify-connector-link">
-                <a href={q.href} target="_blank" rel="noreferrer">
-                  {t("connectorsOpenSettings")}
-                </a>
-              </p>
-            ) : null}
             <div className="clarify-options">
               {q.options.map((opt) => {
                 const selected = answers[q.id] === opt.id;
@@ -76,9 +67,6 @@ export function ClarifyCard({ questions, busy = false, onSubmit }: Props) {
                     className={`clarify-option${selected ? " selected" : ""}`}
                     onClick={() => {
                       setAnswers((prev) => ({ ...prev, [q.id]: opt.id }));
-                      if (opt.id === "goto" && q.href) {
-                        window.open(q.href, "_blank", "noopener,noreferrer");
-                      }
                     }}
                   >
                     {formatInlineMarkdown(opt.label)}

@@ -63,17 +63,6 @@ services:
       timeout: 3s
       retries: 12
 
-  mailpit:
-    image: axllent/mailpit:v1.22
-    container_name: forge-web-mailpit
-    environment:
-      MP_SMTP_AUTH_ACCEPT_ANY: "1"
-      MP_SMTP_AUTH_ALLOW_INSECURE: "1"
-      MP_MAX_MESSAGES: "5000"
-    ports:
-      - "${FORGE_WEB_MAILPIT_SMTP_PORT:-11025}:1025"
-      - "${FORGE_WEB_MAILPIT_UI_PORT:-18025}:8025"
-
   api:
     build:
       context: ./apps/api
@@ -95,8 +84,6 @@ services:
       OBJECT_STORE_ACCESS_KEY: ${MINIO_ROOT_USER:-rodiumdev}
       OBJECT_STORE_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-rodiumdev123}
       OBJECT_STORE_ADDRESSING: path
-      SMTP_HOST: mailpit
-      SMTP_PORT: "1025"
       REDIS_URL: redis://valkey:6379/0
       API_BASE_URL: http://localhost:8100
       TEMPLATES_ROOT: /data/templates
@@ -124,8 +111,6 @@ services:
         condition: service_healthy
       minio-init:
         condition: service_completed_successfully
-      mailpit:
-        condition: service_started
       build-worker:
         condition: service_started
 

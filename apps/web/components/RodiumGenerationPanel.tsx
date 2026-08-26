@@ -29,13 +29,14 @@ type RodiumAccount = {
   generation_key_hint?: string | null;
 };
 
-type ConnectorTestResult = {
+type RodiumTestResult = {
   ok: boolean;
   message: string;
 };
 
-type ConnectorSnapshot = {
+type RodiumKeyStatus = {
   configured: boolean;
+  managed: boolean;
   supports_test: boolean;
   credentials_hint: string | null;
 };
@@ -46,7 +47,7 @@ type ConnectorSnapshot = {
 export function RodiumGenerationPanel() {
   const { t, locale } = useI18n();
   const [account, setAccount] = useState<RodiumAccount | null>(null);
-  const [connector, setConnector] = useState<ConnectorSnapshot | null>(null);
+  const [keyStatus, setKeyStatus] = useState<RodiumKeyStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedKeyId, setSelectedKeyId] = useState("");
   const [selectingKey, setSelectingKey] = useState(false);
@@ -68,15 +69,11 @@ export function RodiumGenerationPanel() {
       try {
         const [rodium, item] = await Promise.all([
           api<RodiumAccount>("/auth/rodium/account"),
-          api<{
-            configured: boolean;
-            supports_test: boolean;
-            credentials_hint: string | null;
-          }>("/connectors/rodiumai", {}, locale),
+          api<RodiumKeyStatus>("/settings/rodium", {}, locale),
         ]);
         if (cancelled) return;
         setAccount(rodium);
-        setConnector(item);
+        setKeyStatus(item);
         patchSessionCache({
           rodium: { linked: Boolean(rodium.linked), wallet: rodium.wallet ?? null },
           profile: {
@@ -115,17 +112,17 @@ export function RodiumGenerationPanel() {
   const canSelectKey = Boolean(selectedKeyId) && !selectingKey;
   const canSavePaste = Boolean(apiKeyPaste.trim()) && !saving;
   const canTest = Boolean(
-    connector?.supports_test &&
-      (apiKeyPaste.trim() || connector.configured || account?.has_generation_key),
+    keyStatus?.supports_test &&
+      (apiKeyPaste.trim() || keyStatus.configured || account?.has_generation_key),
   );
 
-  async function refreshAccountAndConnector() {
+  async function refreshAccountAndKey() {
     const [rodium, item] = await Promise.all([
       api<RodiumAccount>("/auth/rodium/account"),
-      api<ConnectorSnapshot>("/connectors/rodiumai", {}, locale),
+      api<RodiumKeyStatus>("/settings/rodium", {}, locale),
     ]);
     setAccount(rodium);
-    setConnector(item);
+    setKeyStatus(item);
     patchSessionCache({
       rodium: { linked: Boolean(rodium.linked), wallet: rodium.wallet ?? null },
       profile: {
@@ -151,9 +148,9 @@ export function RodiumGenerationPanel() {
         method: "POST",
         body: JSON.stringify({ api_key_id: selectedKeyId }),
       });
-      await refreshAccountAndConnector();
+      await refreshAccountAndKey();
       setSelectedKeyId(result.selected_api_key_id || selectedKeyId);
-      setMessage(t("connectorKeyLinked"));
+      setMessage(t("rodiumKeyLinked"));
     } catch (err) {
       setError(err instanceof Error ? err.message : t("errorGeneric"));
     } finally {
@@ -171,12 +168,12 @@ export function RodiumGenerationPanel() {
     setTestMessage(null);
     setTestOk(null);
     try {
-      await api("/connectors/rodiumai", {
+      await api("/settings/rodium", {
         method: "PUT",
-        body: JSON.stringify({ credentials: { api_key: key } }),
+        body: JSON.stringify({ api_key: key }),
       });
       setApiKeyPaste("");
-      await refreshAccountAndConnector();
+      await refreshAccountAndKey();
       setMessage(t("saved"));
     } catch (err) {
       setError(err instanceof Error ? err.message : t("errorGeneric"));
@@ -186,18 +183,16 @@ export function RodiumGenerationPanel() {
   }
 
   async function onTest() {
-    if (!connector?.supports_test) return;
+    if (!keyStatus?.supports_test) return;
     setTesting(true);
     setError(null);
     setTestMessage(null);
     setTestOk(null);
     try {
-      const credentials: Record<string, string> = {};
       const apiKey = apiKeyPaste.trim();
-      if (apiKey) credentials.api_key = apiKey;
-      const result = await api<ConnectorTestResult>("/connectors/rodiumai/test", {
+      const result = await api<RodiumTestResult>("/settings/rodium/test", {
         method: "POST",
-        body: JSON.stringify({ credentials }),
+        body: JSON.stringify(apiKey ? { rodium_api_key: apiKey } : {}),
       });
       setTestOk(result.ok);
       setTestMessage(result.message);
@@ -215,15 +210,15 @@ export function RodiumGenerationPanel() {
 
   return (
     <>
-      <SettingsBlock title={t("connectorAccountTitle")} subtitle={t("connectorManagedHelp")}>
+      <SettingsBlock title={t("rodiumAccountTitle")} subtitle={t("rodiumManagedHelp")}>
         <SettingsRow title={t("settingsRodiumStatus")}>
           <span className={`home-settings-badge ${account?.linked ? "ok" : "warn"}`}>
-            {account?.linked ? t("connectorManaged") : t("connectorNotConfigured")}
+            {account?.linked ? t("rodiumManaged") : t("rodiumNotConfigured")}
             {account?.email ? ` · ${account.email}` : ""}
           </span>
         </SettingsRow>
         {(account?.name || account?.email) && (
-          <SettingsRow title={t("connectorAccountTitle")}>
+          <SettingsRow title={t("rodiumAccountTitle")}>
             <div className="home-connector-meta">
               {account?.avatar_url ? (
                 <img className="home-connector-avatar" src={account.avatar_url} alt="" />
@@ -239,7 +234,7 @@ export function RodiumGenerationPanel() {
         )}
       </SettingsBlock>
 
-      <SettingsBlock title={t("connectorWalletTitle")}>
+      <SettingsBlock title={t("rodiumWalletTitle")}>
         <SettingsRow title={t("balanceRodi")}>
           <span className="settings-value">{account?.wallet?.balance_rodi ?? "—"}</span>
         </SettingsRow>
@@ -248,7 +243,7 @@ export function RodiumGenerationPanel() {
         </SettingsRow>
       </SettingsBlock>
 
-      <SettingsBlock title={t("connectorKeysTitle")} subtitle={t("connectorSelectKeyHelp")}>
+      <SettingsBlock title={t("rodiumKeysTitle")} subtitle={t("rodiumSelectKeyHelp")}>
         <SettingsRow
           title={t("settingsRodiumStatus")}
           hint={
@@ -258,31 +253,31 @@ export function RodiumGenerationPanel() {
           }
         >
           <span className={`home-settings-badge ${account?.has_generation_key ? "ok" : "warn"}`}>
-            {account?.has_generation_key ? t("connectorConfigured") : t("connectorNotConfigured")}
+            {account?.has_generation_key ? t("rodiumConfigured") : t("rodiumNotConfigured")}
           </span>
         </SettingsRow>
 
         {activeKeys.length ? (
           <form className="settings-inline-form" onSubmit={(e) => void onSelectAccountKey(e)}>
             <label className="home-settings-field">
-              <span>{t("connectorSelectKey")}</span>
+              <span>{t("rodiumSelectKey")}</span>
               <select
                 className="home-settings-input"
                 value={selectedKeyId}
                 onChange={(e) => setSelectedKeyId(e.target.value)}
               >
-                <option value="">{t("connectorSelectKeyPlaceholder")}</option>
+                <option value="">{t("rodiumSelectKeyPlaceholder")}</option>
                 {activeKeys.map((key) => (
                   <option key={key.id} value={key.id}>
                     {key.name}
                     {key.last4 ? ` (…${key.last4})` : ""}
                     {key.billing_source ? ` · ${key.billing_source}` : ""}
-                    {account?.selected_api_key_id === key.id ? ` · ${t("connectorKeyActive")}` : ""}
+                    {account?.selected_api_key_id === key.id ? ` · ${t("rodiumKeyActive")}` : ""}
                   </option>
                 ))}
               </select>
             </label>
-            <p className="home-settings-hint">{t("connectorSelectKeyRotateHint")}</p>
+            <p className="home-settings-hint">{t("rodiumSelectKeyRotateHint")}</p>
             {error && <p className="error home-settings-feedback">{error}</p>}
             {message && <p className="home-settings-success">{message}</p>}
             {testMessage && (
@@ -296,9 +291,9 @@ export function RodiumGenerationPanel() {
                 type="submit"
                 disabled={!canSelectKey}
               >
-                {selectingKey ? t("settingsSaving") : t("connectorUseSelectedKey")}
+                {selectingKey ? t("settingsSaving") : t("rodiumUseSelectedKey")}
               </button>
-              {connector?.supports_test && (
+              {keyStatus?.supports_test && (
                 <button
                   type="button"
                   className="home-settings-test"
@@ -313,18 +308,18 @@ export function RodiumGenerationPanel() {
                 className="home-settings-test"
                 onClick={() => setShowManualPaste((v) => !v)}
               >
-                {showManualPaste ? t("connectorHidePaste") : t("connectorShowPaste")}
+                {showManualPaste ? t("rodiumHidePaste") : t("rodiumShowPaste")}
               </button>
             </div>
           </form>
         ) : (
-          <p className="muted">{t("connectorNoKeys")}</p>
+          <p className="muted">{t("rodiumNoKeys")}</p>
         )}
 
         {showManualPaste && (
           <form className="settings-inline-form" onSubmit={(e) => void onPasteSubmit(e)}>
             <label className="home-settings-field">
-              <span>{t("connectorPasteKeyFallback")}</span>
+              <span>{t("rodiumPasteKeyFallback")}</span>
               <input
                 className="home-settings-input"
                 type="password"
@@ -334,14 +329,14 @@ export function RodiumGenerationPanel() {
                 autoComplete="off"
               />
             </label>
-            <p className="home-settings-hint">{t("connectorPasteKeyHelp")}</p>
+            <p className="home-settings-hint">{t("rodiumPasteKeyHelp")}</p>
             <div className="home-settings-actions">
               <button
                 className="landing-create home-settings-save"
                 type="submit"
                 disabled={!canSavePaste}
               >
-                {saving ? t("settingsSaving") : t("connectorSave")}
+                {saving ? t("settingsSaving") : t("rodiumSaveKey")}
               </button>
             </div>
           </form>
