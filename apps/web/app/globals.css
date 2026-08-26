@@ -6447,3 +6447,107 @@ html:has(.builder) body {
     display: none;
   }
 }
+
+/* -- Error boundaries -- */
+.app-error {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+  background: var(--home-bg, #0b0b0f);
+}
+
+.app-error-card {
+  max-width: 34rem;
+  width: 100%;
+  display: grid;
+  gap: 0.9rem;
+  padding: 2rem;
+  border: 1px solid var(--home-border, #2a2a33);
+  border-radius: 14px;
+  background: var(--home-surface, #14141a);
+}
+
+.app-error-title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--home-text, #f4f4f6);
+}
+
+.app-error-body {
+  margin: 0;
+  color: var(--home-muted, #a1a1ac);
+  line-height: 1.55;
+}
+
+.app-error-detail {
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  border-radius: 10px;
+  background: var(--home-hover, #1d1d25);
+  color: var(--home-muted, #a1a1ac);
+  font-size: 0.8rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 9rem;
+  overflow: auto;
+}
+
+.app-error-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 0.25rem;
+}
+
+.app-error-link {
+  color: var(--home-muted, #a1a1ac);
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+
+.app-error-link:hover {
+  color: var(--home-text, #f4f4f6);
+}
+
+.panel-error {
+  display: grid;
+  gap: 0.6rem;
+  align-content: center;
+  justify-items: start;
+  height: 100%;
+  padding: 1.5rem;
+  background: var(--home-surface, #14141a);
+}
+
+.panel-error-title {
+  margin: 0;
+  font-weight: 700;
+  color: var(--home-text, #f4f4f6);
+}
+
+.panel-error-detail {
+  margin: 0;
+  max-width: 100%;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  background: var(--home-hover, #1d1d25);
+  color: var(--home-muted, #a1a1ac);
+  font-size: 0.78rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow: auto;
+}
+
+.panel-error-retry {
+  appearance: none;
+  border: 1px solid var(--home-border-strong, #3a3a46);
+  background: transparent;
+  color: var(--home-text, #f4f4f6);
+  border-radius: 8px;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
