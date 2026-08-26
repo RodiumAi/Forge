@@ -305,6 +305,9 @@ def visual_edit_text(
 ) -> VisualEditResponse:
     locale = resolve_locale(request)
     _owned(db, user, project_id, locale)
+    # Visual edits rewrite source files just like the agent does; without a
+    # checkpoint they were the only irreversible mutation in the product.
+    history.snapshot(str(project_id), "before visual text edit")
     try:
         result = apply_visual_text_edit(str(project_id), body.old_text, body.new_text)
     except ValueError as exc:
@@ -328,6 +331,7 @@ def visual_edit_image(
 ) -> VisualImageResponse:
     locale = resolve_locale(request)
     _owned(db, user, project_id, locale)
+    history.snapshot(str(project_id), "before visual image replace")
     try:
         result = apply_visual_image_replace(
             str(project_id),
