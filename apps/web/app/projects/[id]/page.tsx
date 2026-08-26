@@ -11,7 +11,7 @@ import {
   useState,
 } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ArrowUp, ListTodo, Pencil, Plus, Square } from "lucide-react";
 import { api, apiBase, getToken, logoutToHome } from "@/lib/api";
 import {
@@ -33,6 +33,7 @@ import { DesignCharterSlideover } from "@/components/DesignCharterSlideover";
 import { GenerationCollapse } from "@/components/GenerationCollapse";
 import { PlanPanel, type PlanTask } from "@/components/PlanPanel";
 import { PromptFileChips } from "@/components/PromptFileChips";
+import { PromptAssetMention } from "@/components/PromptAssetMention";
 import { BuilderTopbar } from "@/components/builder/BuilderTopbar";
 import { CodePane } from "@/components/builder/CodePane";
 import { CommentsPanel } from "@/components/builder/CommentsPanel";
@@ -42,6 +43,8 @@ import { OptionsPane } from "@/components/builder/OptionsPane";
 import { PreviewPane } from "@/components/builder/PreviewPane";
 import {
   detectRoutes,
+  flattenFiles,
+  routeSourceFiles,
   type BuilderMode,
   type ElementSelection,
   type FileNode,
@@ -53,14 +56,35 @@ import {
   PROMPT_FILE_ACCEPT,
   type MessageAttachment,
   type PromptAttachment,
+  attachmentName,
+  attachmentPreviewUrl,
+  attachmentPublicUrl,
   buildPromptWithAttachments,
   formatElementSelectionMarker,
+  insertMentionInTextarea,
   mergePromptAttachments,
   parseUserMessageContent,
   revokePromptAttachment,
 } from "@/lib/prompt-attachments";
+import { uploadPromptAttachments } from "@/lib/prompt-upload";
 import { toPlainChatText } from "@/lib/plain-text";
 import { UserMessageBody } from "@/components/UserMessageBody";
+import {
+  builderStateFromUi,
+  builderUrlFromState,
+  isOptionsSubview,
+  parseBuilderUrlState,
+  type OptionsSubview,
+  viewToMode,
+} from "@/lib/builder-url-state";
+import {
+  subscribeFiles,
+  subscribePreview,
+  subscribeRun,
+  type PreviewLive,
+  type RunLive,
+} from "@/lib/firebase/live";
+import { firebaseEnabled } from "@/lib/firebase/client";
 
 type Project = {
   id: string;
@@ -81,14 +105,24 @@ type Message = {
   thinking_text?: string | null;
   steps_json?: string | null;
   file_ops_json?: string | null;
+  plan_json?: string | null;
   effort_label?: string | null;
   attachments?: MessageAttachment[] | null;
+  kind?: "error";
+  retryable?: boolean;
 };
 
 type SendOpts = {
   bootKey?: string;
   skipUserBubble?: boolean;
 };
+
+type ChatRetryAction =
+  | { kind: "boot"; prompt: string }
+  | { kind: "send"; content: string; attachments: PromptAttachment[]; opts: SendOpts }
+  | { kind: "plan" }
+  | { kind: "clarify"; answers: Record<string, string> }
+  | { kind: "subscribe"; runId: string };
 
 type AgentMode = "agent" | "plan";
 
@@ -160,9 +194,27 @@ async function readSseStream(
   }
 }
 
-function friendlyStreamError(err: unknown, fallback: string): string {
+function friendlyStreamError(err: unknown, fallback: string, rodiumExpired: string): string {
   const raw = err instanceof Error ? err.message : String(err || fallback);
-  if (/failed to fetch|networkerror|network request failed|load failed|network error/i.test(raw)) {
+  if (
+    /failed to fetch|networkerror|network request failed|load failed|network error|incomplete chunked|peer closed connection|connection reset|timed out|timeout/i.test(
+      raw,
+    )
+  ) {
+    return fallback;
+  }
+  if (
+    /rodiumai session expired|sign in with rodiumai again|invalid_grant|refresh token is invalid|session rodiumai expir/i.test(
+      raw,
+    )
+  ) {
+    return rodiumExpired;
+  }
+  if (/invalid or unauthorized rodiumai key|clé rodiumai invalide/i.test(raw)) {
+    return rodiumExpired;
+  }
+  // Surface Rodium network codes as the friendly stream message.
+  if (/rodiumai error \(network\)/i.test(raw)) {
     return fallback;
   }
   return raw || fallback;
@@ -172,7 +224,11 @@ export default function ProjectPage() {
   const params = useParams<{ id: string }>();
   const projectId = params.id;
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { t, locale } = useI18n();
+
+  const initialUrl = parseBuilderUrlState(searchParams);
 
   const initialBoot =
     typeof window !== "undefined" ? peekBootPrompt(projectId)?.trim() || null : null;
@@ -185,6 +241,9 @@ export default function ProjectPage() {
   const [input, setInput] = useState("");
   const [attachments, setAttachments] = useState<PromptAttachment[]>([]);
   const [fileError, setFileError] = useState<string | null>(null);
+  const [fileNotice, setFileNotice] = useState<string | null>(null);
+  const [mentionOpen, setMentionOpen] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState("");
   const [streaming, setStreaming] = useState("");
   const [streamThinking, setStreamThinking] = useState("");
   const [streamSteps, setStreamSteps] = useState<AgentStep[]>(() =>
@@ -196,20 +255,32 @@ export default function ProjectPage() {
   const [busy, setBusy] = useState(() => Boolean(initialBoot));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [chatRetry, setChatRetry] = useState<ChatRetryAction | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewMode, setPreviewMode] = useState<"vite" | "babel_runner">("babel_runner");
   const [previewKey, setPreviewKey] = useState(0);
   const [previewBusy, setPreviewBusy] = useState(false);
   const [previewUpdating, setPreviewUpdating] = useState(false);
-  const [mobilePane, setMobilePane] = useState<"chat" | "workspace">("chat");
-  const [mainMode, setMainMode] = useState<BuilderMode>("preview");
-  const [viewport, setViewport] = useState<ViewportMode>("desktop");
-  const [previewTool, setPreviewTool] = useState<PreviewTool | null>(null);
+  const [previewLiveStatus, setPreviewLiveStatus] = useState<string | null>(null);
+  const [mobilePane, setMobilePane] = useState<"chat" | "workspace">(
+    initialUrl.pane ?? "chat",
+  );
+  const [mainMode, setMainMode] = useState<BuilderMode>(() => viewToMode(initialUrl.view));
+  const [viewport, setViewport] = useState<ViewportMode>(initialUrl.viewport ?? "desktop");
+  const [previewTool, setPreviewTool] = useState<PreviewTool | null>(initialUrl.tool);
   const [elementSelection, setElementSelection] = useState<ElementSelection | null>(null);
   const [commentAnchor, setCommentAnchor] = useState<ElementSelection | null>(null);
   const [imageSelection, setImageSelection] = useState<ImageSelection | null>(null);
-  const [previewPath, setPreviewPath] = useState("/");
+  const [previewPath, setPreviewPath] = useState(
+    initialUrl.page ?? (initialUrl.subview && initialUrl.view === "preview" ? `/${initialUrl.subview.replace(/^\//, "")}` : "/"),
+  );
   const [pages, setPages] = useState<string[]>(["/"]);
-  const [designOpen, setDesignOpen] = useState(false);
+  const [designOpen, setDesignOpen] = useState(initialUrl.design);
+  const [optionsSection, setOptionsSection] = useState<OptionsSubview>(
+    initialUrl.view === "more" && isOptionsSubview(initialUrl.subview)
+      ? initialUrl.subview
+      : "general",
+  );
   const [bootRetryPrompt, setBootRetryPrompt] = useState<string | null>(null);
   const [planMode, setPlanMode] = useState(false);
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
@@ -223,6 +294,10 @@ export default function ProjectPage() {
   const stickToBottomRef = useRef(true);
   const streamAbortRef = useRef<AbortController | null>(null);
   const activeRunIdRef = useRef<string | null>(null);
+  const restoredBgRunRef = useRef<string | null>(null);
+  /** Runs the user explicitly stopped — ignore Firestore "running" echoes for these. */
+  const ignoredRunIdsRef = useRef<Set<string>>(new Set());
+  const streamingRunIdRef = useRef<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const autoPreviewRef = useRef(false);
@@ -230,25 +305,103 @@ export default function ProjectPage() {
   const bootPromptRef = useRef<string | null>(initialBoot);
   const previewRefreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const previewUpdatingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const chatRetryRef = useRef<ChatRetryAction | null>(null);
 
   const previewSrc = useMemo(() => {
     if (!previewUrl) return null;
-    // Always load the SPA entry under /preview/{id}/ — route changes are client-side.
+    if (previewMode === "babel_runner") {
+      const absolute = previewUrl.startsWith("http")
+        ? previewUrl
+        : `${apiBase()}${previewUrl.startsWith("/") ? previewUrl : `/${previewUrl}`}`;
+      const join = absolute.includes("?") ? "&" : "?";
+      return `${absolute}${join}t=${previewKey}`;
+    }
+    // Vite: load SPA entry under /preview/{id}/ — route changes are client-side.
     const base = previewUrl.endsWith("/") ? previewUrl : `${previewUrl}/`;
-    const path =
-      previewPath && previewPath !== "/"
-        ? previewPath.replace(/^\//, "")
-        : "";
-    const url = `${apiBase()}${base}${path}`;
+    const url = `${apiBase()}${base}`;
     const params = new URLSearchParams();
     params.set("t", String(previewKey));
-    return `${url}?${params.toString()}`;
-  }, [previewUrl, previewKey, previewPath]);
+    const hash =
+      previewPath && previewPath !== "/"
+        ? `#${previewPath.startsWith("/") ? previewPath : `/${previewPath}`}`
+        : "";
+    return `${url}?${params.toString()}${hash}`;
+  }, [previewUrl, previewKey, previewPath, previewMode]);
+
+  const syncBuilderUrl = useCallback(
+    (overrides?: Partial<{
+      mainMode: BuilderMode;
+      optionsSection: OptionsSubview;
+      mobilePane: "chat" | "workspace";
+      viewport: ViewportMode;
+      previewPath: string;
+      previewTool: PreviewTool | null;
+      designOpen: boolean;
+    }>) => {
+      router.replace(
+        builderUrlFromState(
+          pathname,
+          builderStateFromUi({
+            mainMode: overrides?.mainMode ?? mainMode,
+            optionsSection: overrides?.optionsSection ?? optionsSection,
+            mobilePane: overrides?.mobilePane ?? mobilePane,
+            viewport: overrides?.viewport ?? viewport,
+            previewPath: overrides?.previewPath ?? previewPath,
+            previewTool: overrides?.previewTool ?? previewTool,
+            designOpen: overrides?.designOpen ?? designOpen,
+          }),
+        ),
+        { scroll: false },
+      );
+    },
+    [
+      designOpen,
+      mainMode,
+      mobilePane,
+      optionsSection,
+      pathname,
+      previewPath,
+      previewTool,
+      router,
+      viewport,
+    ],
+  );
+
+  useEffect(() => {
+    const parsed = parseBuilderUrlState(searchParams);
+    setMainMode(viewToMode(parsed.view));
+    setMobilePane(parsed.pane ?? "chat");
+    setViewport(parsed.viewport ?? "desktop");
+    setPreviewTool(parsed.view === "preview" ? parsed.tool : null);
+    setDesignOpen(parsed.design);
+    if (parsed.view === "more" && isOptionsSubview(parsed.subview)) {
+      setOptionsSection(parsed.subview);
+    }
+    if (parsed.page) {
+      setPreviewPath(parsed.page);
+    } else if (parsed.view === "preview" && parsed.subview) {
+      setPreviewPath(`/${parsed.subview.replace(/^\//, "")}`);
+    }
+  }, [searchParams]);
 
   const refreshRoutes = useCallback(async () => {
     try {
       const tree = await api<FileNode[]>(`/projects/${projectId}/files`);
-      const routes = detectRoutes(tree);
+      const candidates = routeSourceFiles(flattenFiles(tree));
+      const sources: Record<string, string> = {};
+      await Promise.all(
+        candidates.map(async (path) => {
+          try {
+            const res = await api<{ content: string }>(
+              `/projects/${projectId}/files/content?path=${encodeURIComponent(path)}`,
+            );
+            sources[path] = res.content;
+          } catch {
+            /* optional */
+          }
+        }),
+      );
+      const routes = detectRoutes(tree, sources);
       setPages(routes);
       setPreviewPath((prev) => (routes.includes(prev) ? prev : "/"));
     } catch {
@@ -321,7 +474,7 @@ export default function ProjectPage() {
           setPlanTasks([]);
           setBusy(false);
         } else if (
-          active.status === "awaiting_plan_confirm" &&
+          (active.status === "awaiting_plan_confirm" || active.status === "error") &&
           Array.isArray(active.plan) &&
           active.plan.length
         ) {
@@ -336,6 +489,17 @@ export default function ProjectPage() {
           setClarifyQuestions([]);
           setBusy(false);
           setPlanMode(active.mode === "plan");
+        } else if (active.status === "running" && Array.isArray(active.plan) && active.plan.length) {
+          setPlanTasks(
+            active.plan.map((task, i) => ({
+              id: task.id || `task_${i + 1}`,
+              title: task.title || `Task ${i + 1}`,
+              status: task.status || "pending",
+            })),
+          );
+          setPlanNeedsConfirm(false);
+          setBusy(true);
+          restoredBgRunRef.current = active.id;
         }
       }
     } catch {
@@ -349,25 +513,55 @@ export default function ProjectPage() {
     void refreshRoutes();
   }, [projectId, t, refreshRoutes]);
 
+  const pushChatError = useCallback(
+    (message: string, retry: ChatRetryAction | null = null) => {
+      const text = message.trim() || t("streamError");
+      chatRetryRef.current = retry;
+      setChatRetry(retry);
+      setError(null);
+      setMessages((prev) => {
+        const withoutStale = prev.filter((m) => m.kind !== "error");
+        return [
+          ...withoutStale,
+          {
+            id: `local-error-${Date.now()}`,
+            role: "assistant",
+            kind: "error",
+            content: text,
+            retryable: Boolean(retry),
+          },
+        ];
+      });
+      stickToBottomRef.current = true;
+    },
+    [t],
+  );
+
   const startPreview = useCallback(async () => {
     setPreviewBusy(true);
     setError(null);
     try {
-      const status = await api<{ running: boolean; url: string | null }>(
-        `/projects/${projectId}/preview/start`,
-        { method: "POST" },
+      const status = await api<{
+        running: boolean;
+        url: string | null;
+        mode?: string;
+        runner_url?: string | null;
+      }>(`/projects/${projectId}/preview/start`, { method: "POST" });
+      const mode = status.mode === "babel_runner" ? "babel_runner" : "vite";
+      setPreviewMode(mode);
+      setPreviewUrl(
+        mode === "babel_runner" ? status.runner_url || status.url : status.url,
       );
-      setPreviewUrl(status.url);
       setPreviewKey((k) => k + 1);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("previewFailed"));
+      pushChatError(err instanceof Error ? err.message : t("previewFailed"), null);
     } finally {
       setPreviewBusy(false);
     }
-  }, [projectId, t]);
+  }, [projectId, pushChatError, t]);
 
   const forcePreviewRefresh = useCallback(
-    async (opts?: { softStart?: boolean; remount?: boolean }) => {
+    async (opts?: { softStart?: boolean; remount?: boolean; restart?: boolean }) => {
       const remount = opts?.remount !== false;
       setPreviewUpdating(true);
       if (previewUpdatingTimer.current) clearTimeout(previewUpdatingTimer.current);
@@ -376,7 +570,22 @@ export default function ProjectPage() {
         previewRefreshTimer.current = null;
       }
 
-      if (opts?.softStart) {
+      if (opts?.restart) {
+        // Clean restart (kill orphans + clear Vite cache) then remount iframe.
+        try {
+          const status = await api<{ running: boolean; url: string | null }>(
+            `/projects/${projectId}/preview/restart`,
+            { method: "POST" },
+          );
+          if (status.url) setPreviewUrl(status.url);
+          if (remount) setPreviewKey((k) => k + 1);
+        } catch (err) {
+          // Fallback to plain start if restart endpoint unavailable.
+          await startPreview();
+          if (remount) setPreviewKey((k) => k + 1);
+          pushChatError(err instanceof Error ? err.message : t("previewFailed"), null);
+        }
+      } else if (opts?.softStart) {
         try {
           const status = await api<{ running: boolean; url: string | null }>(
             `/projects/${projectId}/preview`,
@@ -399,7 +608,7 @@ export default function ProjectPage() {
         previewUpdatingTimer.current = null;
       }, 1600);
     },
-    [projectId, startPreview],
+    [projectId, pushChatError, startPreview, t],
   );
 
   useEffect(() => {
@@ -413,13 +622,13 @@ export default function ProjectPage() {
         if (err instanceof Error && /invalid token|not authenticated|unauthorized/i.test(err.message)) {
           return;
         }
-        setError(err.message);
+        pushChatError(err.message, null);
       })
       .finally(() => {
         setLoading(false);
         topProgressDone("project-load");
       });
-  }, [load, router]);
+  }, [load, pushChatError, router]);
 
   useEffect(() => {
     if (previewBusy || previewUpdating) topProgressStart("preview");
@@ -437,11 +646,96 @@ export default function ProjectPage() {
     void startPreview();
   }, [loading, previewBusy, previewUrl, startPreview]);
 
+  // Firestore live: preview status (primary UI signal when emulator/prod is on).
+  useEffect(() => {
+    if (!projectId || !firebaseEnabled()) return;
+    let lastStatus = "";
+    return subscribePreview(projectId, (live: PreviewLive | null) => {
+      if (!live?.status) return;
+      setPreviewLiveStatus(live.status);
+      if (live.status === "starting") {
+        setPreviewBusy(true);
+      } else if (live.status === "ready") {
+        if (live.url) setPreviewUrl(live.url);
+        setPreviewBusy(false);
+        if (lastStatus && lastStatus !== "ready") {
+          setPreviewKey((k) => k + 1);
+        }
+      } else if (live.status === "dead" || live.status === "error") {
+        setPreviewBusy(false);
+        setPreviewUrl(null);
+        if (live.status === "error" && live.error) {
+          pushChatError(live.error, null);
+        }
+      } else if (live.status === "stopped") {
+        setPreviewBusy(false);
+      }
+      lastStatus = live.status;
+    });
+  }, [projectId, pushChatError]);
+  useEffect(() => {
+    if (!projectId || !firebaseEnabled()) return;
+    let lastRev = -1;
+    return subscribeFiles(projectId, (live) => {
+      const rev = typeof live?.rev === "number" ? live.rev : -1;
+      if (rev < 0 || rev === lastRev) return;
+      lastRev = rev;
+      void refreshRoutes();
+      void forcePreviewRefresh({ softStart: true, remount: true });
+    });
+  }, [projectId, refreshRoutes, forcePreviewRefresh]);
+
+  // Firestore live: run metadata (SSE still streams tokens).
+  useEffect(() => {
+    if (!projectId || !firebaseEnabled()) return;
+    return subscribeRun(projectId, (live: RunLive | null) => {
+      if (!live) return;
+      const runId = live.run_id || null;
+      if (runId && ignoredRunIdsRef.current.has(runId)) {
+        if (live.status === "cancelled" || live.status === "done" || live.status === "error") {
+          ignoredRunIdsRef.current.delete(runId);
+        }
+        return;
+      }
+      if (runId) setActiveRunId(runId);
+      if (live.status === "running" || live.status === "awaiting_clarify" || live.status === "awaiting_plan_confirm") {
+        // Only lock the composer from Firestore when we own an SSE for this run,
+        // or when restoring an awaiting HITL state (clarify/plan).
+        if (
+          live.status === "awaiting_clarify" ||
+          live.status === "awaiting_plan_confirm" ||
+          (runId && streamingRunIdRef.current === runId) ||
+          Boolean(streamAbortRef.current)
+        ) {
+          setBusy(true);
+        }
+      } else if (live.status === "done" || live.status === "error" || live.status === "cancelled") {
+        if (!runId || streamingRunIdRef.current === runId || !streamAbortRef.current) {
+          setBusy(false);
+        }
+      }
+      if (live.step_id && live.step_label) {
+        setStreamSteps((prev) => {
+          const next = [...prev];
+          const idx = next.findIndex((s) => s.id === live.step_id);
+          const row = {
+            id: live.step_id!,
+            label: live.step_label!,
+            status: (live.status === "running" ? "running" : "done") as AgentStep["status"],
+          };
+          if (idx >= 0) next[idx] = { ...next[idx], ...row };
+          else next.push(row);
+          return next;
+        });
+      }
+    });
+  }, [projectId]);
+
   const schedulePreviewRefresh = useCallback(() => {
     if (previewRefreshTimer.current) clearTimeout(previewRefreshTimer.current);
     previewRefreshTimer.current = setTimeout(() => {
       previewRefreshTimer.current = null;
-      void forcePreviewRefresh();
+      void forcePreviewRefresh({ restart: true });
     }, 900);
   }, [forcePreviewRefresh]);
 
@@ -500,10 +794,19 @@ export default function ProjectPage() {
   }, [messages]);
   const addFiles = useCallback(
     (list: FileList | File[]) => {
+      if (!list?.length) return;
       setAttachments((prev) => {
-        const { next, rejected } = mergePromptAttachments(prev, list);
-        setFileError(rejected.length ? t("promptFileTypeError") : null);
-        return next;
+        const result = mergePromptAttachments(prev, list);
+        const added = result.next.length - prev.length;
+        if (added > 0) {
+          setFileError(null);
+          setFileNotice(t("promptFilesAttached").replace("{count}", String(added)));
+          window.setTimeout(() => setFileNotice(null), 3200);
+        } else if (result.rejected.length > 0) {
+          setFileNotice(null);
+          setFileError(t("promptFileTypeError"));
+        }
+        return result.next;
       });
     },
     [t],
@@ -511,9 +814,17 @@ export default function ProjectPage() {
 
   function onFilesSelected(e: ChangeEvent<HTMLInputElement>) {
     const list = e.target.files;
+    // Always clear so selecting the same file again still fires onChange.
+    e.target.value = "";
     if (!list?.length) return;
     addFiles(list);
-    e.target.value = "";
+  }
+
+  function openFilePicker() {
+    const input = fileInputRef.current;
+    if (!input || composerInputLocked) return;
+    input.value = "";
+    input.click();
   }
 
   function removeAttachment(id: string) {
@@ -523,6 +834,7 @@ export default function ProjectPage() {
       return prev.filter((item) => item.id !== id);
     });
     setFileError(null);
+    setFileNotice(null);
   }
 
   function onDrop(e: DragEvent<HTMLDivElement>) {
@@ -558,6 +870,8 @@ export default function ProjectPage() {
       }
       if (type === "user_message" && typeof payloadEvent.run_id === "string") {
         setActiveRunId(payloadEvent.run_id);
+        streamingRunIdRef.current = payloadEvent.run_id;
+        ignoredRunIdsRef.current.delete(payloadEvent.run_id);
       }
       if (type === "token") {
         ctx.assistantRef.value += String(payloadEvent.content || "");
@@ -638,6 +952,7 @@ export default function ProjectPage() {
         ctx.appliedRef.value = true;
         ctx.ops.push({ op: "write", path: String(payloadEvent.path) });
         setStreamOps([...ctx.ops]);
+        void refreshRoutes();
         schedulePreviewRefresh();
         if (!previewUrl && !previewBusy) void startPreview();
       } else if (type === "file_delete") {
@@ -653,12 +968,23 @@ export default function ProjectPage() {
           setActiveRunId(null);
           return;
         }
-        setPlanTasks((prev) =>
-          prev.map((task) =>
+        setPlanTasks((prev) => {
+          const base = Array.isArray(payloadEvent.plan)
+            ? (payloadEvent.plan as PlanTask[]).map((task, i) => ({
+                ...task,
+                id: String(task.id || `task_${i + 1}`),
+                status: task.status || "pending",
+              }))
+            : prev;
+          const updated = base.map((task) =>
             task.status === "running" ? { ...task, status: "error" } : task,
-          ),
-        );
-        setPlanNeedsConfirm(false);
+          );
+          const canResume = updated.some(
+            (task) => task.status === "pending" || task.status === "error",
+          );
+          setPlanNeedsConfirm(canResume);
+          return updated;
+        });
         throw new Error(message);
       } else if (type === "done") {
         const summary = toPlainChatText(
@@ -671,14 +997,12 @@ export default function ProjectPage() {
             ? "Here is what was put in place."
             : "Voici ce qui a été mis en place.");
         setStreamSummary(content);
-        if (Array.isArray(payloadEvent.plan)) {
-          setPlanTasks(
-            (payloadEvent.plan as PlanTask[]).map((task) => ({
+        const finalPlan = Array.isArray(payloadEvent.plan)
+          ? (payloadEvent.plan as PlanTask[]).map((task) => ({
               ...task,
               status: task.status || "done",
-            })),
-          );
-        }
+            }))
+          : [];
         setPlanNeedsConfirm(false);
         setClarifyQuestions([]);
         setPlanTasks([]);
@@ -709,6 +1033,7 @@ export default function ProjectPage() {
               thinking_text: ctx.thinkingRef.value || null,
               steps_json: JSON.stringify(ctx.stepsSnapshot),
               file_ops_json: JSON.stringify(ctx.ops),
+              plan_json: finalPlan.length ? JSON.stringify(finalPlan) : null,
               effort_label: ctx.effortRef.value || (payloadEvent.effort_label as string) || null,
             },
           ];
@@ -723,14 +1048,91 @@ export default function ProjectPage() {
           ? (payloadEvent.applied as unknown[])
           : [];
         if (ctx.appliedRef.value || appliedList.length) {
-          void forcePreviewRefresh({ softStart: true });
+          void forcePreviewRefresh({ restart: true });
           setMainMode("preview");
           setMobilePane("workspace");
+          setPreviewTool(null);
+          syncBuilderUrl({ mainMode: "preview", mobilePane: "workspace", previewTool: null });
         }
       }
     },
-    [forcePreviewRefresh, locale, previewBusy, previewUrl, schedulePreviewRefresh, startPreview, t],
+    [forcePreviewRefresh, locale, previewBusy, previewUrl, schedulePreviewRefresh, startPreview, syncBuilderUrl, t],
   );
+
+  const subscribeRunEvents = useCallback(
+    async (runId: string) => {
+      if (!chatId || !runId) return;
+      streamAbortRef.current?.abort();
+      const abortCtrl = new AbortController();
+      streamAbortRef.current = abortCtrl;
+      streamingRunIdRef.current = runId;
+      setBusy(true);
+      setError(null);
+      try {
+        const res = await fetch(
+          `${apiBase()}/projects/${projectId}/chats/${chatId}/runs/${runId}/events`,
+          {
+            method: "GET",
+            signal: abortCtrl.signal,
+            headers: {
+              Authorization: `Bearer ${getToken()}`,
+              "Accept-Language": locale,
+              Accept: "text/event-stream",
+            },
+          },
+        );
+        if (!res.ok || !res.body) {
+          throw new Error(res.statusText || t("streamError"));
+        }
+        const assistantRef = { value: "" };
+        const thinkingRef = { value: "" };
+        const effortRef = { value: streamEffort };
+        const appliedRef = { value: false };
+        const ops: FileOp[] = [...streamOps];
+        const stepsSnapshot: AgentStep[] = [...streamSteps];
+        await readSseStream(res, async (payloadEvent) => {
+          if (
+            String(payloadEvent.type || "") === "error" &&
+            String(payloadEvent.message || "") === "run_detached"
+          ) {
+            setPlanNeedsConfirm(true);
+            setBusy(false);
+            return;
+          }
+          handleStreamEvent(payloadEvent, {
+            assistantRef,
+            thinkingRef,
+            ops,
+            stepsSnapshot,
+            effortRef,
+            appliedRef,
+            userPayload: "",
+            clearBootOnce: () => undefined,
+          });
+        });
+      } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") return;
+        pushChatError(friendlyStreamError(err, t("streamError"), t("rodiumSessionExpired")), {
+          kind: "subscribe",
+          runId,
+        });
+        setPlanNeedsConfirm(true);
+      } finally {
+        if (streamAbortRef.current === abortCtrl) streamAbortRef.current = null;
+        if (streamingRunIdRef.current === runId) streamingRunIdRef.current = null;
+        setBusy(false);
+        void refreshRodiumWallet();
+      }
+    },
+    [chatId, handleStreamEvent, locale, projectId, pushChatError, streamEffort, streamOps, streamSteps, t],
+  );
+
+  useEffect(() => {
+    const rid = restoredBgRunRef.current;
+    if (!rid || rid !== activeRunId || !chatId) return;
+    restoredBgRunRef.current = null;
+    void subscribeRunEvents(rid);
+  }, [activeRunId, chatId, subscribeRunEvents]);
 
   const startEditMessage = useCallback(
     (messageId: string, content: string) => {
@@ -775,8 +1177,13 @@ export default function ProjectPage() {
   const stopGeneration = useCallback(async () => {
     streamAbortRef.current?.abort();
     streamAbortRef.current = null;
-    const runId = activeRunIdRef.current;
-    if (runId && chatId) {
+    const localRunId = activeRunIdRef.current || streamingRunIdRef.current;
+    if (localRunId) ignoredRunIdsRef.current.add(localRunId);
+    streamingRunIdRef.current = null;
+
+    const cancelOne = async (runId: string) => {
+      ignoredRunIdsRef.current.add(runId);
+      if (!chatId) return;
       try {
         await fetch(
           `${apiBase()}/projects/${projectId}/chats/${chatId}/runs/${runId}/cancel`,
@@ -791,7 +1198,23 @@ export default function ProjectPage() {
       } catch {
         /* ignore */
       }
+    };
+
+    if (localRunId) await cancelOne(localRunId);
+    // Also cancel whatever the API still considers active (stale local id).
+    if (chatId) {
+      try {
+        const active = await api<{ id: string; status: string } | null>(
+          `/projects/${projectId}/chats/${chatId}/runs/active`,
+        );
+        if (active?.id && active.id !== localRunId) {
+          await cancelOne(active.id);
+        }
+      } catch {
+        /* ignore */
+      }
     }
+
     setBusy(false);
     setStreaming("");
     setStreamThinking("");
@@ -808,47 +1231,34 @@ export default function ProjectPage() {
   const sendMessage = useCallback(
     async (content: string, attached: PromptAttachment[] = [], opts: SendOpts = {}) => {
       if (!chatId) return;
-      if (busy && !opts.skipUserBubble) return;
+      // Block only when a real SSE stream is in flight — ignore Firestore ghost busy.
+      if (busy && !opts.skipUserBubble && streamAbortRef.current) return;
 
       let uploaded = attached;
       try {
-        if (attached.some((a) => a.kind === "image")) {
-          uploaded = [];
-          for (const item of attached) {
-            if (item.kind !== "image") {
-              uploaded.push(item);
-              continue;
-            }
-            const fd = new FormData();
-            fd.append("file", item.file);
-            const up = await fetch(`${apiBase()}/projects/${projectId}/files/upload`, {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${getToken()}`,
-                "Accept-Language": locale,
-              },
-              body: fd,
-            });
-            if (!up.ok) {
-              const detail = await up.text().catch(() => up.statusText);
-              throw new Error(detail || "Upload failed");
-            }
-            const data = (await up.json()) as { public_path?: string; path?: string };
-            uploaded.push({
-              ...item,
-              publicPath: data.public_path || (data.path ? `/${data.path.replace(/^public\//, "")}` : null),
-            });
-          }
+        if (attached.some((a) => a.source === "local" && a.kind === "image")) {
+          uploaded = await uploadPromptAttachments(projectId, attached, locale);
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : String(err));
+        const msg = err instanceof Error ? err.message : String(err);
+        // Drop failed local images so the composer + picker stay usable.
+        setAttachments((prev) => {
+          for (const item of prev) {
+            if (item.source === "local" && item.kind === "image") {
+              revokePromptAttachment(item);
+            }
+          }
+          return prev.filter((a) => !(a.source === "local" && a.kind === "image"));
+        });
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        pushChatError(msg, null);
         return;
       }
 
       const withSelection = elementSelection
         ? `${formatElementSelectionMarker(elementSelection, t("selectionMarker"))}\n\n${content}`.trim()
         : content;
-      const payload = await buildPromptWithAttachments(withSelection, uploaded, {
+      const built = await buildPromptWithAttachments(withSelection, uploaded, {
         importFiles: t("importFiles"),
         imageAttached: t("promptImageAttached"),
         mdSection: t("promptMdSection"),
@@ -856,14 +1266,17 @@ export default function ProjectPage() {
         pdfSection: t("promptPdfSection"),
         pdfEmpty: t("promptPdfEmpty"),
       });
+      const payload = built.trim();
       if (!payload.trim()) return;
       setElementSelection(null);
 
       const displayAtts: MessageAttachment[] = uploaded.map((a) => ({
-        name: a.file.name,
+        name: attachmentName(a),
         kind: a.kind,
-        previewUrl: a.previewUrl,
-        publicPath: a.publicPath || null,
+        previewUrl: attachmentPreviewUrl(a),
+        publicUrl: attachmentPublicUrl(a),
+        publicPath: attachmentPublicUrl(a),
+        objectId: a.objectId || null,
       }));
 
       const mode: AgentMode = planMode ? "plan" : "agent";
@@ -877,6 +1290,9 @@ export default function ProjectPage() {
       setBusy(true);
       setError(null);
       setBootRetryPrompt(null);
+      setMessages((prev) => prev.filter((m) => m.kind !== "error"));
+      chatRetryRef.current = null;
+      setChatRetry(null);
       setStreaming("");
       setStreamThinking("");
       setStreamSummary("");
@@ -972,6 +1388,9 @@ export default function ProjectPage() {
             logoutToHome("expired");
             return;
           }
+          if (res.status === 403 && /rodiumai session expired|sign in with rodiumai/i.test(detail)) {
+            throw new Error(detail);
+          }
           throw new Error(detail || res.statusText);
         }
 
@@ -1008,21 +1427,32 @@ export default function ProjectPage() {
         if (opts.bootKey) {
           setBootRetryPrompt(payload);
         }
-        setError(friendlyStreamError(err, t("streamError")));
+        const retry: ChatRetryAction = opts.bootKey
+          ? { kind: "boot", prompt: payload }
+          : {
+              kind: "send",
+              content,
+              attachments: uploaded,
+              opts: { ...opts, skipUserBubble: true },
+            };
+        pushChatError(
+          friendlyStreamError(err, t("streamError"), t("rodiumSessionExpired")),
+          retry,
+        );
         setStreaming("");
         setStreamThinking("");
         setStreamSteps([]);
         setStreamOps([]);
         setStreamEffort(null);
         setClarifyQuestions([]);
-        setPlanNeedsConfirm(false);
       } finally {
         streamAbortRef.current = null;
+        streamingRunIdRef.current = null;
         setBusy(false);
         void refreshRodiumWallet();
       }
     },
-    [busy, chatId, editingMessageId, elementSelection, handleStreamEvent, locale, planMode, projectId, t],
+    [busy, chatId, editingMessageId, elementSelection, handleStreamEvent, locale, planMode, projectId, pushChatError, t],
   );
 
   const submitClarify = useCallback(
@@ -1065,13 +1495,16 @@ export default function ProjectPage() {
           });
         });
       } catch (err) {
-        setError(friendlyStreamError(err, t("streamError")));
+        pushChatError(friendlyStreamError(err, t("streamError"), t("rodiumSessionExpired")), {
+          kind: "clarify",
+          answers,
+        });
       } finally {
         setBusy(false);
         void refreshRodiumWallet();
       }
     },
-    [activeRunId, chatId, handleStreamEvent, locale, projectId, streamEffort, streamOps, streamSteps, t],
+    [activeRunId, chatId, handleStreamEvent, locale, projectId, pushChatError, streamEffort, streamOps, streamSteps, t],
   );
 
   const executePlan = useCallback(async () => {
@@ -1081,8 +1514,13 @@ export default function ProjectPage() {
     setError(null);
     setPlanTasks((prev) => {
       if (!prev.length) return prev;
-      const next = prev.map((task) => ({ ...task, status: "pending" }));
-      next[0] = { ...next[0], status: "running" };
+      const next = prev.map((task) =>
+        task.status === "done" ? task : { ...task, status: "pending" },
+      );
+      const firstPending = next.findIndex((task) => task.status === "pending");
+      if (firstPending >= 0) {
+        next[firstPending] = { ...next[firstPending], status: "running" };
+      }
       return next;
     });
     setStreamSteps((prev) => [
@@ -1144,7 +1582,9 @@ export default function ProjectPage() {
       if (err instanceof Error && err.name === "AbortError") {
         return;
       }
-      setError(friendlyStreamError(err, t("streamError")));
+      pushChatError(friendlyStreamError(err, t("streamError"), t("rodiumSessionExpired")), {
+        kind: "plan",
+      });
       if (err instanceof Error && err.message === t("planInvalid")) {
         setPlanNeedsConfirm(false);
         setPlanTasks([]);
@@ -1162,21 +1602,24 @@ export default function ProjectPage() {
       setBusy(false);
       void refreshRodiumWallet();
     }
-  }, [activeRunId, chatId, handleStreamEvent, locale, planTasks, projectId, streamEffort, streamSteps, t]);
+  }, [activeRunId, chatId, handleStreamEvent, locale, planTasks, projectId, pushChatError, streamEffort, streamSteps, t]);
 
   useEffect(() => {
     if (!chatId || loading || bootSentRef.current || bootInFlight.has(projectId)) return;
     const pending = bootPromptRef.current || peekBootPrompt(projectId)?.trim() || null;
     if (!pending) return;
 
-    const hasUser = messages.some((m) => m.role === "user");
+    // Real server/local turns (not the optimistic boot-user bubble).
+    const hasRealUser = messages.some(
+      (m) => m.role === "user" && m.id !== "boot-user",
+    );
     const hasAssistant = messages.some((m) => m.role === "assistant");
-    if (hasUser || hasAssistant) {
-      if (messages.some((m) => m.id !== "boot-user" && m.role === "user")) {
-        bootSentRef.current = true;
-        bootPromptRef.current = null;
-        clearBootPrompt(projectId);
-      }
+    if (hasRealUser || hasAssistant) {
+      bootSentRef.current = true;
+      bootPromptRef.current = null;
+      clearBootPrompt(projectId);
+      setBusy(false);
+      setStreamSteps((prev) => prev.filter((s) => s.id !== "boot"));
       return;
     }
 
@@ -1207,21 +1650,50 @@ export default function ProjectPage() {
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    // Mention picker owns Arrow/Enter/Escape while open.
+    if (mentionOpen && ["ArrowDown", "ArrowUp", "Enter", "Escape"].includes(e.key)) {
+      return;
+    }
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       void submitComposer();
     }
   }
 
-  async function retryBoot() {
-    const pending = bootRetryPrompt || peekBootPrompt(projectId)?.trim();
-    if (!pending || busy) return;
-    bootSentRef.current = true;
-    setMessages([{ id: "boot-user", role: "user", content: pending }]);
-    await sendMessage(pending, [], {
-      bootKey: bootPromptKey(projectId),
-      skipUserBubble: true,
-    });
+  async function retryChatAction() {
+    const action = chatRetryRef.current || chatRetry;
+    if (!action || busy) return;
+    setMessages((prev) => prev.filter((m) => m.kind !== "error"));
+    chatRetryRef.current = null;
+    setChatRetry(null);
+    setError(null);
+    if (action.kind === "boot") {
+      bootSentRef.current = true;
+      setBootRetryPrompt(action.prompt);
+      await sendMessage(action.prompt, [], {
+        bootKey: bootPromptKey(projectId),
+        skipUserBubble: true,
+      });
+      return;
+    }
+    if (action.kind === "send") {
+      await sendMessage(action.content, action.attachments, {
+        ...action.opts,
+        skipUserBubble: true,
+      });
+      return;
+    }
+    if (action.kind === "plan") {
+      await executePlan();
+      return;
+    }
+    if (action.kind === "clarify") {
+      await submitClarify(action.answers);
+      return;
+    }
+    if (action.kind === "subscribe") {
+      await subscribeRunEvents(action.runId);
+    }
   }
 
   const canSend =
@@ -1269,24 +1741,34 @@ export default function ProjectPage() {
         onModeChange={(mode) => {
           setMainMode(mode);
           setMobilePane("workspace");
+          const nextTool = mode !== "preview" ? null : previewTool;
           if (mode !== "preview") setPreviewTool(null);
+          syncBuilderUrl({ mainMode: mode, mobilePane: "workspace", previewTool: nextTool });
           if (mode === "preview") {
-            // Ensure Vite is alive; remount only after a restart (startPreview bumps key).
             void forcePreviewRefresh({ softStart: true, remount: false });
           }
         }}
         viewport={viewport}
-        onViewportChange={setViewport}
+        onViewportChange={(next) => {
+          setViewport(next);
+          syncBuilderUrl({ viewport: next });
+        }}
         pages={pages}
         previewPath={previewPath}
-        onPreviewPathChange={setPreviewPath}
+        onPreviewPathChange={(path) => {
+          setPreviewPath(path);
+          syncBuilderUrl({ previewPath: path });
+        }}
         previewLive={Boolean(previewSrc)}
         previewUpdating={previewUpdating}
         previewBusy={previewBusy}
         onRefreshPreview={() => {
-          void forcePreviewRefresh({ softStart: true });
+          void forcePreviewRefresh({ restart: true });
         }}
-        onOpenDesign={() => setDesignOpen(true)}
+        onOpenDesign={() => {
+          setDesignOpen(true);
+          syncBuilderUrl({ designOpen: true });
+        }}
         onOpenDraftExternal={async () => {
           await forcePreviewRefresh({ softStart: true, remount: false });
           window.open(
@@ -1303,7 +1785,10 @@ export default function ProjectPage() {
           role="tab"
           className={mobilePane === "chat" ? "active" : ""}
           aria-selected={mobilePane === "chat"}
-          onClick={() => setMobilePane("chat")}
+          onClick={() => {
+            setMobilePane("chat");
+            syncBuilderUrl({ mobilePane: "chat" });
+          }}
         >
           {t("builderTabChat")}
         </button>
@@ -1312,26 +1797,20 @@ export default function ProjectPage() {
           role="tab"
           className={mobilePane === "workspace" ? "active" : ""}
           aria-selected={mobilePane === "workspace"}
-          onClick={() => setMobilePane("workspace")}
+          onClick={() => {
+            setMobilePane("workspace");
+            syncBuilderUrl({ mobilePane: "workspace" });
+          }}
         >
           {t("builderTabWorkspace")}
         </button>
       </div>
 
-      {error && (
+      {error && !messages.some((m) => m.kind === "error") ? (
         <div className="builder-error" role="alert">
           {error}
-          {bootRetryPrompt ? (
-            <>
-              {" "}
-              <button type="button" className="btn" onClick={() => void retryBoot()}>
-                {t("bootRetry")}
-              </button>
-              <Link href="/connectors/rodiumai"> {t("openSettings")}</Link>
-            </>
-          ) : null}
         </div>
-      )}
+      ) : null}
 
       <div className={`builder-body builder-body-${mobilePane}`}>
         <aside className="builder-sidebar">
@@ -1343,6 +1822,36 @@ export default function ProjectPage() {
             )}
 
             {messages.map((m) => {
+              if (m.kind === "error") {
+                return (
+                  <article
+                    key={m.id}
+                    className="builder-msg builder-msg-assistant builder-msg-error"
+                  >
+                    <header className="builder-msg-head">{t("roleAssistant")}</header>
+                    <div className="builder-msg-error-body">
+                      <p className="builder-msg-error-text">{m.content}</p>
+                      {m.retryable ? (
+                        <div className="builder-msg-error-actions">
+                          <button
+                            type="button"
+                            className="builder-msg-error-retry"
+                            disabled={busy}
+                            onClick={() => void retryChatAction()}
+                          >
+                            {t("retryAction")}
+                          </button>
+                          {bootRetryPrompt ? (
+                            <Link href="/settings?tab=generation" className="builder-msg-error-link">
+                              {t("openSettings")}
+                            </Link>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </div>
+                  </article>
+                );
+              }
               if (m.role === "user" && !m.content.trim()) return null;
               const text =
                 m.role === "assistant"
@@ -1350,11 +1859,13 @@ export default function ProjectPage() {
                   : m.content.trim();
               const steps = parseJsonArray<AgentStep>(m.steps_json);
               const ops = parseJsonArray<FileOp>(m.file_ops_json);
+              const msgPlan = parseJsonArray<PlanTask>(m.plan_json);
               if (
                 m.role === "assistant" &&
                 !text &&
                 !steps.length &&
                 !ops.length &&
+                !msgPlan.length &&
                 !m.thinking_text
               ) {
                 return null;
@@ -1375,6 +1886,9 @@ export default function ProjectPage() {
                       effortLabel={m.effort_label}
                     />
                   )}
+                  {m.role === "assistant" && msgPlan.length > 0 ? (
+                    <PlanPanel tasks={msgPlan} needsConfirm={false} busy={false} executing={false} />
+                  ) : null}
                   {m.role === "user" ? (
                     <div className="builder-msg-user-wrap">
                       {!busy &&
@@ -1394,6 +1908,7 @@ export default function ProjectPage() {
                         content={m.content}
                         attachments={m.attachments}
                         previewBase={previewUrl}
+                        projectId={projectId}
                       />
                     </div>
                   ) : (
@@ -1454,11 +1969,38 @@ export default function ProjectPage() {
 
           <form className="builder-composer" onSubmit={onSend}>
             <div
-              className="builder-composer-box"
+              className={`builder-composer-box${attachments.length ? " has-attachments" : ""}`}
               onDragOver={(e) => e.preventDefault()}
               onDrop={onDrop}
             >
-              <PromptFileChips items={attachments} onRemove={removeAttachment} />
+              {attachments.length > 0 ? (
+                <div className="builder-composer-attachments">
+                  <PromptFileChips
+                    items={attachments}
+                    onRemove={removeAttachment}
+                    projectId={projectId}
+                  />
+                </div>
+              ) : null}
+              <PromptAssetMention
+                projectId={projectId}
+                open={mentionOpen}
+                query={mentionQuery}
+                onClose={() => {
+                  setMentionOpen(false);
+                  setMentionQuery("");
+                }}
+                onSelect={(att, mention) => {
+                  setAttachments((prev) => {
+                    if (prev.some((x) => x.id === att.id)) return prev;
+                    if (prev.length >= 5) return prev;
+                    return [...prev, att];
+                  });
+                  setInput((prev) => insertMentionInTextarea(textareaRef.current, prev, mention));
+                  setMentionOpen(false);
+                  setMentionQuery("");
+                }}
+              />
               {elementSelection ? (
                 <div className="landing-files">
                   <button
@@ -1480,6 +2022,7 @@ export default function ProjectPage() {
                   </button>
                 </div>
               ) : null}
+              {fileNotice && <p className="landing-file-notice">{fileNotice}</p>}
               {fileError && <p className="landing-file-error">{fileError}</p>}
               {editingMessageId ? (
                 <p className="builder-editing-hint">{t("editingMessage")}</p>
@@ -1487,7 +2030,20 @@ export default function ProjectPage() {
               <textarea
                 ref={textareaRef}
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setInput(v);
+                  const caret = e.target.selectionStart ?? v.length;
+                  const before = v.slice(0, caret);
+                  const atMatch = before.match(/@([^\s@]*)$/);
+                  if (atMatch) {
+                    setMentionOpen(true);
+                    setMentionQuery(atMatch[1]);
+                  } else {
+                    setMentionOpen(false);
+                    setMentionQuery("");
+                  }
+                }}
                 onKeyDown={onKeyDown}
                 placeholder={t("builderPlaceholder")}
                 rows={3}
@@ -1506,22 +2062,32 @@ export default function ProjectPage() {
                   {t("planMode")}
                 </button>
                 <div className="builder-composer-actions-end">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    className="landing-import-input"
-                    multiple
-                    accept={PROMPT_FILE_ACCEPT}
-                    onChange={onFilesSelected}
-                  />
                   <button
                     type="button"
-                    className="builder-plus"
+                    className="builder-plus-label"
+                    title={t("importHint")}
                     aria-label={t("importAria")}
-                    onClick={() => fileInputRef.current?.click()}
                     disabled={composerInputLocked}
+                    onClick={openFilePicker}
                   >
-                    <Icon icon={Plus} className="ui-icon-md" />
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      className="landing-import-input"
+                      multiple
+                      accept={PROMPT_FILE_ACCEPT}
+                      onChange={onFilesSelected}
+                      tabIndex={-1}
+                      aria-hidden
+                    />
+                    <span className="builder-plus">
+                      <Icon icon={Plus} className="ui-icon-md" />
+                      {attachments.length > 0 ? (
+                        <span className="builder-plus-badge" aria-hidden>
+                          {attachments.length}
+                        </span>
+                      ) : null}
+                    </span>
                   </button>
                   {busy ? (
                     <button
@@ -1546,21 +2112,24 @@ export default function ProjectPage() {
         {mainMode === "preview" && (
           <PreviewPane
             previewSrc={previewSrc}
+            previewPath={previewPath}
+            previewLiveStatus={previewLiveStatus}
             viewport={viewport}
             previewUpdating={previewUpdating}
             previewBusy={previewBusy}
             previewTool={previewTool}
+            previewMode={previewMode}
+            projectId={projectId}
+            remountKey={previewKey}
             onPreviewToolChange={(tool) => {
               setPreviewTool(tool);
+              syncBuilderUrl({ previewTool: tool });
               if (tool !== "image") setImageSelection(null);
               if (tool !== "comment") setCommentAnchor(null);
-              if (tool !== "select") {
-                /* keep selection badge until cleared / sent */
-              }
             }}
             onStartPreview={() => void startPreview()}
             onRefreshPreview={() => {
-              void forcePreviewRefresh({ softStart: true });
+              void forcePreviewRefresh({ restart: true });
             }}
             onElementSelect={(sel) => {
               setElementSelection(sel);
@@ -1578,14 +2147,15 @@ export default function ProjectPage() {
                   },
                 );
                 setError(null);
-                void forcePreviewRefresh({ softStart: true, remount: false });
+                void forcePreviewRefresh({ softStart: true, remount: true });
                 if (res?.path) {
                   setPreviewUpdating(true);
-                  setTimeout(() => setPreviewUpdating(false), 900);
+                  setTimeout(() => setPreviewUpdating(false), 1200);
                 }
               } catch (err) {
-                setError(
+                pushChatError(
                   err instanceof Error ? err.message : t("visualEditFailed"),
+                  null,
                 );
               }
             }}
@@ -1606,9 +2176,9 @@ export default function ProjectPage() {
                     setImageSelection(null);
                   }}
                   onReplaced={() => {
-                    void forcePreviewRefresh({ softStart: true, remount: false });
+                    void forcePreviewRefresh({ softStart: true, remount: true });
                     setPreviewUpdating(true);
-                    setTimeout(() => setPreviewUpdating(false), 900);
+                    setTimeout(() => setPreviewUpdating(false), 1200);
                   }}
                 />
               ) : null
@@ -1620,8 +2190,7 @@ export default function ProjectPage() {
             projectId={projectId}
             onSaved={() => {
               void refreshRoutes();
-              // Immediate remount so saved edits apply to preview without waiting on HMR.
-              void forcePreviewRefresh({ softStart: true });
+              void forcePreviewRefresh({ restart: true });
             }}
           />
         )}
@@ -1630,7 +2199,7 @@ export default function ProjectPage() {
             projectId={projectId}
             onChanged={() => {
               void refreshRoutes();
-              void forcePreviewRefresh({ softStart: true });
+              void forcePreviewRefresh({ restart: true });
             }}
           />
         )}
@@ -1641,6 +2210,11 @@ export default function ProjectPage() {
             projectSlug={project?.slug || ""}
             sitesUrl={project?.sites_url ?? null}
             publishedAt={project?.published_at ?? null}
+            section={optionsSection}
+            onSectionChange={(section) => {
+              setOptionsSection(section);
+              syncBuilderUrl({ optionsSection: section });
+            }}
             onNameSaved={(meta) =>
               setProject((p) =>
                 p
@@ -1653,7 +2227,10 @@ export default function ProjectPage() {
                   : p,
               )
             }
-            onOpenDesign={() => setDesignOpen(true)}
+            onOpenDesign={() => {
+              setDesignOpen(true);
+              syncBuilderUrl({ designOpen: true });
+            }}
           />
         )}
       </div>
@@ -1661,7 +2238,10 @@ export default function ProjectPage() {
       <DesignCharterSlideover
         projectId={projectId}
         open={designOpen}
-        onClose={() => setDesignOpen(false)}
+        onClose={() => {
+          setDesignOpen(false);
+          syncBuilderUrl({ designOpen: false });
+        }}
       />
     </div>
   );

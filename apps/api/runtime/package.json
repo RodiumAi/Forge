@@ -1,0 +1,13 @@
+{
+  "name": "@forge/runtime-transform",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "transform": "node cli.mjs"
+  },
+  "dependencies": {
+    "@babel/standalone": "^7.26.9"
+  }
+}

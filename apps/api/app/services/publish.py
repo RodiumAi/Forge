@@ -34,26 +34,90 @@ def _guess_content_type(path: Path) -> str:
     return ctype or "application/octet-stream"
 
 
-async def publish_project(project_id: str, slug: str) -> dict:
-    """Build with base=/ and sync dist/ to forge-assets/{slug}/."""
+async def run_vite_build_only(project_id: str) -> str:
+    """Run `vite build --base=/` for a project. Used by the build worker."""
     root = project_dir(project_id)
-    # Skip import scan on publish — deps should already be installed from preview/agent.
-    await ensure_dependencies(project_id, sync_imports=False)
-
-    # Publish must use base=/ (preview vite.config uses /preview/{id}/).
-    await _run_npm(
+    return await _run_npm(
         ["exec", "--", "vite", "build", "--base", "/"],
         str(root),
     )
 
+
+async def publish_project(
+    project_id: str,
+    slug: str,
+    *,
+    owner_user_id: str | None = None,
+) -> dict:
+    """Build and sync site assets. Uses ESM Babel publish when PUBLISH_MODE=esm."""
+    settings = get_settings()
+    if settings.publish_mode == "esm":
+        from app.services.publish_esm import publish_project_esm
+
+        return await publish_project_esm(
+            project_id,
+            slug,
+            owner_user_id=owner_user_id,
+        )
+
+    from app.services import firestore_live
+
+    firestore_live.set_publish(
+        project_id,
+        phase="deps",
+        owner_user_id=owner_user_id,
+    )
+    if settings.build_worker_enabled:
+        from app.services.build_queue import enqueue_build_job, wait_for_job
+
+        job_id = enqueue_build_job(
+            kind="vite_build",
+            project_id=project_id,
+            owner_user_id=owner_user_id,
+        )
+        firestore_live.set_publish(
+            project_id,
+            phase="build",
+            owner_user_id=owner_user_id,
+            job_id=job_id,
+        )
+        await asyncio.to_thread(wait_for_job, job_id, timeout_s=600.0)
+    else:
+        # Dev fallback: keep build in-process when worker is disabled.
+        firestore_live.set_publish(
+            project_id,
+            phase="build",
+            owner_user_id=owner_user_id,
+        )
+        await ensure_dependencies(project_id, sync_imports=False)
+        await run_vite_build_only(project_id)
+
+    root = project_dir(project_id)
     dist = root / "dist"
     if not dist.is_dir():
+        firestore_live.set_publish(
+            project_id,
+            phase="error",
+            owner_user_id=owner_user_id,
+            message="Build succeeded but dist/ is missing",
+        )
         raise RuntimeError("Build succeeded but dist/ is missing")
 
-    settings = get_settings()
+    firestore_live.set_publish(
+        project_id,
+        phase="upload",
+        owner_user_id=owner_user_id,
+    )
+
     store = get_object_store()
     bucket = store.bucket_site_assets or settings.bucket_site_assets
     if not bucket:
+        firestore_live.set_publish(
+            project_id,
+            phase="error",
+            owner_user_id=owner_user_id,
+            message="Site assets bucket is not configured",
+        )
         raise RuntimeError("Site assets bucket is not configured")
 
     files = [p for p in dist.rglob("*") if p.is_file()]
@@ -77,7 +141,16 @@ async def publish_project(project_id: str, slug: str) -> dict:
         async with lock:
             uploaded += 1
 
-    await asyncio.gather(*(upload_one(path) for path in files))
+    try:
+        await asyncio.gather(*(upload_one(path) for path in files))
+    except Exception as exc:
+        firestore_live.set_publish(
+            project_id,
+            phase="error",
+            owner_user_id=owner_user_id,
+            message=str(exc)[:500],
+        )
+        raise
 
     public_url = settings.sites_url_for_slug(slug)
     logger.info("Published project=%s slug=%s files=%s url=%s", project_id, slug, uploaded, public_url)

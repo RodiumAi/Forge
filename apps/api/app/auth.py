@@ -32,19 +32,34 @@ def create_access_token(user_id: UUID) -> str:
     return jwt.encode(payload, settings.secret_key, algorithm="HS256")
 
 
+def _token_from_request(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None,
+) -> str | None:
+    if credentials and credentials.credentials:
+        return credentials.credentials
+    # Allow short-lived img/src loads that cannot send Authorization headers.
+    for key in ("access_token", "token"):
+        value = request.query_params.get(key)
+        if value:
+            return value.strip() or None
+    return None
+
+
 def get_current_user(
     request: Request,
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)],
     db: Annotated[Session, Depends(get_db)],
 ) -> User:
     locale = resolve_locale(request)
-    if credentials is None:
+    token = _token_from_request(request, credentials)
+    if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=t("not_authenticated", locale),
         )
     try:
-        payload = jwt.decode(credentials.credentials, settings.secret_key, algorithms=["HS256"])
+        payload = jwt.decode(token, settings.secret_key, algorithms=["HS256"])
         user_id = payload.get("sub")
         if not user_id:
             raise HTTPException(

@@ -48,6 +48,12 @@ def delete_file(project_id: str, relative: str) -> None:
             else:
                 child.rmdir()
         path.rmdir()
+    try:
+        from app.services.firestore_live import bump_files
+
+        bump_files(project_id, [relative])
+    except Exception:
+        pass
 
 
 def read_file(project_id: str, relative: str) -> str:

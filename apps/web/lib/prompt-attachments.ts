@@ -1,36 +1,106 @@
 export const MAX_PROMPT_FILES = 5;
 
 export const PROMPT_FILE_ACCEPT =
-  ".md,.markdown,.txt,.pdf,image/*,.png,.jpg,.jpeg,.gif,.webp,.svg,text/markdown,text/plain,application/pdf";
+  ".md,.markdown,.txt,.pdf,image/*,.png,.jpg,.jpeg,.gif,.webp,.svg,.ico,image/x-icon,image/vnd.microsoft.icon,text/markdown,text/plain,application/pdf";
 
 export type PromptAttachmentKind = "image" | "md" | "pdf" | "txt";
 
-export type PromptAttachment = {
+export type LocalPromptAttachment = {
+  source: "local";
   id: string;
   file: File;
   kind: PromptAttachmentKind;
   previewUrl: string | null;
-  /** Public path after upload to project public/ (images). */
+  publicUrl?: string | null;
+  objectId?: string | null;
+  /** @deprecated use publicUrl */
   publicPath?: string | null;
 };
+
+export type ProjectRefPromptAttachment = {
+  source: "project";
+  id: string;
+  kind: PromptAttachmentKind;
+  name: string;
+  publicUrl: string;
+  objectId?: string | null;
+  previewUrl?: string | null;
+  /** @deprecated use publicUrl */
+  publicPath?: string | null;
+};
+
+export type PromptAttachment = LocalPromptAttachment | ProjectRefPromptAttachment;
 
 export type MessageAttachment = {
   name: string;
   kind: PromptAttachmentKind | string;
   previewUrl?: string | null;
+  publicUrl?: string | null;
+  objectId?: string | null;
+  /** @deprecated use publicUrl */
   publicPath?: string | null;
 };
+
+const EXPLICIT_ASSET_USE_RE =
+  /\b(?:use|set|put|place|attach|insert|comme|met(?:s|tre)|utilis(?:e|er))\b[\s\S]{0,40}\b(?:as|pour|for|en)?\s*(?:the|la|le|this|cette|cet|mon|my)?\s*(?:logo|favicon|icône|icone|bannière|banner|marque|brand)\b/i;
+
+/** Filename looks like a logo/favicon file the user wants embedded in the site. */
+const ASSET_FILENAME_RE =
+  /(?:^|[/_.-])(?:logo|favicon|icon|icone|icône|brand|marque|banner|bannière)(?:[._-]|\.[a-z0-9]+$)/i;
+
+/** Filename looks like a design reference capture — never treat as embeddable asset. */
+const REFERENCE_FILENAME_RE =
+  /(?:screenshot|screen-?shot|capture|mockup|maquette|wireframe|reference|référence|ref-?design|design-?ref)/i;
+
+const ATTACH_INSTRUCTION_RE =
+  /This is an? (?:REFERENCE screenshot(?:\/mockup)?(?: for visual inspiration)?|uploaded site asset)[\s\S]*?(?=\n\n|\Z)/gi;
 
 function extensionOf(name: string): string {
   const idx = name.lastIndexOf(".");
   return idx >= 0 ? name.slice(idx + 1).toLowerCase() : "";
 }
 
+export function attachmentName(item: PromptAttachment): string {
+  return item.source === "local" ? item.file.name : item.name;
+}
+
+export function attachmentObjectId(item: PromptAttachment): string | null {
+  return item.objectId || null;
+}
+
+export function attachmentPreviewUrl(item: PromptAttachment): string | null {
+  if (item.previewUrl) return item.previewUrl;
+  if (item.source === "local") return item.previewUrl;
+  return item.publicUrl || null;
+}
+
+export function attachmentPublicUrl(item: PromptAttachment): string | null {
+  if (item.source === "local") return item.publicUrl || item.publicPath || null;
+  return item.publicUrl || item.publicPath || null;
+}
+
 export function promptAttachmentKind(file: File): PromptAttachmentKind | null {
   const ext = extensionOf(file.name);
   const type = (file.type || "").toLowerCase();
+  const imageExt = [
+    "png",
+    "jpg",
+    "jpeg",
+    "gif",
+    "webp",
+    "svg",
+    "ico",
+    "bmp",
+    "jfif",
+    "pjpeg",
+    "avif",
+    "heic",
+    "heif",
+    "tif",
+    "tiff",
+  ];
 
-  if (type.startsWith("image/") || ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp"].includes(ext)) {
+  if (type.startsWith("image/") || type === "image/x-icon" || type === "image/vnd.microsoft.icon" || imageExt.includes(ext)) {
     return "image";
   }
   if (type === "text/markdown" || type === "text/x-markdown" || ext === "md" || ext === "markdown") {
@@ -45,10 +115,11 @@ export function promptAttachmentKind(file: File): PromptAttachmentKind | null {
   return null;
 }
 
-export function createPromptAttachment(file: File): PromptAttachment | null {
+export function createPromptAttachment(file: File): LocalPromptAttachment | null {
   const kind = promptAttachmentKind(file);
   if (!kind) return null;
   return {
+    source: "local",
     id: `${file.name}-${file.size}-${file.lastModified}-${Math.random().toString(36).slice(2, 8)}`,
     file,
     kind,
@@ -56,8 +127,35 @@ export function createPromptAttachment(file: File): PromptAttachment | null {
   };
 }
 
+export function createProjectRefAttachment(asset: {
+  id: string;
+  name: string;
+  public_url: string;
+  content_type?: string;
+}): ProjectRefPromptAttachment {
+  const ext = extensionOf(asset.name);
+  const kind: PromptAttachmentKind =
+    asset.content_type?.startsWith("image/") || ["png", "jpg", "jpeg", "gif", "webp", "svg"].includes(ext)
+      ? "image"
+      : ext === "pdf"
+        ? "pdf"
+        : ext === "md" || ext === "markdown"
+          ? "md"
+          : "txt";
+  return {
+    source: "project",
+    id: `ref-${asset.id}`,
+    kind,
+    name: asset.name,
+    publicUrl: asset.public_url,
+    objectId: asset.id,
+    previewUrl: null,
+    publicPath: asset.public_url,
+  };
+}
+
 export function revokePromptAttachment(item: PromptAttachment) {
-  if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
+  if (item.source === "local" && item.previewUrl) URL.revokeObjectURL(item.previewUrl);
 }
 
 export function mergePromptAttachments(
@@ -84,7 +182,6 @@ async function readTextFile(file: File): Promise<string> {
   return file.text();
 }
 
-/** Best-effort PDF text extraction without a heavy PDF.js dependency. */
 async function extractPdfText(file: File): Promise<string> {
   const buffer = await file.arrayBuffer();
   const bytes = new Uint8Array(buffer);
@@ -110,11 +207,7 @@ async function extractPdfText(file: File): Promise<string> {
     }
   }
 
-  const cleaned = parts
-    .join(" ")
-    .replace(/\s+/g, " ")
-    .trim();
-
+  const cleaned = parts.join(" ").replace(/\s+/g, " ").trim();
   if (cleaned.length >= 20) return cleaned.slice(0, 40_000);
 
   const runs = raw.match(/[\x20-\x7EÀ-ÿ]{5,}/g) || [];
@@ -141,15 +234,38 @@ export type PromptLabels = {
   txtSection?: string;
 };
 
-/** Markers used in the LLM payload — parsed back for chat display. */
 export const ATTACH_IMAGE_RE =
-  /\[(?:Reference screenshot|Capture de référence|Image attached|Image jointe):\s*([^\|\]]+?)(?:\s*\|\s*public:([^\]]+))?\]/gi;
-export const ATTACH_FILES_RE =
-  /\[(?:Files|Fichiers):\s*([^\]]+)\]/gi;
+  /\[(?:Reference screenshot|Capture de référence|Image attached|Image jointe):\s*([^\]]+)\]/gi;
+export const ATTACH_FILES_RE = /\[(?:Files|Fichiers):\s*([^\]]+)\]/gi;
 export const ATTACH_DOC_RE =
   /###\s+(?:Markdown file|Fichier Markdown|PDF content|Contenu PDF|Text file|Fichier texte|PDF attached[^:]*):\s*([^\n]+)\n+/gi;
-export const ATTACH_PUBLIC_HINT_RE =
-  /—\s*saved in project as\s*`([^`]+)`/gi;
+export const ATTACH_PUBLIC_HINT_RE = /—\s*saved in project as\s*`([^`]+)`/gi;
+
+function parseImageMarkerBody(body: string): {
+  name: string;
+  url: string | null;
+  objectId: string | null;
+} {
+  const parts = body.split("|").map((p) => p.trim()).filter(Boolean);
+  let name = parts[0] || "";
+  let url: string | null = null;
+  let objectId: string | null = null;
+  for (const part of parts.slice(1)) {
+    const lower = part.toLowerCase();
+    if (lower.startsWith("url:")) url = part.slice(4).trim() || null;
+    else if (lower.startsWith("public:")) url = part.slice(7).trim() || null;
+    else if (lower.startsWith("object:")) objectId = part.slice(7).trim() || null;
+  }
+  return { name, url, objectId };
+}
+
+function isAssetIntent(prompt: string, images: PromptAttachment[]): boolean {
+  if (images.some((img) => REFERENCE_FILENAME_RE.test(attachmentName(img)))) {
+    return false;
+  }
+  if (EXPLICIT_ASSET_USE_RE.test(prompt)) return true;
+  return images.some((img) => ASSET_FILENAME_RE.test(attachmentName(img)));
+}
 
 export function parseUserMessageContent(raw: string): {
   text: string;
@@ -159,29 +275,26 @@ export function parseUserMessageContent(raw: string): {
   let text = raw || "";
 
   for (const match of raw.matchAll(ATTACH_IMAGE_RE)) {
-    const name = match[1].trim();
-    const publicPath = (match[2] || "").trim() || null;
-    if (name && !attachments.some((a) => a.name === name)) {
-      attachments.push({ name, kind: "image", publicPath });
-    } else if (name && publicPath) {
-      const existing = attachments.find((a) => a.name === name);
-      if (existing && !existing.publicPath) existing.publicPath = publicPath;
-    }
-  }
-  // Legacy path hint after marker
-  for (const match of raw.matchAll(
-    /\[(?:Reference screenshot|Capture de référence|Image attached|Image jointe):\s*([^\]]+)\]\s*(?:—\s*saved in project as\s*`([^`]+)`)?/gi,
-  )) {
-    const name = match[1].trim();
-    const publicPath = (match[2] || "").trim() || null;
+    const { name, url, objectId } = parseImageMarkerBody(match[1] || "");
     if (!name) continue;
     const existing = attachments.find((a) => a.name === name);
     if (existing) {
-      if (publicPath && !existing.publicPath) existing.publicPath = publicPath;
+      if (url && !existing.publicUrl) {
+        existing.publicUrl = url;
+        existing.publicPath = url;
+      }
+      if (objectId && !existing.objectId) existing.objectId = objectId;
     } else {
-      attachments.push({ name, kind: "image", publicPath });
+      attachments.push({
+        name,
+        kind: "image",
+        publicUrl: url,
+        publicPath: url,
+        objectId,
+      });
     }
   }
+
   for (const match of raw.matchAll(ATTACH_FILES_RE)) {
     for (const part of match[1].split(",")) {
       const name = part.trim();
@@ -200,6 +313,7 @@ export function parseUserMessageContent(raw: string): {
       }
     }
   }
+
   for (const match of raw.matchAll(ATTACH_DOC_RE)) {
     const name = match[1].trim();
     if (!name) continue;
@@ -214,7 +328,10 @@ export function parseUserMessageContent(raw: string): {
     .replace(ATTACH_IMAGE_RE, "")
     .replace(ATTACH_FILES_RE, "")
     .replace(ATTACH_PUBLIC_HINT_RE, "")
-    .replace(/This is a REFERENCE screenshot[\s\S]*?(?=\n\n|\Z)/gi, "")
+    .replace(ATTACH_INSTRUCTION_RE, "")
+    // Legacy prose instructions (older messages) + selection markers stay out of the UI.
+    .replace(/\[(?:Sélection|Selection):\s*[^\]]*\]/gi, "")
+    .replace(/\[Connector:\s*[^\]]+\]/gi, "")
     .replace(/###\s+(?:Markdown file|Fichier Markdown|PDF content|Contenu PDF|Text file|Fichier texte)[^\n]*\n+[\s\S]*?(?=\n###|\n\[|\s*$)/gi, "")
     .replace(/\[(?:PDF attached|PDF joint)[^\]]*\]/gi, "")
     .replace(/\n{3,}/g, "\n\n")
@@ -236,23 +353,25 @@ export async function buildPromptWithAttachments(
 
   const images = attachments.filter((a) => a.kind === "image");
   const docs = attachments.filter((a) => a.kind === "md" || a.kind === "pdf" || a.kind === "txt");
+  const assetMode = isAssetIntent(trimmed, images);
 
   if (images.length) {
-    chunks.push(
-      `[${labels.importFiles}: ${images.map((a) => a.file.name).join(", ")}]`,
-    );
+    // Structured markers only — vision/asset instructions are injected server-side
+    // so they never appear in the chat UI.
+    chunks.push(`[${labels.importFiles}: ${images.map(attachmentName).join(", ")}]`);
     for (const img of images) {
-      const pathPart = img.publicPath ? ` | public:${img.publicPath}` : "";
-      chunks.push(
-        `[${labels.imageAttached}: ${img.file.name}${pathPart}]\n` +
-          "This is a REFERENCE screenshot/mockup for visual inspiration. " +
-          "Match its layout, hierarchy and style in the app. " +
-          "Do NOT call image generation / do NOT invent a new stock photo — implement UI in code.",
-      );
+      const url = attachmentPublicUrl(img);
+      const objectId = attachmentObjectId(img);
+      const urlPart = url ? ` | url:${url}` : "";
+      const objectPart = objectId ? ` | object:${objectId}` : "";
+      const intentPart = ` | intent:${assetMode ? "asset" : "reference"}`;
+      const name = attachmentName(img);
+      chunks.push(`[${labels.imageAttached}: ${name}${urlPart}${objectPart}${intentPart}]`);
     }
   }
 
   for (const doc of docs) {
+    if (doc.source !== "local") continue;
     try {
       if (doc.kind === "md" || doc.kind === "txt") {
         const text = (await readTextFile(doc.file)).trim();
@@ -274,6 +393,19 @@ export async function buildPromptWithAttachments(
   return chunks.join("\n\n").trim();
 }
 
+export function insertMentionInTextarea(
+  textarea: HTMLTextAreaElement | null,
+  value: string,
+  mention: string,
+): string {
+  if (!textarea) return `${value}${mention}`;
+  const start = textarea.selectionStart ?? value.length;
+  const end = textarea.selectionEnd ?? value.length;
+  const before = value.slice(0, start).replace(/@(?:[^\s@]*)$/, "");
+  const after = value.slice(end);
+  return `${before}${mention} ${after}`.replace(/\s+/g, " ").trimStart();
+}
+
 export type ElementSelectionMarker = {
   tag: string;
   id?: string | null;
@@ -282,11 +414,7 @@ export type ElementSelectionMarker = {
   text?: string;
 };
 
-/** Stable marker prepended to chat content so the agent targets a DOM element. */
-export function formatElementSelectionMarker(
-  sel: ElementSelectionMarker,
-  label = "Sélection",
-): string {
+export function formatElementSelectionMarker(sel: ElementSelectionMarker, label = "Sélection"): string {
   const parts = [
     sel.tag || "element",
     sel.selector ? `selector:${sel.selector}` : "",

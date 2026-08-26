@@ -3,15 +3,130 @@
 from __future__ import annotations
 
 import re
-from pathlib import Path
+from typing import Any
 
-from app.prompts.system import SYSTEM_PROMPT, system_prompt_with_design
+from app.prompts.system import THEME_QUALITY_HINT, system_prompt_with_design
+from app.services.attachments import enrich_user_message_with_vision
+from app.services.connector_recipes import format_prototype_plugins_layer
 from app.services.filesystem import list_files, read_file
+from app.services.ai_rules import ensure_ai_rules_md, load_ai_rules_md
 
-DESIGN_PATH = "DESIGN.md"
 DESIGN_MAX_CHARS = 12_000
-SELECTED_FILE_MAX_CHARS = 24_000
-FORCED_PATHS = ("src/index.css", "src/App.tsx", "DESIGN.md")
+SELECTED_FILE_MAX_CHARS = 28_000
+CSS_RESERVED_CHARS = 14_000
+FORCED_PATHS = ("src/index.css", "src/App.tsx", "DESIGN.md", "AI_RULES.md")
+SCAFFOLD_EXTRA_K = 8
+SURGICAL_EDIT_HINT = (
+    "Surgical edit mode: prefer the smallest correct change. Edit only the "
+    "targeted lines/sections. Do not rewrite whole files unless necessary for "
+    "correctness. Preserve unrelated imports, JSX, and CSS. "
+    "For src/index.css: preserve all existing selectors verbatim; only APPEND "
+    "new rules — never drop navbar/hero/layout rules."
+)
+_SELECTION_RE = re.compile(
+    r"\[(?:Selection|Sélection):\s*[^|\]]*\|[^|\]]*\|?\s*text:\"([^\"]*)\"",
+    re.I,
+)
+_LOGO_RE = re.compile(r"\b(logo|favicon|navbar|header|brand)\b", re.I)
+_SMALL_QUERY_RE = re.compile(
+    r"\b(change|modifie|modifier|remplace|mets|update|fix|texte|titre|title|hero|"
+    r"couleur|color|bouton|button|label)\b",
+    re.I,
+)
+_SCAFFOLD_QUERY_RE = re.compile(
+    r"\b(scaffold|build|crée|creer|create|génère|genere|generate|site|landing|"
+    r"ecommerce|e-commerce|boutique|shop|portfolio|saas|restaurant|resto|"
+    r"page|section|home|accueil|collection|pricing|menu)\b",
+    re.I,
+)
+
+
+def _is_small_edit_query(query: str) -> bool:
+    text = query or ""
+    if len(text) > 220:
+        return False
+    return bool(_SMALL_QUERY_RE.search(text))
+
+
+def select_files(query: str, files: dict[str, str], k: int = 4) -> list[str]:
+    tokens = [t.lower() for t in re.findall(r"[a-zA-Z0-9_./-]{2,}", query or "") if len(t) > 1]
+    scores: dict[str, float] = {p: 0.0 for p in files}
+    selection_text = ""
+    m = _SELECTION_RE.search(query or "")
+    if m:
+        selection_text = (m.group(1) or "").strip().lower()
+
+    scaffoldish = bool(_SCAFFOLD_QUERY_RE.search(query or ""))
+    effective_k = SCAFFOLD_EXTRA_K if scaffoldish and k < SCAFFOLD_EXTRA_K else k
+
+    for path, content in files.items():
+        pl = path.lower()
+        cl = content.lower()
+        for tok in tokens:
+            if tok in pl:
+                scores[path] += 3.0
+            if tok in cl:
+                scores[path] += 1.0 + min(cl.count(tok), 5) * 0.2
+        if path.endswith((".tsx", ".ts", ".css")):
+            scores[path] += 0.3
+        if selection_text and selection_text in cl:
+            scores[path] += 8.0
+        for tok in (
+            "hero",
+            "footer",
+            "navbar",
+            "header",
+            "contact",
+            "skills",
+            "projects",
+            "logo",
+            "collection",
+            "product",
+            "cart",
+            "pricing",
+            "menu",
+        ):
+            if tok in tokens and tok in pl:
+                scores[path] += 4.0
+        if scaffoldish and (
+            "/components/" in pl or pl.endswith("app.tsx") or pl.endswith("index.css")
+        ):
+            scores[path] += 1.5
+
+    if _LOGO_RE.search(query or ""):
+        for path in files:
+            pl = path.lower()
+            if "navbar" in pl or "header" in pl or pl.endswith("app.tsx"):
+                scores[path] += 6.0
+
+    ranked = sorted(scores.items(), key=lambda x: (-x[1], x[0]))
+    small = _is_small_edit_query(query)
+    limit = 2 if small else effective_k
+    picked: list[str] = []
+    for path, score in ranked:
+        if score <= 0 and len(picked) >= 1:
+            continue
+        if path not in picked:
+            picked.append(path)
+        if len(picked) >= limit:
+            break
+
+    if small:
+        for forced in FORCED_PATHS:
+            if forced in files and forced not in picked and scores.get(forced, 0) > 0:
+                picked.append(forced)
+        return picked[: limit + 1]
+
+    for forced in FORCED_PATHS:
+        if forced in files and forced not in picked:
+            picked.append(forced)
+    # Always keep index.css when scaffolding / building sections
+    if "src/index.css" in files and "src/index.css" not in picked:
+        picked.append("src/index.css")
+    # Put index.css first so the full CSS budget is reserved before other files.
+    if "src/index.css" in picked:
+        picked = ["src/index.css"] + [p for p in picked if p != "src/index.css"]
+    return picked[: effective_k + len(FORCED_PATHS)]
 
 
 def _skeleton_for_file(path: str, content: str) -> str:
@@ -42,40 +157,31 @@ def build_file_skeletons(files: dict[str, str], max_files: int = 60) -> str:
     return "\n".join(parts).rstrip() + "\n"
 
 
-def select_files(query: str, files: dict[str, str], k: int = 4) -> list[str]:
-    tokens = [t.lower() for t in re.findall(r"[a-zA-Z0-9_./-]{2,}", query or "") if len(t) > 1]
-    scores: dict[str, float] = {p: 0.0 for p in files}
-    for path, content in files.items():
-        pl = path.lower()
-        cl = content.lower()
-        for tok in tokens:
-            if tok in pl:
-                scores[path] += 3.0
-            if tok in cl:
-                scores[path] += 1.0 + min(cl.count(tok), 5) * 0.2
-        if path.endswith((".tsx", ".ts", ".css")):
-            scores[path] += 0.3
-
-    ranked = sorted(scores.items(), key=lambda x: (-x[1], x[0]))
-    picked: list[str] = []
-    for path, score in ranked:
-        if score <= 0 and len(picked) >= 1:
-            continue
-        if path not in picked:
-            picked.append(path)
-        if len(picked) >= k:
-            break
-
-    for forced in FORCED_PATHS:
-        if forced in files and forced not in picked:
-            picked.append(forced)
-    return picked[: k + len(FORCED_PATHS)]
+DESIGN_PATH = "DESIGN.md"
 
 
 def _selected_file_blocks(files: dict[str, str], paths: list[str]) -> str:
+    """Emit full selected files. Always reserve budget for src/index.css first."""
     parts = ["Selected files (full):\n"]
     used = 0
-    for path in paths:
+    ordered = list(paths)
+    if "src/index.css" in files:
+        ordered = ["src/index.css"] + [p for p in ordered if p != "src/index.css"]
+
+    # Phase 1: always include as much of index.css as the reserved budget allows.
+    css = files.get("src/index.css")
+    if css is not None:
+        css_chunk = css
+        if len(css_chunk) > CSS_RESERVED_CHARS:
+            css_chunk = css_chunk[:CSS_RESERVED_CHARS] + "\n/* … index.css truncated (tail omitted) */\n"
+        block = f"\n--- src/index.css ---\n{css_chunk}\n"
+        parts.append(block)
+        used += len(block)
+
+    # Phase 2: remaining files with leftover budget.
+    for path in ordered:
+        if path == "src/index.css":
+            continue
         content = files.get(path)
         if content is None:
             continue
@@ -112,54 +218,106 @@ def _sanitize_turn(role: str, content: str, *, limit: int) -> str:
     return text[:limit]
 
 
-def build_llm_messages(
+async def build_llm_messages(
     *,
     project_id: str,
     history: list[tuple[str, str]],
     user_query: str,
-) -> list[dict[str, str]]:
+    db=None,
+    user_id=None,
+    locale: str = "en",
+    auth=None,
+    model: str | None = None,
+    surgical_edit: bool = False,
+) -> list[dict[str, Any]]:
     """
     history: list of (role, content) including the latest user message.
     Layers 1–2 stable; 3 volatile; 4 compacted; 5 = last user turn already in history.
     """
+    ensure_ai_rules_md(project_id)
     files = list_files(project_id)
     design = load_design_md(project_id)
     has_design = bool(design)
 
     layer1 = system_prompt_with_design(has_design)
     layer2_parts = []
+    ai_rules = load_ai_rules_md(project_id)
+    if ai_rules:
+        layer2_parts.append("AI_RULES.md (project conventions — follow strictly):\n\n" + ai_rules)
     if design:
-        layer2_parts.append("DESIGN.md (graphic charter — follow strictly):\n\n" + design)
+        layer2_parts.append(
+            "DESIGN.md (LOCKED graphic charter — follow strictly; "
+            "do NOT rewrite this file or invent a new brand/logo/palette):\n\n"
+            + design
+        )
+        layer2_parts.append(THEME_QUALITY_HINT)
+    else:
+        layer2_parts.append(THEME_QUALITY_HINT)
     layer2_parts.append(build_file_skeletons(files))
     layer2 = "\n\n".join(layer2_parts)
 
     selected = select_files(user_query, files, k=4)
     layer3 = _selected_file_blocks(files, selected)
 
+    # Prototype mode: UI plugins only — no backend connector recipes.
+    plugins_connectors_layer = format_prototype_plugins_layer(locale=locale)
+
     # Always strip forge-write bodies — recent turns used to send 100k+ chars and break the stream.
-    compact: list[tuple[str, str]] = []
-    for role, content in history[:-6]:
-        compact.append((role, _sanitize_turn(role, content, limit=800 if role == "assistant" else 1200)))
+    early = history[:-6]
     recent = [
         (role, _sanitize_turn(role, content, limit=1500 if role == "assistant" else 4000))
         for role, content in history[-6:]
     ]
 
-    messages: list[dict[str, str]] = [
+    messages: list[dict[str, Any]] = [
         {"role": "system", "content": layer1},
+        {"role": "system", "content": plugins_connectors_layer},
         {"role": "system", "content": layer2},
         {"role": "system", "content": layer3},
     ]
-    if compact:
+    if surgical_edit:
+        messages.append({"role": "system", "content": SURGICAL_EDIT_HINT})
+
+    compacted_summary: str | None = None
+    if len(early) >= 4 and auth is not None and model:
+        try:
+            from app.services.orchestration.compaction import compact_conversation
+
+            sanitized_early = [
+                (role, _sanitize_turn(role, content, limit=800 if role == "assistant" else 1200))
+                for role, content in early
+            ]
+            compacted_summary = await compact_conversation(
+                turns=sanitized_early,
+                auth=auth,
+                model=model,
+                locale=locale,  # type: ignore[arg-type]
+            )
+        except Exception:
+            compacted_summary = None
+
+    if compacted_summary:
+        messages.append(
+            {
+                "role": "system",
+                "content": "Earlier conversation (structured summary):\n" + compacted_summary[:12_000],
+            }
+        )
+    elif early:
         summary_bits = []
-        for role, content in compact[-8:]:
-            summary_bits.append(f"{role}: {content[:400]}")
+        for role, content in early[-8:]:
+            bit = _sanitize_turn(role, content, limit=800 if role == "assistant" else 1200)
+            summary_bits.append(f"{role}: {bit[:400]}")
         messages.append(
             {
                 "role": "system",
                 "content": "Earlier conversation (compacted):\n" + "\n".join(summary_bits),
             }
         )
-    for role, content in recent:
-        messages.append({"role": role, "content": content})
+    for idx, (role, content) in enumerate(recent):
+        if role == "user" and idx == len(recent) - 1:
+            enriched = await enrich_user_message_with_vision(db, project_id, content)
+            messages.append({"role": role, "content": enriched})
+        else:
+            messages.append({"role": role, "content": content})
     return messages

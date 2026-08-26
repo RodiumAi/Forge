@@ -3,10 +3,11 @@
 import { ChangeEvent, useCallback, useEffect, useState } from "react";
 import { ImagePlus, Loader2 } from "lucide-react";
 import { api, apiBase, getToken } from "@/lib/api";
+import { assetContentUrl } from "@/lib/asset-url";
 import { Icon } from "@/components/ui/icon";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { FileTypeIcon } from "./file-icons";
-import { collectPublicImages, type FileNode } from "./types";
+import type { ProjectAsset } from "@/lib/prompt-upload";
 
 type Props = {
   projectId: string;
@@ -15,14 +16,14 @@ type Props = {
 
 export function FilesPane({ projectId, onChanged }: Props) {
   const { t } = useI18n();
-  const [images, setImages] = useState<string[]>([]);
+  const [assets, setAssets] = useState<ProjectAsset[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const tree = await api<FileNode[]>(`/projects/${projectId}/files`);
-      setImages(collectPublicImages(tree));
+      const list = await api<ProjectAsset[]>(`/projects/${projectId}/assets`);
+      setAssets(list);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("errorGeneric"));
     }
@@ -69,25 +70,35 @@ export function FilesPane({ projectId, onChanged }: Props) {
         <label className="btn builder-upload-btn">
           {busy ? <Icon icon={Loader2} className="ui-icon-sm agent-spin" /> : <Icon icon={ImagePlus} className="ui-icon-sm" />}
           {t("filesImportImage")}
-          <input type="file" accept="image/*" hidden onChange={(e) => void onUpload(e)} disabled={busy} />
+          <input type="file" accept="image/*,.ico,image/x-icon,image/vnd.microsoft.icon" hidden onChange={(e) => void onUpload(e)} disabled={busy} />
         </label>
       </header>
       {error && <p className="builder-pane-error">{error}</p>}
-      {images.length === 0 ? (
+      {assets.length === 0 ? (
         <p className="builder-empty">{t("filesEmpty")}</p>
       ) : (
         <ul className="builder-files-grid">
-          {images.map((path) => {
-            const publicPath = "/" + path.replace(/^public\//i, "");
+          {assets.map((asset) => {
+            const viewUrl = assetContentUrl(projectId, asset.id) ?? asset.public_url;
             return (
-              <li key={path} className="builder-file-card">
-                <div className="builder-file-thumb">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={`${apiBase()}/preview/${projectId}${publicPath}`} alt={path} />
-                </div>
+              <li key={asset.id} className="builder-file-card">
+                <a
+                  className="builder-file-thumb"
+                  href={viewUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  title={asset.name}
+                >
+                  {asset.content_type.startsWith("image/") ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={viewUrl} alt={asset.name} />
+                  ) : (
+                    <FileTypeIcon path={asset.name} size="md" />
+                  )}
+                </a>
                 <div className="builder-file-meta">
-                  <FileTypeIcon path={path} size="md" />
-                  <code>{publicPath}</code>
+                  <FileTypeIcon path={asset.name} size="md" />
+                  <code title={asset.name}>{asset.name}</code>
                 </div>
               </li>
             );

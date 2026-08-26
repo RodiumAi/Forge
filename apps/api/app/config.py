@@ -40,17 +40,28 @@ class Settings(BaseSettings):
     # Forkable starter kits (Vite/React snapshots). Docker: /data/templates
     templates_root: str = "./data/templates"
     cors_origins: str = "http://localhost:3100,http://127.0.0.1:3100,http://localhost:8080"
-    # Text/code default (Gemini). Images use default_image_model for tests.
+    # LLM models (override via .env — no slugs in router.py)
+    # LITE_MODEL: small edits, classify, coherence
+    # DEFAULT_MODEL: scaffold, plan, medium/large edits, verify.repair
+    # DEFAULT_IMAGE_MODEL: image generation
+    lite_model: str = "google/gemini-3.1-flash-lite"
     default_model: str = "google/gemini-3.7-flash"
     default_image_model: str = "openai/gpt-image-2"
     enable_pro_escalation: bool = False
+    # Optional heavier model when enable_pro_escalation is true (future use).
+    escalation_model: str = "google/gemini-3.7-flash"
     access_token_expire_minutes: int = 60 * 24 * 7
     preview_port_start: int = 5200
     preview_port_end: int = 5299
-    # Vite live preview (Next middleware). Sites Gateway routing uses sites_base_domain + Caddy.
     preview_public_host: str = "lvh.me"
     preview_public_port: int = 3100
     preview_public_scheme: str = "http"
+    # Preview engine: vite (legacy) | babel_runner (no bundler)
+    preview_mode: Literal["vite", "babel_runner"] = "babel_runner"
+    # Publish engine: vite (legacy) | esm (Babel transform, no vite build)
+    publish_mode: Literal["vite", "esm"] = "esm"
+    # Parent origins allowed to talk to the preview runner (comma-separated)
+    runner_parent_origins: str = "http://localhost:3100,http://127.0.0.1:3100"
 
     # Object store (MinIO local / S3 or R2 in production)
     object_store_provider: Literal["s3_compatible"] = "s3_compatible"
@@ -104,6 +115,20 @@ class Settings(BaseSettings):
     usage_stream: str = "sites:usage"
     usage_consumer_group: str = "billing"
     build_queue: str = "sites:builds"
+    # When true, vite build / heavy npm work is enqueued for the build-worker service.
+    build_worker_enabled: bool = False
+    # SSE comment heartbeats so ALB/proxies with long idle timeouts stay open.
+    sse_heartbeat_seconds: float = 15.0
+    # Target ALB idle timeout (seconds) — document & IaC must match before streaming runs.
+    alb_idle_timeout_seconds: int = 600
+
+    # Firestore live mirror (Admin SDK writes; UI listens via custom token).
+    # Emulator: set FIRESTORE_EMULATOR_HOST + FIREBASE_AUTH_EMULATOR_HOST (standard Google env vars).
+    firestore_enabled: bool = False
+    firebase_project_id: str = "rodiumai-local"
+    firestore_database: str = "rodiumaidb"
+    # Path to service account JSON for production; unused when emulator env is set.
+    google_application_credentials: str = ""
 
     managed_email_daily_limit: int = 25
     managed_storage_bytes_limit: int = 500 * 1024 * 1024

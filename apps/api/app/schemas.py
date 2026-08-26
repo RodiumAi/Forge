@@ -19,6 +19,13 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
 
 
+class FirebaseCustomTokenResponse(BaseModel):
+    token: str
+    project_id: str
+    database_id: str
+    enabled: bool = True
+
+
 class UserOut(BaseModel):
     id: UUID
     email: EmailStr
@@ -150,6 +157,27 @@ class ConnectorUpdate(BaseModel):
     credentials: dict[str, str] = Field(default_factory=dict)
 
 
+class PluginOut(BaseModel):
+    id: str
+    family: str
+    package: str
+    version: str
+    when_to_use: str
+    import_example: str
+    forbidden_alternatives: list[str] = Field(default_factory=list)
+    installable: bool = True
+
+
+class PluginFamilyOut(BaseModel):
+    id: str
+    plugins: list[PluginOut] = Field(default_factory=list)
+
+
+class PluginsCatalogOut(BaseModel):
+    families: list[PluginFamilyOut] = Field(default_factory=list)
+    plugins: list[PluginOut] = Field(default_factory=list)
+
+
 class ProjectCreate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=200)
     prompt: str | None = Field(default=None, max_length=8000)
@@ -224,6 +252,7 @@ class MessageOut(BaseModel):
     thinking_text: str | None = None
     steps_json: str | None = None
     file_ops_json: str | None = None
+    plan_json: str | None = None
     task_class: str | None = None
     model_slug: str | None = None
     effort_label: str | None = None
@@ -282,3 +311,6 @@ class PreviewStatus(BaseModel):
     port: int | None = None
     url: str | None = None
     public_url: str | None = None
+    mode: str = "babel_runner"
+    runner_url: str | None = None
+    entry: str = "src/main.tsx"

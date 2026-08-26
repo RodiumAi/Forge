@@ -20,11 +20,17 @@ from app.schemas import (
     SendMessageRequest,
 )
 from app.services.capabilities import require_rodi_for_paid_capability
-from app.services.filesystem import delete_file, write_file
+from app.services.filesystem import delete_file
+from app.services.apply_writes import apply_validated_writes
 from app.services.llm import RodiumError, stream_chat_completion
+from app.services.sse import with_sse_heartbeats
 from app.services.orchestration.cancel import clear_cancelled, is_cancelled, mark_cancelled
 from app.services.orchestration.context import build_llm_messages
-from app.services.orchestration.dispatcher import run_plan_tasks
+from app.services.attachments import extract_image_urls
+from app.services.orchestration.plan_persist import (
+    persist_assistant as _persist_assistant,
+)
+from app.services.orchestration.plan_worker import iter_run_event_sse, spawn_plan_job
 from app.services.orchestration.images import generate_project_image
 from app.services.orchestration.router import (
     classify_and_route,
@@ -86,6 +92,20 @@ def _sse(payload: dict) -> str:
     return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
 
 
+def _event_stream(source):
+    """SSE response with comment heartbeats (ALB idle timeout target: 600s)."""
+    settings = get_settings()
+    return StreamingResponse(
+        with_sse_heartbeats(source, interval_s=settings.sse_heartbeat_seconds),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
 def _parse_sse_chunk(chunk: str) -> dict | None:
     if not chunk.startswith("data: "):
         return None
@@ -104,45 +124,6 @@ def _history(db: Session, chat_id: UUID) -> list[tuple[str, str]]:
         .all()
     )
     return [(m.role, m.content) for m in rows]
-
-
-def _persist_assistant(
-    db: Session,
-    run: AgentRun,
-    payload: dict,
-    locale: str = "fr",
-) -> None:
-    raw = str(payload.get("summary") or "")
-    content = to_plain_text(raw)
-    # Never persist raw LLM marketing prose as the chat bubble.
-    if (
-        not content
-        or "<forge-write" in content.lower()
-        or len(content) > 1200
-    ):
-        content = to_plain_text(
-            build_run_summary(
-                tasks=payload.get("plan") if isinstance(payload.get("plan"), list) else None,
-                applied=payload.get("applied") if isinstance(payload.get("applied"), list) else None,
-                locale=locale if locale in ("en", "fr") else "fr",  # type: ignore[arg-type]
-            )
-        )
-    steps = payload.get("steps") or []
-    applied = payload.get("applied") or []
-    db.add(
-        Message(
-            chat_id=run.chat_id,
-            role="assistant",
-            content=content,
-            thinking_text=payload.get("thinking_text"),
-            steps_json=json.dumps(steps, ensure_ascii=False) if steps else None,
-            file_ops_json=json.dumps(applied, ensure_ascii=False) if applied else None,
-            task_class=run.task_class,
-            model_slug=run.model_slug,
-            effort_label=None,
-        )
-    )
-    db.commit()
 
 
 def _should_single_pass(task_class: str, user_content: str, mode: str) -> bool:
@@ -168,6 +149,8 @@ async def _iter_single_pass(
     auth,
     locale: str,
     route_effort: str,
+    user_id: UUID | None = None,
+    surgical_edit: bool = False,
 ):
     """Yield SSE for a direct code edit (no plan panel)."""
     steps: list[dict] = []
@@ -183,14 +166,33 @@ async def _iter_single_pass(
             existing["label"] = label
         else:
             steps.append({"id": step_id, "label": label, "status": st})
+        try:
+            from app.services import firestore_live
+
+            firestore_live.set_run(
+                project_id_str,
+                run_id=run_id_str,
+                status="running",
+                owner_user_id=str(user_id) if user_id else None,
+                step_id=step_id,
+                step_label=label,
+            )
+        except Exception:
+            pass
         return _sse({"type": "step", "id": step_id, "label": label, "status": st})
 
     yield push_step("select_files", t("step_select_files", locale), "running")
     history = _history(db, chat_id_pk)
-    llm_messages = build_llm_messages(
+    llm_messages = await build_llm_messages(
         project_id=project_id_str,
         history=history,
         user_query=user_content,
+        db=db,
+        user_id=user_id,
+        locale=locale,
+        auth=auth,
+        model=model,
+        surgical_edit=surgical_edit,
     )
     yield push_step("select_files", t("step_select_files", locale), "done")
     yield push_step("generate", t("step_generate_code", locale), "running")
@@ -229,10 +231,70 @@ async def _iter_single_pass(
     yield push_step("generate", t("step_generate_code", locale), "done")
     yield push_step("apply_writes", t("step_apply_writes", locale), "running")
     writes, deletes = parse_forge_tags("".join(full))
-    for op in writes:
-        write_file(project_id_str, op.path, op.content)
-        applied.append({"op": "write", "path": op.path})
-        yield _sse({"type": "file_write", "path": op.path})
+
+    required_urls = [
+        img.url for img in extract_image_urls(user_content) if img.url.startswith("http")
+    ]
+    if required_urls and not any(
+        any(url in op.content for op in writes) for url in required_urls
+    ):
+        retry_prompt = (
+            "CRITICAL: The user's uploaded asset URL(s) must appear verbatim in your forge-write output "
+            "(e.g. <img src=\"...\"> or background-image: url(...)). Do not use placeholders.\n"
+            + "\n".join(f"- {u}" for u in required_urls)
+            + f"\n\nOriginal request:\n{user_content}"
+        )
+        yield push_step("generate", t("step_generate_code", locale), "running")
+        retry_messages = await build_llm_messages(
+            project_id=project_id_str,
+            history=history + [("user", user_content), ("assistant", "".join(full)), ("user", retry_prompt)],
+            user_query=retry_prompt,
+            db=db,
+            user_id=user_id,
+            locale=locale,
+            auth=auth,
+            model=model,
+            surgical_edit=surgical_edit,
+        )
+        retry_full: list[str] = []
+        try:
+            async for chunk in stream_chat_completion(
+                auth=auth,
+                model=model,
+                messages=retry_messages,
+                locale=locale,  # type: ignore[arg-type]
+            ):
+                if is_cancelled(run_id_str):
+                    yield push_step("generate", t("step_generate_code", locale), "error")
+                    yield _sse({"type": "error", "message": "cancelled"})
+                    return
+                if chunk.kind == "thinking":
+                    thinking_parts.append(chunk.content)
+                    yield _sse({"type": "thinking", "delta": chunk.content})
+                else:
+                    retry_full.append(chunk.content)
+                    yield _sse({"type": "token", "content": chunk.content})
+        except RodiumError as exc:
+            yield push_step("generate", t("step_generate_code", locale), "error")
+            yield _sse({"type": "error", "message": str(exc)})
+            return
+        if retry_full:
+            full = retry_full
+            writes, deletes = parse_forge_tags("".join(full))
+        yield push_step("generate", t("step_generate_code", locale), "done")
+
+    written, violations = apply_validated_writes(project_id_str, writes)
+    applied.extend(written)
+    for item in written:
+        yield _sse({"type": "file_write", "path": item["path"]})
+    for v in violations:
+        yield _sse(
+            {
+                "type": "warning",
+                "message": f"{v.get('code')}: {v.get('message')}",
+                "violation": v,
+            }
+        )
     for op in deletes:
         delete_file(project_id_str, op.path)
         applied.append({"op": "delete", "path": op.path})
@@ -265,6 +327,18 @@ async def _iter_single_pass(
         _persist_assistant(db, live, payload, locale)
         live.status = "done"
         db.commit()
+        try:
+            from app.services import firestore_live
+
+            firestore_live.set_run(
+                project_id_str,
+                run_id=run_id_str,
+                status="done",
+                owner_user_id=str(user_id) if user_id else None,
+                throttle=False,
+            )
+        except Exception:
+            pass
     yield _sse({"type": "done", **payload, "effort_label": route_effort})
 
 
@@ -305,7 +379,7 @@ def get_active_run(
         .filter(
             AgentRun.chat_id == chat.id,
             AgentRun.status.in_(
-                ("awaiting_plan_confirm", "awaiting_clarify", "running"),
+                ("awaiting_plan_confirm", "awaiting_clarify", "running", "error"),
             ),
         )
         .order_by(AgentRun.created_at.desc())
@@ -329,16 +403,23 @@ def get_active_run(
     except Exception:
         clarify = []
 
-    # A bare "running" stream cannot be resumed after refresh.
-    # Only plan-mode runs should resurface as awaiting confirmation — agent runs
-    # that died mid-stream must not become ghost "Execute plan" panels.
+    # A bare "running" stream without checkpointed plan cannot be resumed after refresh.
+    # Plan-mode / checkpointed runs resurface for confirm or resume.
     if run.status == "running":
-        if (run.mode or "agent") == "plan" and plan:
-            run.status = "awaiting_plan_confirm"
+        if plan:
+            # Keep as running if background worker may still be active; UI will subscribe.
+            # If no live worker (legacy SSE), treat as resumable confirm.
             for task in plan:
                 if isinstance(task, dict) and task.get("status") == "running":
                     task["status"] = "pending"
             run.plan_json = json.dumps(plan)
+            # Prefer resume UX unless still actively claimed by worker (phase 3).
+            from app.services.orchestration.run_queue import is_run_claimed
+
+            if not is_run_claimed(str(run.id)):
+                run.status = "error" if any(
+                    isinstance(t, dict) and t.get("status") == "done" for t in plan
+                ) else "awaiting_plan_confirm"
             db.commit()
         else:
             run.status = "interrupted"
@@ -407,7 +488,19 @@ async def send_message(
     user_msg_id = str(user_msg.id)
     chat_id_pk = chat.id
     run_pk = run.id
-    clarify = needs_clarify(user_content, force_scaffold=force_scaffold)
+    use_single_pass = _should_single_pass(route.task_class, user_content, mode)
+    clarify = (
+        False
+        if use_single_pass
+        else needs_clarify(
+            user_content,
+            force_scaffold=force_scaffold,
+            task_class=route.task_class,
+        )
+    )
+
+    # Prototype mode (FE-only): no connector clarify gate (Resend/Firebase/…).
+    # RodiumAi generation auth remains via resolve_generation_auth / Settings.
 
     # Image branch: keep single-pass for V1
     if route.is_image and mode == "agent":
@@ -426,6 +519,19 @@ async def send_message(
                     existing["label"] = label
                 else:
                     steps.append({"id": step_id, "label": label, "status": st})
+                try:
+                    from app.services import firestore_live
+
+                    firestore_live.set_run(
+                        str(project_id),
+                        run_id=str(run.id),
+                        status="running",
+                        owner_user_id=str(user.id),
+                        step_id=step_id,
+                        step_label=label,
+                    )
+                except Exception:
+                    pass
                 return _sse({"type": "step", "id": step_id, "label": label, "status": st})
 
             yield _sse({"type": "user_message", "id": user_msg_id, "run_id": str(run.id)})
@@ -460,10 +566,15 @@ async def send_message(
                     "Use forge-write tags."
                 )
                 yield push_step("select_files", t("step_select_files", locale), "running")
-                llm_messages = build_llm_messages(
+                llm_messages = await build_llm_messages(
                     project_id=project_id_str,
                     history=history + [("user", wire_prompt)],
                     user_query=wire_prompt,
+                    db=db,
+                    user_id=user.id,
+                    locale=locale,
+                    auth=gen_auth,
+                    model=get_settings().default_model,
                 )
                 yield push_step("select_files", t("step_select_files", locale), "done")
                 yield push_step("generate", t("step_generate_code", locale), "running")
@@ -482,10 +593,18 @@ async def send_message(
                 yield push_step("generate", t("step_generate_code", locale), "done")
                 yield push_step("apply_writes", t("step_apply_writes", locale), "running")
                 writes, deletes = parse_forge_tags("".join(full))
-                for op in writes:
-                    write_file(project_id_str, op.path, op.content)
-                    applied.append({"op": "write", "path": op.path})
-                    yield _sse({"type": "file_write", "path": op.path})
+                written, violations = apply_validated_writes(project_id_str, writes)
+                applied.extend(written)
+                for item in written:
+                    yield _sse({"type": "file_write", "path": item["path"]})
+                for v in violations:
+                    yield _sse(
+                        {
+                            "type": "warning",
+                            "message": f"{v.get('code')}: {v.get('message')}",
+                            "violation": v,
+                        }
+                    )
                 for op in deletes:
                     delete_file(project_id_str, op.path)
                     applied.append({"op": "delete", "path": op.path})
@@ -523,11 +642,15 @@ async def send_message(
                 db.commit()
                 yield _sse({"type": "error", "message": str(exc)})
 
-        return StreamingResponse(image_stream(), media_type="text/event-stream")
+        return _event_stream(image_stream())
 
     # Clarify gate
     if clarify:
-        questions = build_clarify_questions(user_content, locale)  # type: ignore[arg-type]
+        questions = build_clarify_questions(
+            user_content,
+            locale,  # type: ignore[arg-type]
+            force_scaffold=force_scaffold,
+        )
         run.clarify_json = json.dumps(questions)
         run.status = "awaiting_clarify"
         db.commit()
@@ -558,7 +681,7 @@ async def send_message(
                 }
             )
 
-        return StreamingResponse(clarify_stream(), media_type="text/event-stream")
+        return _event_stream(clarify_stream())
 
     def _attachment_steps():
         """Yield SSE steps for reading/parsing user attachments (not image gen)."""
@@ -631,7 +754,6 @@ async def send_message(
         )
 
     # Build plan (and auto-exec for agent mode)
-    use_single_pass = _should_single_pass(route.task_class, user_content, mode)
 
     async def plan_stream():
         try:
@@ -666,6 +788,9 @@ async def send_message(
                     auth=gen_auth,
                     locale=locale,  # type: ignore[arg-type]
                     route_effort=route_effort,
+                    user_id=user.id,
+                    surgical_edit=route.task_class
+                    in ("code.edit.small", "text.copy", "text.micro", "code.edit.medium"),
                 ):
                     yield chunk
                 return
@@ -713,26 +838,19 @@ async def send_message(
             if needs_confirm:
                 return
             history = _history(db, chat_id_pk)
-            async for chunk in run_plan_tasks(
+            spawn_plan_job(
+                run_id=run_pk,
+                user_id=user.id,
                 project_id=project_id_str,
                 history=history,
                 user_prompt=user_content,
                 answers_block="",
                 tasks=plan,
                 model=route.model,
-                auth=gen_auth,
                 locale=locale,  # type: ignore[arg-type]
-                run_id=str(run_pk),
-            ):
+            )
+            async for chunk in iter_run_event_sse(str(run_pk)):
                 yield chunk
-                payload = _parse_sse_chunk(chunk)
-                if payload and payload.get("type") == "done":
-                    done_row = db.get(AgentRun, run_pk)
-                    if done_row is not None:
-                        _persist_assistant(db, done_row, payload, locale)
-                        done_row.status = "done"
-                        done_row.plan_json = json.dumps(payload.get("plan") or plan)
-                        db.commit()
         except Exception as exc:
             try:
                 err_row = db.get(AgentRun, run_pk)
@@ -743,7 +861,7 @@ async def send_message(
                 pass
             yield _sse({"type": "error", "message": str(exc)[:500]})
 
-    return StreamingResponse(plan_stream(), media_type="text/event-stream")
+    return _event_stream(plan_stream())
 
 
 @router.post("/projects/{project_id}/chats/{chat_id}/runs/{run_id}/clarify")
@@ -834,26 +952,19 @@ async def submit_clarify(
             history = _history(db, chat_id_pk)
             questions = json.loads(clarify_json) if clarify_json else None
             answers_block = format_answers_for_prompt(answers, questions)
-            async for chunk in run_plan_tasks(
+            spawn_plan_job(
+                run_id=run_pk,
+                user_id=user.id,
                 project_id=project_id_str,
                 history=history,
                 user_prompt=run_prompt,
                 answers_block=answers_block,
                 tasks=plan,
                 model=run_model,
-                auth=gen_auth,
                 locale=locale,  # type: ignore[arg-type]
-                run_id=str(run_pk),
-            ):
+            )
+            async for chunk in iter_run_event_sse(str(run_pk)):
                 yield chunk
-                payload = _parse_sse_chunk(chunk)
-                if payload and payload.get("type") == "done":
-                    live = db.get(AgentRun, run_pk)
-                    if live is not None:
-                        _persist_assistant(db, live, payload, locale)
-                        live.status = "done"
-                        live.plan_json = json.dumps(payload.get("plan") or plan)
-                        db.commit()
         except Exception as exc:
             live = db.get(AgentRun, run_pk)
             if live is not None:
@@ -861,7 +972,7 @@ async def submit_clarify(
                 db.commit()
             yield _sse({"type": "error", "message": str(exc)[:500]})
 
-    return StreamingResponse(stream(), media_type="text/event-stream")
+    return _event_stream(stream())
 
 @router.post("/projects/{project_id}/chats/{chat_id}/runs/{run_id}/confirm-plan")
 async def confirm_plan(
@@ -875,7 +986,7 @@ async def confirm_plan(
 ) -> StreamingResponse:
     locale = resolve_locale(request)
     project, chat, run = _owned_run(db, user, project_id, chat_id, run_id, locale)
-    if run.status != "awaiting_plan_confirm":
+    if run.status not in ("awaiting_plan_confirm", "error"):
         raise HTTPException(status_code=400, detail=t("run_invalid_state", locale))  # type: ignore[arg-type]
     require_rodi_for_paid_capability(user, db)
     gen_auth = await resolve_generation_auth(db, user)
@@ -884,7 +995,7 @@ async def confirm_plan(
     if not plan:
         raise HTTPException(status_code=400, detail=t("plan_empty", locale))  # type: ignore[arg-type]
     for task in plan:
-        if isinstance(task, dict):
+        if isinstance(task, dict) and task.get("status") != "done":
             task["status"] = "pending"
 
     run_pk = run.id
@@ -901,37 +1012,50 @@ async def confirm_plan(
     db.commit()
 
     history = _history(db, chat_id_pk)
+    user_id = user.id
+
+    spawn_plan_job(
+        run_id=run_pk,
+        user_id=user_id,
+        project_id=project_id_str,
+        history=history,
+        user_prompt=run_prompt,
+        answers_block=answers_block,
+        tasks=plan,
+        model=model,
+        locale=locale,  # type: ignore[arg-type]
+    )
 
     async def stream():
-        try:
-            async for chunk in run_plan_tasks(
-                project_id=project_id_str,
-                history=history,
-                user_prompt=run_prompt,
-                answers_block=answers_block,
-                tasks=plan,
-                model=model,
-                auth=gen_auth,
-                locale=locale,  # type: ignore[arg-type]
-                run_id=str(run_pk),
-            ):
-                yield chunk
-                payload = _parse_sse_chunk(chunk)
-                if payload and payload.get("type") == "done":
-                    live = db.get(AgentRun, run_pk)
-                    if live is not None:
-                        _persist_assistant(db, live, payload, locale)
-                        live.status = "done"
-                        live.plan_json = json.dumps(payload.get("plan") or plan)
-                        db.commit()
-        except Exception as exc:
-            live = db.get(AgentRun, run_pk)
-            if live is not None:
-                live.status = "error"
-                db.commit()
-            yield _sse({"type": "error", "message": str(exc)[:500]})
+        async for chunk in iter_run_event_sse(str(run_pk)):
+            yield chunk
 
-    return StreamingResponse(stream(), media_type="text/event-stream")
+    return _event_stream(stream())
+
+
+@router.get("/projects/{project_id}/chats/{chat_id}/runs/{run_id}/events")
+async def stream_run_events(
+    project_id: UUID,
+    chat_id: UUID,
+    run_id: UUID,
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> StreamingResponse:
+    """Replay + live SSE for a background plan run (reconnect after refresh)."""
+    locale = resolve_locale(request)
+    _owned_run(db, user, project_id, chat_id, run_id, locale)
+    after = 0
+    try:
+        after = max(0, int(request.query_params.get("after") or 0))
+    except Exception:
+        after = 0
+
+    async def stream():
+        async for chunk in iter_run_event_sse(str(run_id), start_after=after):
+            yield chunk
+
+    return _event_stream(stream())
 
 
 @router.post("/projects/{project_id}/chats/{chat_id}/runs/{run_id}/cancel")
@@ -950,6 +1074,18 @@ def cancel_run(
     mark_cancelled(str(run.id))
     run.status = "cancelled"
     db.commit()
+    try:
+        from app.services import firestore_live
+
+        firestore_live.set_run(
+            str(project_id),
+            run_id=str(run.id),
+            status="cancelled",
+            owner_user_id=str(user.id),
+            throttle=False,
+        )
+    except Exception:
+        pass
     return {"ok": True}
 
 
@@ -1013,11 +1149,23 @@ async def branch_messages(
     project_id_str = str(project.id)
     chat_id_pk = chat.id
     run_pk = run.id
-    clarify = needs_clarify(user_content, force_scaffold=force_scaffold)
     use_single_pass = _should_single_pass(route.task_class, user_content, mode)
+    clarify = (
+        False
+        if use_single_pass
+        else needs_clarify(
+            user_content,
+            force_scaffold=force_scaffold,
+            task_class=route.task_class,
+        )
+    )
 
     if clarify:
-        questions = build_clarify_questions(user_content, locale)  # type: ignore[arg-type]
+        questions = build_clarify_questions(
+            user_content,
+            locale,  # type: ignore[arg-type]
+            force_scaffold=force_scaffold,
+        )
         run.clarify_json = json.dumps(questions)
         run.status = "awaiting_clarify"
         db.commit()
@@ -1040,7 +1188,7 @@ async def branch_messages(
                 }
             )
 
-        return StreamingResponse(clarify_stream(), media_type="text/event-stream")
+        return _event_stream(clarify_stream())
 
     async def branch_stream():
         try:
@@ -1064,6 +1212,9 @@ async def branch_messages(
                     auth=gen_auth,
                     locale=locale,  # type: ignore[arg-type]
                     route_effort=route_effort,
+                    user_id=user.id,
+                    surgical_edit=route.task_class
+                    in ("code.edit.small", "text.copy", "text.micro", "code.edit.medium"),
                 ):
                     yield chunk
                 return
@@ -1111,26 +1262,19 @@ async def branch_messages(
             if needs_confirm:
                 return
             history = _history(db, chat_id_pk)
-            async for chunk in run_plan_tasks(
+            spawn_plan_job(
+                run_id=run_pk,
+                user_id=user.id,
                 project_id=project_id_str,
                 history=history,
                 user_prompt=user_content,
                 answers_block="",
                 tasks=plan,
                 model=route.model,
-                auth=gen_auth,
                 locale=locale,  # type: ignore[arg-type]
-                run_id=str(run_pk),
-            ):
+            )
+            async for chunk in iter_run_event_sse(str(run_pk)):
                 yield chunk
-                payload = _parse_sse_chunk(chunk)
-                if payload and payload.get("type") == "done":
-                    done_row = db.get(AgentRun, run_pk)
-                    if done_row is not None:
-                        _persist_assistant(db, done_row, payload, locale)
-                        done_row.status = "done"
-                        done_row.plan_json = json.dumps(payload.get("plan") or plan)
-                        db.commit()
         except Exception as exc:
             err_row = db.get(AgentRun, run_pk)
             if err_row is not None:
@@ -1138,4 +1282,4 @@ async def branch_messages(
                 db.commit()
             yield _sse({"type": "error", "message": str(exc)[:500]})
 
-    return StreamingResponse(branch_stream(), media_type="text/event-stream")
+    return _event_stream(branch_stream())

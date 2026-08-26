@@ -4,6 +4,10 @@ import { useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import type { OnMount } from "@monaco-editor/react";
 import { monacoLanguageForPath } from "./file-icons";
+import {
+  MONACO_IGNORED_DIAGNOSTIC_CODES,
+  MONACO_PROJECT_EXTRA_LIB,
+} from "./monaco-extra-libs";
 
 const Monaco = dynamic(() => import("@monaco-editor/react"), {
   ssr: false,
@@ -18,15 +22,65 @@ type Props = {
 };
 
 const FORGE_THEME = "forge-dark";
+let monacoConfigured = false;
+
+function modelUriForPath(path: string): string {
+  const normalized = path.replace(/\\/g, "/").replace(/^\/+/, "");
+  return `file:///project/${normalized}`;
+}
+
+function configureMonaco(monaco: Parameters<OnMount>[1]) {
+  if (monacoConfigured) return;
+  monacoConfigured = true;
+
+  const compilerOptions = {
+    jsx: monaco.languages.typescript.JsxEmit.ReactJSX,
+    jsxImportSource: "react",
+    allowNonTsExtensions: true,
+    allowJs: true,
+    checkJs: false,
+    strict: false,
+    skipLibCheck: true,
+    target: monaco.languages.typescript.ScriptTarget.ESNext,
+    module: monaco.languages.typescript.ModuleKind.ESNext,
+    moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
+    esModuleInterop: true,
+    isolatedModules: true,
+    noUnusedLocals: false,
+    noUnusedParameters: false,
+  };
+
+  const diagnosticsOptions = {
+    noSemanticValidation: false,
+    noSyntaxValidation: false,
+    noSuggestionDiagnostics: true,
+    diagnosticCodesToIgnore: MONACO_IGNORED_DIAGNOSTIC_CODES,
+  };
+
+  monaco.languages.typescript.typescriptDefaults.setCompilerOptions(compilerOptions);
+  monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
+    ...compilerOptions,
+    allowJs: true,
+  });
+  monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions(diagnosticsOptions);
+  monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions(diagnosticsOptions);
+  monaco.languages.typescript.typescriptDefaults.addExtraLib(
+    MONACO_PROJECT_EXTRA_LIB,
+    "file:///node_modules/@types/forge-project/index.d.ts",
+  );
+}
 
 export function CodeEditor({ path, value, onChange, onSave }: Props) {
   const language = monacoLanguageForPath(path);
+  const modelPath = modelUriForPath(path);
   const onSaveRef = useRef(onSave);
   useEffect(() => {
     onSaveRef.current = onSave;
   }, [onSave]);
 
   const handleMount: OnMount = (editor, monaco) => {
+    configureMonaco(monaco);
+
     monaco.editor.defineTheme(FORGE_THEME, {
       base: "vs-dark",
       inherit: true,
@@ -70,25 +124,13 @@ export function CodeEditor({ path, value, onChange, onSave }: Props) {
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
       onSaveRef.current?.();
     });
-
-    monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
-      jsx: monaco.languages.typescript.JsxEmit.ReactJSX,
-      allowNonTsExtensions: true,
-      target: monaco.languages.typescript.ScriptTarget.ESNext,
-      moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
-      esModuleInterop: true,
-    });
-    monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
-      jsx: monaco.languages.typescript.JsxEmit.ReactJSX,
-      allowNonTsExtensions: true,
-      target: monaco.languages.typescript.ScriptTarget.ESNext,
-    });
   };
 
   return (
     <div className="code-monaco-wrap">
       <Monaco
-        key={path}
+        key={modelPath}
+        path={modelPath}
         height="100%"
         language={language}
         theme={FORGE_THEME}

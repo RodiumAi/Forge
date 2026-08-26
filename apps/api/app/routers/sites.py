@@ -11,9 +11,9 @@ from app.config import get_settings
 from app.db import get_db
 from app.errors import recipient_not_allowed
 from app.i18n import resolve_locale, t
-from app.models import Project, StoredObject, User
+from app.models import Project, User
 from app.providers.mail import build_mail_provider
-from app.services import s3 as s3_service
+from app.services.asset_storage import upload_project_asset
 from app.services.capabilities import (
     assert_managed_email_quota,
     assert_managed_storage_quota,
@@ -144,30 +144,22 @@ async def upload_site_file(
             "Using Forge managed object storage (500 MB cap). "
             "Connect Cloudinary to remove this limit."
         )
-        adapter = "s3"
 
-    object_key = s3_service.build_object_key(
-        user_id=str(user.id),
-        project_slug=project.slug,
-        filename=filename,
-    )
-    public_url = s3_service.upload_bytes(object_key, body, content_type)
-    db.add(
-        StoredObject(
-            user_id=user.id,
-            project_id=project.id,
-            object_key=object_key,
+    try:
+        row = upload_project_asset(
+            db,
+            user=user,
+            project=project,
+            body=body,
+            filename=filename,
             content_type=content_type,
-            byte_size=len(body),
-            public_url=public_url,
-            adapter=adapter,
         )
-    )
-    db.commit()
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=str(exc)[:300]) from exc
     return StorageUploadResponse(
-        adapter=adapter,
-        object_key=object_key,
-        public_url=public_url,
-        byte_size=len(body),
+        adapter=row.adapter,
+        object_key=row.object_key,
+        public_url=row.public_url,
+        byte_size=int(row.byte_size or 0),
         warning=warning,
     )

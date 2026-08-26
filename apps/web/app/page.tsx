@@ -1,10 +1,10 @@
 "use client";
 
 import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowUp, Plus } from "lucide-react";
+import { BrandLogo } from "@/components/BrandLogo";
 import { PromptFileChips } from "@/components/PromptFileChips";
 import { SiteThumb } from "@/components/SiteThumb";
 import { GalleryTemplate } from "@/components/TemplateGallery";
@@ -13,9 +13,10 @@ import { getToken } from "@/lib/api";
 import {
   PENDING_PROMPT_KEY,
   PENDING_TEMPLATE_KEY,
-  createProjectFromPrompt,
+  createProjectWithAttachments,
   ensureCanGenerate,
   forkProjectFromTemplate,
+  stashPendingFiles,
 } from "@/lib/create-project";
 import {
   ensureTemplates,
@@ -29,9 +30,10 @@ import { ThemeSwitch } from "@/components/ThemeSwitch";
 import {
   PROMPT_FILE_ACCEPT,
   PromptAttachment,
-  buildPromptWithAttachments,
+  LocalPromptAttachment,
   mergePromptAttachments,
   revokePromptAttachment,
+  type PromptLabels,
 } from "@/lib/prompt-attachments";
 
 type PromptBoxProps = {
@@ -83,7 +85,7 @@ function LandingPromptBox({
         <p className="lp-prompt-error" role="alert">
           {error}{" "}
           {error === t("createNeedsKey") ? (
-            <Link href="/connectors/rodiumai">{t("openSettings")}</Link>
+            <Link href="/settings?tab=generation">{t("openSettings")}</Link>
           ) : null}
         </p>
       )}
@@ -173,15 +175,15 @@ export default function LandingPage() {
     })();
   }, [locale]);
 
-  async function composePrompt(value: string) {
-    return buildPromptWithAttachments(value, files, {
+  function promptLabels(): PromptLabels {
+    return {
       importFiles: t("importFiles"),
       imageAttached: t("promptImageAttached"),
       mdSection: t("promptMdSection"),
       txtSection: t("promptTxtSection"),
       pdfSection: t("promptPdfSection"),
       pdfEmpty: t("promptPdfEmpty"),
-    });
+    };
   }
 
   async function goWithPrompt(value: string) {
@@ -189,11 +191,15 @@ export default function LandingPage() {
     setSubmitting(true);
     setError(null);
     try {
-      const payload = await composePrompt(value);
-      if (!payload) return;
+      const trimmed = value.trim();
+      if (!trimmed && !files.length) return;
 
       if (!getToken()) {
-        sessionStorage.setItem(PENDING_PROMPT_KEY, payload);
+        sessionStorage.setItem(PENDING_PROMPT_KEY, trimmed);
+        const localFiles = files
+          .filter((item): item is LocalPromptAttachment => item.source === "local")
+          .map((item) => item.file);
+        if (localFiles.length) await stashPendingFiles(localFiles);
         router.push("/login");
         return;
       }
@@ -204,7 +210,13 @@ export default function LandingPage() {
         return;
       }
 
-      const project = await createProjectFromPrompt(payload, t("newProject"));
+      const project = await createProjectWithAttachments(
+        trimmed,
+        files,
+        t("newProject"),
+        promptLabels(),
+        locale,
+      );
       invalidateProjectsCache();
       prependProject(locale, project);
       files.forEach(revokePromptAttachment);
@@ -314,7 +326,7 @@ export default function LandingPage() {
     <div className="landing">
       <header className="lp-nav">
         <Link href="/" className="lp-nav-brand" aria-label={t("brandAlt")}>
-          <Image src="/forge-rodiumai.png" alt="" width={132} height={38} priority />
+          <BrandLogo alt="" width={132} height={38} priority />
         </Link>
         <nav className="lp-nav-links" aria-label={t("homeNav")}>
           <a href="#templates">{t("landingNavTemplates")}</a>
@@ -466,7 +478,7 @@ export default function LandingPage() {
         <div className="lp-footer-wash" aria-hidden />
         <div className="lp-footer-panel">
           <div className="lp-footer-brand">
-            <Image src="/forge-rodiumai.png" alt={t("brandAlt")} width={120} height={34} />
+            <BrandLogo alt={t("brandAlt")} width={120} height={34} />
             <p>{t("landingFooterTagline")}</p>
           </div>
           <div className="lp-footer-cols">
@@ -478,7 +490,7 @@ export default function LandingPage() {
             </div>
             <div>
               <h3>{t("landingFooterResources")}</h3>
-              <Link href="/connectors">{t("connectors")}</Link>
+              <Link href="/settings?tab=generation">{t("settingsTabRodium")}</Link>
               <Link href="/dashboard">{t("projects")}</Link>
             </div>
             <div>

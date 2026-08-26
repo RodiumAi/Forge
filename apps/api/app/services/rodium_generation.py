@@ -72,17 +72,35 @@ def store_oauth_tokens(row: UserSettings, tokens: dict) -> None:
 
 async def ensure_rodium_access_token(db: Session, user: User, row: UserSettings) -> str:
     if not row.rodium_access_token_encrypted:
-        raise HTTPException(status_code=400, detail="RodiumAi account is not linked")
+        raise HTTPException(
+            status_code=403,
+            detail="RodiumAi account is not linked. Sign in with RodiumAi again.",
+        )
     access = decrypt_secret(row.rodium_access_token_encrypted)
     expires = row.rodium_token_expires_at
     if expires is not None and expires.tzinfo is None:
         expires = expires.replace(tzinfo=timezone.utc)
-    if expires and expires > datetime.now(timezone.utc):
+    now = datetime.now(timezone.utc)
+    if expires and expires > now:
         return access
     if not row.rodium_refresh_token_encrypted:
-        return access
+        raise HTTPException(
+            status_code=403,
+            detail="RodiumAi session expired. Sign in with RodiumAi again to continue generating.",
+        )
     refresh = decrypt_secret(row.rodium_refresh_token_encrypted)
-    tokens = await refresh_access_token(refresh)
+    try:
+        tokens = await refresh_access_token(refresh)
+    except RodiumOidcError as exc:
+        # Invalid/expired refresh — clear so the UI can force a clean re-link.
+        row.rodium_access_token_encrypted = None
+        row.rodium_refresh_token_encrypted = None
+        row.rodium_token_expires_at = None
+        db.commit()
+        raise HTTPException(
+            status_code=403,
+            detail="RodiumAi session expired. Sign in with RodiumAi again to continue generating.",
+        ) from exc
     store_oauth_tokens(row, tokens)
     db.commit()
     return decrypt_secret(row.rodium_access_token_encrypted or "")
@@ -142,16 +160,30 @@ async def select_api_key_id(
     return row.rodium_api_key_hint or hint or "API key"
 
 
+def _bound_user(db: Session, user: User) -> User:
+    """Re-bind User after commits / background sessions so attribute access is safe."""
+    user_id = getattr(user, "id", None)
+    if user_id is None:
+        return user
+    bound = db.get(User, user_id)
+    return bound or user
+
+
 async def resolve_generation_auth(db: Session, user: User) -> RodiumGenerationAuth:
+    user = _bound_user(db, user)
     row = db.get(UserSettings, user.id)
     if row is None:
         raise HTTPException(status_code=400, detail="RodiumAi API key is required")
-    if user.rodium_sub and row.selected_rodium_api_key_id:
+    rodium_sub = user.rodium_sub
+    selected_key = row.selected_rodium_api_key_id
+    if rodium_sub and selected_key:
         access = await ensure_rodium_access_token(db, user, row)
+        # Token refresh commits — re-read settings row in case the session moved.
+        row = db.get(UserSettings, user.id) or row
         return RodiumGenerationAuth(
             mode="playground",
             access_token=access,
-            api_key_id=row.selected_rodium_api_key_id,
+            api_key_id=row.selected_rodium_api_key_id or selected_key,
         )
     if row.rodium_api_key_encrypted:
         try:

@@ -159,4 +159,101 @@ def fork_template(template_id: str, project_id: str, app_name: str | None = None
             except OSError:
                 pass
 
+    # Default Forge favicon when the template has none.
+    from app.services.scaffold import ensure_favicon_link, install_default_favicon
+
+    install_default_favicon(project_id)
+    html_path = dest / "index.html"
+    if html_path.is_file():
+        try:
+            text = html_path.read_text(encoding="utf-8")
+            updated = ensure_favicon_link(text)
+            if updated != text:
+                html_path.write_text(updated, encoding="utf-8")
+        except OSError:
+            pass
+
     return meta
+
+
+# Heuristic keyword → template id (first match wins by score).
+_TEMPLATE_KEYWORDS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    (
+        "sarab-restaurant",
+        (
+            "restaurant",
+            "resto",
+            "menu",
+            "food",
+            "cuisine",
+            "burger",
+            "café",
+            "cafe",
+            "brasserie",
+            "pizzeria",
+        ),
+    ),
+    (
+        "bloom-shop",
+        (
+            "ecommerce",
+            "e-commerce",
+            "boutique",
+            "shop",
+            "store",
+            "panier",
+            "cart",
+            "sneakers",
+            "fashion",
+            "magasin",
+            "produits",
+        ),
+    ),
+    (
+        "folio-eliott",
+        (
+            "portfolio",
+            "freelance",
+            "designer",
+            "photographe",
+            "photographer",
+            "cv",
+            "case study",
+            "études de cas",
+        ),
+    ),
+    (
+        "tailnext-saas",
+        ("saas", "pricing", "abonnement", "subscription", "b2b", "product landing"),
+    ),
+    (
+        "play-startup",
+        ("startup", "landing", "features", "équipe", "team", "blog startup"),
+    ),
+    (
+        "podux-podcast",
+        ("podcast", "épisode", "episode", "audio", "listen", "écoute"),
+    ),
+)
+
+
+def suggest_template(prompt: str) -> str | None:
+    """Return a template id when the prompt clearly matches a kit category."""
+    text = (prompt or "").strip().lower()
+    if len(text) < 12:
+        return None
+    best_id: str | None = None
+    best_score = 0
+    for tid, keywords in _TEMPLATE_KEYWORDS:
+        score = 0
+        for kw in keywords:
+            if kw in text:
+                score += 2 if len(kw) >= 6 else 1
+        if score > best_score:
+            best_score = score
+            best_id = tid
+    if best_score < 2:
+        return None
+    if get_template(best_id or "") is None:
+        return None
+    return best_id

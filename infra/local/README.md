@@ -43,6 +43,22 @@ Caddy reproduit le contrat de routage (`/_rodium/*` → API, le reste → MinIO)
 
 Aucun écart : la même implémentation tourne en local et en production.
 
+### Build worker (Node)
+
+Le service Compose `build-worker` consomme la file Valkey `sites:builds`. L’API enqueue (`BUILD_WORKER_ENABLED=true`) et n’exécute plus `vite build` dans le process FastAPI. Partage du volume `./data/projects`.
+
+### SSE et idle timeout ALB
+
+Les streams agent émettent des commentaires SSE (`: hb …`) toutes les `SSE_HEARTBEAT_SECONDS` (15s). **Avant le premier run streamé derrière un ALB**, configurer :
+
+```text
+aws elbv2 modify-load-balancer-attributes \
+  --load-balancer-arn <ALB_ARN> \
+  --attributes Key=idle_timeout.timeout_seconds,Value=600
+```
+
+Cible documentée : `ALB_IDLE_TIMEOUT_SECONDS=600`.
+
 ### Preview Vite
 
 Le live preview dashboard reste sur `{slug}.lvh.me:3100` (middleware Next). Caddy `:8080` sert le contrat Sites Gateway (assets publiés + `/_rodium`).

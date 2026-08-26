@@ -1,4 +1,7 @@
 import { api } from "@/lib/api";
+import { buildPromptWithAttachments, type PromptAttachment, type PromptLabels } from "@/lib/prompt-attachments";
+import { uploadPromptAttachments } from "@/lib/prompt-upload";
+import { clearPendingFiles, loadPendingFiles, savePendingFiles } from "@/lib/pending-files";
 
 export const PENDING_PROMPT_KEY = "forge_pending_prompt";
 export const PENDING_TEMPLATE_KEY = "forge_pending_template";
@@ -60,12 +63,46 @@ export async function createProjectFromPrompt(
 ): Promise<CreatedProject> {
   const payload = raw.trim();
   if (!payload) throw new Error("empty prompt");
+  // API may auto-fork a ThemeWagon kit when the prompt matches (hybrid start).
   const project = await api<CreatedProject>("/projects", {
     method: "POST",
     body: JSON.stringify({ prompt: payload, name: nameFallback }),
   });
   setBootPrompt(project.id, payload);
   return project;
+}
+
+export async function createProjectWithAttachments(
+  text: string,
+  attachments: PromptAttachment[],
+  nameFallback: string,
+  labels: PromptLabels,
+  locale: string,
+): Promise<CreatedProject> {
+  const trimmed = text.trim();
+  const project = await api<CreatedProject>("/projects", {
+    method: "POST",
+    body: JSON.stringify({
+      prompt: trimmed || nameFallback,
+      name: nameFallback,
+    }),
+  });
+  const uploaded = attachments.length
+    ? await uploadPromptAttachments(project.id, attachments, locale)
+    : [];
+  const payload = await buildPromptWithAttachments(trimmed, uploaded, labels);
+  if (payload) setBootPrompt(project.id, payload);
+  await clearPendingFiles();
+  return project;
+}
+
+export async function restorePendingFilesAsAttachments(): Promise<File[]> {
+  return loadPendingFiles();
+}
+
+export async function stashPendingFiles(files: File[]): Promise<void> {
+  const locals = files.filter((f) => f instanceof File);
+  if (locals.length) await savePendingFiles(locals);
 }
 
 export async function forkProjectFromTemplate(

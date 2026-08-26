@@ -1,4 +1,8 @@
 import type { NextConfig } from "next";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const configDir = path.dirname(fileURLToPath(import.meta.url));
 
 function s3RemotePatterns(): NonNullable<
   NextConfig["images"]
@@ -41,6 +45,14 @@ const nextConfig: NextConfig = {
   ...(useStandaloneOutput ? { output: "standalone" as const } : {}),
   images: {
     remotePatterns: s3RemotePatterns(),
+  },
+  webpack: (config) => {
+    if (useStandaloneOutput) {
+      config.resolve ??= {};
+      config.resolve.alias ??= {};
+      config.resolve.alias["@/lib/fonts"] = path.join(configDir, "lib/fonts.fallback.ts");
+    }
+    return config;
   },
 };
 
