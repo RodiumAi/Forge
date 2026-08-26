@@ -31,7 +31,8 @@ import {
 import { ClarifyCard, type ClarifyQuestion } from "@/components/ClarifyCard";
 import { DesignCharterSlideover } from "@/components/DesignCharterSlideover";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { GenerationCollapse } from "@/components/GenerationCollapse";
+import { AssistantBody } from "@/components/chat/AssistantBody";
+import { ScrollToBottom } from "@/components/chat/ScrollToBottom";
 import { PlanPanel, type PlanTask } from "@/components/PlanPanel";
 import { PromptFileChips } from "@/components/PromptFileChips";
 import { PromptAssetMention } from "@/components/PromptAssetMention";
@@ -68,7 +69,6 @@ import {
   revokePromptAttachment,
 } from "@/lib/prompt-attachments";
 import { uploadPromptAttachments } from "@/lib/prompt-upload";
-import { toPlainChatText } from "@/lib/plain-text";
 import { UserMessageBody } from "@/components/UserMessageBody";
 import {
   builderStateFromUi,
@@ -253,6 +253,8 @@ export default function ProjectPage() {
   const [streamOps, setStreamOps] = useState<FileOp[]>([]);
   const [streamEffort, setStreamEffort] = useState<string | null>(null);
   const [streamSummary, setStreamSummary] = useState("");
+  const [showJumpToBottom, setShowJumpToBottom] = useState(false);
+  const [hasUnread, setHasUnread] = useState(false);
   const [busy, setBusy] = useState(() => Boolean(initialBoot));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -745,7 +747,10 @@ export default function ProjectPage() {
       const distanceFromBottom =
         container.scrollHeight - container.scrollTop - container.clientHeight;
       // Only keep auto-following while the user is near the bottom.
-      stickToBottomRef.current = distanceFromBottom < 80;
+      const atBottom = distanceFromBottom < 80;
+      stickToBottomRef.current = atBottom;
+      setShowJumpToBottom(!atBottom);
+      if (atBottom) setHasUnread(false);
     };
 
     container.addEventListener("scroll", onScroll, { passive: true });
@@ -755,8 +760,14 @@ export default function ProjectPage() {
 
   useEffect(() => {
     const container = messagesRef.current;
-    if (!container || !stickToBottomRef.current) return;
-    container.scrollTop = container.scrollHeight;
+    if (!container) return;
+    if (!stickToBottomRef.current) {
+      // Detached view: signal that something new landed instead of yanking
+      // the user back down mid-read.
+      setHasUnread(true);
+      return;
+    }
+    container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
   }, [
     messages,
     streaming,
@@ -767,6 +778,15 @@ export default function ProjectPage() {
     planTasks,
     streamSummary,
   ]);
+
+  const jumpToBottom = useCallback(() => {
+    const container = messagesRef.current;
+    if (!container) return;
+    stickToBottomRef.current = true;
+    setHasUnread(false);
+    setShowJumpToBottom(false);
+    container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
+  }, []);
 
   // New user message → pin back to bottom so the reply is visible.
   useEffect(() => {
@@ -971,12 +991,10 @@ export default function ProjectPage() {
         });
         throw new Error(message);
       } else if (type === "done") {
-        const summary = toPlainChatText(
-          typeof payloadEvent.summary === "string" ? payloadEvent.summary : "",
-        );
-        // Never surface LLM marketing prose (emoji / markdown) as the chat bubble.
+        const summary = typeof payloadEvent.summary === "string" ? payloadEvent.summary : "";
         const content =
-          summary ||
+          summary.trim() ||
+          ctx.assistantRef.value.trim() ||
           (locale === "en"
             ? "Here is what was put in place."
             : "Voici ce qui a été mis en place.");
@@ -1798,7 +1816,14 @@ export default function ProjectPage() {
 
       <div className={`builder-body builder-body-${mobilePane}`}>
         <aside className="builder-sidebar">
-          <div className="builder-messages" ref={messagesRef}>
+          <div
+            className="builder-messages"
+            ref={messagesRef}
+            role="log"
+            aria-live="polite"
+            aria-relevant="additions text"
+            aria-label={t("chatLogLabel")}
+          >
             {loading && !messages.length && <p className="builder-empty">{t("loading")}</p>}
 
             {!loading && messages.length === 0 && !showLivePanel && (
@@ -1839,7 +1864,7 @@ export default function ProjectPage() {
               if (m.role === "user" && !m.content.trim()) return null;
               const text =
                 m.role === "assistant"
-                  ? toPlainChatText(displayContent(m.content) || m.content)
+                  ? displayContent(m.content) || m.content
                   : m.content.trim();
               const steps = parseJsonArray<AgentStep>(m.steps_json);
               const ops = parseJsonArray<FileOp>(m.file_ops_json);
@@ -1896,12 +1921,7 @@ export default function ProjectPage() {
                       />
                     </div>
                   ) : (
-                    <GenerationCollapse
-                      summary={text}
-                      code=""
-                      fileCount={ops.length}
-                      streaming={false}
-                    />
+                    <AssistantBody content={text} />
                   )}
                 </article>
               );
@@ -1939,10 +1959,8 @@ export default function ProjectPage() {
                     onSubmit={(answers) => void submitClarify(answers)}
                   />
                 )}
-                <GenerationCollapse
-                  summary={toPlainChatText(streamSummary)}
-                  code=""
-                  fileCount={streamOps.length}
+                <AssistantBody
+                  content={streamSummary || streaming}
                   streaming={busy && !awaitingHitl}
                 />
               </article>
@@ -1950,6 +1968,13 @@ export default function ProjectPage() {
 
             <div ref={bottomRef} />
           </div>
+
+          <ScrollToBottom
+            visible={showJumpToBottom}
+            unread={hasUnread}
+            onClick={jumpToBottom}
+            label={t("chatJumpToLatest")}
+          />
 
           <form className="builder-composer" onSubmit={onSend}>
             <div

@@ -127,6 +127,8 @@ export const dictionaries = {
     previewFailed: "Preview failed",
     newProject: "New project",
     errorGeneric: "Error",
+    chatLogLabel: "Conversation",
+    chatJumpToLatest: "Jump to latest",
     errorBoundaryTitle: "Something went wrong",
     errorBoundaryBody:
       "This page hit an unexpected error. Your project files are safe — every change is checkpointed.",
@@ -570,6 +572,8 @@ export const dictionaries = {
     previewFailed: "Échec de la preview",
     newProject: "Nouveau projet",
     errorGeneric: "Erreur",
+    chatLogLabel: "Conversation",
+    chatJumpToLatest: "Revenir en bas",
     errorBoundaryTitle: "Une erreur est survenue",
     errorBoundaryBody:
       "Cette page a rencontré une erreur inattendue. Vos fichiers sont intacts — chaque modification est sauvegardée en checkpoint.",

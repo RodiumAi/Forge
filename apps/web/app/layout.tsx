@@ -3,6 +3,7 @@ import { TopProgressHost } from "@/components/TopProgressHost";
 import { appFonts } from "@/lib/fonts";
 import { I18nProvider } from "@/lib/i18n/I18nProvider";
 import { ThemeProvider } from "@/lib/theme/ThemeProvider";
+import "highlight.js/styles/github-dark.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
