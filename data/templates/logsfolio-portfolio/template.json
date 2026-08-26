@@ -1,0 +1,19 @@
+{
+  "id": "logsfolio-portfolio",
+  "title": { "en": "Developer Portfolio", "fr": "Portfolio Developpeur" },
+  "description": {
+    "en": "A dark single-page developer portfolio: hero intro, work experience, projects, education, testimonials and blog teasers.",
+    "fr": "Un portfolio developpeur sombre en une page : intro, experience, projets, formation, temoignages et apercus de blog."
+  },
+  "tags": ["portfolio", "developer", "resume"],
+  "preview": "preview.html",
+  "bootHint": {
+    "en": "Compiling the resume...",
+    "fr": "Compilation du CV..."
+  },
+  "accent": "#5eead4",
+  "bg": "#0d1117",
+  "fg": "#e6edf3",
+  "muted": "#8b949e",
+  "tone": "dark, technical, confident"
+}

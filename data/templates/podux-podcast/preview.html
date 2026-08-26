@@ -1,31 +1,40 @@
 <!doctype html>
-<html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Podux Podcast</title>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Podux Podcast — Preview</title>
 <style>
-
-:root{--bg:#0b1020;--fg:#f8fafc;--muted:#94a3b8;--accent:#8b5cf6;--card:#121a2f;font-family:"Segoe UI",system-ui,sans-serif}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg)}
-.top{display:flex;justify-content:space-between;align-items:center;padding:1rem 1.5rem}
-.brand{font-weight:800}
-.btn{background:var(--accent);color:#fff;border:0;border-radius:.7rem;padding:.7rem 1.1rem;font-weight:700}
-.hero{display:grid;grid-template-columns:1.05fr .95fr;gap:2rem;max-width:1100px;margin:0 auto;padding:2.5rem 1.5rem;align-items:center}
-.hero h1{font-size:clamp(2.2rem,5vw,3.4rem);letter-spacing:-.03em;margin:.5rem 0 1rem}
-.hero p{color:var(--muted)}
-.hero img{width:100%;border-radius:1.25rem;object-fit:cover;max-height:420px}
-.section{max-width:1100px;margin:0 auto;padding:2rem 1.5rem}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
-.card{display:grid;grid-template-columns:120px 1fr;gap:1rem;background:var(--card);border-radius:1rem;padding:1rem;border:1px solid #1e293b;align-items:center}
-.card img{width:120px;height:90px;object-fit:cover;border-radius:.75rem}
-.muted{color:var(--muted)}
-.stats{display:flex;gap:2rem;margin-top:1.5rem}
-@media(max-width:900px){.hero,.grid2,.card{grid-template-columns:1fr}}
-
-html,body{overflow:hidden} a,button{pointer-events:none}
-img{max-width:100%;display:block}
-</style></head><body>
-
-<header class="top"><strong class="brand">Podux</strong><button class="btn">Join Us</button></header>
-<section class="hero"><div><h1>Find and listen to your favorite podcast</h1><p>Tech conversations for builders.</p></div>
-<img src="public/03-concentrated-young-african-american.webp" alt=""/></section>
-
-</body></html>
+body{margin:0;font-family:"Segoe UI",system-ui,sans-serif;background:#f7f6fc;color:#181330}
+.h{display:flex;justify-content:space-between;align-items:center;padding:10px 18px;font-size:11px}
+.h b{font-size:13px}
+.cta{background:#7c5cff;color:#fff;border-radius:99px;padding:4px 10px;font-weight:700;font-size:10px}
+.hero{display:flex;gap:14px;align-items:center;padding:14px 18px 20px}
+.chip{background:#ece9f8;color:#7c5cff;border-radius:99px;padding:2px 8px;font-size:8px;font-weight:700}
+.hero h1{font-size:15px;margin:6px 0;max-width:24ch}
+.hero p{color:#6f6a86;font-size:9px;margin:0}
+.art{flex:1;min-height:80px;border-radius:12px;background:linear-gradient(150deg,#7c5cff,#2b1a6e 75%);display:flex;align-items:center;justify-content:center}
+.pl{background:#fff;color:#7c5cff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px}
+.eps{padding:0 18px 14px}
+.ep{display:flex;align-items:center;gap:8px;background:#fff;border-radius:9px;padding:6px 10px;margin-bottom:6px;font-size:9px;box-shadow:0 1px 5px rgba(24,19,48,.07)}
+.n{color:#6f6a86;font-weight:700}
+.cv{width:22px;height:22px;border-radius:6px}
+.t{flex:1;font-weight:600}
+.d{background:#ece9f8;color:#6f6a86;border-radius:99px;padding:0 6px;font-size:8px}
+.p2{background:#ece9f8;color:#7c5cff;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:7px}
+.f{background:#181330;color:#b7b1cf;padding:10px 18px;font-size:9px}
+</style>
+</head>
+<body>
+<div class="h"><b>Signal&amp;Noise</b><span class="cta">Follow the show</span></div>
+<div class="hero">
+  <div><span class="chip">Season 4 now streaming</span><h1>Signal&amp;Noise, a podcast about building software people actually use</h1><p>New episode every other Tuesday.</p></div>
+  <div class="art"><span class="pl">&#9654;</span></div>
+</div>
+<div class="eps">
+  <div class="ep"><span class="n">01</span><span class="cv" style="background:linear-gradient(135deg,#7c5cff,#4b32c3)"></span><span class="t">Why your side project deserves a launch day</span><span class="d">38 min</span><span class="p2">&#9654;</span></div>
+  <div class="ep"><span class="n">02</span><span class="cv" style="background:linear-gradient(135deg,#ff7ab8,#b83280)"></span><span class="t">Debugging in production without losing sleep</span><span class="d">52 min</span><span class="p2">&#9654;</span></div>
+  <div class="ep"><span class="n">03</span><span class="cv" style="background:linear-gradient(135deg,#5ccfff,#2a7fb8)"></span><span class="t">The art of the tiny pull request</span><span class="d">27 min</span><span class="p2">&#9654;</span></div>
+</div>
+<div class="f">&copy; 2026 Signal&amp;Noise &mdash; fictional demo podcast</div>
+</body>
+</html>

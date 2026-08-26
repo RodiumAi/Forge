@@ -1,0 +1,100 @@
+:root {
+  --bg: #0d1117;
+  --fg: #e6edf3;
+  --muted: #8b949e;
+  --accent: #5eead4;
+  --soft: #161b22;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: "Segoe UI", system-ui, sans-serif;
+  line-height: 1.65;
+}
+
+.page { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+
+.topbar {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 22px 0; flex-wrap: wrap; gap: 10px;
+}
+.brand { font-weight: 700; font-size: 16px; }
+.brand-dot { color: var(--accent); }
+.nav { display: flex; gap: 20px; flex-wrap: wrap; }
+.nav a { color: var(--muted); text-decoration: none; font-size: 14px; }
+.nav a:hover { color: var(--accent); }
+
+.hero { text-align: center; padding: 72px 0 64px; }
+.avatar {
+  width: 112px; height: 112px; border-radius: 50%; margin: 0 auto 24px;
+  background: linear-gradient(140deg, var(--accent), #2563eb 80%);
+  border: 3px solid var(--soft);
+}
+.hero h1 { font-size: clamp(28px, 5vw, 42px); }
+.hero-sub { color: var(--muted); max-width: 560px; margin: 14px auto 28px; }
+.hero-links { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; }
+.btn { text-decoration: none; padding: 11px 24px; border-radius: 8px; font-size: 14px; }
+.btn--solid { background: var(--accent); color: #06281f; font-weight: 600; }
+.btn--ghost { border: 1px solid var(--muted); color: var(--fg); }
+.btn:hover { opacity: 0.85; }
+
+.section { padding: 44px 0; border-top: 1px solid var(--soft); }
+.section h2 { font-size: 24px; margin-bottom: 26px; }
+.section h2::before { content: "// "; color: var(--accent); }
+
+.job, .edu { background: var(--soft); border-radius: 12px; padding: 22px 24px; margin-bottom: 16px; }
+.job-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 6px; }
+.job-head h3 { font-size: 17px; }
+.job-at { color: var(--accent); font-weight: 500; }
+.meta { color: var(--muted); font-size: 13px; }
+.job ul { margin: 12px 0 0 20px; color: var(--muted); font-size: 14.5px; }
+.job li { margin-bottom: 5px; }
+.edu-school { color: var(--accent); font-size: 14px; margin-top: 2px; }
+.muted { color: var(--muted); font-size: 14.5px; }
+
+.projects { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+.card { background: var(--soft); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
+.card-thumb { height: 130px; }
+.card-body { padding: 18px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+.card-body h3 { font-size: 17px; }
+.card-body p { color: var(--muted); font-size: 14px; flex: 1; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag {
+  font-size: 11.5px; color: var(--accent); border: 1px solid rgba(94, 234, 212, 0.35);
+  padding: 2px 9px; border-radius: 999px;
+}
+.card-links { display: flex; gap: 16px; font-size: 13.5px; }
+.card-links a { color: var(--accent); text-decoration: none; }
+.card-links a:hover { text-decoration: underline; }
+
+.quotes { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.quote { background: var(--soft); border-left: 3px solid var(--accent); border-radius: 0 12px 12px 0; padding: 20px 22px; }
+.quote p { font-size: 15px; font-style: italic; }
+.quote-foot { display: flex; align-items: center; gap: 12px; margin-top: 16px; font-size: 13.5px; }
+.quote-avatar { width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0; }
+
+.blogs { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.blog-card {
+  display: block; background: var(--soft); border-radius: 12px; padding: 20px 22px;
+  text-decoration: none; color: var(--fg);
+}
+.blog-card h3 { font-size: 16px; margin-bottom: 8px; }
+.blog-card .meta { display: block; margin-top: 12px; }
+.blog-card:hover h3 { color: var(--accent); }
+
+.footer {
+  border-top: 1px solid var(--soft); padding: 26px 0 44px;
+  text-align: center; color: var(--muted); font-size: 13px;
+}
+
+@media (max-width: 760px) {
+  .projects { grid-template-columns: 1fr; }
+  .quotes, .blogs { grid-template-columns: 1fr; }
+  .hero { padding: 48px 0 40px; }
+  .topbar { justify-content: center; }
+}

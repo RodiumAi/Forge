@@ -1,21 +1,30 @@
-# Design charter
+# Template
 
-Inspired by ThemeWagon demo — keep layout, palette and section rhythm.
-
-## Template
 - id: `tailnext-saas`
-- name: TailNext SaaS
+- name: TailNext SaaS Landing
 
 ## Colors
-- `--bg`: #ffffff
-- `--fg`: #0f172a
-- `--muted`: #64748b
-- `--accent`: #4f46e5
+
+| Token | Value | Role |
+|---|---|---|
+| --bg | #ffffff | page background |
+| --fg | #1e293b | headings / body |
+| --muted | #64748b | secondary text |
+| --accent | #4f46e5 | buttons, links, highlights |
+| --soft | #eef2ff | tinted panels, hero visual |
 
 ## Tone
-- Product marketing, clear hierarchy.
 
-## Do / Don't
-- Do keep structure and spacing close to the demo.
-- Do reuse images from `/public`.
-- Don't invent a second palette.
+Clean, professional, airy. Generous whitespace, large friendly headlines, soft rounded cards, subtle borders instead of heavy shadows.
+
+## Do
+
+- Keep sections in this rhythm: topbar → split hero → logo strip → 3-col features → pricing (middle plan highlighted) → contact/footer.
+- Use the accent sparingly: primary CTA, plan highlight, small labels.
+- Original copy only (fictional SaaS product).
+
+## Don't
+
+- Don't copy any text, images or CSS from the TailNext demo.
+- Don't add external fonts, icon packs or images.
+- Don't use dark backgrounds outside the footer.

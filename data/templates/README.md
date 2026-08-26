@@ -1,35 +1,45 @@
-# Forge templates
+# Template kits
 
-Les starters forkables vivent ici. Catalogue actuel = **6 démos ThemeWagon** adaptées en Vite + React.
+Eight forkable Vite + React starters. Each mirrors the **layout, section rhythm
+and palette** of a public ThemeWagon demo, with fully original copy, CSS and
+visuals (no scraped assets — imagery is simulated with CSS gradients so the
+repo stays light and previews load instantly in the Babel runner).
 
-| id | Source | Prompt keywords (auto-suggest) |
-|---|---|---|
-| `sarab-restaurant` | https://themewagon.github.io/sarab/ | restaurant, resto, menu, food |
-| `bloom-shop` | https://themewagon.github.io/bloomtpl/ | ecommerce, boutique, shop, cart |
-| `folio-eliott` | https://themewagon.github.io/folio-tailwind/ | portfolio, freelance |
-| `tailnext-saas` | https://themewagon.github.io/tailnext/ | saas, pricing |
-| `podux-podcast` | https://themewagon.github.io/podux/ | podcast, episode |
-| `play-startup` | https://themewagon.github.io/play-astro/ | startup, landing, features |
+| id | Category | Palette | Demo layout reference |
+|---|---|---|---|
+| `astroship-startup` | Startup landing | White / indigo | astroship |
+| `nexora-agency` | Agency (dark) | Navy / indigo | nexora |
+| `gallery-photos` | Photo gallery | Warm paper / terracotta | gallery |
+| `logsfolio-portfolio` | Developer portfolio (dark) | Ink / teal | logsfolio |
+| `tailstore-shop` | E-commerce | White / amber | tailstore |
+| `podux-podcast` | Podcast | Lavender / violet | podux |
+| `tailnext-saas` | SaaS marketing | White / indigo | tailnext |
+| `orbit-dashboard` | Admin dashboard | Slate / blue | orbit |
 
-Images miroir : `_media/themewagon/{slug}/` (manifest + sources).
+## Contract
 
-## Hybrid create
+Every kit contains exactly:
 
-`POST /projects` with a free-text `prompt` (and no `template_id`) runs `suggest_template(prompt)`.
-If keywords match a kit, the API forks that template then the agent personalizes it.
-Otherwise it scaffolds a blank Vite React app.
-
-## Régénérer
-
-```bash
-# re-télécharger les assets (optionnel)
-# python scripts/download_themewagon_images.py
-
-python scripts/build_themewagon_templates.py
+```
+template.json      catalog metadata (id, i18n title/description, tags, palette, bootHint)
+DESIGN.md          locked design charter the agent must respect
+index.html         Vite entry
+package.json       react + react-dom only (runs in the Babel runner, no install)
+vite.config.ts
+tsconfig.json / tsconfig.node.json
+preview.html       self-contained ~2 KB card miniature (no JS)
+src/main.tsx       createRoot bootstrap
+src/App.tsx        single-file page, no external imports
+src/index.css      plain CSS, :root palette variables, one mobile media query
 ```
 
-## API
+Rules for `src/App.tsx`:
+- one default-exported component, no imports beyond React JSX runtime;
+- visuals are CSS-only (gradients, shapes, character glyphs — no image files);
+- copy is original and brand-fictitious;
+- must compile under Babel standalone (validated in CI-adjacent script
+  `apps/api/runtime` transform).
 
-- `GET /templates`
-- `GET /templates/{id}/preview`
-- `POST /projects` avec `{ "template_id": "sarab-restaurant" }` ou `{ "prompt": "…" }`
+Keyword routing for prompt → template lives in
+`apps/api/app/services/templates.py` (`_TEMPLATE_KEYWORDS`). Update it when
+adding or removing a kit.

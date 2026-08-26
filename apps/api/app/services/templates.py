@@ -187,22 +187,7 @@ def fork_template(template_id: str, project_id: str, app_name: str | None = None
 # Heuristic keyword → template id (first match wins by score).
 _TEMPLATE_KEYWORDS: tuple[tuple[str, tuple[str, ...]], ...] = (
     (
-        "sarab-restaurant",
-        (
-            "restaurant",
-            "resto",
-            "menu",
-            "food",
-            "cuisine",
-            "burger",
-            "café",
-            "cafe",
-            "brasserie",
-            "pizzeria",
-        ),
-    ),
-    (
-        "bloom-shop",
+        "tailstore-shop",
         (
             "ecommerce",
             "e-commerce",
@@ -211,23 +196,36 @@ _TEMPLATE_KEYWORDS: tuple[tuple[str, tuple[str, ...]], ...] = (
             "store",
             "panier",
             "cart",
-            "sneakers",
             "fashion",
             "magasin",
             "produits",
+            "vêtements",
         ),
     ),
     (
-        "folio-eliott",
+        "logsfolio-portfolio",
         (
             "portfolio",
             "freelance",
             "designer",
-            "photographe",
-            "photographer",
+            "développeur",
+            "developer",
             "cv",
             "case study",
             "études de cas",
+            "projets",
+        ),
+    ),
+    (
+        "gallery-photos",
+        (
+            "galerie",
+            "gallery",
+            "photo",
+            "photographe",
+            "photographer",
+            "photographie",
+            "exposition",
         ),
     ),
     (
@@ -235,12 +233,28 @@ _TEMPLATE_KEYWORDS: tuple[tuple[str, tuple[str, ...]], ...] = (
         ("saas", "pricing", "abonnement", "subscription", "b2b", "product landing"),
     ),
     (
-        "play-startup",
-        ("startup", "landing", "features", "équipe", "team", "blog startup"),
+        "astroship-startup",
+        ("startup", "landing", "lancement", "launch", "produit tech", "waitlist"),
+    ),
+    (
+        "nexora-agency",
+        ("agence", "agency", "studio créatif", "creative studio", "services", "clients"),
     ),
     (
         "podux-podcast",
-        ("podcast", "épisode", "episode", "audio", "listen", "écoute"),
+        ("podcast", "épisode", "episode", "audio", "listen", "écoute", "émission"),
+    ),
+    (
+        "orbit-dashboard",
+        (
+            "dashboard",
+            "tableau de bord",
+            "admin",
+            "analytics",
+            "statistiques",
+            "kpi",
+            "back-office",
+        ),
     ),
 )
 
