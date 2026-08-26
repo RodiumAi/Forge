@@ -173,6 +173,14 @@ def fork_template(template_id: str, project_id: str, app_name: str | None = None
         except OSError:
             pass
 
+    # Baseline checkpoint: the user can always roll back to the pristine fork.
+    try:
+        from app.services import history
+
+        history.snapshot(project_id, f"forked template: {meta.id}")
+    except Exception:  # pragma: no cover - history is best effort
+        pass
+
     return meta
 
 

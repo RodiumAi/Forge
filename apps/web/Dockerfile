@@ -1,7 +1,9 @@
 FROM node:22-alpine AS deps
 WORKDIR /app
-COPY package.json ./
-RUN npm install
+# Lockfile + `npm ci` → reproducible builds. `npm install` without the lockfile
+# silently drifted dependency versions between the dev and the Docker image.
+COPY package.json package-lock.json ./
+RUN npm ci
 
 FROM node:22-alpine AS builder
 WORKDIR /app

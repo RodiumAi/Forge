@@ -329,7 +329,9 @@ async def run_plan_tasks(
         yield push_step("apply_writes", t("step_apply_writes", locale), "running")
         assistant_text = "".join(task_buf)
         writes, deletes = parse_forge_tags(assistant_text)
-        written, violations = apply_validated_writes(project_id, writes)
+        written, violations = apply_validated_writes(
+            project_id, writes, snapshot_label=f"before: {title}"
+        )
         applied.extend(written)
         for item in written:
             yield _sse({"type": "file_write", "path": item["path"]})
@@ -417,7 +419,9 @@ async def run_plan_tasks(
                             full.append(chunk.content)
                             yield _sse({"type": "token", "content": chunk.content})
                     writes, deletes = parse_forge_tags("".join(repair_buf))
-                    written, violations = apply_validated_writes(project_id, writes)
+                    written, violations = apply_validated_writes(
+                        project_id, writes, snapshot_label=f"before repair: {title}"
+                    )
                     applied.extend(written)
                     for item in written:
                         yield _sse({"type": "file_write", "path": item["path"]})
@@ -527,7 +531,9 @@ async def run_plan_tasks(
                     full.append(chunk.content)
                     yield _sse({"type": "token", "content": chunk.content})
             writes, deletes = parse_forge_tags("".join(repair_buf))
-            written, violations = apply_validated_writes(project_id, writes)
+            written, violations = apply_validated_writes(
+                project_id, writes, snapshot_label="before final repair"
+            )
             applied.extend(written)
             for item in written:
                 yield _sse({"type": "file_write", "path": item["path"]})
