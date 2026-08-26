@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { Plus } from "lucide-react";
 import { getToken } from "@/lib/api";
+import { Icon } from "@/components/ui/icon";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import {
   getSessionSnapshot,
@@ -12,6 +14,16 @@ import {
 } from "@/lib/session-cache";
 
 const POLL_MS = 45_000;
+
+function rodiumUserAppOrigin(): string {
+  const raw =
+    process.env.NEXT_PUBLIC_RODIUM_USER_APP_URL?.trim() || "http://localhost:3000";
+  return raw.replace(/\/$/, "");
+}
+
+function rechargeUrl(): string {
+  return `${rodiumUserAppOrigin()}/dashboard/billing/recharge`;
+}
 
 function formatRodi(value: string | null | undefined, locale: string): string {
   if (value == null || value === "") return "—";
@@ -83,18 +95,30 @@ export function RodiumWalletBadge() {
   const provided = formatRodi(wallet?.provided_total_rodi, locale);
 
   return (
-    <Link
-      href="/connectors/rodiumai"
-      className="rodium-wallet-badge"
-      title={`${t("balanceRodi")}: ${balance} · ${t("providedRodi")}: ${provided}`}
-    >
-      <span className="rodium-wallet-main">
-        <strong>{balance}</strong>
-        <span>RODI</span>
-      </span>
-      <span className="rodium-wallet-provided">
-        {provided} {t("walletProvidedShort")}
-      </span>
-    </Link>
+    <div className="rodium-wallet-wrap">
+      <Link
+        href="/settings?tab=generation"
+        className="rodium-wallet-badge"
+        title={`${t("balanceRodi")}: ${balance} · ${t("providedRodi")}: ${provided}`}
+      >
+        <span className="rodium-wallet-main">
+          <strong>{balance}</strong>
+          <span>RODI</span>
+        </span>
+        <span className="rodium-wallet-provided">
+          {provided} {t("walletProvidedShort")}
+        </span>
+      </Link>
+      <a
+        href={rechargeUrl()}
+        className="rodium-wallet-recharge"
+        title={t("rechargeRodi")}
+        aria-label={t("rechargeRodi")}
+        target="_blank"
+        rel="noreferrer"
+      >
+        <Icon icon={Plus} className="ui-icon-sm" />
+      </a>
+    </div>
   );
 }

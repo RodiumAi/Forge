@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { BrandLogo } from "@/components/BrandLogo";
 import { api } from "@/lib/api";
 import { LocaleSwitch, useI18n } from "@/lib/i18n/I18nProvider";
 
@@ -33,7 +33,7 @@ export default function LoginPage() {
           </div>
         </div>
         <div style={{ textAlign: "center", marginBottom: "1.25rem" }}>
-          <Image src="/forge-rodiumai.png" alt={t("brandAlt")} width={220} height={64} priority />
+          <BrandLogo alt={t("brandAlt")} width={220} height={64} priority />
           <h1 style={{ margin: "0.85rem 0 0.35rem", fontSize: "1.25rem" }}>{t("loginTitle")}</h1>
           <p className="muted" style={{ margin: 0 }}>
             {t("loginRodiumSub")}

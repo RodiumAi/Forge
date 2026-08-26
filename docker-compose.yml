@@ -100,6 +100,19 @@ services:
       REDIS_URL: redis://valkey:6379/0
       API_BASE_URL: http://localhost:8100
       TEMPLATES_ROOT: /data/templates
+      BUILD_WORKER_ENABLED: "true"
+      BUILD_QUEUE: sites:builds
+      PREVIEW_MODE: ${PREVIEW_MODE:-babel_runner}
+      PUBLISH_MODE: ${PUBLISH_MODE:-esm}
+      RUNNER_PARENT_ORIGINS: http://localhost:3100,http://127.0.0.1:3100
+      SSE_HEARTBEAT_SECONDS: "15"
+      ALB_IDLE_TIMEOUT_SECONDS: "600"
+      FIRESTORE_ENABLED: "true"
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-rodiumai-local}
+      FIRESTORE_DATABASE: ${FIRESTORE_DATABASE:-rodiumaidb}
+      # Always host gateway from containers (do not inherit 127.0.0.1 from .env).
+      FIRESTORE_EMULATOR_HOST: host.docker.internal:8085
+      FIREBASE_AUTH_EMULATOR_HOST: host.docker.internal:9099
     volumes:
       - ./data/projects:/data/projects
       - ./data/templates:/data/templates:ro
@@ -113,6 +126,43 @@ services:
         condition: service_completed_successfully
       mailpit:
         condition: service_started
+      build-worker:
+        condition: service_started
+
+  build-worker:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    container_name: forge-web-build-worker
+    restart: unless-stopped
+    command: ["python", "-m", "app.workers.build_worker"]
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-forge}:${POSTGRES_PASSWORD:-forge}@postgres:5432/${POSTGRES_DB:-forge_web}
+      PROJECTS_ROOT: /data/projects
+      TEMPLATES_ROOT: /data/templates
+      OBJECT_STORE_ENDPOINT: http://minio:9000
+      OBJECT_STORE_PUBLIC_ENDPOINT: http://localhost:9000
+      OBJECT_STORE_ACCESS_KEY: ${MINIO_ROOT_USER:-rodiumdev}
+      OBJECT_STORE_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-rodiumdev123}
+      OBJECT_STORE_ADDRESSING: path
+      REDIS_URL: redis://valkey:6379/0
+      BUILD_QUEUE: sites:builds
+      BUILD_WORKER_ENABLED: "true"
+      FIRESTORE_ENABLED: "true"
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-rodiumai-local}
+      FIRESTORE_DATABASE: ${FIRESTORE_DATABASE:-rodiumaidb}
+      FIRESTORE_EMULATOR_HOST: host.docker.internal:8085
+      FIREBASE_AUTH_EMULATOR_HOST: host.docker.internal:9099
+    volumes:
+      - ./data/projects:/data/projects
+      - ./data/templates:/data/templates:ro
+    depends_on:
+      valkey:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
 
   web:
     build:
@@ -126,6 +176,13 @@ services:
       - "${FORGE_WEB_UI_PORT:-3100}:3000"
     environment:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8100}
+      DOCKER_BUILD: "1"
+      FORGE_FONT_MODE: fallback
+      NEXT_PUBLIC_USE_FIREBASE_EMULATOR: ${NEXT_PUBLIC_USE_FIREBASE_EMULATOR:-1}
+      NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${NEXT_PUBLIC_FIREBASE_PROJECT_ID:-rodiumai-local}
+      NEXT_PUBLIC_FIRESTORE_DATABASE: ${NEXT_PUBLIC_FIRESTORE_DATABASE:-rodiumaidb}
+      NEXT_PUBLIC_FIRESTORE_EMULATOR_HOST: ${NEXT_PUBLIC_FIRESTORE_EMULATOR_HOST:-127.0.0.1:8085}
+      NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST: ${NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST:-127.0.0.1:9099}
     depends_on:
       - api
 

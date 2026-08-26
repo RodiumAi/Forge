@@ -28,7 +28,7 @@ from app.services import preview as preview_service
 from app.services.filesystem import list_files, project_dir
 from app.services.project_naming import suggest_project_name
 from app.services.scaffold import scaffold_vite_react
-from app.services.templates import fork_template, get_template, preview_path
+from app.services.templates import fork_template, get_template, preview_path, suggest_template
 
 logger = logging.getLogger("projects")
 
@@ -84,6 +84,7 @@ def _unique_slug(db: Session, base: str) -> str:
 
 
 def _unique_slug_excluding(db: Session, base: str, exclude_id: UUID | None) -> str:
+    """Pick a globally unique project slug (required for {slug}.lvh.me routing)."""
     base_slug = _slugify(base)
     slug = base_slug
     i = 2
@@ -106,6 +107,12 @@ async def create_project(
 ) -> ProjectOut:
     locale = resolve_locale(request)
     template_id = (body.template_id or "").strip() or None
+    prompt = (body.prompt or "").strip()
+    # Hybrid start: if no explicit template, suggest from prompt keywords.
+    if not template_id and prompt:
+        suggested = suggest_template(prompt)
+        if suggested:
+            template_id = suggested
     if template_id and get_template(template_id) is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -113,34 +120,32 @@ async def create_project(
         )
 
     fallback = t("new_project", locale)  # type: ignore[arg-type]
-    if template_id:
+    if prompt:
+        display_name = await suggest_project_name(
+            prompt,
+            locale=locale,  # type: ignore[arg-type]
+            db=db,
+            user=user,
+            fallback=(body.name or "").strip() or fallback,
+        )
+    elif template_id:
         display_name = (body.name or "").strip() or fallback
     else:
-        prompt = (body.prompt or "").strip()
-        if prompt:
+        display_name = (body.name or "").strip()
+        if not display_name:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=t("project_name_required", locale),  # type: ignore[arg-type]
+            )
+        # Still shorten a pasted long name when no prompt field was sent.
+        if len(display_name) > 40:
             display_name = await suggest_project_name(
-                prompt,
+                display_name,
                 locale=locale,  # type: ignore[arg-type]
                 db=db,
                 user=user,
-                fallback=(body.name or "").strip() or fallback,
+                fallback=fallback,
             )
-        else:
-            display_name = (body.name or "").strip()
-            if not display_name:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=t("project_name_required", locale),  # type: ignore[arg-type]
-                )
-            # Still shorten a pasted long name when no prompt field was sent.
-            if len(display_name) > 40:
-                display_name = await suggest_project_name(
-                    display_name,
-                    locale=locale,  # type: ignore[arg-type]
-                    db=db,
-                    user=user,
-                    fallback=fallback,
-                )
 
     slug = _unique_slug(db, display_name)
 
@@ -171,6 +176,18 @@ async def create_project(
     chat = Chat(project_id=project.id, title=t("main_chat", locale))
     db.add(chat)
     db.commit()
+    try:
+        from app.services import firestore_live
+
+        firestore_live.ensure_project(str(project.id), str(user.id), name=project.name)
+        firestore_live.mirror_dashboard(
+            str(user.id),
+            str(project.id),
+            name=project.name,
+            preview_status="stopped",
+        )
+    except Exception:
+        pass
     return _project_out(project)
 
 
@@ -370,6 +387,30 @@ h1{margin:0;font-size:2rem} .a{color:#f2620a}
 </style></head><body><h1><span class="a">F</span>orge</h1></body></html>""",
         headers=headers,
     )
+
+
+@router.post("/{project_id}/security-review")
+async def security_review_project(
+    project_id: UUID,
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Optional Forge-style security review of generated site code (no auto-apply)."""
+    locale = resolve_locale(request)
+    _owned_project(db, user, project_id, locale)
+    from app.services.orchestration.security_review import run_security_review
+    from app.services.rodium_generation import resolve_generation_auth
+
+    auth = await resolve_generation_auth(db, user)
+    settings = get_settings()
+    report = await run_security_review(
+        project_id=str(project_id),
+        auth=auth,
+        model=settings.default_model or "google/gemini-3.7-flash",
+        locale=locale,  # type: ignore[arg-type]
+    )
+    return {"report": report}
 
 
 @router.get("/{project_id}/chats", response_model=list[ChatOut])

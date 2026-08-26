@@ -1,15 +1,25 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
+from fastapi.responses import RedirectResponse, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
+from app.config import get_settings
 from app.db import get_db
+from app.errors import provider_not_configured
 from app.i18n import resolve_locale, t
 from app.models import Project, User
+from app.providers.objects import get_object_store
 from app.schemas import FileContent, FileNode
-from app.services.filesystem import delete_file, file_tree, read_file, write_bytes, write_file
+from app.services.asset_storage import (
+    asset_display_name,
+    get_project_asset,
+    list_project_assets,
+    upload_project_asset,
+)
+from app.services.filesystem import delete_file, file_tree, read_file, write_file
 from app.services.visual_edit import apply_visual_text_edit
 from app.services.visual_image import apply_visual_image_replace
 
@@ -22,8 +32,11 @@ IMAGE_TYPES = {
     "image/webp",
     "image/gif",
     "image/svg+xml",
+    "image/x-icon",
+    "image/vnd.microsoft.icon",
+    "image/ico",
 }
-IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg"}
+IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg", ".ico"}
 
 
 class FileWriteRequest(BaseModel):
@@ -33,8 +46,24 @@ class FileWriteRequest(BaseModel):
 
 class FileUploadResponse(BaseModel):
     ok: bool = True
-    path: str
-    public_path: str
+    object_id: str
+    object_key: str
+    public_url: str
+    content_type: str
+    name: str
+    # Legacy fields for older clients
+    path: str = ""
+    public_path: str = ""
+
+
+class ProjectAssetOut(BaseModel):
+    id: str
+    name: str
+    public_url: str
+    content_type: str
+    byte_size: int
+    object_key: str
+    created_at: str
 
 
 class VisualEditRequest(BaseModel):
@@ -50,7 +79,7 @@ class VisualEditResponse(BaseModel):
 
 class VisualImageRequest(BaseModel):
     old_src: str = Field(min_length=1, max_length=2000)
-    new_public_path: str = Field(min_length=1, max_length=500)
+    new_public_path: str = Field(min_length=1, max_length=2000)
 
 
 class VisualImageResponse(BaseModel):
@@ -135,6 +164,88 @@ def remove_file(
     return {"ok": True, "path": rel}
 
 
+@router.get("/{project_id}/assets", response_model=list[ProjectAssetOut])
+def list_assets(
+    project_id: UUID,
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[ProjectAssetOut]:
+    _owned(db, user, project_id, resolve_locale(request))
+    rows = list_project_assets(db, project_id)
+    return [
+        ProjectAssetOut(
+            id=str(row.id),
+            name=asset_display_name(row.object_key),
+            public_url=row.public_url,
+            content_type=row.content_type,
+            byte_size=int(row.byte_size or 0),
+            object_key=row.object_key,
+            created_at=row.created_at.isoformat() if row.created_at else "",
+        )
+        for row in rows
+    ]
+
+
+def _presigned_asset_url(row) -> str:
+    store = get_object_store()
+    bucket = store.bucket_uploads or get_settings().aws_s3_bucket
+    if not bucket:
+        return row.public_url
+    try:
+        return store.presign_get(bucket, row.object_key, expires=3600)
+    except Exception:
+        return row.public_url
+
+
+@router.get("/{project_id}/assets/{object_id}")
+def redirect_asset(
+    project_id: UUID,
+    object_id: UUID,
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    _owned(db, user, project_id, resolve_locale(request))
+    row = get_project_asset(db, project_id, object_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Asset not found")
+    return RedirectResponse(url=_presigned_asset_url(row), status_code=302)
+
+
+@router.get("/{project_id}/assets/{object_id}/content")
+def stream_asset_content(
+    project_id: UUID,
+    object_id: UUID,
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Authenticated asset body for <img src> (Bearer or ?access_token=)."""
+    _owned(db, user, project_id, resolve_locale(request))
+    row = get_project_asset(db, project_id, object_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Asset not found")
+    store = get_object_store()
+    bucket = store.bucket_uploads or get_settings().aws_s3_bucket
+    if not bucket:
+        raise HTTPException(status_code=503, detail="Object store not configured")
+    try:
+        obj = store.internal.get_object(Bucket=bucket, Key=row.object_key)
+        body = obj["Body"].read()
+    except Exception:
+        # Fallback: redirect to a short-lived signed URL.
+        return RedirectResponse(url=_presigned_asset_url(row), status_code=302)
+    return Response(
+        content=body,
+        media_type=row.content_type or "application/octet-stream",
+        headers={
+            "Cache-Control": "private, max-age=300",
+            "Content-Disposition": f'inline; filename="{asset_display_name(row.object_key)}"',
+        },
+    )
+
+
 @router.post("/{project_id}/files/upload", response_model=FileUploadResponse)
 async def upload_project_image(
     project_id: UUID,
@@ -144,7 +255,7 @@ async def upload_project_image(
     db: Session = Depends(get_db),
 ) -> FileUploadResponse:
     locale = resolve_locale(request)
-    _owned(db, user, project_id, locale)
+    project = _owned(db, user, project_id, locale)
     filename = (file.filename or "image.png").replace("\\", "/").split("/")[-1]
     ext = ("." + filename.rsplit(".", 1)[-1].lower()) if "." in filename else ""
     content_type = (file.content_type or "").lower()
@@ -153,16 +264,32 @@ async def upload_project_image(
     body = await file.read()
     if len(body) > 8 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="Image too large (max 8 MB)")
-    # Sanitize name
     safe = "".join(c if c.isalnum() or c in ".-_" else "-" for c in filename).strip("-") or "image.png"
     if "." not in safe and ext:
         safe = safe + ext
-    rel = f"public/{safe}"
     try:
-        write_bytes(str(project_id), rel, body)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return FileUploadResponse(path=rel, public_path=f"/{safe}")
+        row = upload_project_asset(
+            db,
+            user=user,
+            project=project,
+            body=body,
+            filename=safe,
+            content_type=content_type or "application/octet-stream",
+        )
+    except provider_not_configured as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)[:300]) from exc
+    name = asset_display_name(row.object_key)
+    return FileUploadResponse(
+        object_id=str(row.id),
+        object_key=row.object_key,
+        public_url=row.public_url,
+        content_type=row.content_type,
+        name=name,
+        path=row.object_key,
+        public_path=row.public_url,
+    )
 
 
 @router.post("/{project_id}/visual-edit", response_model=VisualEditResponse)

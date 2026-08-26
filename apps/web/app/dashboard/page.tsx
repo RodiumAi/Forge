@@ -12,7 +12,7 @@ import {
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Plus, Search } from "lucide-react";
-import { getToken } from "@/lib/api";
+import { api, getToken } from "@/lib/api";
 import { HomeLayout } from "@/components/HomeLayout";
 import { PromptFileChips } from "@/components/PromptFileChips";
 import { SiteThumb, invalidateThumbCache } from "@/components/SiteThumb";
@@ -21,9 +21,10 @@ import { Icon } from "@/components/ui/icon";
 import {
   PENDING_PROMPT_KEY,
   PENDING_TEMPLATE_KEY,
-  createProjectFromPrompt,
+  createProjectWithAttachments,
   ensureCanGenerate,
   forkProjectFromTemplate,
+  restorePendingFilesAsAttachments,
 } from "@/lib/create-project";
 import {
   ensureProjects,
@@ -37,12 +38,15 @@ import {
 } from "@/lib/lists-cache";
 import { topProgressDone, topProgressStart } from "@/lib/top-progress";
 import { useI18n } from "@/lib/i18n/I18nProvider";
+import { firebaseEnabled } from "@/lib/firebase/client";
+import { subscribeUserProjects, type UserProjectLive } from "@/lib/firebase/live";
 import {
   PROMPT_FILE_ACCEPT,
   PromptAttachment,
-  buildPromptWithAttachments,
+  createPromptAttachment,
   mergePromptAttachments,
   revokePromptAttachment,
+  type PromptLabels,
 } from "@/lib/prompt-attachments";
 
 type Project = {
@@ -74,6 +78,8 @@ function DashboardInner() {
   const [creating, setCreating] = useState(false);
   const [forkingId, setForkingId] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [liveById, setLiveById] = useState<Record<string, UserProjectLive>>({});
+  const [userId, setUserId] = useState<string | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -82,6 +88,18 @@ function DashboardInner() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!getToken()) return;
+    void api<{ id: string }>("/auth/me")
+      .then((u) => setUserId(u.id))
+      .catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    if (!userId || !firebaseEnabled()) return;
+    return subscribeUserProjects(userId, setLiveById);
+  }, [userId]);
 
   useEffect(() => {
     const raw = searchParams.get("tab");
@@ -132,7 +150,11 @@ function DashboardInner() {
         const pending = sessionStorage.getItem(PENDING_PROMPT_KEY);
         if (pending?.trim()) {
           sessionStorage.removeItem(PENDING_PROMPT_KEY);
-          await createFromPrompt(pending.trim());
+          const restored = await restorePendingFilesAsAttachments();
+          const restoredAttachments = restored
+            .map((file) => createPromptAttachment(file))
+            .filter((item): item is NonNullable<ReturnType<typeof createPromptAttachment>> => item !== null);
+          await createFromPrompt(pending.trim(), restoredAttachments);
           return;
         }
 
@@ -187,20 +209,20 @@ function DashboardInner() {
     }
   }
 
-  async function composePrompt(value: string) {
-    return buildPromptWithAttachments(value, files, {
+  function promptLabels(): PromptLabels {
+    return {
       importFiles: t("importFiles"),
       imageAttached: t("promptImageAttached"),
       mdSection: t("promptMdSection"),
       txtSection: t("promptTxtSection"),
       pdfSection: t("promptPdfSection"),
       pdfEmpty: t("promptPdfEmpty"),
-    });
+    };
   }
 
-  async function createFromPrompt(raw: string) {
-    const payload = raw.trim();
-    if (!payload) return;
+  async function createFromPrompt(raw: string, attachmentList: PromptAttachment[] = files) {
+    const trimmed = raw.trim();
+    if (!trimmed && !attachmentList.length) return;
     setCreating(true);
     setError(null);
     try {
@@ -210,10 +232,18 @@ function DashboardInner() {
         setCreating(false);
         return;
       }
-      const project = await createProjectFromPrompt(payload, t("newProject"));
+      const project = await createProjectWithAttachments(
+        trimmed,
+        attachmentList,
+        t("newProject"),
+        promptLabels(),
+        locale,
+      );
       invalidateProjectsCache();
       prependProject(locale, project);
       invalidateThumbCache(project.id);
+      attachmentList.forEach(revokePromptAttachment);
+      setFiles([]);
       router.replace(`/projects/${project.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("errorGeneric"));
@@ -245,9 +275,8 @@ function DashboardInner() {
 
   async function submitPrompt() {
     if (creating) return;
-    const payload = await composePrompt(prompt);
-    if (!payload) return;
-    await createFromPrompt(payload);
+    if (!prompt.trim() && !files.length) return;
+    await createFromPrompt(prompt);
   }
 
   async function onPromptSubmit(e: FormEvent) {
@@ -351,7 +380,7 @@ function DashboardInner() {
           {fileError && <p className="landing-file-error">{fileError}</p>}
           {error && error === t("createNeedsKey") && (
             <p className="landing-file-error" role="alert">
-              {error} <Link href="/connectors/rodiumai">{t("openSettings")}</Link>
+              {error} <Link href="/settings?tab=generation">{t("openSettings")}</Link>
             </p>
           )}
           <textarea
@@ -484,12 +513,20 @@ function DashboardInner() {
                       title={p.name}
                       className="home-card-thumb"
                     />
-                    <div className="home-card-body">
+                      <div className="home-card-body">
                       <strong>{p.name}</strong>
                       <span>
                         {p.slug}
                         {mounted
                           ? ` · ${new Date(p.created_at).toLocaleDateString(locale)}`
+                          : ""}
+                        {liveById[p.id]?.preview_status === "ready"
+                          ? ` · ${t("previewLive")}`
+                          : liveById[p.id]?.preview_status === "starting"
+                            ? ` · ${t("builderStarting")}`
+                            : ""}
+                        {liveById[p.id]?.active_run_status === "running"
+                          ? ` · ${t("agentRunning")}`
                           : ""}
                       </span>
                     </div>

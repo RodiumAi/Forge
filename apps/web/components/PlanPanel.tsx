@@ -46,6 +46,10 @@ export function PlanPanel({
   const doneCount = tasks.filter((task) => task.status === "done").length;
   const runningTask = tasks.find((task) => task.status === "running");
   const errorTask = tasks.find((task) => task.status === "error");
+  const canResume = Boolean(
+    errorTask && tasks.some((task) => task.status === "pending" || task.status === "error"),
+  );
+  const showExecute = (needsConfirm || canResume) && onExecute;
   const total = tasks.length;
   const progress = total ? Math.round((doneCount / total) * 100) : 0;
   const isExecuting = executing || Boolean(runningTask) || (busy && !needsConfirm);
@@ -113,7 +117,7 @@ export function PlanPanel({
         ))}
       </ol>
 
-      {needsConfirm && onExecute ? (
+      {showExecute ? (
         <>
           <button type="button" className="btn plan-execute" disabled={busy} onClick={onExecute}>
             {busy ? (
@@ -124,11 +128,11 @@ export function PlanPanel({
             ) : (
               <>
                 <Icon icon={Play} className="ui-icon-sm" />
-                {t("planExecute")}
+                {canResume ? t("planResume") : t("planExecute")}
               </>
             )}
           </button>
-          {onDismiss ? (
+          {needsConfirm && onDismiss ? (
             <button type="button" className="btn plan-dismiss" disabled={busy} onClick={onDismiss}>
               {t("planDismiss")}
             </button>

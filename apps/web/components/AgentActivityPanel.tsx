@@ -21,12 +21,17 @@ type Props = {
   streaming?: boolean;
 };
 
-function normalizeOps(ops: Props["fileOps"]): string[] {
+function normalizeOps(ops: Props["fileOps"]): Array<{ key: string; label: string }> {
   if (!ops?.length) return [];
-  return ops.map((op) => {
-    if (typeof op === "string") return op;
+  return ops.map((op, index) => {
+    if (typeof op === "string") {
+      return { key: `${index}:${op}`, label: op };
+    }
     const prefix = op.op === "delete" ? "−" : "+";
-    return `${prefix} ${op.path}`;
+    return {
+      key: `${index}:${op.op}:${op.path}`,
+      label: `${prefix} ${op.path}`,
+    };
   });
 }
 
@@ -106,7 +111,7 @@ export function AgentActivityPanel({
       {ops.length > 0 && (
         <ul className="builder-file-ops">
           {ops.map((op) => (
-            <li key={op}>{op}</li>
+            <li key={op.key}>{op.label}</li>
           ))}
         </ul>
       )}

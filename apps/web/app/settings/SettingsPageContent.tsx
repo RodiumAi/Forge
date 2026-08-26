@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { HomeLayout } from "@/components/HomeLayout";
+import { RodiumGenerationPanel } from "@/components/RodiumGenerationPanel";
 import {
   SettingsBlock,
   SettingsPanel,
@@ -23,10 +24,10 @@ type Profile = {
   created_at: string;
 };
 
-const SECTIONS: SettingsSection[] = ["account", "appearance", "security"];
+const SECTIONS: SettingsSection[] = ["account", "appearance", "security", "generation"];
 
 function parseSection(raw: string | null): SettingsSection {
-  if (raw === "rodium") return "account";
+  if (raw === "rodium" || raw === "generation") return "generation";
   if (raw && SECTIONS.includes(raw as SettingsSection)) return raw as SettingsSection;
   return "account";
 }
@@ -133,6 +134,12 @@ export default function SettingsPageContent() {
                 </SettingsRow>
               )}
             </SettingsBlock>
+          </SettingsPanel>
+        )}
+
+        {!loading && section === "generation" && (
+          <SettingsPanel title={t("settingsGenerationTitle")} subtitle={t("settingsGenerationSub")}>
+            <RodiumGenerationPanel />
           </SettingsPanel>
         )}
 

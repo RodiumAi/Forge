@@ -6,16 +6,18 @@ import {
   Check,
   CheckCircle2,
   Copy,
+  Download,
   ExternalLink,
   Globe,
   Loader2,
   Pencil,
   Upload,
 } from "lucide-react";
-import { api } from "@/lib/api";
+import { api, apiBase, getToken } from "@/lib/api";
 import { Icon } from "@/components/ui/icon";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { topProgressDone, topProgressStart } from "@/lib/top-progress";
+import { usePublishLive } from "@/lib/firebase/live";
 
 type Props = {
   projectId: string;
@@ -82,9 +84,11 @@ export function PublishPopover({
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<PopoverPos>({ top: 0, right: 0 });
   const [busy, setBusy] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [savingSlug, setSavingSlug] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [exportNotice, setExportNotice] = useState<string | null>(null);
   const [slug, setSlug] = useState(slugProp || "");
   const [url, setUrl] = useState(sitesUrl || "");
   const [lastPublished, setLastPublished] = useState(publishedAt || null);
@@ -92,6 +96,7 @@ export function PublishPopover({
   const [editing, setEditing] = useState(false);
   const [draftSlug, setDraftSlug] = useState(slugProp || "");
   const [mounted, setMounted] = useState(false);
+  const publishLive = usePublishLive(projectId);
 
   useEffect(() => {
     setMounted(true);
@@ -115,6 +120,21 @@ export function PublishPopover({
     return () => window.clearInterval(id);
   }, [busy]);
 
+  useEffect(() => {
+    const phase = publishLive?.phase;
+    if (!phase) return;
+    if (phase === "done") {
+      setBusy(false);
+      if (publishLive.published_at) setLastPublished(publishLive.published_at);
+    } else if (phase === "error") {
+      setBusy(false);
+      if (publishLive.message) setError(publishLive.message);
+    } else if (phase !== "idle") {
+      setBusy(true);
+      setOpen(true);
+    }
+  }, [publishLive]);
+
   const updatePos = () => {
     const btn = btnRef.current;
     if (!btn) return;
@@ -133,7 +153,7 @@ export function PublishPopover({
   useEffect(() => {
     if (!open) return;
     function onDoc(e: MouseEvent) {
-      if (busy) return;
+      if (busy || exporting) return;
       const target = e.target as Node;
       if (wrapRef.current?.contains(target)) return;
       if (popoverRef.current?.contains(target)) return;
@@ -141,7 +161,7 @@ export function PublishPopover({
     }
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") {
-        if (busy) return;
+        if (busy || exporting) return;
         setEditing(false);
         setOpen(false);
       }
@@ -159,7 +179,7 @@ export function PublishPopover({
       window.removeEventListener("resize", onReposition);
       window.removeEventListener("scroll", onReposition, true);
     };
-  }, [open, busy]);
+  }, [open, busy, exporting]);
 
   async function publish() {
     abortRef.current?.abort();
@@ -169,6 +189,7 @@ export function PublishPopover({
 
     setBusy(true);
     setError(null);
+    setExportNotice(null);
     setOpen(true);
     topProgressStart();
     try {
@@ -195,6 +216,50 @@ export function PublishPopover({
       if (abortRef.current === controller) abortRef.current = null;
       setBusy(false);
       topProgressDone();
+    }
+  }
+
+  async function exportZip() {
+    setExporting(true);
+    setError(null);
+    setExportNotice(null);
+    try {
+      const headers = new Headers();
+      const token = getToken();
+      if (token) headers.set("Authorization", `Bearer ${token}`);
+      headers.set("Accept-Language", locale === "en" ? "en" : "fr");
+      const res = await fetch(`${apiBase()}/projects/${projectId}/export`, {
+        method: "GET",
+        headers,
+      });
+      if (!res.ok) {
+        let detail = res.statusText;
+        try {
+          const data = await res.json();
+          if (typeof data.detail === "string") detail = data.detail;
+        } catch {
+          /* ignore */
+        }
+        throw new Error(detail);
+      }
+      const blob = await res.blob();
+      const cd = res.headers.get("Content-Disposition") || "";
+      const match = /filename="([^"]+)"/i.exec(cd);
+      const filename =
+        match?.[1] || `${(slug || "project").replace(/[^a-z0-9-_]/gi, "-")}-export.zip`;
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(objectUrl);
+      setExportNotice(t("optionsExportDone"));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("errorGeneric"));
+    } finally {
+      setExporting(false);
     }
   }
 
@@ -251,14 +316,25 @@ export function PublishPopover({
       ? `${slug}.lvh.me:8080`
       : t("publishEmpty");
 
+  const phaseFromLive = publishLive?.phase;
   const phaseLabel =
-    elapsed < 8
+    phaseFromLive === "queued"
       ? t("publishPhaseDeps")
-      : elapsed < 45
-        ? t("publishPhaseBuild")
-        : elapsed < 90
-          ? t("publishPhaseUpload")
-          : t("publishPhaseFinalize");
+      : phaseFromLive === "deps"
+        ? t("publishPhaseDeps")
+        : phaseFromLive === "build"
+          ? t("publishPhaseBuild")
+          : phaseFromLive === "upload"
+            ? t("publishPhaseUpload")
+            : phaseFromLive === "done"
+              ? t("publishPhaseFinalize")
+              : elapsed < 8
+                ? t("publishPhaseDeps")
+                : elapsed < 45
+                  ? t("publishPhaseBuild")
+                  : elapsed < 90
+                    ? t("publishPhaseUpload")
+                    : t("publishPhaseFinalize");
 
   const panel = open && mounted
     ? createPortal(
@@ -324,7 +400,7 @@ export function PublishPopover({
               <>
                 <div className="publish-url-main">
                   <span className="publish-favicon" aria-hidden>
-                    F
+                    <img src="/icon.png" alt="" width={16} height={16} />
                   </span>
                   {hasPublished && url ? (
                     <a href={url} target="_blank" rel="noreferrer" className="publish-url-link">
@@ -397,10 +473,32 @@ export function PublishPopover({
             <span>{t("publishSecurityOk")}</span>
           </div>
 
+          <div className="publish-export-block">
+            <p className="publish-export-help">{t("optionsExportHelp")}</p>
+            <button
+              type="button"
+              className="publish-export-btn"
+              disabled={busy || exporting}
+              onClick={() => void exportZip()}
+            >
+              <Icon
+                icon={exporting ? Loader2 : Download}
+                className={`ui-icon-sm ${exporting ? "agent-spin" : ""}`}
+              />
+              {exporting ? t("optionsExporting") : t("optionsExport")}
+            </button>
+            {exportNotice ? <p className="publish-export-ok">{exportNotice}</p> : null}
+          </div>
+
           {error && <p className="publish-error">{error}</p>}
 
           <div className="publish-footer">
-            <button type="button" className="publish-run" disabled={busy} onClick={() => void publish()}>
+            <button
+              type="button"
+              className="publish-run"
+              disabled={busy || exporting}
+              onClick={() => void publish()}
+            >
               {busy ? (
                 <>
                   <Icon icon={Loader2} className="ui-icon-sm agent-spin" />

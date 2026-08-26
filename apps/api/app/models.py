@@ -83,7 +83,7 @@ class Project(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
-    __table_args__ = (UniqueConstraint("user_id", "slug", name="uq_projects_user_slug"),)
+    __table_args__ = (UniqueConstraint("slug", name="uq_projects_slug"),)
 
     user: Mapped[User] = relationship(back_populates="projects")
     chats: Mapped[list["Chat"]] = relationship(back_populates="project", cascade="all, delete-orphan")
@@ -117,6 +117,7 @@ class Message(Base):
     thinking_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     steps_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     file_ops_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    plan_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     task_class: Mapped[str | None] = mapped_column(String(64), nullable=True)
     model_slug: Mapped[str | None] = mapped_column(String(128), nullable=True)
     effort_label: Mapped[str | None] = mapped_column(String(32), nullable=True)

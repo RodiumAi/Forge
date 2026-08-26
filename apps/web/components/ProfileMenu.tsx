@@ -117,8 +117,13 @@ export function ProfileMenu() {
           <Link href="/settings" className="profile-menu-item" role="menuitem" onClick={() => setOpen(false)}>
             {t("settings")}
           </Link>
-          <Link href="/connectors" className="profile-menu-item" role="menuitem" onClick={() => setOpen(false)}>
-            {t("connectors")}
+          <Link
+            href="/settings?tab=generation"
+            className="profile-menu-item"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+          >
+            {t("settingsTabRodium")}
           </Link>
           <button
             type="button"

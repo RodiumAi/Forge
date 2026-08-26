@@ -8,7 +8,9 @@ from app.config import get_settings
 settings = get_settings()
 
 engine = create_engine(settings.database_url, pool_pre_ping=True)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# expire_on_commit=False avoids DetachedInstanceError when request-scoped
+# User/Settings objects are reused after commits (token refresh, streaming).
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, expire_on_commit=False, bind=engine)
 
 
 class Base(DeclarativeBase):
@@ -72,6 +74,34 @@ def init_db() -> None:
         "ALTER TABLE projects ADD COLUMN IF NOT EXISTS design_brief TEXT",
         "ALTER TABLE projects ADD COLUMN IF NOT EXISTS template_id VARCHAR(64)",
         "ALTER TABLE projects ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ",
+        # Site URLs are global ({slug}.lvh.me) — slug must be unique across all users.
+        """
+        DO $$
+        DECLARE r RECORD;
+            n INT;
+            base TEXT;
+            candidate TEXT;
+        BEGIN
+          FOR r IN
+            SELECT id, slug,
+                   ROW_NUMBER() OVER (PARTITION BY slug ORDER BY created_at ASC, id ASC) AS rn
+            FROM projects
+          LOOP
+            IF r.rn > 1 THEN
+              base := left(r.slug, 70);
+              n := r.rn;
+              LOOP
+                candidate := base || '-' || n::text;
+                EXIT WHEN NOT EXISTS (SELECT 1 FROM projects WHERE slug = candidate);
+                n := n + 1;
+              END LOOP;
+              UPDATE projects SET slug = candidate WHERE id = r.id;
+            END IF;
+          END LOOP;
+        END $$;
+        """,
+        "ALTER TABLE projects DROP CONSTRAINT IF EXISTS uq_projects_user_slug",
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_projects_slug ON projects (slug)",
         "ALTER TABLE site_usage_days ADD COLUMN IF NOT EXISTS page_views INTEGER NOT NULL DEFAULT 0",
         "ALTER TABLE site_usage_days ADD COLUMN IF NOT EXISTS unique_visitors INTEGER NOT NULL DEFAULT 0",
         "ALTER TABLE messages ADD COLUMN IF NOT EXISTS thinking_text TEXT",
@@ -80,6 +110,7 @@ def init_db() -> None:
         "ALTER TABLE messages ADD COLUMN IF NOT EXISTS task_class VARCHAR(64)",
         "ALTER TABLE messages ADD COLUMN IF NOT EXISTS model_slug VARCHAR(128)",
         "ALTER TABLE messages ADD COLUMN IF NOT EXISTS effort_label VARCHAR(32)",
+        "ALTER TABLE messages ADD COLUMN IF NOT EXISTS plan_json TEXT",
         """
         CREATE TABLE IF NOT EXISTS agent_runs (
             id UUID PRIMARY KEY,

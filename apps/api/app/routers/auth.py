@@ -23,6 +23,7 @@ from app.schemas import (
     RodiumSelectKeyRequest,
     RodiumSelectKeyResponse,
     RodiumWalletOut,
+    FirebaseCustomTokenResponse,
     TokenResponse,
     UserOut,
 )
@@ -376,6 +377,7 @@ def login(body: LoginRequest, request: Request, db: Session = Depends(get_db)) -
 
 @router.get("/me", response_model=UserOut)
 async def me(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> UserOut:
+    user_id = user.id
     if user.rodium_sub:
         try:
             async with asyncio.timeout(1.5):
@@ -383,18 +385,20 @@ async def me(user: User = Depends(get_current_user), db: Session = Depends(get_d
                 info = await fetch_userinfo(access)
                 name = info.get("name") if isinstance(info.get("name"), str) else None
                 picture = _picture_from_userinfo(info)
+                # Re-bind after token refresh commits (avoid DetachedInstanceError).
+                fresh = db.get(User, user_id) or user
                 dirty = False
-                if name and name != user.name:
-                    user.name = name
+                if name and name != fresh.name:
+                    fresh.name = name
                     dirty = True
-                if picture and picture != user.avatar_url:
-                    user.avatar_url = picture
+                if picture and picture != fresh.avatar_url:
+                    fresh.avatar_url = picture
                     dirty = True
                 if dirty:
                     db.commit()
-                    db.refresh(user)
+                user = db.get(User, user_id) or fresh
         except Exception:
-            pass
+            user = db.get(User, user_id) or user
     return _user_out(user)
 
 
@@ -418,6 +422,33 @@ async def logout(
         row.rodium_token_expires_at = None
         db.commit()
     return LogoutResponse()
+
+
+@router.post("/firebase-custom-token", response_model=FirebaseCustomTokenResponse)
+def firebase_custom_token(
+    request: Request,
+    user: User = Depends(get_current_user),
+) -> FirebaseCustomTokenResponse:
+    """Exchange Forge JWT for a Firebase Auth custom token (Firestore listeners)."""
+    locale = resolve_locale(request)
+    settings = get_settings()
+    from app.services import firestore_live
+
+    if not firestore_live.enabled():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=t("firestore_disabled", locale) if False else "Firestore live is disabled",
+        )
+    try:
+        token = firestore_live.create_custom_token(str(user.id))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)[:500]) from exc
+    return FirebaseCustomTokenResponse(
+        token=token,
+        project_id=settings.firebase_project_id,
+        database_id=settings.firestore_database,
+        enabled=True,
+    )
 
 
 @router.post("/change-password", response_model=PasswordChangeResponse)

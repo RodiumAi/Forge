@@ -14,9 +14,13 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from app.config import get_settings
+from app.plugins_catalog import catalog_package_versions
 from app.services.filesystem import project_dir
 
 logger = logging.getLogger("preview")
+
+# PIDs of Vite processes currently starting — orphan killer must not SIGKILL them.
+_protected_pids: set[int] = set()
 
 _CORE_DEPS: dict[str, str] = {
     "react": "^18.3.1",
@@ -188,8 +192,14 @@ def sync_package_json_deps(project_id: str) -> bool:
 
     for name in _collect_bare_imports(root):
         if name in deps or name in dev:
+            # Upgrade to catalog version when known and currently "latest"
+            catalog = catalog_package_versions()
+            if name in catalog and deps.get(name) == "latest":
+                deps[name] = catalog[name]
+                changed = True
             continue
-        deps[name] = "latest"
+        catalog = catalog_package_versions()
+        deps[name] = catalog.get(name, "latest")
         changed = True
 
     if changed:
@@ -269,61 +279,151 @@ export default defineConfig({{
     )
 
 
-async def start_preview(project_id: str, preferred_port: int | None = None) -> PreviewProcess:
+async def start_preview(
+    project_id: str,
+    preferred_port: int | None = None,
+    *,
+    owner_user_id: str | None = None,
+    public_url: str | None = None,
+    project_name: str | None = None,
+) -> PreviewProcess:
+    from app.services import firestore_live
+
     existing = _previews.get(project_id)
     if existing and existing.process.poll() is None:
         # Restart so vite.config base/port stay aligned with the proxy prefix.
-        stop_preview(project_id)
+        stop_preview(project_id, owner_user_id=owner_user_id, project_name=project_name)
 
-    await ensure_dependencies(project_id)
-    port = allocate_port(preferred_port)
-    root = project_dir(project_id)
-    _write_preview_vite_config(project_id, port)
-    npm = _npm_executable()
-
-    env = os.environ.copy()
-    env["BROWSER"] = "none"
-    creationflags = 0
-    if sys.platform == "win32":
-        creationflags = subprocess.CREATE_NEW_PROCESS_GROUP  # type: ignore[attr-defined]
-
-    process = subprocess.Popen(
-        [npm, "run", "dev", "--", "--port", str(port), "--host", "127.0.0.1", "--strictPort"],
-        cwd=str(root),
-        env=env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        creationflags=creationflags,
+    firestore_live.set_preview(
+        project_id,
+        status="starting",
+        owner_user_id=owner_user_id,
+        url=f"/preview/{project_id}/",
+        public_url=public_url,
+        name=project_name,
     )
 
-    output_chunks: list[str] = []
-    for _ in range(60):
-        await asyncio.sleep(0.25)
-        if process.poll() is not None:
-            if process.stdout:
-                rest = process.stdout.read().decode("utf-8", errors="replace")
-                if rest:
-                    output_chunks.append(rest)
-            tail = "".join(output_chunks)[-2000:]
-            raise RuntimeError(f"Preview process exited early: {tail or 'no output'}")
-        if not _port_free(port):
-            break
-    else:
-        process.kill()
-        raise RuntimeError("Preview did not become ready in time")
+    try:
+        await ensure_dependencies(project_id)
+        port = allocate_port(preferred_port)
+        root = project_dir(project_id)
+        _write_preview_vite_config(project_id, port)
+        npm = _npm_executable()
 
-    preview = PreviewProcess(project_id=project_id, port=port, process=process)
-    _previews[project_id] = preview
-    logger.info("Preview started project=%s port=%s", project_id, port)
-    return preview
+        env = os.environ.copy()
+        env["BROWSER"] = "none"
+        creationflags = 0
+        if sys.platform == "win32":
+            creationflags = subprocess.CREATE_NEW_PROCESS_GROUP  # type: ignore[attr-defined]
+
+        process = subprocess.Popen(
+            [npm, "run", "dev", "--", "--port", str(port), "--host", "127.0.0.1", "--strictPort"],
+            cwd=str(root),
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            creationflags=creationflags,
+        )
+        # Protect the fresh PID from concurrent orphan kills during startup.
+        if process.pid:
+            _protected_pids.add(process.pid)
+
+        output_chunks: list[str] = []
+        ready = False
+        try:
+            for _ in range(80):
+                await asyncio.sleep(0.25)
+                if process.stdout and hasattr(process.stdout, "readline"):
+                    try:
+                        import select as _select
+
+                        if sys.platform != "win32":
+                            while True:
+                                readable, _, _ = _select.select([process.stdout], [], [], 0)
+                                if not readable:
+                                    break
+                                line = process.stdout.readline()
+                                if not line:
+                                    break
+                                output_chunks.append(line.decode("utf-8", errors="replace"))
+                    except Exception:
+                        pass
+                if process.poll() is not None:
+                    if process.stdout:
+                        rest = process.stdout.read().decode("utf-8", errors="replace")
+                        if rest:
+                            output_chunks.append(rest)
+                    tail = "".join(output_chunks)[-2000:]
+                    raise RuntimeError(f"Preview process exited early: {tail or 'no output'}")
+                if not _port_free(port):
+                    # Port open — confirm process still alive after a short settle.
+                    await asyncio.sleep(0.35)
+                    if process.poll() is not None:
+                        if process.stdout:
+                            rest = process.stdout.read().decode("utf-8", errors="replace")
+                            if rest:
+                                output_chunks.append(rest)
+                        tail = "".join(output_chunks)[-2000:]
+                        raise RuntimeError(
+                            f"Preview process exited early: {tail or 'no output'}"
+                        )
+                    ready = True
+                    break
+            if not ready:
+                process.kill()
+                raise RuntimeError("Preview did not become ready in time")
+        finally:
+            if process.pid:
+                _protected_pids.discard(process.pid)
+
+        preview = PreviewProcess(project_id=project_id, port=port, process=process)
+        _previews[project_id] = preview
+        logger.info(
+            "Preview started project=%s port=%s pid=%s",
+            project_id,
+            port,
+            process.pid,
+        )
+        firestore_live.set_preview(
+            project_id,
+            status="ready",
+            owner_user_id=owner_user_id,
+            port=port,
+            url=f"/preview/{project_id}/",
+            public_url=public_url,
+            name=project_name,
+        )
+        return preview
+    except Exception as exc:
+        firestore_live.set_preview(
+            project_id,
+            status="error",
+            owner_user_id=owner_user_id,
+            error=str(exc)[:500],
+            name=project_name,
+        )
+        raise
 
 
-def stop_preview(project_id: str) -> None:
+def stop_preview(
+    project_id: str,
+    *,
+    owner_user_id: str | None = None,
+    project_name: str | None = None,
+) -> None:
+    from app.services import firestore_live
+
     preview = _previews.pop(project_id, None)
     if not preview:
+        firestore_live.set_preview(
+            project_id,
+            status="stopped",
+            owner_user_id=owner_user_id,
+            name=project_name,
+        )
         return
     proc = preview.process
-    if proc.poll() is None:
+    if proc is not None and proc.poll() is None:
         try:
             if sys.platform == "win32":
                 proc.send_signal(signal.CTRL_BREAK_EVENT)  # type: ignore[attr-defined]
@@ -333,22 +433,179 @@ def stop_preview(project_id: str) -> None:
         except Exception:
             proc.kill()
     logger.info("Preview stopped project=%s", project_id)
+    firestore_live.set_preview(
+        project_id,
+        status="stopped",
+        owner_user_id=owner_user_id,
+        port=preview.port,
+        name=project_name,
+    )
 
 
-def get_preview(project_id: str) -> PreviewProcess | None:
+def get_preview(
+    project_id: str,
+    *,
+    owner_user_id: str | None = None,
+) -> PreviewProcess | None:
+    from app.services import firestore_live
+
     preview = _previews.get(project_id)
-    if preview and preview.process.poll() is not None:
+    if preview and preview.process is not None and preview.process.poll() is not None:
         _previews.pop(project_id, None)
+        firestore_live.set_preview(
+            project_id,
+            status="dead",
+            owner_user_id=owner_user_id,
+            port=preview.port,
+        )
         return None
+    if preview and preview.process is None:
+        # Adopted listener — verify port is still alive.
+        if _port_free(preview.port):
+            _previews.pop(project_id, None)
+            firestore_live.set_preview(
+                project_id,
+                status="dead",
+                owner_user_id=owner_user_id,
+                port=preview.port,
+            )
+            return None
     return preview
 
 
-async def refresh_preview_after_deps(project_id: str) -> bool:
+def adopt_preview(project_id: str, port: int) -> PreviewProcess | None:
+    """Register an already-listening Vite port (e.g. after out-of-process remount)."""
+    if _port_free(port):
+        return None
+    existing = get_preview(project_id)
+    if existing and existing.port == port:
+        return existing
+    if existing:
+        stop_preview(project_id)
+    preview = PreviewProcess(project_id=project_id, port=port, process=None)  # type: ignore[arg-type]
+    _previews[project_id] = preview
+    logger.info("Preview adopted project=%s port=%s", project_id, port)
+    return preview
+
+
+def kill_orphan_vite_processes(
+    project_id: str,
+    *,
+    exclude_pids: set[int] | None = None,
+) -> int:
+    """Kill node/vite/esbuild processes still bound to this project's node_modules.
+
+    Needed after API restarts leave orphan Vite servers with stale transform caches.
+    Never kill PIDs in exclude_pids (the freshly spawned preview).
+    """
+    marker = str(project_dir(project_id) / "node_modules").replace("\\", "/")
+    skip = set(exclude_pids or set()) | set(_protected_pids)
+    killed = 0
+    if sys.platform == "win32":
+        # Best-effort: registered process only; Windows orphan scan is unreliable here.
+        return killed
+    try:
+        for name in os.listdir("/proc"):
+            if not name.isdigit():
+                continue
+            pid = int(name)
+            if pid in skip:
+                continue
+            try:
+                raw = open(f"/proc/{name}/cmdline", "rb").read().replace(b"\x00", b" ")
+                cmd = raw.decode("utf-8", "ignore")
+            except Exception:
+                continue
+            if marker not in cmd.replace("\\", "/"):
+                continue
+            if "vite" not in cmd and "esbuild" not in cmd:
+                continue
+            try:
+                os.kill(pid, signal.SIGKILL)
+                killed += 1
+            except Exception:
+                pass
+    except Exception as exc:
+        logger.warning("orphan vite scan failed project=%s err=%s", project_id, exc)
+    if killed:
+        logger.info("Killed %s orphan vite/esbuild process(es) for %s", killed, project_id)
+    return killed
+
+
+async def restart_preview_clean(
+    project_id: str,
+    *,
+    owner_user_id: str | None = None,
+    public_url: str | None = None,
+    project_name: str | None = None,
+) -> PreviewProcess:
+    """Stop registered preview, kill orphans, clear Vite cache, start fresh.
+
+    Retries once if the fresh Vite process is killed during startup.
+    """
+    existing = get_preview(project_id, owner_user_id=owner_user_id)
+    preferred = existing.port if existing else None
+    last_exc: Exception | None = None
+    for attempt in range(2):
+        stop_preview(project_id, owner_user_id=owner_user_id, project_name=project_name)
+        kill_orphan_vite_processes(project_id)
+        cache_dir = project_dir(project_id) / "node_modules" / ".vite"
+        if cache_dir.exists():
+            try:
+                shutil.rmtree(cache_dir, ignore_errors=True)
+            except Exception:
+                pass
+        try:
+            return await start_preview(
+                project_id,
+                preferred_port=preferred,
+                owner_user_id=owner_user_id,
+                public_url=public_url,
+                project_name=project_name,
+            )
+        except Exception as exc:
+            last_exc = exc
+            msg = str(exc).lower()
+            if attempt == 0 and ("exited early" in msg or "killed" in msg):
+                logger.warning(
+                    "preview restart retry project=%s attempt=%s err=%s",
+                    project_id,
+                    attempt + 1,
+                    str(exc)[:240],
+                )
+                await asyncio.sleep(0.6)
+                continue
+            raise
+    assert last_exc is not None
+    raise last_exc
+
+
+async def refresh_preview_after_deps(
+    project_id: str,
+    *,
+    owner_user_id: str | None = None,
+    public_url: str | None = None,
+    project_name: str | None = None,
+) -> bool:
     """Re-install deps if needed and bounce Vite so new modules resolve."""
     installed = await ensure_dependencies(project_id)
     if not installed:
-        return False
-    existing = get_preview(project_id)
-    preferred = existing.port if existing else None
-    await start_preview(project_id, preferred_port=preferred)
+        # Still restart to pick up source changes after multi-task edits.
+        try:
+            await restart_preview_clean(
+                project_id,
+                owner_user_id=owner_user_id,
+                public_url=public_url,
+                project_name=project_name,
+            )
+        except Exception as exc:
+            logger.warning("preview restart skipped project=%s err=%s", project_id, exc)
+            return False
+        return True
+    await restart_preview_clean(
+        project_id,
+        owner_user_id=owner_user_id,
+        public_url=public_url,
+        project_name=project_name,
+    )
     return True

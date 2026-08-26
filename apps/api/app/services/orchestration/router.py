@@ -6,6 +6,7 @@ import re
 from dataclasses import dataclass
 
 from app.config import get_settings
+from app.services.attachments import extract_image_urls
 
 # Effort labels shown in UI — never expose model slugs.
 EFFORT_LABELS = {
@@ -43,14 +44,15 @@ _SCAFFOLD_RE = re.compile(
     re.I,
 )
 _SMALL_RE = re.compile(
-    r"\b(change|renomme|rename|couleur|color|fix\s+typo|typo|padding|margin|texte\s+du|"
-    r"update\s+the\s+title|bouton|button\s+label)\b",
+    r"\b(change|modifie|modifier|remplace|mets|mettre|renomme|rename|update|fix|"
+    r"édite|edit|ajuste|couleur|color|typo|padding|margin|texte\s+du|texte\s+de|"
+    r"titre|title|label|bouton|button\s+label|hero|footer|navbar|header)\b",
     re.I,
 )
 
 _ATTACH_NOISE_RE = re.compile(
     r"\[(?:Files|Fichiers|Image attached|Image jointe|Reference screenshot|Capture de référence|"
-    r"PDF attached[^\]]*|PDF joint[^\]]*)[^\]]*\]|"
+    r"PDF attached[^\]]*|PDF joint[^\]]*|Connector)[^\]]*\]|"
     r"###\s+(?:Markdown file|Fichier Markdown|PDF content|Contenu PDF|Text file|Fichier texte)"
     r"[^\n]*\n[\s\S]*?(?=\n###|\n\[|\Z)",
     re.I,
@@ -68,11 +70,12 @@ def strip_attachment_noise(user_text: str) -> str:
     text = _ATTACH_NOISE_RE.sub(" ", user_text or "")
     # Drop the reference-instruction paragraphs that follow screenshot markers.
     text = re.sub(
-        r"This is a REFERENCE screenshot[\s\S]*?(?=\n\n|\Z)",
+        r"This is an? (?:REFERENCE screenshot(?:/mockup)?(?: for visual inspiration)?|uploaded site asset)[\s\S]*?(?=\n\n|\Z)",
         " ",
         text,
         flags=re.I,
     )
+    text = re.sub(r"\[Connector:\s*[^\]]+\]", " ", text, flags=re.I)
     return re.sub(r"\s+", " ", text).strip()
 
 
@@ -83,6 +86,8 @@ def has_reference_attachments(user_text: str) -> bool:
 def classify_task(user_text: str) -> str:
     raw = user_text or ""
     text = strip_attachment_noise(raw)
+    if has_reference_attachments(raw) and extract_image_urls(raw):
+        return "code.edit.with_vision"
     if not text:
         # Attachments-only message → treat as code/design edit using the refs.
         if has_reference_attachments(raw):
@@ -102,10 +107,18 @@ def classify_task(user_text: str) -> str:
 
 def route_task(task_class: str) -> Route:
     settings = get_settings()
-    lite = "google/gemini-3.1-flash-lite"
-    flash = settings.default_model or "google/gemini-3.7-flash"
-    image = settings.default_image_model or "openai/gpt-image-2"
+    lite = (settings.lite_model or "").strip() or "google/gemini-3.1-flash-lite"
+    flash = (settings.default_model or "").strip() or "google/gemini-3.7-flash"
+    image = (settings.default_image_model or "").strip() or "openai/gpt-image-2"
+    escalation = (settings.escalation_model or "").strip() or flash
+    if settings.enable_pro_escalation and task_class in (
+        "code.scaffold",
+        "code.edit.large",
+        "plan.scaffold",
+    ):
+        flash = escalation
 
+    # Tiers only — model slugs come exclusively from Settings / .env
     table: dict[str, tuple[str, str]] = {
         "intent.classify": (lite, "lite"),
         "plan.scaffold": (flash, "primary"),
@@ -115,6 +128,7 @@ def route_task(task_class: str) -> Route:
         "code.assemble": (lite, "lite"),
         "code.edit.small": (lite, "lite"),
         "code.edit.medium": (flash, "primary"),
+        "code.edit.with_vision": (flash, "primary"),
         "code.edit.large": (flash, "primary"),
         "code.fix.build": (flash, "primary"),
         "code.fix.runtime": (flash, "primary"),
@@ -123,6 +137,7 @@ def route_task(task_class: str) -> Route:
         "text.micro": (lite, "lite"),
         "image.generate": (image, "image"),
         "coherence.pass": (lite, "lite"),
+        "verify.repair": (flash, "primary"),
     }
     model, tier = table.get(task_class, (flash, "primary"))
     return Route(

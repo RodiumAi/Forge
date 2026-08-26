@@ -1,43 +1,61 @@
 from __future__ import annotations
 
-from app.services.filesystem import project_dir, write_file
+from pathlib import Path
 
+from app.services.ai_rules import ensure_ai_rules_md
+from app.services.filesystem import project_dir, write_bytes, write_file
+from app.services.preview_bridge import FORGE_EDIT_BRIDGE
+
+_FORGE_FAVICON = Path(__file__).resolve().parent.parent / "assets" / "forge-favicon.png"
+
+
+def forge_favicon_bytes() -> bytes:
+    """Default Forge brand icon for generated projects."""
+    return _FORGE_FAVICON.read_bytes()
+
+
+def install_default_favicon(project_id: str) -> None:
+    """Write public/favicon.png (Forge icon) unless a favicon already exists."""
+    root = project_dir(project_id)
+    existing = [
+        root / "public" / "favicon.png",
+        root / "public" / "favicon.ico",
+        root / "public" / "seo" / "favicon.png",
+    ]
+    if any(p.is_file() for p in existing):
+        return
+    write_bytes(project_id, "public/favicon.png", forge_favicon_bytes())
+
+
+def ensure_favicon_link(html: str) -> str:
+    """Ensure index.html links /favicon.png (idempotent)."""
+    if re_search_favicon(html):
+        return html
+    link = '    <link rel="icon" type="image/png" href="/favicon.png" />\n'
+    if "<head>" in html:
+        return html.replace("<head>", "<head>\n" + link.rstrip() + "\n", 1)
+    if "</title>" in html:
+        return html.replace("</title>", "</title>\n" + link.rstrip(), 1)
+    return link + html
+
+
+def re_search_favicon(html: str) -> bool:
+    low = html.lower()
+    return 'rel="icon"' in low or "rel='icon'" in low or "favicon." in low
+
+# Lightweight package manifest (no Vite / no install scripts). Runtime comes from CDN import map.
 PACKAGE_JSON = """{
   "name": "forge-app",
   "private": true,
   "version": "0.0.1",
   "type": "module",
-  "scripts": {
-    "dev": "vite --host 0.0.0.0 --port 5173",
-    "build": "tsc -b && vite build",
-    "preview": "vite preview --host 0.0.0.0 --port 5173"
-  },
+  "description": "Forge Babel/ESM app — preview & publish without Vite or node_modules",
   "dependencies": {
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "lucide-react": "^0.468.0"
-  },
-  "devDependencies": {
-    "@types/react": "^18.3.12",
-    "@types/react-dom": "^18.3.1",
-    "@vitejs/plugin-react": "^4.3.4",
-    "typescript": "^5.6.3",
-    "vite": "^5.4.11"
   }
 }
-"""
-
-VITE_CONFIG = """import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
-
-export default defineConfig({
-  plugins: [react()],
-  server: {
-    host: true,
-    port: 5173,
-    strictPort: true,
-  },
-});
 """
 
 TSCONFIG = """{
@@ -56,35 +74,63 @@ TSCONFIG = """{
     "strict": true,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "baseUrl": ".",
+    "paths": { "@/*": ["src/*"] }
   },
   "include": ["src"]
 }
 """
 
+# Shell used as documentation / ZIP export fallback. Publish regenerates index.html + importmap.
 INDEX_HTML = """<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Forge App</title>
+    <meta name="description" content="" />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:title" content="Forge App" />
+    <meta property="og:description" content="" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Forge App" />
+    <meta name="twitter:description" content="" />
+    <meta name="twitter:image" content="" />
+    <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@18.3.1",
+        "react-dom": "https://esm.sh/react-dom@18.3.1",
+        "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+        "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+        "react/jsx-dev-runtime": "https://esm.sh/react@18.3.1/jsx-dev-runtime",
+        "lucide-react": "https://esm.sh/lucide-react@0.468.0"
+      }
+    }
+    </script>
+    <link rel="stylesheet" href="/src/index.css" />
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <!-- Live preview uses the Babel runner; publish rewrites this to ESM .js -->
+    <script type="module" src="/src/main.js"></script>
   </body>
 </html>
 """
 
-MAIN_TSX = """import React from "react";
-import ReactDOM from "react-dom/client";
+MAIN_TSX = """import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
 
-ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
+createRoot(document.getElementById("root")!).render(
+  <StrictMode>
     <App />
-  </React.StrictMode>
+  </StrictMode>
 );
 """
 
@@ -180,24 +226,37 @@ This file is the graphic charter for the app. Forge injects it into every AI cal
 """
 
 
+def _index_html(app_name: str) -> str:
+    html = INDEX_HTML.replace("Forge App", app_name)
+    if b"forge-edit-bridge" not in html.encode("utf-8"):
+        bridge = FORGE_EDIT_BRIDGE.decode("utf-8")
+        html = html.replace("  </body>", f"  {bridge}\n  </body>")
+    return html
+
+
 def scaffold_vite_react(project_id: str, app_name: str) -> None:
+    """Scaffold a React/TS app for the Babel/ESM runtime (no Vite / node_modules)."""
     project_dir(project_id)
-    write_file(project_id, "package.json", PACKAGE_JSON.replace("forge-app", app_name.lower().replace(" ", "-")[:40] or "forge-app"))
-    write_file(project_id, "vite.config.ts", VITE_CONFIG)
+    slug = app_name.lower().replace(" ", "-")[:40] or "forge-app"
+    write_file(project_id, "package.json", PACKAGE_JSON.replace("forge-app", slug))
     write_file(project_id, "tsconfig.json", TSCONFIG)
-    write_file(project_id, "tsconfig.node.json", '{\n  "compilerOptions": { "composite": true, "skipLibCheck": true, "module": "ESNext", "moduleResolution": "bundler", "allowSyntheticDefaultImports": true },\n  "include": ["vite.config.ts"]\n}\n')
-    write_file(project_id, "index.html", INDEX_HTML.replace("Forge App", app_name))
+    write_file(project_id, "index.html", _index_html(app_name))
     write_file(project_id, "src/main.tsx", MAIN_TSX)
     write_file(project_id, "src/App.tsx", APP_TSX)
     write_file(project_id, "src/index.css", INDEX_CSS)
-    write_file(project_id, "src/vite-env.d.ts", '/// <reference types="vite/client" />\n')
     write_file(project_id, "DESIGN.md", DESIGN_MD)
-    write_file(project_id, "public/.gitkeep", "")
+    write_file(
+        project_id,
+        "forge.json",
+        '{\n  "runtime": "babel_esm",\n  "entry": "src/main.tsx"\n}\n',
+    )
+    ensure_ai_rules_md(project_id)
+    install_default_favicon(project_id)
     write_file(
         project_id,
         "preview.html",
         f"""<!doctype html>
-<html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<html lang="en"><head><meta charset="UTF-8" /><link rel="icon" type="image/png" href="/favicon.png" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>{app_name}</title>
 <style>{INDEX_CSS}
 html,body{{overflow:hidden}} a,button{{pointer-events:none}}
