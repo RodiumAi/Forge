@@ -6901,3 +6901,34 @@ button.file-op-path:focus-visible { outline: 2px solid #f2620a; outline-offset: 
   font-size: 0.92em;
   opacity: 0.85;
 }
+
+/* -- Composer: drop zone, readonly state -- */
+.builder-composer-box.is-dragging {
+  border-color: #f2620a;
+  box-shadow: 0 0 0 2px rgba(242, 98, 10, 0.2);
+}
+
+.composer-dropzone {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  border-radius: inherit;
+  background: rgba(16, 16, 16, 0.86);
+  border: 1px dashed #f2620a;
+  pointer-events: none;
+}
+
+.composer-dropzone span {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #fdba74;
+}
+
+.builder-composer-box textarea[readonly] {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.prompt-mention-list [role="option"] { list-style: none; }

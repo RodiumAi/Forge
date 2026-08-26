@@ -162,20 +162,25 @@ export function mergePromptAttachments(
   prev: PromptAttachment[],
   incoming: FileList | File[],
   max = MAX_PROMPT_FILES,
-): { next: PromptAttachment[]; rejected: string[] } {
+): { next: PromptAttachment[]; rejected: string[]; overflow: string[] } {
   const next = [...prev];
   const rejected: string[] = [];
+  // Files dropped because the cap was reached used to vanish with no message.
+  const overflow: string[] = [];
   for (const file of Array.from(incoming)) {
-    if (next.length >= max) break;
     const kind = promptAttachmentKind(file);
     if (!kind) {
       rejected.push(file.name);
       continue;
     }
+    if (next.length >= max) {
+      overflow.push(file.name);
+      continue;
+    }
     const created = createPromptAttachment(file);
     if (created) next.push(created);
   }
-  return { next, rejected };
+  return { next, rejected, overflow };
 }
 
 async function readTextFile(file: File): Promise<string> {
@@ -403,7 +408,13 @@ export function insertMentionInTextarea(
   const end = textarea.selectionEnd ?? value.length;
   const before = value.slice(0, start).replace(/@(?:[^\s@]*)$/, "");
   const after = value.slice(end);
-  return `${before}${mention} ${after}`.replace(/\s+/g, " ").trimStart();
+  // Only collapse spaces/tabs around the insertion point. The previous
+  // `.replace(/\s+/g, " ")` ran over the WHOLE value and silently flattened
+  // every newline the user had typed.
+  const head = before.replace(/[ \t]+$/, "");
+  const tail = after.replace(/^[ \t]+/, "");
+  const needsSpace = tail && !tail.startsWith("\n");
+  return `${head}${head ? " " : ""}${mention}${needsSpace ? " " : ""}${tail}`;
 }
 
 export type ElementSelectionMarker = {
