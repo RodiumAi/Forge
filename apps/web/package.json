@@ -8,7 +8,9 @@
     "start": "next start -p 3000",
     "lint": "eslint . --max-warnings=10",
     "lint:fix": "eslint . --fix",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
@@ -25,11 +27,16 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.6",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.3.2",
     "@types/node": "^22.13.10",
     "@types/react": "^19.0.12",
     "@types/react-dom": "^19.0.4",
+    "@vitejs/plugin-react": "^4.7.0",
     "eslint": "^9.39.5",
     "eslint-config-next": "^15.5.24",
-    "typescript": "^5.8.2"
+    "jsdom": "^25.0.1",
+    "typescript": "^5.8.2",
+    "vitest": "^3.2.7"
   }
 }
