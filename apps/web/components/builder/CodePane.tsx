@@ -74,12 +74,13 @@ function TreeItem({
     return (
       <li role="none">
         <div className="code-tree-row">
-          <button
-            type="button"
-            role="treeitem"
-            aria-expanded={open}
-            aria-level={depth + 1}
-            className="code-tree-dir"
+        <button
+          type="button"
+          role="treeitem"
+          aria-expanded={open}
+          aria-selected={false}
+          aria-level={depth + 1}
+          className="code-tree-dir"
             style={{ paddingLeft: 8 + depth * 12 }}
             onClick={() => setOpen((v) => !v)}
           >
