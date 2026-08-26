@@ -4,28 +4,35 @@
  */
 
 const ALLOWED_PARENT_ORIGINS = new Set(
-  (window.__FORGE_PARENT_ORIGINS || "http://localhost:3100,http://127.0.0.1:3100").split(",").map((s) => s.trim()).filter(Boolean),
+  (window.__FORGE_PARENT_ORIGINS || "http://localhost:3100,http://127.0.0.1:3100")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean),
 );
 
 function isAllowedOrigin(origin) {
-  if (ALLOWED_PARENT_ORIGINS.has(origin)) return true;
-  try {
-    const u = new URL(origin);
-    return u.hostname === "localhost" || u.hostname === "127.0.0.1";
-  } catch {
-    return false;
-  }
+  // Strict allowlist only. Accepting any localhost port let a rogue local page
+  // register itself, and `send()` then broadcast app content to it.
+  return ALLOWED_PARENT_ORIGINS.has(origin);
 }
 
+// The embedder is the only peer we talk to. Derived from the referrer, kept
+// only if allowed, and never widened at runtime.
+let PARENT_ORIGIN = (() => {
+  try {
+    const ref = document.referrer ? new URL(document.referrer).origin : "";
+    return isAllowedOrigin(ref) ? ref : "";
+  } catch {
+    return "";
+  }
+})();
+
 const send = (payload) => {
-  // Prefer event origin tracking; fall back to whitelist.
-  const targets = new Set(ALLOWED_PARENT_ORIGINS);
-  for (const origin of targets) {
-    try {
-      parent.postMessage(payload, origin);
-    } catch {
-      /* ignore */
-    }
+  if (!PARENT_ORIGIN) return;
+  try {
+    parent.postMessage(payload, PARENT_ORIGIN);
+  } catch {
+    /* ignore */
   }
 };
 
@@ -369,7 +376,7 @@ async function mount(files, entry, tokensCss) {
 
 window.addEventListener("message", (e) => {
   if (!isAllowedOrigin(e.origin)) return;
-  ALLOWED_PARENT_ORIGINS.add(e.origin);
+  if (!PARENT_ORIGIN) PARENT_ORIGIN = e.origin;
   const data = e.data;
   if (!data || typeof data !== "object") return;
   if (data.type === "forge:render") {

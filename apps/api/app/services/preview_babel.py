@@ -25,6 +25,48 @@ def runner_url() -> str:
     return f"{base}/runner/"
 
 
+def render_runner_shell() -> str:
+    """Build the preview shell HTML.
+
+    Served dynamically rather than as a static file because three things must be
+    injected at request time:
+      - the import map, derived from packages.json (a hand-written copy used to
+        live in index.html and drifted from the AST allowlist),
+      - the allowed parent origins, so postMessage can be pinned on both sides,
+      - the visual-edit bridge, which no longer has any other injection point.
+    """
+    import json
+
+    from app.runtime_manifest import browser_import_map
+
+    settings = get_settings()
+    import_map = json.dumps({"imports": browser_import_map()}, indent=2)
+    origins = json.dumps(settings.runner_parent_origins)
+
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Forge preview runner</title>
+  <!-- Generated from runtime/packages.json - do not hand-edit. -->
+  <script type="importmap" id="forge-importmap">
+{import_map}
+  </script>
+  <style id="forge-tokens"></style>
+  <style id="forge-app-css"></style>
+  <script>window.__FORGE_PARENT_ORIGINS = {origins};</script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.9/babel.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="./bridge.js"></script>
+  <script type="module" src="./runner.js"></script>
+</body>
+</html>
+"""
+
+
 def mark_babel_preview_ready(project_id: str) -> None:
     _babel_ready.add(project_id)
 

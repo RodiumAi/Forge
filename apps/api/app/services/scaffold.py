@@ -4,7 +4,6 @@ from pathlib import Path
 
 from app.services.ai_rules import ensure_ai_rules_md
 from app.services.filesystem import project_dir, write_bytes, write_file
-from app.services.preview_bridge import FORGE_EDIT_BRIDGE
 
 _FORGE_FAVICON = Path(__file__).resolve().parent.parent / "assets" / "forge-favicon.png"
 
@@ -228,11 +227,9 @@ This file is the graphic charter for the app. Forge injects it into every AI cal
 
 
 def _index_html(app_name: str) -> str:
-    html = INDEX_HTML.replace("Forge App", app_name)
-    if b"forge-edit-bridge" not in html.encode("utf-8"):
-        bridge = FORGE_EDIT_BRIDGE.decode("utf-8")
-        html = html.replace("  </body>", f"  {bridge}\n  </body>")
-    return html
+    # The visual-edit bridge used to be inlined here. It now ships with the
+    # preview runner shell, so it no longer leaks into the user's exported ZIP.
+    return INDEX_HTML.replace("Forge App", app_name)
 
 
 def scaffold_vite_react(project_id: str, app_name: str) -> None:

@@ -39,6 +39,7 @@ const WIDTH: Record<ViewportMode, string> = {
 
 const TOOL_RETRY_DELAYS_MS = [50, 150, 400, 800, 1600, 3200];
 const NAV_RETRY_DELAYS_MS = [0, 120, 350, 700, 1400, 2800];
+const MAX_BRIDGE_PINGS = 8;
 
 /**
  * Origin of the preview iframe, or null when it cannot be determined.
@@ -85,6 +86,7 @@ export function PreviewPane({
   const toolRetryTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const pingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const bridgeWarnTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const editMissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const desiredToolRef = useRef<PreviewTool | null>(previewTool);
   const syncedToolRef = useRef<PreviewTool | null>(null);
   const onVisualEditRef = useRef(onVisualEdit);
@@ -139,9 +141,11 @@ export function PreviewPane({
         void pushRender(targetOrigin);
       }
       if (data.type === "forge:mounted") {
+        // App mounted — that says nothing about the visual-edit bridge, which
+        // acknowledges separately via forge-tool-ack. Conflating the two showed
+        // "click to edit" next to "bridge unavailable" at the same time.
         setLoadError(false);
         setBabelError(null);
-        setBridgeSynced(true);
       }
       if (data.type === "forge:transform-error" || data.type === "forge:error") {
         setLoadError(true);
@@ -259,9 +263,19 @@ export function PreviewPane({
         }
       }, 3000);
 
+      // Bounded: if the bridge never answers, keep the warning but stop
+      // hammering the iframe forever (this used to ping every 2s indefinitely).
+      let attempts = 0;
       pingIntervalRef.current = setInterval(() => {
-        if (desiredToolRef.current !== tool) return;
-        if (syncedToolRef.current === tool) return;
+        attempts += 1;
+        if (
+          desiredToolRef.current !== tool ||
+          syncedToolRef.current === tool ||
+          attempts > MAX_BRIDGE_PINGS
+        ) {
+          clearPingInterval();
+          return;
+        }
         postTool(tool);
       }, 2000);
     }
@@ -312,7 +326,8 @@ export function PreviewPane({
 
       if (type === "forge-edit-miss") {
         setEditMissHint(t("previewEditMiss"));
-        window.setTimeout(() => setEditMissHint(null), 3200);
+        if (editMissTimerRef.current) clearTimeout(editMissTimerRef.current);
+        editMissTimerRef.current = setTimeout(() => setEditMissHint(null), 3200);
         return;
       }
 
@@ -346,7 +361,10 @@ export function PreviewPane({
       }
     }
     window.addEventListener("message", onMessage);
-    return () => window.removeEventListener("message", onMessage);
+    return () => {
+      window.removeEventListener("message", onMessage);
+      if (editMissTimerRef.current) clearTimeout(editMissTimerRef.current);
+    };
   }, [t, previewSrc]);
 
   const toolActive = Boolean(previewTool);

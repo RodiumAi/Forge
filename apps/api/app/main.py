@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.config import get_settings
@@ -22,7 +23,7 @@ from app.routers import (
     templates,
 )
 from app.routers import settings as settings_router
-from app.services.preview_babel import runtime_public_dir
+from app.services.preview_babel import render_runner_shell, runtime_public_dir
 
 logger = logging.getLogger(__name__)
 
@@ -69,9 +70,19 @@ app.include_router(comments.router)
 app.include_router(publish.router)
 app.include_router(preview.router)
 
+
+@app.get("/runner/", include_in_schema=False)
+@app.get("/runner", include_in_schema=False)
+def runner_shell() -> HTMLResponse:
+    """Preview shell: import map + parent origins + visual-edit bridge."""
+    return HTMLResponse(render_runner_shell(), headers={"Cache-Control": "no-store"})
+
+
+# Declared after the route above so `/runner/` resolves to the generated shell
+# and the mount only serves sibling assets (runner.js, bridge.js).
 _runner_dir = runtime_public_dir()
 if _runner_dir.is_dir():
-    app.mount("/runner", StaticFiles(directory=str(_runner_dir), html=True), name="runner")
+    app.mount("/runner", StaticFiles(directory=str(_runner_dir)), name="runner")
 
 
 @app.get("/health")
