@@ -580,18 +580,9 @@ async def run_plan_tasks(
         yield push_step("verify_build", "Verifying build", "done")
 
     if applied:
-        yield push_step("sync_deps", t("step_sync_deps", locale), "running")
-        try:
-            from app.services.preview import restart_preview_clean
-
-            await restart_preview_clean(
-                project_id,
-                owner_user_id=str(user_id) if user_id else None,
-            )
-            yield push_step("sync_deps", t("step_sync_deps", locale), "done")
-        except Exception as exc:
-            yield push_step("sync_deps", t("step_sync_deps", locale), "error")
-            yield _sse({"type": "warning", "message": f"preview restart: {str(exc)[:240]}"})
+        # No dependency install and no dev server to bounce: the runner receives
+        # the new source bundle straight from the browser on the next refresh.
+        yield _sse({"type": "preview_refresh"})
 
     summary = to_plain_text(
         build_run_summary(tasks=tasks, applied=applied, locale=locale)

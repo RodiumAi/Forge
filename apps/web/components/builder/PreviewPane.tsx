@@ -19,7 +19,6 @@ type Props = {
   previewBusy: boolean;
   previewLiveStatus?: string | null;
   previewTool: PreviewTool | null;
-  previewMode?: "vite" | "babel_runner";
   projectId?: string;
   remountKey?: number;
   onPreviewToolChange: (tool: PreviewTool | null) => void;
@@ -66,7 +65,6 @@ export function PreviewPane({
   previewBusy,
   previewLiveStatus = null,
   previewTool,
-  previewMode = "babel_runner",
   projectId,
   remountKey = 0,
   onPreviewToolChange,
@@ -106,7 +104,7 @@ export function PreviewPane({
 
   // Babel runner: push source bundle into the iframe (origin = API).
   useEffect(() => {
-    if (previewMode !== "babel_runner" || !previewSrc || !projectId) return;
+    if (!previewSrc || !projectId) return;
     const targetOrigin = previewOrigin(previewSrc);
     if (!targetOrigin) return;
 
@@ -166,36 +164,11 @@ export function PreviewPane({
       window.removeEventListener("message", onMessage);
       window.clearTimeout(t);
     };
-  }, [previewMode, previewSrc, projectId, remountKey]);
+  }, [previewSrc, projectId, remountKey]);
 
   useEffect(() => {
     setLoadError(false);
-    if (!previewSrc) return;
-    if (previewMode === "babel_runner") return; // errors come via forge:error postMessage
-    if (loadTimer.current) clearTimeout(loadTimer.current);
-    // Same-origin only: UI is :3100, preview proxy is often :8100 → cross-origin.
-    // Still try; if blocked, the always-visible restart button remains available.
-    loadTimer.current = setTimeout(() => {
-      try {
-        const doc = frameRef.current?.contentDocument;
-        if (!doc) {
-          // Cross-origin: cannot inspect. Soft-hint after a delay by leaving loadError false;
-          // user can still use the floating restart control.
-          return;
-        }
-        const root = doc.getElementById("root");
-        const hasNodes = Boolean(root && root.childElementCount > 0);
-        if (!hasNodes && doc.readyState === "complete") {
-          setLoadError(true);
-        }
-      } catch {
-        // Cross-origin: ignore.
-      }
-    }, 4500);
-    return () => {
-      if (loadTimer.current) clearTimeout(loadTimer.current);
-    };
-  }, [previewSrc, previewMode]);
+  }, [previewSrc]);
 
   function clearNavigateRetries() {
     for (const id of navigateRetryTimers.current) clearTimeout(id);
@@ -424,19 +397,10 @@ export function PreviewPane({
                 // reports "null" and forces a wildcard, which is worse). The iframe
                 // is served from the API origin, which holds no browser credentials —
                 // the session token lives in the builder origin only.
-                sandbox={
-                  previewMode === "babel_runner"
-                    ? "allow-scripts allow-same-origin allow-forms allow-modals allow-popups"
-                    : undefined
-                }
+                sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups"
                 onLoad={() => {
                   setLoadError(false);
-                  if (previewMode === "babel_runner") {
-                    runnerReadyRef.current = true;
-                  } else {
-                    syncToolWithRetries(desiredToolRef.current);
-                    schedulePreviewNavigate(previewPath);
-                  }
+                  runnerReadyRef.current = true;
                 }}
               />
               {loadError && (

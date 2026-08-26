@@ -79,6 +79,5 @@ def health() -> dict[str, str]:
     return {
         "status": "ok",
         "service": "forge-web-api",
-        "preview_mode": config.preview_mode,
-        "publish_mode": config.publish_mode,
+        "runtime": "babel_esm",
     }

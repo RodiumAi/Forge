@@ -303,15 +303,7 @@ async def _iter_single_pass(
         yield _sse({"type": "file_delete", "path": op.path})
     yield push_step("apply_writes", t("step_apply_writes", locale), "done")
     if applied:
-        yield push_step("sync_deps", t("step_sync_deps", locale), "running")
-        try:
-            from app.services.preview import refresh_preview_after_deps
-
-            await refresh_preview_after_deps(project_id_str)
-            yield push_step("sync_deps", t("step_sync_deps", locale), "done")
-        except Exception as exc:
-            yield push_step("sync_deps", t("step_sync_deps", locale), "error")
-            yield _sse({"type": "warning", "message": f"deps sync: {str(exc)[:240]}"})
+        yield _sse({"type": "preview_refresh"})
     yield push_step("done", t("step_done", locale), "done")
 
     summary = to_plain_text(
@@ -615,15 +607,7 @@ async def send_message(
                     yield _sse({"type": "file_delete", "path": op.path})
                 yield push_step("apply_writes", t("step_apply_writes", locale), "done")
                 if applied:
-                    yield push_step("sync_deps", t("step_sync_deps", locale), "running")
-                    try:
-                        from app.services.preview import refresh_preview_after_deps
-
-                        await refresh_preview_after_deps(project_id_str)
-                        yield push_step("sync_deps", t("step_sync_deps", locale), "done")
-                    except Exception as exc:
-                        yield push_step("sync_deps", t("step_sync_deps", locale), "error")
-                        yield _sse({"type": "warning", "message": f"deps sync: {str(exc)[:240]}"})
+                    yield _sse({"type": "preview_refresh"})
                 yield push_step("done", t("step_done", locale), "done")
                 summary = (
                     "Image générée et intégrée."

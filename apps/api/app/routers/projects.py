@@ -24,7 +24,7 @@ from app.schemas import (
     ProjectStatsOut,
     ProjectUpdate,
 )
-from app.services import preview as preview_service
+from app.services import preview_babel
 from app.services.filesystem import list_files, project_dir
 from app.services.project_naming import suggest_project_name
 from app.services.scaffold import scaffold_vite_react
@@ -304,7 +304,7 @@ def project_stats(
     return ProjectStatsOut(
         slug=project.slug,
         status=project.status,
-        preview_running=bool(preview_service.get_preview(str(project.id))),
+        preview_running=preview_babel.is_babel_preview_ready(str(project.id)),
         published=published,
         published_at=getattr(project, "published_at", None),
         sites_url=settings.sites_url_for_slug(project.slug) if published else None,
@@ -334,7 +334,7 @@ def delete_project(
     slug = project.slug
 
     try:
-        preview_service.stop_preview(pid)
+        preview_babel.stop_babel_preview(pid)
     except Exception:
         logger.exception("Failed to stop preview before delete project=%s", pid)
 

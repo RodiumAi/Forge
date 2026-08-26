@@ -56,10 +56,6 @@ class Settings(BaseSettings):
     preview_public_host: str = "lvh.me"
     preview_public_port: int = 3100
     preview_public_scheme: str = "http"
-    # Preview engine: vite (legacy) | babel_runner (no bundler)
-    preview_mode: Literal["vite", "babel_runner"] = "babel_runner"
-    # Publish engine: vite (legacy) | esm (Babel transform, no vite build)
-    publish_mode: Literal["vite", "esm"] = "esm"
     # Parent origins allowed to talk to the preview runner (comma-separated)
     runner_parent_origins: str = "http://localhost:3100,http://127.0.0.1:3100"
 
@@ -100,9 +96,6 @@ class Settings(BaseSettings):
     redis_url: str = "redis://127.0.0.1:6380/0"
     usage_stream: str = "sites:usage"
     usage_consumer_group: str = "billing"
-    build_queue: str = "sites:builds"
-    # When true, vite build / heavy npm work is enqueued for the build-worker service.
-    build_worker_enabled: bool = False
     # SSE comment heartbeats so ALB/proxies with long idle timeouts stay open.
     sse_heartbeat_seconds: float = 15.0
     # Target ALB idle timeout (seconds) — document & IaC must match before streaming runs.
