@@ -8,6 +8,7 @@ import {
   ExternalLink,
   FolderOpen,
   Globe,
+  History,
   Monitor,
   Pencil,
   RefreshCw,
@@ -51,6 +52,7 @@ type Props = {
   previewBusy: boolean;
   onRefreshPreview: () => void;
   onOpenDesign: () => void;
+  onOpenHistory: () => void;
   /** Ensure draft preview is running, then open it in a new tab. */
   onOpenDraftExternal?: () => Promise<void> | void;
 };
@@ -75,6 +77,7 @@ export function BuilderTopbar({
   previewBusy,
   onRefreshPreview,
   onOpenDesign,
+  onOpenHistory,
   onOpenDraftExternal,
 }: Props) {
   const { t } = useI18n();
@@ -449,6 +452,15 @@ export function BuilderTopbar({
           title={t("designTitle")}
         >
           {t("designOpen")}
+        </button>
+        <button
+          type="button"
+          className="builder-toolbar-btn"
+          onClick={onOpenHistory}
+          title={t("historyTitle")}
+          aria-label={t("historyTitle")}
+        >
+          <Icon icon={History} className="ui-icon-sm" />
         </button>
         <PublishPopover
           projectId={projectId}
