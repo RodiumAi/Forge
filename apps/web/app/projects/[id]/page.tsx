@@ -57,6 +57,7 @@ import {
 } from "@/components/builder/types";
 import {
   PROMPT_FILE_ACCEPT,
+  MAX_PROMPT_FILES,
   type MessageAttachment,
   type PromptAttachment,
   attachmentName,
@@ -257,6 +258,8 @@ export default function ProjectPage() {
   const [streamSummary, setStreamSummary] = useState("");
   const [showJumpToBottom, setShowJumpToBottom] = useState(false);
   const [codeOpenPath, setCodeOpenPath] = useState<string | null>(null);
+  const [dragActive, setDragActive] = useState(false);
+  const dragDepth = useRef(0);
   const [hasUnread, setHasUnread] = useState(false);
   const [busy, setBusy] = useState(() => Boolean(initialBoot));
   const [loading, setLoading] = useState(true);
@@ -820,7 +823,15 @@ export default function ProjectPage() {
           setFileError(null);
           setFileNotice(t("promptFilesAttached").replace("{count}", String(added)));
           window.setTimeout(() => setFileNotice(null), 3200);
-        } else if (result.rejected.length > 0) {
+        }
+        // Silent drops were the worst offender here: files over the cap or of
+        // the wrong type simply disappeared with zero feedback.
+        if (result.overflow.length > 0) {
+          setFileNotice(null);
+          setFileError(
+            t("promptFilesTooMany").replace("{max}", String(MAX_PROMPT_FILES)),
+          );
+        } else if (added === 0 && result.rejected.length > 0) {
           setFileNotice(null);
           setFileError(t("promptFileTypeError"));
         }
@@ -829,6 +840,30 @@ export default function ProjectPage() {
     },
     [t],
   );
+
+  function onDragEnter(e: DragEvent<HTMLDivElement>) {
+    if (composerInputLocked) return;
+    if (!Array.from(e.dataTransfer.types || []).includes("Files")) return;
+    e.preventDefault();
+    dragDepth.current += 1;
+    setDragActive(true);
+  }
+
+  function onDragLeave() {
+    dragDepth.current = Math.max(0, dragDepth.current - 1);
+    if (dragDepth.current === 0) setDragActive(false);
+  }
+
+  /** Paste an image straight from the clipboard (screenshots). */
+  function onComposerPaste(e: React.ClipboardEvent<HTMLTextAreaElement>) {
+    if (composerInputLocked) return;
+    const files = Array.from(e.clipboardData?.files || []).filter((f) =>
+      f.type.startsWith("image/"),
+    );
+    if (!files.length) return;
+    e.preventDefault();
+    addFiles(files);
+  }
 
   function onFilesSelected(e: ChangeEvent<HTMLInputElement>) {
     const list = e.target.files;
@@ -857,6 +892,8 @@ export default function ProjectPage() {
 
   function onDrop(e: DragEvent<HTMLDivElement>) {
     e.preventDefault();
+    dragDepth.current = 0;
+    setDragActive(false);
     if (composerInputLocked) return;
     if (e.dataTransfer.files?.length) addFiles(e.dataTransfer.files);
   }
@@ -1181,6 +1218,12 @@ export default function ProjectPage() {
     },
     [busy],
   );
+
+  const cancelEditMessage = useCallback(() => {
+    setEditingMessageId(null);
+    setInput("");
+    setAttachments([]);
+  }, []);
 
   const dismissPlan = useCallback(async () => {
     const runId = activeRunId;
@@ -1677,6 +1720,9 @@ export default function ProjectPage() {
     if (!text && files.length === 0 && !elementSelection) return;
     setInput("");
     setFileError(null);
+    // Keep the caret in the composer so the next message can be typed straight
+    // away — the focus used to be lost for the whole generation.
+    textareaRef.current?.focus();
     // Attachments cleared inside sendMessage after bubble owns blob URLs.
     await sendMessage(text, files);
   }
@@ -1689,6 +1735,12 @@ export default function ProjectPage() {
   function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     // Mention picker owns Arrow/Enter/Escape while open.
     if (mentionOpen && ["ArrowDown", "ArrowUp", "Enter", "Escape"].includes(e.key)) {
+      return;
+    }
+    // Escape cancels an in-progress message edit.
+    if (e.key === "Escape" && editingMessageId) {
+      e.preventDefault();
+      cancelEditMessage();
       return;
     }
     if (e.key === "Enter" && !e.shiftKey) {
@@ -2017,10 +2069,17 @@ export default function ProjectPage() {
 
           <form className="builder-composer" onSubmit={onSend}>
             <div
-              className={`builder-composer-box${attachments.length ? " has-attachments" : ""}`}
+              className={`builder-composer-box${attachments.length ? " has-attachments" : ""}${dragActive ? " is-dragging" : ""}`}
+              onDragEnter={onDragEnter}
               onDragOver={(e) => e.preventDefault()}
+              onDragLeave={onDragLeave}
               onDrop={onDrop}
             >
+              {dragActive ? (
+                <div className="composer-dropzone" aria-hidden="true">
+                  <span>{t("promptDropHere")}</span>
+                </div>
+              ) : null}
               {attachments.length > 0 ? (
                 <div className="builder-composer-attachments">
                   <PromptFileChips
@@ -2041,7 +2100,12 @@ export default function ProjectPage() {
                 onSelect={(att, mention) => {
                   setAttachments((prev) => {
                     if (prev.some((x) => x.id === att.id)) return prev;
-                    if (prev.length >= 5) return prev;
+                    if (prev.length >= MAX_PROMPT_FILES) {
+                      setFileError(
+                        t("promptFilesTooMany").replace("{max}", String(MAX_PROMPT_FILES)),
+                      );
+                      return prev;
+                    }
                     return [...prev, att];
                   });
                   setInput((prev) => insertMentionInTextarea(textareaRef.current, prev, mention));
@@ -2083,7 +2147,9 @@ export default function ProjectPage() {
                   setInput(v);
                   const caret = e.target.selectionStart ?? v.length;
                   const before = v.slice(0, caret);
-                  const atMatch = before.match(/@([^\s@]*)$/);
+                  // The `@` must start a token: `(^|\s)` prevents the picker
+                  // from popping up inside an email address like nom@domaine.
+                  const atMatch = before.match(/(?:^|\s)@([^\s@]*)$/);
                   if (atMatch) {
                     setMentionOpen(true);
                     setMentionQuery(atMatch[1]);
@@ -2093,9 +2159,16 @@ export default function ProjectPage() {
                   }
                 }}
                 onKeyDown={onKeyDown}
+                onPaste={onComposerPaste}
                 placeholder={t("builderPlaceholder")}
+                aria-label={t("builderPlaceholder")}
+                role="combobox"
+                aria-expanded={mentionOpen}
+                aria-controls="prompt-mention-listbox"
+                aria-autocomplete="list"
                 rows={3}
-                disabled={composerInputLocked}
+                readOnly={composerInputLocked}
+                aria-busy={busy}
               />
               <div className="builder-composer-actions">
                 <button

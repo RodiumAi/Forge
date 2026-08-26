@@ -134,6 +134,8 @@ export const dictionaries = {
     fileOpOpen: "Open in editor",
     fileOpsMore: "+{n} more",
     fileOpsLess: "Show less",
+    promptFilesTooMany: "Up to {max} attachments per message.",
+    promptDropHere: "Drop files to attach",
     errorBoundaryTitle: "Something went wrong",
     errorBoundaryBody:
       "This page hit an unexpected error. Your project files are safe — every change is checkpointed.",
@@ -584,6 +586,8 @@ export const dictionaries = {
     fileOpOpen: "Ouvrir dans l'éditeur",
     fileOpsMore: "+{n} autres",
     fileOpsLess: "Réduire",
+    promptFilesTooMany: "{max} pièces jointes maximum par message.",
+    promptDropHere: "Déposez les fichiers pour les joindre",
     errorBoundaryTitle: "Une erreur est survenue",
     errorBoundaryBody:
       "Cette page a rencontré une erreur inattendue. Vos fichiers sont intacts — chaque modification est sauvegardée en checkpoint.",

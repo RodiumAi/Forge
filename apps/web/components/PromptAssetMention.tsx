@@ -106,17 +106,28 @@ export function PromptAssetMention({ projectId, open, query, onSelect, onClose }
   }
 
   return (
-    <div className="prompt-mention-menu" role="listbox" aria-label={t("builderModeFiles")}>
+    <div className="prompt-mention-menu" aria-label={t("builderModeFiles")}>
       {loading ? <p className="prompt-mention-empty">{t("promptMentionLoading")}</p> : null}
       {!loading && filtered.length === 0 ? (
         <p className="prompt-mention-empty">{t("promptMentionEmpty")}</p>
       ) : null}
       {!loading && filtered.length > 0 ? (
-        <ul ref={listRef} className="prompt-mention-list">
+        <ul
+          ref={listRef}
+          className="prompt-mention-list"
+          role="listbox"
+          id="prompt-mention-listbox"
+        >
           {filtered.map((asset, idx) => (
-            <li key={asset.id}>
+            <li
+              key={asset.id}
+              role="option"
+              id={`prompt-mention-opt-${idx}`}
+              aria-selected={idx === active}
+            >
               <button
                 type="button"
+                tabIndex={-1}
                 className={`prompt-mention-item${idx === active ? " active" : ""}`}
                 onMouseDown={(e) => {
                   e.preventDefault();
