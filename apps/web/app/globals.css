@@ -7137,3 +7137,187 @@ button.file-op-path:focus-visible { outline: 2px solid #f2620a; outline-offset: 
   outline-offset: -2px;
   border-radius: 4px;
 }
+
+/* -- Code editor: tabs, tree actions, quick open -- */
+.code-tree-tools { display: inline-flex; gap: 0.2rem; margin-left: auto; }
+
+.code-tree-tools button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--home-muted);
+  padding: 0.25rem;
+  border-radius: 5px;
+  cursor: pointer;
+  display: inline-flex;
+}
+
+.code-tree-tools button:hover { color: var(--home-text); background: rgba(255, 255, 255, 0.07); }
+.code-tree-tools button:focus-visible { outline: 2px solid #f2620a; outline-offset: 1px; }
+
+.code-tree-row { display: flex; align-items: center; }
+.code-tree-row > .code-tree-dir,
+.code-tree-row > .code-tree-file { flex: 1; min-width: 0; }
+
+.code-tree-actions {
+  display: inline-flex;
+  gap: 0.1rem;
+  opacity: 0;
+  padding-right: 0.25rem;
+}
+
+.code-tree-row:hover .code-tree-actions,
+.code-tree-actions:focus-within { opacity: 1; }
+
+.code-tree-actions button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--home-muted);
+  padding: 0.2rem;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-flex;
+}
+
+.code-tree-actions button:hover { color: var(--home-text); background: rgba(255, 255, 255, 0.09); }
+.code-tree-actions button:focus-visible { outline: 2px solid #f2620a; outline-offset: 1px; }
+
+/* Tabs */
+.code-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 1px;
+  overflow-x: auto;
+  background: #0d1117;
+  border-bottom: 1px solid var(--border);
+  scrollbar-width: thin;
+}
+
+.code-tab {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  background: transparent;
+  border-right: 1px solid var(--border);
+}
+
+.code-tab > button:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--home-muted);
+  font-size: 0.78rem;
+  padding: 0.45rem 0.3rem 0.45rem 0.6rem;
+  cursor: pointer;
+  max-width: 14rem;
+}
+
+.code-tab > button:first-child span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.code-tab.active { background: #161b22; }
+.code-tab.active > button:first-child { color: var(--home-text); box-shadow: inset 0 2px 0 #f2620a; }
+.code-tab:hover > button:first-child { color: var(--home-text); }
+
+.code-tab-dot {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: #f2620a;
+  flex-shrink: 0;
+}
+
+.code-tab-close {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--home-muted);
+  padding: 0.3rem 0.5rem 0.3rem 0.15rem;
+  cursor: pointer;
+  display: inline-flex;
+}
+
+.code-tab-close:hover { color: #fca5a5; }
+.code-tab-close:focus-visible { outline: 2px solid #f2620a; outline-offset: -2px; }
+
+/* Quick open */
+.quick-open-root { position: fixed; inset: 0; z-index: 120; }
+
+.quick-open-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.quick-open {
+  position: absolute;
+  top: 12vh;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(38rem, calc(100vw - 2rem));
+  max-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--home-border-strong);
+  border-radius: 12px;
+  background: var(--home-surface);
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+}
+
+.quick-open-input {
+  appearance: none;
+  border: 0;
+  border-bottom: 1px solid var(--home-border);
+  background: transparent;
+  color: var(--home-text);
+  font-size: 0.95rem;
+  padding: 0.85rem 1rem;
+  outline: none;
+}
+
+.quick-open-input::placeholder { color: var(--home-muted); }
+
+.quick-open-empty {
+  margin: 0;
+  padding: 1.1rem 1rem;
+  color: var(--home-muted);
+  font-size: 0.85rem;
+}
+
+.quick-open-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.3rem;
+  overflow-y: auto;
+}
+
+.quick-open-item {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.55rem;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 0.84rem;
+  color: var(--home-text);
+}
+
+.quick-open-item.active { background: rgba(242, 98, 10, 0.14); }
+
+.quick-open-name { flex-shrink: 0; }
+
+.quick-open-dir {
+  color: var(--home-muted);
+  font-size: 0.75rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

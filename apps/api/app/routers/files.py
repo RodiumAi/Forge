@@ -26,6 +26,7 @@ from app.services.filesystem import (
     delete_file,
     file_tree,
     read_file,
+    rename_path,
     write_file,
 )
 from app.services.visual_edit import apply_visual_text_edit
@@ -180,6 +181,42 @@ def put_file_content(
         content=body.content,
         version=content_version(str(project_id), path),
     )
+
+
+class FileRenameRequest(BaseModel):
+    from_path: str = Field(min_length=1, max_length=500)
+    to_path: str = Field(min_length=1, max_length=500)
+
+
+@router.post("/{project_id}/files/rename", response_model=dict)
+def rename_file(
+    project_id: UUID,
+    body: FileRenameRequest,
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    locale = resolve_locale(request)
+    _owned(db, user, project_id, locale)
+    src = body.from_path.strip().lstrip("/")
+    dst = body.to_path.strip().lstrip("/")
+    if not src or not dst or ".." in src.split("/") or ".." in dst.split("/"):
+        raise HTTPException(status_code=400, detail=t("file_not_found", locale))
+    if src == dst:
+        return {"ok": True, "path": dst}
+    try:
+        history.snapshot(str(project_id), f"before rename: {src} -> {dst}")
+        rename_path(str(project_id), src, dst)
+    except FileExistsError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail=t("file_exists", locale),  # type: ignore[arg-type]
+        ) from exc
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=t("file_not_found", locale)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"ok": True, "path": dst}
 
 
 @router.delete("/{project_id}/files")

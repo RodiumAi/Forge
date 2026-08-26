@@ -85,6 +85,34 @@ def delete_file(project_id: str, relative: str) -> None:
         pass
 
 
+def rename_path(project_id: str, src: str, dst: str) -> None:
+    """Move/rename a file or directory inside the project."""
+    base = project_dir(project_id).resolve()
+    source = safe_resolve(project_id, src)
+    target = safe_resolve(project_id, dst)
+
+    if source == base or target == base:
+        raise ValueError("Refusing to rename the project root")
+    if ".git" in source.relative_to(base).parts or ".git" in target.relative_to(base).parts:
+        raise ValueError("Refusing to touch project history")
+    if not source.exists():
+        raise FileNotFoundError(src)
+    if target.exists():
+        raise FileExistsError(dst)
+    if source in target.parents:
+        raise ValueError("Cannot move a directory inside itself")
+
+    target.parent.mkdir(parents=True, exist_ok=True)
+    os.replace(source, target)
+
+    try:
+        from app.services.firestore_live import bump_files
+
+        bump_files(project_id, [src, dst])
+    except Exception:
+        pass
+
+
 class BinaryFileError(ValueError):
     """The file exists but is not UTF-8 text (image, font, archive...)."""
 
