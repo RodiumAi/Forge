@@ -6760,3 +6760,144 @@ html:has(.builder) body {
   background: #f2620a;
   border: 2px solid var(--home-surface);
 }
+
+/* -- Agent activity: timeline, durations, file ops, warnings -- */
+.agent-block-summary {
+  margin-left: auto;
+  font-size: 0.72rem;
+  color: var(--home-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.agent-steps { position: relative; }
+
+.agent-step {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding-left: 0.15rem;
+}
+
+/* Vertical rail connecting the steps */
+.agent-step-rail {
+  position: absolute;
+  left: 0.42rem;
+  top: -0.35rem;
+  bottom: -0.35rem;
+  width: 1px;
+  background: var(--home-border);
+}
+.agent-step:first-child .agent-step-rail { top: 50%; }
+.agent-step:last-child .agent-step-rail { bottom: 50%; }
+.agent-step:only-child .agent-step-rail { display: none; }
+
+.agent-step > .ui-icon-sm,
+.agent-step-pulse {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  background: #101010;
+}
+
+.agent-step-pulse {
+  width: 0.55rem;
+  height: 0.55rem;
+  margin: 0 0.15rem;
+  border-radius: 999px;
+  background: #f2620a;
+  box-shadow: 0 0 0 0 rgba(242, 98, 10, 0.55);
+  animation: agent-step-pulse 1.5s ease-out infinite;
+}
+
+@keyframes agent-step-pulse {
+  to { box-shadow: 0 0 0 7px rgba(242, 98, 10, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agent-step-pulse { animation: none; }
+}
+
+.agent-step-label { flex: 1; min-width: 0; }
+
+.agent-step-time {
+  font-size: 0.7rem;
+  color: var(--home-muted);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+/* Reasoning: raise contrast (was 55% opacity, below WCAG) */
+.agent-thinking {
+  color: #9aa0aa;
+  opacity: 1;
+}
+
+/* File operations */
+.builder-file-ops { display: grid; gap: 0.15rem; }
+
+.file-op {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.76rem;
+}
+
+.file-op-write { color: #86efac; }
+.file-op-delete { color: #fca5a5; }
+
+.file-op-path {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+button.file-op-path { cursor: pointer; text-decoration: underline dotted transparent; }
+button.file-op-path:hover { text-decoration-color: currentColor; }
+button.file-op-path:focus-visible { outline: 2px solid #f2620a; outline-offset: 2px; border-radius: 3px; }
+
+.file-op-more button {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0.1rem 0;
+  color: var(--home-muted);
+  font-size: 0.74rem;
+  cursor: pointer;
+}
+.file-op-more button:hover { color: var(--home-text); }
+
+/* Warnings (import violations, repair notices) */
+.agent-warnings {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.agent-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  padding: 0.4rem 0.55rem;
+  border-radius: 8px;
+  border: 1px solid rgba(250, 204, 21, 0.25);
+  background: rgba(250, 204, 21, 0.07);
+  color: #fde68a;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.agent-warning .ui-icon-sm { flex-shrink: 0; margin-top: 0.1rem; }
+.agent-warning code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.92em;
+  opacity: 0.85;
+}
