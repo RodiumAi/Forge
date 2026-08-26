@@ -295,6 +295,18 @@ async def upload_project_image(
     )
 
 
+def _ambiguous_detail(base: str, exc: BaseException) -> str:
+    """Append the concrete reason so the user knows why the edit was refused."""
+    from app.services.source_edit import AmbiguousMatch
+
+    if not isinstance(exc, AmbiguousMatch):
+        return base
+    where = ", ".join(exc.candidates[:3])
+    if len(exc.candidates) > 3:
+        where += f" (+{len(exc.candidates) - 3})"
+    return f"{base} — {exc}. {where}" if where else f"{base} — {exc}."
+
+
 @router.post("/{project_id}/visual-edit", response_model=VisualEditResponse)
 def visual_edit_text(
     project_id: UUID,
@@ -315,7 +327,10 @@ def visual_edit_text(
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=t("visual_edit_not_found", locale)) from exc
     except LookupError as exc:
-        raise HTTPException(status_code=409, detail=t("visual_edit_ambiguous", locale)) from exc
+        raise HTTPException(
+            status_code=409,
+            detail=_ambiguous_detail(t("visual_edit_ambiguous", locale), exc),
+        ) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)[:300]) from exc
     return VisualEditResponse(ok=True, path=result.path, occurrences=result.occurrences)
@@ -343,7 +358,10 @@ def visual_edit_image(
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=t("visual_image_not_found", locale)) from exc
     except LookupError as exc:
-        raise HTTPException(status_code=409, detail=t("visual_image_ambiguous", locale)) from exc
+        raise HTTPException(
+            status_code=409,
+            detail=_ambiguous_detail(t("visual_image_ambiguous", locale), exc),
+        ) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)[:300]) from exc
     return VisualImageResponse(ok=True, path=result.path, occurrences=result.occurrences)
