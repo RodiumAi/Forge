@@ -12,7 +12,7 @@ from app.db import get_db
 from app.i18n import resolve_locale, t
 from app.models import Project, User
 from app.services.export_project import build_export_zip
-from app.services.publish import publish_project
+from app.services.publish_esm import publish_project_esm
 
 router = APIRouter(prefix="/projects", tags=["publish"])
 
@@ -60,7 +60,7 @@ async def publish_now(
     locale = resolve_locale(request)
     project = _owned(db, user, project_id, locale)
     try:
-        result = await publish_project(
+        result = await publish_project_esm(
             str(project.id),
             project.slug,
             owner_user_id=str(user.id),

@@ -258,7 +258,6 @@ export default function ProjectPage() {
   const [error, setError] = useState<string | null>(null);
   const [chatRetry, setChatRetry] = useState<ChatRetryAction | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [previewMode, setPreviewMode] = useState<"vite" | "babel_runner">("babel_runner");
   const [previewKey, setPreviewKey] = useState(0);
   const [previewBusy, setPreviewBusy] = useState(false);
   const [previewUpdating, setPreviewUpdating] = useState(false);
@@ -310,24 +309,12 @@ export default function ProjectPage() {
 
   const previewSrc = useMemo(() => {
     if (!previewUrl) return null;
-    if (previewMode === "babel_runner") {
-      const absolute = previewUrl.startsWith("http")
-        ? previewUrl
-        : `${apiBase()}${previewUrl.startsWith("/") ? previewUrl : `/${previewUrl}`}`;
-      const join = absolute.includes("?") ? "&" : "?";
-      return `${absolute}${join}t=${previewKey}`;
-    }
-    // Vite: load SPA entry under /preview/{id}/ — route changes are client-side.
-    const base = previewUrl.endsWith("/") ? previewUrl : `${previewUrl}/`;
-    const url = `${apiBase()}${base}`;
-    const params = new URLSearchParams();
-    params.set("t", String(previewKey));
-    const hash =
-      previewPath && previewPath !== "/"
-        ? `#${previewPath.startsWith("/") ? previewPath : `/${previewPath}`}`
-        : "";
-    return `${url}?${params.toString()}${hash}`;
-  }, [previewUrl, previewKey, previewPath, previewMode]);
+    const absolute = previewUrl.startsWith("http")
+      ? previewUrl
+      : `${apiBase()}${previewUrl.startsWith("/") ? previewUrl : `/${previewUrl}`}`;
+    const join = absolute.includes("?") ? "&" : "?";
+    return `${absolute}${join}t=${previewKey}`;
+  }, [previewUrl, previewKey]);
 
   const syncBuilderUrl = useCallback(
     (overrides?: Partial<{
@@ -548,11 +535,7 @@ export default function ProjectPage() {
         mode?: string;
         runner_url?: string | null;
       }>(`/projects/${projectId}/preview/start`, { method: "POST" });
-      const mode = status.mode === "babel_runner" ? "babel_runner" : "vite";
-      setPreviewMode(mode);
-      setPreviewUrl(
-        mode === "babel_runner" ? status.runner_url || status.url : status.url,
-      );
+      setPreviewUrl(status.runner_url || status.url);
       setPreviewKey((k) => k + 1);
     } catch (err) {
       pushChatError(err instanceof Error ? err.message : t("previewFailed"), null);
@@ -2120,7 +2103,6 @@ export default function ProjectPage() {
             previewUpdating={previewUpdating}
             previewBusy={previewBusy}
             previewTool={previewTool}
-            previewMode={previewMode}
             projectId={projectId}
             remountKey={previewKey}
             onPreviewToolChange={(tool) => {
