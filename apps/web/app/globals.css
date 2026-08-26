@@ -7067,3 +7067,73 @@ button.file-op-path:focus-visible { outline: 2px solid #f2620a; outline-offset: 
 @media (prefers-reduced-motion: reduce) {
   .history-skeleton li { animation: none; }
 }
+
+/* -- Code editor: skeleton, conflict banner -- */
+.code-tree-skeleton {
+  list-style: none;
+  margin: 0;
+  padding: 0.5rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.code-tree-skeleton li {
+  height: 1.35rem;
+  border-radius: 5px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 25%,
+    rgba(255, 255, 255, 0.09) 37%,
+    rgba(255, 255, 255, 0.04) 63%
+  );
+  background-size: 400% 100%;
+  animation: history-shimmer 1.4s ease infinite;
+}
+
+.code-tree-skeleton li:nth-child(2) { width: 80%; }
+.code-tree-skeleton li:nth-child(3) { width: 65%; }
+.code-tree-skeleton li:nth-child(5) { width: 72%; }
+.code-tree-skeleton li:nth-child(6) { width: 55%; }
+
+@media (prefers-reduced-motion: reduce) {
+  .code-tree-skeleton li { animation: none; }
+}
+
+.code-conflict {
+  margin: 0.5rem 0.75rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid rgba(250, 204, 21, 0.3);
+  border-radius: 9px;
+  background: rgba(250, 204, 21, 0.08);
+  color: #fde68a;
+  font-size: 0.83rem;
+}
+
+.code-conflict p { margin: 0 0 0.5rem; line-height: 1.45; }
+
+.code-conflict-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+.code-conflict-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  appearance: none;
+  border: 1px solid rgba(250, 204, 21, 0.35);
+  background: transparent;
+  color: inherit;
+  border-radius: 7px;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.code-conflict-actions button:hover { background: rgba(250, 204, 21, 0.12); }
+.code-conflict-actions button:focus-visible { outline: 2px solid #f2620a; outline-offset: 2px; }
+
+/* Keyboard focus was invisible on the file tree. */
+.code-tree-dir:focus-visible,
+.code-tree-file:focus-visible {
+  outline: 2px solid #f2620a;
+  outline-offset: -2px;
+  border-radius: 4px;
+}

@@ -20,7 +20,14 @@ from app.services.asset_storage import (
     list_project_assets,
     upload_project_asset,
 )
-from app.services.filesystem import delete_file, file_tree, read_file, write_file
+from app.services.filesystem import (
+    BinaryFileError,
+    content_version,
+    delete_file,
+    file_tree,
+    read_file,
+    write_file,
+)
 from app.services.visual_edit import apply_visual_text_edit
 from app.services.visual_image import apply_visual_image_replace
 
@@ -43,6 +50,8 @@ IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg", ".ico"}
 class FileWriteRequest(BaseModel):
     path: str = Field(min_length=1, max_length=500)
     content: str = Field(default="", max_length=2_000_000)
+    # Version loaded by the client; empty means "force write".
+    version: str = Field(default="", max_length=64)
 
 
 class FileUploadResponse(BaseModel):
@@ -122,9 +131,18 @@ def get_file_content(
     _owned(db, user, project_id, locale)
     try:
         content = read_file(str(project_id), path)
+    except BinaryFileError as exc:
+        raise HTTPException(
+            status_code=415,
+            detail=t("file_binary", locale),  # type: ignore[arg-type]
+        ) from exc
     except (FileNotFoundError, ValueError) as exc:
         raise HTTPException(status_code=404, detail=t("file_not_found", locale)) from exc
-    return FileContent(path=path, content=content)
+    return FileContent(
+        path=path,
+        content=content,
+        version=content_version(str(project_id), path),
+    )
 
 
 @router.put("/{project_id}/files/content", response_model=FileContent)
@@ -140,12 +158,28 @@ def put_file_content(
     path = body.path.strip().lstrip("/")
     if not path or ".." in path.split("/"):
         raise HTTPException(status_code=400, detail=t("file_not_found", locale))
+
+    # Optimistic concurrency: the agent writes to the same files, and the editor
+    # holds an in-memory copy. Without this check a save silently discarded
+    # whatever was written under it.
+    if body.version:
+        current = content_version(str(project_id), path)
+        if current and current != body.version:
+            raise HTTPException(
+                status_code=409,
+                detail=t("file_conflict", locale),  # type: ignore[arg-type]
+            )
+
     try:
         history.snapshot(str(project_id), f"before manual edit: {path}")
         write_file(str(project_id), path, body.content)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return FileContent(path=path, content=body.content)
+    return FileContent(
+        path=path,
+        content=body.content,
+        version=content_version(str(project_id), path),
+    )
 
 
 @router.delete("/{project_id}/files")
