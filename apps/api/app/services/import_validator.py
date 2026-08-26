@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from app.runtime_manifest import (
+    FORBIDDEN_BACKEND_PACKAGES,
     FORBIDDEN_BARE_PREFIXES,
     allowed_packages,
     is_relative_or_alias,
@@ -141,6 +142,21 @@ def validate_source(path: str, source: str, *, allowlist: dict[str, str] | None 
                     path=path,
                     specifier=spec,
                     message=f"Forbidden platform import `{spec}`.",
+                )
+            )
+            continue
+        if pkg in FORBIDDEN_BACKEND_PACKAGES:
+            # Named explicitly so the repair pass gets an actionable reason
+            # instead of a generic "unknown package".
+            violations.append(
+                ImportViolation(
+                    path=path,
+                    specifier=spec,
+                    code="BACKEND_SDK_FORBIDDEN",
+                    message=(
+                        f"`{pkg}` is a backend SDK. Forge builds frontend-only "
+                        "prototypes: use mock data or localStorage instead."
+                    ),
                 )
             )
             continue

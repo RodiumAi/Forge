@@ -32,6 +32,7 @@ import {
 import { ClarifyCard, type ClarifyQuestion } from "@/components/ClarifyCard";
 import { DesignCharterSlideover } from "@/components/DesignCharterSlideover";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { HistoryPanel } from "@/components/builder/HistoryPanel";
 import { AssistantBody } from "@/components/chat/AssistantBody";
 import { ScrollToBottom } from "@/components/chat/ScrollToBottom";
 import { PlanPanel, type PlanTask } from "@/components/PlanPanel";
@@ -259,6 +260,7 @@ export default function ProjectPage() {
   const [showJumpToBottom, setShowJumpToBottom] = useState(false);
   const [codeOpenPath, setCodeOpenPath] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const dragDepth = useRef(0);
   const [hasUnread, setHasUnread] = useState(false);
   const [busy, setBusy] = useState(() => Boolean(initialBoot));
@@ -1858,13 +1860,14 @@ export default function ProjectPage() {
           setDesignOpen(true);
           syncBuilderUrl({ designOpen: true });
         }}
+        onOpenHistory={() => setHistoryOpen(true)}
         onOpenDraftExternal={async () => {
           await forcePreviewRefresh({ softStart: true, remount: false });
-          window.open(
-            `${apiBase()}/preview/${projectId}/`,
-            "_blank",
-            "noopener,noreferrer",
-          );
+          // The Vite proxy at /preview/{id}/ no longer exists: the draft lives
+          // in the Babel runner, whose URL the preview status hands us.
+          if (previewSrc) {
+            window.open(previewSrc, "_blank", "noopener,noreferrer");
+          }
         }}
       />
 
@@ -2370,6 +2373,17 @@ export default function ProjectPage() {
         onClose={() => {
           setDesignOpen(false);
           syncBuilderUrl({ designOpen: false });
+        }}
+      />
+
+      <HistoryPanel
+        projectId={projectId}
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        onRestored={() => {
+          void refreshRoutes();
+          void forcePreviewRefresh({ restart: true, remount: true });
+          void load();
         }}
       />
     </div>

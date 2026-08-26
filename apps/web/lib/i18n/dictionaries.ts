@@ -136,6 +136,14 @@ export const dictionaries = {
     fileOpsLess: "Show less",
     promptFilesTooMany: "Up to {max} attachments per message.",
     promptDropHere: "Drop files to attach",
+    historyTitle: "History",
+    historyEmpty: "No checkpoint yet.",
+    historyUnavailable: "History is unavailable on this server.",
+    historyCurrent: "current",
+    historyRestore: "Restore",
+    historyRestoring: "Restoring…",
+    historyRestoreConfirm:
+      "Restore the project to «{label}»? Current files are checkpointed first, so this stays undoable.",
     errorBoundaryTitle: "Something went wrong",
     errorBoundaryBody:
       "This page hit an unexpected error. Your project files are safe — every change is checkpointed.",
@@ -588,6 +596,14 @@ export const dictionaries = {
     fileOpsLess: "Réduire",
     promptFilesTooMany: "{max} pièces jointes maximum par message.",
     promptDropHere: "Déposez les fichiers pour les joindre",
+    historyTitle: "Historique",
+    historyEmpty: "Aucun point de restauration.",
+    historyUnavailable: "L'historique n'est pas disponible sur ce serveur.",
+    historyCurrent: "actuel",
+    historyRestore: "Restaurer",
+    historyRestoring: "Restauration…",
+    historyRestoreConfirm:
+      "Restaurer le projet à « {label} » ? L'état actuel est sauvegardé avant, l'opération reste annulable.",
     errorBoundaryTitle: "Une erreur est survenue",
     errorBoundaryBody:
       "Cette page a rencontré une erreur inattendue. Vos fichiers sont intacts — chaque modification est sauvegardée en checkpoint.",
