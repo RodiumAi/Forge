@@ -32,7 +32,6 @@ class PluginDefinition:
         return package_version(self.package)
 
 
-
 PLUGINS: tuple[PluginDefinition, ...] = (
     PluginDefinition(
         id="lucide",
@@ -146,9 +145,7 @@ def format_plugins_system_block(
             lines.append(f"- {plugin.id}: `{plugin.package}@{ver}` — {when}")
             lines.append(f"  Example: {plugin.import_example.splitlines()[0]}")
             if plugin.forbidden_alternatives:
-                lines.append(
-                    "  Avoid: " + "; ".join(plugin.forbidden_alternatives)
-                )
+                lines.append("  Avoid: " + "; ".join(plugin.forbidden_alternatives))
     lines.append(
         "\nIf you add an installable plugin, update package.json with the catalog version "
         "and import it. Do not invent alternate icon/animation/form libraries."

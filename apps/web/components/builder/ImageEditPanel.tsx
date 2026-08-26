@@ -106,7 +106,7 @@ export function ImageEditPanel({ projectId, selection, onClose, onReplaced }: Pr
           <p className="comments-anchor">
             {t("imageSelected")} <code>{selection.selector || "img"}</code>
           </p>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
+          { }
           <img src={selection.src} alt={selection.alt || ""} className="image-panel-preview" />
         </div>
       ) : (
@@ -151,7 +151,7 @@ export function ImageEditPanel({ projectId, selection, onClose, onReplaced }: Pr
                   title={asset.name}
                   onClick={() => void applyUrl(asset.public_url)}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  { }
                   <img src={thumbUrl} alt={asset.name} />
                   <span>{asset.name}</span>
                 </button>

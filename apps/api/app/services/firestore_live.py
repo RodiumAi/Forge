@@ -11,7 +11,7 @@ import logging
 import os
 import threading
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -34,14 +34,11 @@ _EMULATOR_SA_CANDIDATES = (
 
 
 def _utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def _using_emulator() -> bool:
-    return bool(
-        os.environ.get("FIRESTORE_EMULATOR_HOST")
-        or os.environ.get("FIREBASE_AUTH_EMULATOR_HOST")
-    )
+    return bool(os.environ.get("FIRESTORE_EMULATOR_HOST") or os.environ.get("FIREBASE_AUTH_EMULATOR_HOST"))
 
 
 def enabled() -> bool:
@@ -50,9 +47,7 @@ def enabled() -> bool:
         return False
     if _using_emulator():
         return True
-    if settings.google_application_credentials or os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
-        return True
-    return False
+    return bool(settings.google_application_credentials or os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"))
 
 
 def _emulator_sa_path() -> Path:
@@ -82,9 +77,7 @@ def _ensure_emulator_sa() -> Path:
         from cryptography.hazmat.primitives import serialization
         from cryptography.hazmat.primitives.asymmetric import rsa
     except Exception as exc:
-        raise RuntimeError(
-            "cryptography is required to mint local Firebase Auth tokens"
-        ) from exc
+        raise RuntimeError("cryptography is required to mint local Firebase Auth tokens") from exc
 
     key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     pem = key.private_bytes(
@@ -211,12 +204,7 @@ def _live_ref(project_id: str, doc_id: str):
 
 def _user_project_ref(owner_user_id: str, project_id: str):
     assert _db is not None
-    return (
-        _db.collection("forge_users")
-        .document(owner_user_id)
-        .collection("projects")
-        .document(project_id)
-    )
+    return _db.collection("forge_users").document(owner_user_id).collection("projects").document(project_id)
 
 
 def ensure_project(project_id: str, owner_user_id: str, *, name: str | None = None) -> None:

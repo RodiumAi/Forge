@@ -105,7 +105,7 @@ export function detectRoutes(
   for (const path of files) {
     const norm = path.replace(/\\/g, "/");
     if (/^src\/pages\//i.test(norm) && /\.(tsx|jsx|ts|js)$/i.test(norm)) {
-      let route = norm
+      const route = norm
         .replace(/^src\/pages/i, "")
         .replace(/\.(tsx|jsx|ts|js)$/i, "")
         .replace(/\/index$/i, "");

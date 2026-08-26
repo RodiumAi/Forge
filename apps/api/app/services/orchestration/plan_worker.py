@@ -11,9 +11,9 @@ from uuid import UUID
 from app.db import SessionLocal
 from app.i18n import Locale
 from app.models import AgentRun, User
+from app.services.orchestration import run_queue
 from app.services.orchestration.cancel import clear_cancelled
 from app.services.orchestration.dispatcher import run_plan_tasks
-from app.services.orchestration import run_queue
 from app.services.rodium_generation import resolve_generation_auth
 
 logger = logging.getLogger(__name__)

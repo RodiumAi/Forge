@@ -62,11 +62,7 @@ def persist_assistant(
 ) -> None:
     raw = str(payload.get("summary") or "")
     content = to_plain_text(raw)
-    if (
-        not content
-        or "<forge-write" in content.lower()
-        or len(content) > 1200
-    ):
+    if not content or "<forge-write" in content.lower() or len(content) > 1200:
         content = to_plain_text(
             build_run_summary(
                 tasks=payload.get("plan") if isinstance(payload.get("plan"), list) else None,

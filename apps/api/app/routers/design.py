@@ -209,7 +209,9 @@ async def generate_design_charter(
         raise exc
 
     settings = get_settings()
-    has_logo = bool((body.logo_object_id or "").strip() or (body.logo_url or "").strip() or (body.logo_path or "").strip())
+    has_logo = bool(
+        (body.logo_object_id or "").strip() or (body.logo_url or "").strip() or (body.logo_path or "").strip()
+    )
     brief_text = (body.brief or "").strip()
     if not has_logo:
         has_logo = bool(_existing_logo_path(str(project.id)))

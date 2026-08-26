@@ -181,9 +181,7 @@ def verify_project_build(project_id: str) -> list[VerifyFinding]:
     if context_paths and provider_keys:
         consumers = _consumer_keys(files)
         for hook, used in consumers.items():
-            missing = sorted(
-                k for k in used if k not in provider_keys and k != "children"
-            )
+            missing = sorted(k for k in used if k not in provider_keys and k != "children")
             if missing:
                 findings.append(
                     VerifyFinding(
@@ -199,9 +197,7 @@ def verify_project_build(project_id: str) -> list[VerifyFinding]:
                 )
 
     css = files.get("src/index.css") or ""
-    if css and (
-        _OVERFLOW_HIDDEN_SIMPLE_RE.search(css) or _OVERFLOW_HIDDEN_RE.search(css)
-    ):
+    if css and (_OVERFLOW_HIDDEN_SIMPLE_RE.search(css) or _OVERFLOW_HIDDEN_RE.search(css)):
         findings.append(
             VerifyFinding(
                 code="css.overflow_hidden_root",
@@ -241,10 +237,12 @@ def verify_project_build(project_id: str) -> list[VerifyFinding]:
                 break
         if len(orphan_samples) >= 60:
             break
-    if orphan_samples or (not css_classes and any(
-        path.endswith((".tsx", ".jsx")) and _tsx_class_tokens(content)
-        for path, content in files.items()
-    )):
+    if orphan_samples or (
+        not css_classes
+        and any(
+            path.endswith((".tsx", ".jsx")) and _tsx_class_tokens(content) for path, content in files.items()
+        )
+    ):
         total_tsx_classes = 0
         for path, content in files.items():
             if path.endswith((".tsx", ".jsx")):
@@ -254,12 +252,7 @@ def verify_project_build(project_id: str) -> list[VerifyFinding]:
             all_orphan_count = len(orphan_samples)
         ratio = all_orphan_count / max(total_tsx_classes, 1)
         # Stricter: any hero/layout orphan, ≥15% orphans, or ≥5 samples → critical.
-        critical = (
-            not css_classes
-            or hero_layout_orphans >= 1
-            or ratio >= 0.15
-            or len(orphan_samples) >= 5
-        )
+        critical = not css_classes or hero_layout_orphans >= 1 or ratio >= 0.15 or len(orphan_samples) >= 5
         findings.append(
             VerifyFinding(
                 code="css.orphan_classes",

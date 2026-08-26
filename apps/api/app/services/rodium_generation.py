@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Literal
 
 from fastapi import HTTPException
@@ -65,9 +65,7 @@ def store_oauth_tokens(row: UserSettings, tokens: dict) -> None:
         row.rodium_access_token_encrypted = encrypt_secret(access)
     if refresh:
         row.rodium_refresh_token_encrypted = encrypt_secret(refresh)
-    row.rodium_token_expires_at = datetime.now(timezone.utc) + timedelta(
-        seconds=max(expires_in - 60, 60)
-    )
+    row.rodium_token_expires_at = datetime.now(UTC) + timedelta(seconds=max(expires_in - 60, 60))
 
 
 async def ensure_rodium_access_token(db: Session, user: User, row: UserSettings) -> str:
@@ -79,8 +77,8 @@ async def ensure_rodium_access_token(db: Session, user: User, row: UserSettings)
     access = decrypt_secret(row.rodium_access_token_encrypted)
     expires = row.rodium_token_expires_at
     if expires is not None and expires.tzinfo is None:
-        expires = expires.replace(tzinfo=timezone.utc)
-    now = datetime.now(timezone.utc)
+        expires = expires.replace(tzinfo=UTC)
+    now = datetime.now(UTC)
     if expires and expires > now:
         return access
     if not row.rodium_refresh_token_encrypted:
@@ -147,7 +145,9 @@ async def select_api_key_id(
     access = await ensure_rodium_access_token(db, user, row)
     keys = await fetch_api_keys(access)
     if not any(
-        isinstance(k, dict) and str(k.get("id")) == key_id and bool(k.get("isActive", k.get("is_active", True)))
+        isinstance(k, dict)
+        and str(k.get("id")) == key_id
+        and bool(k.get("isActive", k.get("is_active", True)))
         for k in keys
     ):
         raise RodiumOidcError("API key not found or inactive")

@@ -37,9 +37,7 @@ class UserSettings(Base):
     rodium_wallet_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     rodium_api_keys_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     selected_rodium_api_key_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    default_model: Mapped[str] = mapped_column(
-        String(128), nullable=False, default="google/gemini-3.7-flash"
-    )
+    default_model: Mapped[str] = mapped_column(String(128), nullable=False, default="google/gemini-3.7-flash")
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )

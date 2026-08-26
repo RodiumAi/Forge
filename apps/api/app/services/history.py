@@ -22,7 +22,7 @@ import logging
 import shutil
 import subprocess
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from app.services.filesystem import project_dir
@@ -138,7 +138,7 @@ def snapshot(project_id: str, label: str) -> str | None:
         status = _run(repo, ["status", "--porcelain"])
         if not status.stdout.strip():
             return None
-        message = f"{label}\n\nforge-snapshot-at: {datetime.now(timezone.utc).isoformat()}"
+        message = f"{label}\n\nforge-snapshot-at: {datetime.now(UTC).isoformat()}"
         _run(repo, ["commit", "--quiet", "--no-verify", "-m", message])
         head = _run(repo, ["rev-parse", "HEAD"])
         return head.stdout.strip()

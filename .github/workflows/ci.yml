@@ -109,4 +109,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Validate compose file
-        run: docker compose config --quiet
+        run: |
+          cp .env.example .env
+          docker compose config --quiet

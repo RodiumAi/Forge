@@ -77,7 +77,7 @@ export function PromptFileChips({ items, onRemove, projectId }: PromptFileChipsP
                   onClick={() => setPreview({ src: thumb, name })}
                   aria-label={t("attachmentPreviewOpen")}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  { }
                   <img src={thumb} alt="" className="landing-file-thumb" />
                 </button>
               ) : (
@@ -126,7 +126,7 @@ export function PromptFileChips({ items, onRemove, projectId }: PromptFileChipsP
                 <Icon icon={X} className="ui-icon-md" />
               </button>
             </header>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
+            { }
             <img src={preview.src} alt={preview.name} className="attachment-lightbox-img" />
           </div>
         </div>

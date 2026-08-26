@@ -20,7 +20,7 @@ let db: Firestore | null = null;
 let emulatorsConnected = false;
 let authPromise: Promise<void> | null = null;
 
-function useEmulator(): boolean {
+function emulatorEnabled(): boolean {
   return process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === "1";
 }
 
@@ -57,7 +57,7 @@ export function getFirestoreDb(): Firestore | null {
     const databaseId = process.env.NEXT_PUBLIC_FIRESTORE_DATABASE || "rodiumaidb";
     db = getFirestore(a, databaseId);
   }
-  if (useEmulator() && !emulatorsConnected && auth && db) {
+  if (emulatorEnabled() && !emulatorsConnected && auth && db) {
     const fsHost = process.env.NEXT_PUBLIC_FIRESTORE_EMULATOR_HOST || "127.0.0.1:8085";
     const authHost =
       process.env.NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST || "127.0.0.1:9099";

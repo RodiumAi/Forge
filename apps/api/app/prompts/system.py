@@ -178,8 +178,7 @@ SYSTEM_PROMPT_WITH_DESIGN = SYSTEM_PROMPT  # same body; design rules cover chart
 def system_prompt_with_design(has_design: bool) -> str:
     if has_design:
         return (
-            SYSTEM_PROMPT
-            + "\nBRAND LOCK ACTIVE: DESIGN.md and public/logo.* are the source of truth. "
+            SYSTEM_PROMPT + "\nBRAND LOCK ACTIVE: DESIGN.md and public/logo.* are the source of truth. "
             "Do not rewrite DESIGN.md, do not invent a new brand name/palette/logo, "
             "and keep using the logo path from DESIGN.md (typically /logo.png).\n"
         )

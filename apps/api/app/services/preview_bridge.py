@@ -420,8 +420,8 @@ FORGE_EDIT_BRIDGE = b"""
   });
 
   function navigatePreviewPath(path) {
-    var normalized = (path || "/").replace(/\/+$/, "") || "/";
-    var segment = normalized === "/" ? "home" : normalized.replace(/^\//, "").toLowerCase();
+    var normalized = (path || "/").replace(/\\/+$/, "") || "/";
+    var segment = normalized === "/" ? "home" : normalized.replace(/^\\//, "").toLowerCase();
     var navButtons = document.querySelectorAll(
       ".nav-links-desktop .nav-link-item, .nav-mobile-menu .nav-mobile-link, [data-forge-page]"
     );

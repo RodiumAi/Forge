@@ -95,9 +95,9 @@ def classify_task(user_text: str) -> str:
         return "code.edit.medium"
     if _IMAGE_GENERATE_RE.search(text):
         return "image.generate"
-    if _SCAFFOLD_RE.search(text) or len(text) > 400:
-        if _SCAFFOLD_RE.search(text) or ("page" in text.lower() and "crée" in text.lower()):
-            return "code.scaffold"
+    # (S or len>400) and (S or (page and crée))  ==  S or (len>400 and page and crée)
+    if _SCAFFOLD_RE.search(text) or (len(text) > 400 and "page" in text.lower() and "crée" in text.lower()):
+        return "code.scaffold"
     if len(text) < 120 and _SMALL_RE.search(text):
         return "code.edit.small"
     if len(text) > 800:

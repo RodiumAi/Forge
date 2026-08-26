@@ -31,8 +31,7 @@ class ImportViolation:
             "code": self.code,
             "path": self.path,
             "specifier": self.specifier,
-            "message": self.message
-            or f"Import `{self.specifier}` is not in the runtime manifest.",
+            "message": self.message or f"Import `{self.specifier}` is not in the runtime manifest.",
         }
 
 
@@ -60,8 +59,8 @@ def _extract_imports_regex(source: str) -> list[str]:
 
 def _extract_imports_treesitter(source: str) -> list[str] | None:
     try:
-        from tree_sitter import Language, Parser
         import tree_sitter_typescript as tstype
+        from tree_sitter import Language, Parser
     except Exception as exc:
         logger.warning("tree-sitter unavailable, falling back to regex: %s", exc)
         return None
@@ -127,7 +126,9 @@ def extract_import_specifiers(source: str) -> list[str]:
     return out
 
 
-def validate_source(path: str, source: str, *, allowlist: dict[str, str] | None = None) -> list[ImportViolation]:
+def validate_source(
+    path: str, source: str, *, allowlist: dict[str, str] | None = None
+) -> list[ImportViolation]:
     allow = allowlist or allowed_packages()
     violations: list[ImportViolation] = []
     for spec in extract_import_specifiers(source):
@@ -136,7 +137,9 @@ def validate_source(path: str, source: str, *, allowlist: dict[str, str] | None 
         pkg = _bare_package(spec)
         if not pkg:
             continue
-        if any(pkg == p or pkg.startswith(p + "/") for p in FORBIDDEN_BARE_PREFIXES) or pkg.startswith("node:"):
+        if any(pkg == p or pkg.startswith(p + "/") for p in FORBIDDEN_BARE_PREFIXES) or pkg.startswith(
+            "node:"
+        ):
             violations.append(
                 ImportViolation(
                     path=path,

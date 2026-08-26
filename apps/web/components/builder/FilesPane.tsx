@@ -90,7 +90,7 @@ export function FilesPane({ projectId, onChanged }: Props) {
                   title={asset.name}
                 >
                   {asset.content_type.startsWith("image/") ? (
-                    // eslint-disable-next-line @next/next/no-img-element
+                     
                     <img src={viewUrl} alt={asset.name} />
                   ) : (
                     <FileTypeIcon path={asset.name} size="md" />

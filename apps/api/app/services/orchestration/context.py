@@ -6,10 +6,10 @@ import re
 from typing import Any
 
 from app.prompts.system import THEME_QUALITY_HINT, system_prompt_with_design
-from app.services.attachments import enrich_user_message_with_vision
-from app.services.prototype_mode import format_prototype_plugins_layer
-from app.services.filesystem import list_files, read_file
 from app.services.ai_rules import ensure_ai_rules_md, load_ai_rules_md
+from app.services.attachments import enrich_user_message_with_vision
+from app.services.filesystem import list_files, read_file
+from app.services.prototype_mode import format_prototype_plugins_layer
 
 DESIGN_MAX_CHARS = 12_000
 SELECTED_FILE_MAX_CHARS = 28_000
@@ -88,9 +88,7 @@ def select_files(query: str, files: dict[str, str], k: int = 4) -> list[str]:
         ):
             if tok in tokens and tok in pl:
                 scores[path] += 4.0
-        if scaffoldish and (
-            "/components/" in pl or pl.endswith("app.tsx") or pl.endswith("index.css")
-        ):
+        if scaffoldish and ("/components/" in pl or pl.endswith(("app.tsx", "index.css"))):
             scores[path] += 1.5
 
     if _LOGO_RE.search(query or ""):
@@ -145,7 +143,7 @@ def _skeleton_for_file(path: str, content: str) -> str:
             if len(imports) >= 3:
                 break
     head = "\n".join(exports) if exports else "\n".join(lines[:3])
-    imp = (", ".join(imports) if imports else "—")
+    imp = ", ".join(imports) if imports else "—"
     return f"{path}  ({n} lines)\n  imports: {imp}\n  {head}"
 
 
@@ -247,8 +245,7 @@ async def build_llm_messages(
     if design:
         layer2_parts.append(
             "DESIGN.md (LOCKED graphic charter — follow strictly; "
-            "do NOT rewrite this file or invent a new brand/logo/palette):\n\n"
-            + design
+            "do NOT rewrite this file or invent a new brand/logo/palette):\n\n" + design
         )
         layer2_parts.append(THEME_QUALITY_HINT)
     else:

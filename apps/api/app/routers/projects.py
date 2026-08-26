@@ -2,7 +2,7 @@ import logging
 import os
 import re
 import shutil
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import UUID
 
@@ -70,12 +70,7 @@ def _owned_project(db: Session, user: User, project_id: UUID, locale: str = "fr"
 
 @router.get("", response_model=list[ProjectOut])
 def list_projects(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> list[ProjectOut]:
-    rows = (
-        db.query(Project)
-        .filter(Project.user_id == user.id)
-        .order_by(Project.updated_at.desc())
-        .all()
-    )
+    rows = db.query(Project).filter(Project.user_id == user.id).order_by(Project.updated_at.desc()).all()
     return [_project_out(row) for row in rows]
 
 
@@ -223,11 +218,7 @@ def update_project(
         next_slug = _slugify(body.slug)
         if not next_slug:
             raise HTTPException(status_code=400, detail=t("invalid_slug", locale))  # type: ignore[arg-type]
-        clash = (
-            db.query(Project)
-            .filter(Project.slug == next_slug, Project.id != project.id)
-            .first()
-        )
+        clash = db.query(Project).filter(Project.slug == next_slug, Project.id != project.id).first()
         if clash is not None:
             raise HTTPException(status_code=409, detail=t("slug_taken", locale))  # type: ignore[arg-type]
         project.slug = next_slug
@@ -255,17 +246,12 @@ def project_stats(
     chat_ids = [row.id for row in db.query(Chat.id).filter(Chat.project_id == project.id).all()]
     messages_count = 0
     if chat_ids:
-        messages_count = (
-            db.query(func.count(Message.id)).filter(Message.chat_id.in_(chat_ids)).scalar() or 0
-        )
+        messages_count = db.query(func.count(Message.id)).filter(Message.chat_id.in_(chat_ids)).scalar() or 0
     agent_runs_count = (
         db.query(func.count(AgentRun.id)).filter(AgentRun.project_id == project.id).scalar() or 0
     )
     comments_count = (
-        db.query(func.count(PreviewComment.id))
-        .filter(PreviewComment.project_id == project.id)
-        .scalar()
-        or 0
+        db.query(func.count(PreviewComment.id)).filter(PreviewComment.project_id == project.id).scalar() or 0
     )
 
     try:
@@ -287,17 +273,11 @@ def project_stats(
     except OSError:
         storage_bytes = 0
 
-    usage_rows = (
-        db.query(SiteUsageDay)
-        .filter(SiteUsageDay.project_id == project.id)
-        .all()
-    )
+    usage_rows = db.query(SiteUsageDay).filter(SiteUsageDay.project_id == project.id).all()
     visitors_total = sum(int(getattr(row, "page_views", 0) or 0) for row in usage_rows)
-    cutoff = (datetime.now(timezone.utc) - timedelta(days=7)).strftime("%Y-%m-%d")
+    cutoff = (datetime.now(UTC) - timedelta(days=7)).strftime("%Y-%m-%d")
     visitors_7d = sum(
-        int(getattr(row, "page_views", 0) or 0)
-        for row in usage_rows
-        if (row.day or "") >= cutoff
+        int(getattr(row, "page_views", 0) or 0) for row in usage_rows if (row.day or "") >= cutoff
     )
     published = getattr(project, "published_at", None) is not None
 

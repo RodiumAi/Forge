@@ -43,6 +43,7 @@ def re_search_favicon(html: str) -> bool:
     low = html.lower()
     return 'rel="icon"' in low or "rel='icon'" in low or "favicon." in low
 
+
 # Lightweight package manifest (no Vite / no install scripts). Runtime comes from CDN import map.
 PACKAGE_JSON = """{
   "name": "forge-app",
@@ -276,4 +277,3 @@ html,body{{overflow:hidden}} a,button{{pointer-events:none}}
         history.snapshot(project_id, "initial scaffold")
     except Exception:  # pragma: no cover - history is best effort
         pass
-

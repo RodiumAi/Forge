@@ -84,7 +84,7 @@ def _public_to_disk(path: str | None) -> str | None:
     if not path:
         return None
     p = path.strip()
-    if p.startswith("http://") or p.startswith("https://"):
+    if p.startswith(("http://", "https://")):
         return None
     if p.startswith("/"):
         return f"public{p}"
@@ -127,7 +127,10 @@ def read_seo_meta(project_id: str) -> dict[str, Any]:
 
     fav = _link_href(soup, "icon")
     apple = _link_href(soup, "apple-touch-icon")
-    out["favicon_path"] = fav if fav and _asset_exists(project_id, _public_to_disk(fav)) else fav
+    # Both branches used to return `fav`, so the existence check did nothing:
+    # a <link rel=icon> pointing at a deleted file was kept and the fallback
+    # below (lines "if _asset_exists(...) and not out[...]") never fired.
+    out["favicon_path"] = fav if fav and _asset_exists(project_id, _public_to_disk(fav)) else ""
     out["apple_touch_path"] = apple
 
     out["og_title"] = _meta_content(soup, prop="og:title")
@@ -222,8 +225,8 @@ def write_seo_meta(project_id: str, data: dict[str, Any]) -> dict[str, Any]:
         html = read_file(project_id, INDEX_PATH)
     except FileNotFoundError:
         html = (
-            "<!doctype html>\n<html lang=\"en\">\n  <head></head>\n"
-            "  <body><div id=\"root\"></div></body>\n</html>\n"
+            '<!doctype html>\n<html lang="en">\n  <head></head>\n'
+            '  <body><div id="root"></div></body>\n</html>\n'
         )
 
     soup = BeautifulSoup(html, "html.parser")
@@ -238,9 +241,7 @@ def write_seo_meta(project_id: str, data: dict[str, Any]) -> dict[str, Any]:
     favicon = _disk_to_public(str(data.get("favicon_path") or "").strip() or None) or ""
     apple = _disk_to_public(str(data.get("apple_touch_path") or "").strip() or None) or ""
     og_image = _disk_to_public(str(data.get("og_image_path") or "").strip() or None) or ""
-    twitter_image = (
-        _disk_to_public(str(data.get("twitter_image_path") or "").strip() or None) or og_image
-    )
+    twitter_image = _disk_to_public(str(data.get("twitter_image_path") or "").strip() or None) or og_image
 
     og_title = str(data.get("og_title") or "").strip() or title
     og_description = str(data.get("og_description") or "").strip() or description

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import time
 from collections.abc import AsyncIterator
 from typing import Any
@@ -35,7 +36,6 @@ async def with_sse_heartbeats(
 
     agen = source.__aiter__()
     pending: asyncio.Task | None = None
-    last = time.monotonic()
 
     try:
         while True:
@@ -44,7 +44,6 @@ async def with_sse_heartbeats(
             done, _ = await asyncio.wait({pending}, timeout=interval_s)
             if not done:
                 yield sse_comment(f"hb {int(time.time())}")
-                last = time.monotonic()
                 continue
             try:
                 chunk = pending.result()
@@ -52,11 +51,8 @@ async def with_sse_heartbeats(
                 break
             pending = None
             yield chunk
-            last = time.monotonic()
     finally:
         if pending is not None and not pending.done():
             pending.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError, StopAsyncIteration, Exception):
                 await pending
-            except (asyncio.CancelledError, StopAsyncIteration, Exception):
-                pass

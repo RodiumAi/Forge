@@ -33,6 +33,9 @@ export default function GlobalError({
               <button type="button" className="landing-create" onClick={() => reset()}>
                 Réessayer
               </button>
+              {/* global-error replaces the root layout, so the Next router is
+                  not mounted here: a plain anchor (full reload) is required. */}
+              {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
               <a className="app-error-link" href="/">
                 Accueil
               </a>

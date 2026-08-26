@@ -82,7 +82,7 @@ export function UserMessageBody({ content, attachments, previewBase, projectId }
             return (
               <li key={`${file.kind}-${file.name}-${file.objectId || ""}`} className="builder-msg-attachment">
                 {src ? (
-                  // eslint-disable-next-line @next/next/no-img-element
+                   
                   <img src={src} alt={file.name} className="builder-msg-attach-thumb" />
                 ) : file.kind === "image" ? (
                   <span className="builder-msg-attach-fallback">
