@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useState } from "react";
+import { isValidElement, memo, useCallback, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
@@ -22,6 +22,23 @@ import { Icon } from "@/components/ui/icon";
 function balanceFences(md: string): string {
   const fences = (md.match(/^```/gm) || []).length;
   return fences % 2 === 1 ? `${md}\n\`\`\`` : md;
+}
+
+/**
+ * Flatten a highlighted code node back to plain text.
+ *
+ * rehype-highlight replaces the raw string with nested <span> elements, so
+ * `String(children)` yields "[object Object]" — which is what the copy button
+ * used to put on the clipboard.
+ */
+function nodeText(node: React.ReactNode): string {
+  if (node == null || typeof node === "boolean") return "";
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(nodeText).join("");
+  if (isValidElement(node)) {
+    return nodeText((node.props as { children?: React.ReactNode }).children);
+  }
+  return "";
 }
 
 function CopyButton({ value }: { value: string }) {
@@ -54,7 +71,7 @@ function CodeBlock({
   className?: string;
   children?: React.ReactNode;
 }) {
-  const raw = String(children ?? "").replace(/\n$/, "");
+  const raw = nodeText(children).replace(/\n$/, "");
   const lang = /language-(\w+)/.exec(className || "")?.[1] || "";
 
   return (
@@ -88,7 +105,8 @@ export const ChatMarkdown = memo(function ChatMarkdown({
           // `pre` is unwrapped: CodeBlock renders its own <pre> with a toolbar.
           pre: ({ children }) => <>{children}</>,
           code({ className, children, ...props }) {
-            const isBlock = /language-/.test(className || "") || String(children).includes("\n");
+            const isBlock =
+              /language-/.test(className || "") || nodeText(children).includes("\n");
             if (!isBlock) {
               return (
                 <code className="md-code-inline" {...props}>
