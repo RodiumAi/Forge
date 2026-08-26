@@ -6,7 +6,6 @@ import {
   FormEvent,
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from "react";
@@ -83,13 +82,12 @@ import {
 } from "@/lib/builder-url-state";
 import {
   subscribeFiles,
-  subscribePreview,
   subscribeRun,
-  type PreviewLive,
   type RunLive,
 } from "@/lib/firebase/live";
 import { firebaseEnabled } from "@/lib/firebase/client";
 import { readSseStream } from "@/lib/sse";
+import { usePreviewControl } from "@/components/builder/usePreviewControl";
 import {
   initialStreamState,
   reduceStreamEvent,
@@ -248,11 +246,6 @@ export default function ProjectPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [chatRetry, setChatRetry] = useState<ChatRetryAction | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [previewKey, setPreviewKey] = useState(0);
-  const [previewBusy, setPreviewBusy] = useState(false);
-  const [previewUpdating, setPreviewUpdating] = useState(false);
-  const [previewLiveStatus, setPreviewLiveStatus] = useState<string | null>(null);
   const [mobilePane, setMobilePane] = useState<"chat" | "workspace">(
     initialUrl.pane ?? "chat",
   );
@@ -291,21 +284,33 @@ export default function ProjectPage() {
   const streamingRunIdRef = useRef<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const autoPreviewRef = useRef(false);
   const bootSentRef = useRef(false);
   const bootPromptRef = useRef<string | null>(initialBoot);
-  const previewRefreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const previewUpdatingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const chatRetryRef = useRef<ChatRetryAction | null>(null);
 
-  const previewSrc = useMemo(() => {
-    if (!previewUrl) return null;
-    const absolute = previewUrl.startsWith("http")
-      ? previewUrl
-      : `${apiBase()}${previewUrl.startsWith("/") ? previewUrl : `/${previewUrl}`}`;
-    const join = absolute.includes("?") ? "&" : "?";
-    return `${absolute}${join}t=${previewKey}`;
-  }, [previewUrl, previewKey]);
+  // `pushChatError` is declared further down but the preview hook needs it now;
+  // this indirection keeps the callback identity stable.
+  const chatErrorRef = useRef<(message: string) => void>(() => {});
+  const reportPreviewError = useCallback((message: string) => chatErrorRef.current(message), []);
+
+  const {
+    previewUrl,
+    setPreviewUrl,
+    previewSrc,
+    previewKey,
+    previewBusy,
+    previewUpdating,
+    previewLiveStatus,
+    startPreview,
+    forcePreviewRefresh,
+    schedulePreviewRefresh,
+    flashUpdating,
+  } = usePreviewControl({
+    projectId,
+    loading,
+    onError: reportPreviewError,
+    previewFailedLabel: t("previewFailed"),
+  });
 
   const syncBuilderUrl = useCallback(
     (overrides?: Partial<{
@@ -490,7 +495,7 @@ export default function ProjectPage() {
     );
     if (status.running && status.url) setPreviewUrl(status.url);
     void refreshRoutes();
-  }, [projectId, t, refreshRoutes]);
+  }, [projectId, t, refreshRoutes, setPreviewUrl]);
 
   const pushChatError = useCallback(
     (message: string, retry: ChatRetryAction | null = null) => {
@@ -516,75 +521,9 @@ export default function ProjectPage() {
     [t],
   );
 
-  const startPreview = useCallback(async () => {
-    setPreviewBusy(true);
-    setError(null);
-    try {
-      const status = await api<{
-        running: boolean;
-        url: string | null;
-        mode?: string;
-        runner_url?: string | null;
-      }>(`/projects/${projectId}/preview/start`, { method: "POST" });
-      setPreviewUrl(status.runner_url || status.url);
-      setPreviewKey((k) => k + 1);
-    } catch (err) {
-      pushChatError(err instanceof Error ? err.message : t("previewFailed"), null);
-    } finally {
-      setPreviewBusy(false);
-    }
-  }, [projectId, pushChatError, t]);
+  // Wire the preview hook's error channel now that pushChatError exists.
+  chatErrorRef.current = (message: string) => pushChatError(message, null);
 
-  const forcePreviewRefresh = useCallback(
-    async (opts?: { softStart?: boolean; remount?: boolean; restart?: boolean }) => {
-      const remount = opts?.remount !== false;
-      setPreviewUpdating(true);
-      if (previewUpdatingTimer.current) clearTimeout(previewUpdatingTimer.current);
-      if (previewRefreshTimer.current) {
-        clearTimeout(previewRefreshTimer.current);
-        previewRefreshTimer.current = null;
-      }
-
-      if (opts?.restart) {
-        // Clean restart (kill orphans + clear Vite cache) then remount iframe.
-        try {
-          const status = await api<{ running: boolean; url: string | null }>(
-            `/projects/${projectId}/preview/restart`,
-            { method: "POST" },
-          );
-          if (status.url) setPreviewUrl(status.url);
-          if (remount) setPreviewKey((k) => k + 1);
-        } catch (err) {
-          // Fallback to plain start if restart endpoint unavailable.
-          await startPreview();
-          if (remount) setPreviewKey((k) => k + 1);
-          pushChatError(err instanceof Error ? err.message : t("previewFailed"), null);
-        }
-      } else if (opts?.softStart) {
-        try {
-          const status = await api<{ running: boolean; url: string | null }>(
-            `/projects/${projectId}/preview`,
-          );
-          if (!status.running || !status.url) {
-            await startPreview();
-          } else {
-            setPreviewUrl(status.url);
-            if (remount) setPreviewKey((k) => k + 1);
-          }
-        } catch {
-          await startPreview();
-        }
-      } else if (remount) {
-        setPreviewKey((k) => k + 1);
-      }
-
-      previewUpdatingTimer.current = setTimeout(() => {
-        setPreviewUpdating(false);
-        previewUpdatingTimer.current = null;
-      }, 1600);
-    },
-    [projectId, pushChatError, startPreview, t],
-  );
 
   useEffect(() => {
     if (!getToken()) {
@@ -605,49 +544,12 @@ export default function ProjectPage() {
       });
   }, [load, pushChatError, router]);
 
-  useEffect(() => {
-    if (previewBusy || previewUpdating) topProgressStart("preview");
-    else topProgressDone("preview");
-  }, [previewBusy, previewUpdating]);
 
   useEffect(() => {
     if (busy) topProgressStart("generation");
     else topProgressDone("generation");
   }, [busy]);
 
-  useEffect(() => {
-    if (loading || previewUrl || previewBusy || autoPreviewRef.current) return;
-    autoPreviewRef.current = true;
-    void startPreview();
-  }, [loading, previewBusy, previewUrl, startPreview]);
-
-  // Firestore live: preview status (primary UI signal when emulator/prod is on).
-  useEffect(() => {
-    if (!projectId || !firebaseEnabled()) return;
-    let lastStatus = "";
-    return subscribePreview(projectId, (live: PreviewLive | null) => {
-      if (!live?.status) return;
-      setPreviewLiveStatus(live.status);
-      if (live.status === "starting") {
-        setPreviewBusy(true);
-      } else if (live.status === "ready") {
-        if (live.url) setPreviewUrl(live.url);
-        setPreviewBusy(false);
-        if (lastStatus && lastStatus !== "ready") {
-          setPreviewKey((k) => k + 1);
-        }
-      } else if (live.status === "dead" || live.status === "error") {
-        setPreviewBusy(false);
-        setPreviewUrl(null);
-        if (live.status === "error" && live.error) {
-          pushChatError(live.error, null);
-        }
-      } else if (live.status === "stopped") {
-        setPreviewBusy(false);
-      }
-      lastStatus = live.status;
-    });
-  }, [projectId, pushChatError]);
   useEffect(() => {
     if (!projectId || !firebaseEnabled()) return;
     let lastRev = -1;
@@ -661,7 +563,7 @@ export default function ProjectPage() {
       void refreshRoutes();
       void forcePreviewRefresh({ softStart: true, remount: true });
     });
-  }, [projectId, refreshRoutes, forcePreviewRefresh]);
+  }, [projectId, refreshRoutes, forcePreviewRefresh, setPreviewUrl]);
 
   // Firestore live: run metadata (SSE still streams tokens).
   useEffect(() => {
@@ -709,20 +611,6 @@ export default function ProjectPage() {
     });
   }, [projectId]);
 
-  const schedulePreviewRefresh = useCallback(() => {
-    if (previewRefreshTimer.current) clearTimeout(previewRefreshTimer.current);
-    previewRefreshTimer.current = setTimeout(() => {
-      previewRefreshTimer.current = null;
-      void forcePreviewRefresh({ restart: true });
-    }, 900);
-  }, [forcePreviewRefresh]);
-
-  useEffect(() => {
-    return () => {
-      if (previewRefreshTimer.current) clearTimeout(previewRefreshTimer.current);
-      if (previewUpdatingTimer.current) clearTimeout(previewUpdatingTimer.current);
-    };
-  }, []);
 
   useEffect(() => {
     const el = textareaRef.current;
@@ -2145,8 +2033,7 @@ export default function ProjectPage() {
                 setError(null);
                 void forcePreviewRefresh({ softStart: true, remount: true });
                 if (res?.path) {
-                  setPreviewUpdating(true);
-                  setTimeout(() => setPreviewUpdating(false), 1200);
+                  flashUpdating();
                 }
               } catch (err) {
                 pushChatError(
@@ -2173,8 +2060,7 @@ export default function ProjectPage() {
                   }}
                   onReplaced={() => {
                     void forcePreviewRefresh({ softStart: true, remount: true });
-                    setPreviewUpdating(true);
-                    setTimeout(() => setPreviewUpdating(false), 1200);
+                    flashUpdating();
                   }}
                 />
               ) : null
