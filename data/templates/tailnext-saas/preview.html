@@ -1,35 +1,41 @@
 <!doctype html>
-<html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>TailNext SaaS</title>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>tailnext-saas preview</title>
 <style>
-
-:root{--bg:#ffffff;--fg:#0f172a;--muted:#64748b;--accent:#4f46e5;--soft:#eef2ff;font-family:"Segoe UI",system-ui,sans-serif}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg)}
-.top{display:flex;justify-content:space-between;align-items:center;padding:1rem 1.5rem;border-bottom:1px solid #e2e8f0}
-.brand{font-weight:800;color:var(--accent)}
-.btn{background:var(--accent);color:#fff;border:0;border-radius:.7rem;padding:.7rem 1.1rem;font-weight:700}
-.hero{display:grid;grid-template-columns:1fr 1fr;gap:2rem;max-width:1100px;margin:0 auto;padding:3rem 1.5rem;align-items:center}
-.hero h1{font-size:clamp(2rem,5vw,3.2rem);letter-spacing:-.03em;margin:.5rem 0 1rem}
-.hero p{color:var(--muted)}
-.hero img{width:100%;border-radius:1rem}
-.logos{display:flex;gap:1rem;align-items:center;flex-wrap:wrap;margin-top:1.5rem}
-.logos img{height:28px;width:auto}
-.section{max-width:1100px;margin:0 auto;padding:2rem 1.5rem}
-.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
-.card{background:var(--soft);border-radius:1rem;padding:1.25rem;border:1px solid #e0e7ff}
-.card h3{margin:.4rem 0}
-.muted{color:var(--muted)}
-.price{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
-.price article{border:1px solid #e2e8f0;border-radius:1rem;padding:1.25rem}
-.price .hot{border-color:var(--accent);box-shadow:0 10px 30px rgba(79,70,229,.15)}
-@media(max-width:900px){.hero,.grid3,.price{grid-template-columns:1fr}}
-
-html,body{overflow:hidden} a,button{pointer-events:none}
-img{max-width:100%;display:block}
-</style></head><body>
-
-<header class="top"><strong class="brand">TailNext</strong><button class="btn">Download</button></header>
-<section class="hero"><div><h1>Next.js + Tailwind starter</h1><p>Production-ready website template.</p></div>
-<img src="public/01-hero.f20b02ee.jpg" alt=""/></section>
-
-</body></html>
+  body{margin:0;font-family:"Segoe UI",system-ui,sans-serif;background:#fff;color:#1e293b}
+  .bar{display:flex;justify-content:space-between;align-items:center;padding:10px 16px}
+  .brand{color:#4f46e5;font-weight:700;font-size:13px}
+  .cta{background:#4f46e5;color:#fff;border-radius:6px;padding:4px 10px;font-size:10px;font-weight:600}
+  .hero{display:flex;gap:14px;padding:10px 16px;align-items:center}
+  h1{font-size:16px;margin:0 0 6px}
+  .lead{font-size:9px;color:#64748b;margin:0 0 8px}
+  .vis{background:#eef2ff;border-radius:10px;padding:10px;flex:0 0 42%}
+  .chart{display:flex;align-items:flex-end;gap:4px;height:52px}
+  .chart span{flex:1;background:#4f46e5;border-radius:3px 3px 0 0}
+  .feat{display:flex;gap:8px;padding:12px 16px}
+  .card{flex:1;border:1px solid #e2e8f0;border-radius:8px;padding:8px;font-size:8px;color:#64748b}
+  .card b{display:block;color:#1e293b;font-size:9px;margin-bottom:2px}
+</style>
+</head>
+<body>
+  <div class="bar"><span class="brand">Pulsedeck</span><span class="cta">Get started</span></div>
+  <div class="hero">
+    <div>
+      <h1>Ship updates users notice</h1>
+      <p class="lead">Announcements, rollouts and adoption in one calm dashboard.</p>
+      <span class="cta">Start free trial</span>
+    </div>
+    <div class="vis"><div class="chart">
+      <span style="height:30%"></span><span style="height:55%"></span><span style="height:42%"></span>
+      <span style="height:78%"></span><span style="height:64%"></span><span style="height:92%"></span>
+    </div></div>
+  </div>
+  <div class="feat">
+    <div class="card"><b>Instant changelogs</b>Release notes from PRs.</div>
+    <div class="card"><b>Guided rollouts</b>Ship to 1%, then widen.</div>
+    <div class="card"><b>Adoption analytics</b>See usage within hours.</div>
+  </div>
+</body>
+</html>

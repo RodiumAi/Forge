@@ -48,9 +48,13 @@ const nextConfig: NextConfig = {
   },
   webpack: (config) => {
     if (useStandaloneOutput) {
+      const fallbackFonts = path.join(configDir, "lib/fonts.fallback.ts");
       config.resolve ??= {};
       config.resolve.alias ??= {};
-      config.resolve.alias["@/lib/fonts"] = path.join(configDir, "lib/fonts.fallback.ts");
+      // Redirect every `@/lib/fonts` resolution path so Docker never hits Google Fonts.
+      config.resolve.alias["@/lib/fonts"] = fallbackFonts;
+      config.resolve.alias[path.join(configDir, "lib/fonts.ts")] = fallbackFonts;
+      config.resolve.alias[path.join(configDir, "lib/fonts")] = fallbackFonts;
     }
     return config;
   },

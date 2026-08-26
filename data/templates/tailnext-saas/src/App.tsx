@@ -1,51 +1,137 @@
+const features = [
+  { icon: "⚡", title: "Instant changelogs", text: "Turn merged pull requests into polished release notes your customers actually read." },
+  { icon: "🧭", title: "Guided rollouts", text: "Ship to 1%, watch the metrics, then widen the audience with a single click." },
+  { icon: "🔔", title: "Smart notifications", text: "Announce updates in-app, by email or on Slack without writing the same post three times." },
+  { icon: "📊", title: "Adoption analytics", text: "See which features get used within hours of release, not weeks later in a spreadsheet." },
+  { icon: "🛡️", title: "Approval workflows", text: "Legal and marketing review drafts in one place before anything goes public." },
+  { icon: "🧩", title: "Open API", text: "Pipe release data anywhere with webhooks and a friendly, well-documented REST API." },
+];
+
+const plans = [
+  {
+    name: "Starter", price: "$19", period: "per month", featured: false,
+    perks: ["1 product space", "Unlimited posts", "Email announcements", "Community support"],
+    cta: "Start free trial",
+  },
+  {
+    name: "Growth", price: "$49", period: "per month", featured: true,
+    perks: ["5 product spaces", "Rollout targeting", "Slack + in-app widgets", "Adoption analytics", "Priority support"],
+    cta: "Choose Growth",
+  },
+  {
+    name: "Scale", price: "$129", period: "per month", featured: false,
+    perks: ["Unlimited spaces", "Approval workflows", "SSO and audit log", "Dedicated manager"],
+    cta: "Talk to sales",
+  },
+];
+
+const partners = ["Northbeam", "Kitefox", "Lumora", "Draftly", "Quanta", "Heliodor"];
+
 export default function App() {
   return (
-    <div>
-      <header className="top"><strong className="brand">TailNext</strong><button className="btn" type="button">Download</button></header>
+    <div className="page">
+      <header className="topbar">
+        <span className="brand">Pulsedeck</span>
+        <nav className="nav">
+          <a href="#features">Features</a>
+          <a href="#pricing">Pricing</a>
+          <a href="#contact">Contact</a>
+        </nav>
+        <a className="btn btn-primary" href="#pricing">Get started</a>
+      </header>
+
       <section className="hero">
-        <div>
-          <h1>Free template to start a website with Next.js + Tailwind CSS</h1>
-          <p>Production-ready starter with best practices, SEO, accessibility, dark mode and great page speed.</p>
-          <div style={{display:"flex",gap:".75rem",marginTop:"1.25rem",flexWrap:"wrap"}}>
-            <button className="btn" type="button">Get template</button>
-            <button type="button" style={{border:"1px solid #cbd5e1",background:"#fff",borderRadius:".7rem",padding:".7rem 1.1rem"}}>Learn more</button>
-          </div>
-          <div className="logos">
-            <img src="/02-nextjs-logo.ae3da0a5.png" alt="Next.js" />
-            <img src="/03-react-logo.5b4225d7.png" alt="React" />
-            <img src="/04-tailwind-css-logo.9014e37f.png" alt="Tailwind" />
-            <img src="/05-typescript-logo.37adc0f3.png" alt="TypeScript" />
+        <div className="hero-copy">
+          <p className="eyebrow">Release communication, solved</p>
+          <h1>Ship product updates your users actually notice</h1>
+          <p className="lead">
+            Pulsedeck turns every release into a clear announcement, a targeted rollout and a
+            measurable adoption curve — all from one calm dashboard.
+          </p>
+          <div className="hero-actions">
+            <a className="btn btn-primary" href="#pricing">Start free trial</a>
+            <a className="btn btn-ghost" href="#features">See how it works</a>
           </div>
         </div>
-        <img src="/01-hero.f20b02ee.jpg" alt="Hero" />
+        <div className="hero-visual" aria-hidden="true">
+          <div className="mock-card">
+            <div className="mock-row wide"></div>
+            <div className="mock-row"></div>
+            <div className="mock-row short"></div>
+            <div className="mock-chart">
+              <span style={{ height: "30%" }}></span>
+              <span style={{ height: "55%" }}></span>
+              <span style={{ height: "42%" }}></span>
+              <span style={{ height: "78%" }}></span>
+              <span style={{ height: "64%" }}></span>
+              <span style={{ height: "92%" }}></span>
+            </div>
+          </div>
+        </div>
       </section>
-      <section className="section">
-        <h2>What you get with TailNext</h2>
-        <p className="muted">Seamless integration, ready components and excellent performance.</p>
-        <div className="grid3" style={{marginTop:"1rem"}}>
-          {["Next.js + Tailwind","Ready-to-use Components","Excellent Page Speed"].map((t) => (
-            <article className="card" key={t}><h3>{t}</h3><p className="muted">Built for marketing sites, SaaS and blogs.</p></article>
+
+      <section className="logos" aria-label="Trusted by">
+        {partners.map((p) => (
+          <span key={p} className="logo-pill">{p}</span>
+        ))}
+      </section>
+
+      <section id="features" className="features">
+        <h2>Everything a release needs</h2>
+        <p className="section-lead">From draft to adoption report, without leaving Pulsedeck.</p>
+        <div className="feature-grid">
+          {features.map((f) => (
+            <article key={f.title} className="feature-card">
+              <span className="feature-icon">{f.icon}</span>
+              <h3>{f.title}</h3>
+              <p>{f.text}</p>
+            </article>
           ))}
         </div>
       </section>
-      <section className="section">
-        <div className="grid3">
-          <img src="/06-camera-front.bdbd1228.jpg" alt="" style={{width:"100%",borderRadius:"1rem"}} />
-          <img src="/07-camera-back.0083b6e2.jpg" alt="" style={{width:"100%",borderRadius:"1rem"}} />
-          <img src="/08-gas.f4f7ed48.jpg" alt="" style={{width:"100%",borderRadius:"1rem"}} />
+
+      <section id="pricing" className="pricing">
+        <h2>Simple pricing</h2>
+        <p className="section-lead">Every plan starts with a 14-day free trial. No card required.</p>
+        <div className="plan-grid">
+          {plans.map((plan) => (
+            <article key={plan.name} className={plan.featured ? "plan plan-featured" : "plan"}>
+              {plan.featured && <span className="plan-badge">Most popular</span>}
+              <h3>{plan.name}</h3>
+              <p className="plan-price">
+                {plan.price} <small>{plan.period}</small>
+              </p>
+              <ul>
+                {plan.perks.map((perk) => (
+                  <li key={perk}>{perk}</li>
+                ))}
+              </ul>
+              <a className={plan.featured ? "btn btn-primary" : "btn btn-ghost"} href="#contact">
+                {plan.cta}
+              </a>
+            </article>
+          ))}
         </div>
       </section>
-      <section className="section">
-        <h2>Prices for each plan</h2>
-        <div className="price" style={{marginTop:"1rem"}}>
-          <article><h3>basic</h3><strong style={{fontSize:"1.8rem"}}>$29</strong><p className="muted">per month</p></article>
-          <article className="hot"><h3>standard</h3><strong style={{fontSize:"1.8rem"}}>$69</strong><p className="muted">per month</p></article>
-          <article><h3>premium</h3><strong style={{fontSize:"1.8rem"}}>$199</strong><p className="muted">per month</p></article>
+
+      <footer id="contact" className="footer">
+        <div className="footer-grid">
+          <div>
+            <span className="brand brand-light">Pulsedeck</span>
+            <p>Release communication for calm product teams. Built with care, priced fairly.</p>
+          </div>
+          <div>
+            <h4>Contact</h4>
+            <p>hello@pulsedeck.example</p>
+            <p>+1 (555) 010-2030</p>
+          </div>
+          <div>
+            <h4>Office</h4>
+            <p>42 Harbor Lane</p>
+            <p>Portland, OR</p>
+          </div>
         </div>
-      </section>
-      <footer className="section" style={{paddingBottom:"3rem"}}>
-        <h2>Get in Touch</h2>
-        <p className="muted">tailnext@gmail.com · New York</p>
+        <p className="footer-note">© 2026 Pulsedeck Labs. A fictional product for demo purposes.</p>
       </footer>
     </div>
   );

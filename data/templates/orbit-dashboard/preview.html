@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>orbit-dashboard preview</title>
+<style>
+  body{margin:0;font-family:"Segoe UI",system-ui,sans-serif;background:#f1f5f9;color:#0f172a;display:flex}
+  .side{width:64px;background:#0f172a;min-height:180px;padding:10px 6px}
+  .dot{width:10px;height:10px;border-radius:50%;background:#2563eb;margin:4px auto 12px}
+  .item{height:8px;border-radius:4px;background:#1e293b;margin:8px 6px}
+  .item.on{background:#2563eb}
+  .main{flex:1;padding:10px}
+  .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  .search{background:#fff;border:1px solid #e2e8f0;border-radius:6px;width:55%;height:14px}
+  .av{width:16px;height:16px;border-radius:50%;background:#2563eb}
+  .kpis{display:flex;gap:8px}
+  .kpi{flex:1;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:8px}
+  .kpi small{display:block;color:#64748b;font-size:7px;text-transform:uppercase}
+  .kpi b{font-size:12px}
+  .kpi span{display:block;font-size:7px;color:#16a34a}
+  .chart{background:#fff;border:1px solid #e2e8f0;border-radius:8px;margin-top:8px;padding:8px;display:flex;align-items:flex-end;gap:4px;height:48px}
+  .chart i{flex:1;background:#2563eb;border-radius:2px 2px 0 0}
+</style>
+</head>
+<body>
+  <div class="side">
+    <div class="dot"></div>
+    <div class="item on"></div><div class="item"></div><div class="item"></div>
+    <div class="item"></div><div class="item"></div>
+  </div>
+  <div class="main">
+    <div class="top"><div class="search"></div><div class="av"></div></div>
+    <div class="kpis">
+      <div class="kpi"><small>Revenue</small><b>$84,210</b><span>+12.4%</span></div>
+      <div class="kpi"><small>Customers</small><b>3,482</b><span>+5.1%</span></div>
+      <div class="kpi"><small>Tickets</small><b>127</b><span>-8.3%</span></div>
+    </div>
+    <div class="chart">
+      <i style="height:40%"></i><i style="height:55%"></i><i style="height:48%"></i>
+      <i style="height:70%"></i><i style="height:62%"></i><i style="height:88%"></i>
+      <i style="height:75%"></i><i style="height:95%"></i>
+    </div>
+  </div>
+</body>
+</html>
