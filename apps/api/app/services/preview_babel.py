@@ -45,9 +45,7 @@ def collect_project_source_files(project_id: str) -> dict[str, str]:
         norm = path.replace("\\", "/")
         if any(part in {"node_modules", ".git", "dist", ".vite"} for part in norm.split("/")):
             continue
-        if norm.endswith(
-            (".tsx", ".ts", ".jsx", ".js", ".css", ".json", ".html", ".md", ".svg")
-        ):
+        if norm.endswith((".tsx", ".ts", ".jsx", ".js", ".css", ".json", ".html", ".md", ".svg")):
             out[norm] = content
     return out
 
