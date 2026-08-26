@@ -269,4 +269,11 @@ html,body{{overflow:hidden}} a,button{{pointer-events:none}}
 </body></html>
 """,
     )
+    # Baseline checkpoint: the user can always roll back to the pristine scaffold.
+    try:
+        from app.services import history
+
+        history.snapshot(project_id, "initial scaffold")
+    except Exception:  # pragma: no cover - history is best effort
+        pass
 

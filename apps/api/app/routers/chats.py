@@ -283,7 +283,9 @@ async def _iter_single_pass(
             writes, deletes = parse_forge_tags("".join(full))
         yield push_step("generate", t("step_generate_code", locale), "done")
 
-    written, violations = apply_validated_writes(project_id_str, writes)
+    written, violations = apply_validated_writes(
+        project_id_str, writes, snapshot_label="before edit"
+    )
     applied.extend(written)
     for item in written:
         yield _sse({"type": "file_write", "path": item["path"]})
@@ -593,7 +595,9 @@ async def send_message(
                 yield push_step("generate", t("step_generate_code", locale), "done")
                 yield push_step("apply_writes", t("step_apply_writes", locale), "running")
                 writes, deletes = parse_forge_tags("".join(full))
-                written, violations = apply_validated_writes(project_id_str, writes)
+                written, violations = apply_validated_writes(
+                    project_id_str, writes, snapshot_label="before edit"
+                )
                 applied.extend(written)
                 for item in written:
                     yield _sse({"type": "file_write", "path": item["path"]})

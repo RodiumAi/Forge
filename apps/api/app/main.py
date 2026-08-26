@@ -13,6 +13,7 @@ from app.routers import (
     comments,
     design,
     files,
+    history,
     plugins,
     preview,
     projects,
@@ -63,6 +64,7 @@ app.include_router(design.router)
 app.include_router(seo.router)
 app.include_router(chats.router)
 app.include_router(files.router)
+app.include_router(history.router)
 app.include_router(comments.router)
 app.include_router(publish.router)
 app.include_router(preview.router)

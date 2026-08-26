@@ -13,6 +13,7 @@ from app.i18n import resolve_locale, t
 from app.models import Project, User
 from app.providers.objects import get_object_store
 from app.schemas import FileContent, FileNode
+from app.services import history
 from app.services.asset_storage import (
     asset_display_name,
     get_project_asset,
@@ -140,6 +141,7 @@ def put_file_content(
     if not path or ".." in path.split("/"):
         raise HTTPException(status_code=400, detail=t("file_not_found", locale))
     try:
+        history.snapshot(str(project_id), f"before manual edit: {path}")
         write_file(str(project_id), path, body.content)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -158,6 +160,7 @@ def remove_file(
     _owned(db, user, project_id, locale)
     rel = path.strip().lstrip("/")
     try:
+        history.snapshot(str(project_id), f"before delete: {rel}")
         delete_file(str(project_id), rel)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
