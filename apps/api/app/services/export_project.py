@@ -71,9 +71,7 @@ def _is_skipped_file(path: Path) -> bool:
         return True
     if lower.startswith(ENV_PREFIX) and lower != ".env.example":
         return True
-    if path.suffix.lower() in SKIP_SUFFIXES:
-        return True
-    return False
+    return path.suffix.lower() in SKIP_SUFFIXES
 
 
 def _has_any(root: Path, names: tuple[str, ...]) -> bool:
@@ -423,6 +421,8 @@ def build_export_zip(*, project_id: str, project_name: str, locale: str = "fr") 
         readme = build_readme(project_name=project_name, layout=layout, locale=locale)
         zf.writestr("README.md", readme)
 
-    slug = "".join(c if c.isalnum() or c in "-_" else "-" for c in project_name.lower()).strip("-") or "project"
+    slug = (
+        "".join(c if c.isalnum() or c in "-_" else "-" for c in project_name.lower()).strip("-") or "project"
+    )
     filename = f"{slug}-export.zip"
     return buf.getvalue(), filename

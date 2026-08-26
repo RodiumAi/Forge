@@ -135,7 +135,7 @@ export function PromptAssetMention({ projectId, open, query, onSelect, onClose }
                 }}
               >
                 {asset.content_type.startsWith("image/") ? (
-                  // eslint-disable-next-line @next/next/no-img-element
+                   
                   <img
                     src={
                       (projectId && assetContentUrl(projectId, asset.id)) ||

@@ -279,7 +279,7 @@ export function DesignCharterSlideover({ projectId, open, onClose }: Props) {
               <label htmlFor={fileInputId} className="design-logo-drop">
                 {displayPreview ? (
                   <>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    { }
                     <img src={displayPreview} alt="" className="design-logo-preview" />
                     <span className="design-logo-filename">
                       {logoFile?.name || existingLogoPath || t("designLogoChoose")}

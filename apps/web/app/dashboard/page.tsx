@@ -324,7 +324,7 @@ function DashboardInner() {
   }
 
   const filteredProjects = useMemo(() => {
-    let list = [...projects];
+    const list = [...projects];
     if (tab === "recent") {
       list.sort(
         (a, b) =>

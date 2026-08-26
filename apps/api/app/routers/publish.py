@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -68,11 +68,11 @@ async def publish_now(
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)[:2000]) from exc
 
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     from app.services import firestore_live
 
-    project.published_at = datetime.now(timezone.utc)
+    project.published_at = datetime.now(UTC)
     project.status = "published"
     db.commit()
     db.refresh(project)

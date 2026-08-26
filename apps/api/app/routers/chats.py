@@ -19,24 +19,18 @@ from app.schemas import (
     MessageOut,
     SendMessageRequest,
 )
+from app.services.apply_writes import apply_validated_writes
+from app.services.attachments import extract_image_urls
 from app.services.capabilities import require_rodi_for_paid_capability
 from app.services.filesystem import delete_file
-from app.services.apply_writes import apply_validated_writes
 from app.services.llm import RodiumError, stream_chat_completion
-from app.services.sse import with_sse_heartbeats
 from app.services.orchestration.cancel import clear_cancelled, is_cancelled, mark_cancelled
 from app.services.orchestration.context import build_llm_messages
-from app.services.attachments import extract_image_urls
+from app.services.orchestration.images import generate_project_image
 from app.services.orchestration.plan_persist import (
     persist_assistant as _persist_assistant,
 )
 from app.services.orchestration.plan_worker import iter_run_event_sse, spawn_plan_job
-from app.services.orchestration.images import generate_project_image
-from app.services.orchestration.router import (
-    classify_and_route,
-    has_reference_attachments,
-    strip_attachment_noise,
-)
 from app.services.orchestration.planner import (
     build_clarify_questions,
     build_plan,
@@ -44,7 +38,13 @@ from app.services.orchestration.planner import (
     format_answers_for_prompt,
     needs_clarify,
 )
+from app.services.orchestration.router import (
+    classify_and_route,
+    has_reference_attachments,
+    strip_attachment_noise,
+)
 from app.services.rodium_generation import resolve_generation_auth
+from app.services.sse import with_sse_heartbeats
 from app.services.tags import parse_forge_tags
 from app.services.text_plain import build_run_summary, to_plain_text
 
@@ -117,12 +117,7 @@ def _parse_sse_chunk(chunk: str) -> dict | None:
 
 
 def _history(db: Session, chat_id: UUID) -> list[tuple[str, str]]:
-    rows = (
-        db.query(Message)
-        .filter(Message.chat_id == chat_id)
-        .order_by(Message.created_at.asc())
-        .all()
-    )
+    rows = db.query(Message).filter(Message.chat_id == chat_id).order_by(Message.created_at.asc()).all()
     return [(m.role, m.content) for m in rows]
 
 
@@ -133,9 +128,7 @@ def _should_single_pass(task_class: str, user_content: str, mode: str) -> bool:
     if task_class in ("code.edit.small", "text.copy", "text.micro"):
         return True
     clean = strip_attachment_noise(user_content)
-    if task_class == "code.edit.medium" and len(clean) < 180:
-        return True
-    return False
+    return bool(task_class == "code.edit.medium" and len(clean) < 180)
 
 
 async def _iter_single_pass(
@@ -232,22 +225,18 @@ async def _iter_single_pass(
     yield push_step("apply_writes", t("step_apply_writes", locale), "running")
     writes, deletes = parse_forge_tags("".join(full))
 
-    required_urls = [
-        img.url for img in extract_image_urls(user_content) if img.url.startswith("http")
-    ]
-    if required_urls and not any(
-        any(url in op.content for op in writes) for url in required_urls
-    ):
+    required_urls = [img.url for img in extract_image_urls(user_content) if img.url.startswith("http")]
+    if required_urls and not any(any(url in op.content for op in writes) for url in required_urls):
         retry_prompt = (
             "CRITICAL: The user's uploaded asset URL(s) must appear verbatim in your forge-write output "
-            "(e.g. <img src=\"...\"> or background-image: url(...)). Do not use placeholders.\n"
+            '(e.g. <img src="..."> or background-image: url(...)). Do not use placeholders.\n'
             + "\n".join(f"- {u}" for u in required_urls)
             + f"\n\nOriginal request:\n{user_content}"
         )
         yield push_step("generate", t("step_generate_code", locale), "running")
         retry_messages = await build_llm_messages(
             project_id=project_id_str,
-            history=history + [("user", user_content), ("assistant", "".join(full)), ("user", retry_prompt)],
+            history=[*history, ("user", user_content), ("assistant", "".join(full)), ("user", retry_prompt)],
             user_query=retry_prompt,
             db=db,
             user_id=user_id,
@@ -283,9 +272,7 @@ async def _iter_single_pass(
             writes, deletes = parse_forge_tags("".join(full))
         yield push_step("generate", t("step_generate_code", locale), "done")
 
-    written, violations = apply_validated_writes(
-        project_id_str, writes, snapshot_label="before edit"
-    )
+    written, violations = apply_validated_writes(project_id_str, writes, snapshot_label="before edit")
     applied.extend(written)
     for item in written:
         yield _sse({"type": "file_write", "path": item["path"]})
@@ -346,12 +333,7 @@ def list_messages(
 ) -> list[Message]:
     locale = resolve_locale(request)
     _, chat = _owned_chat(db, user, project_id, chat_id, locale)
-    return (
-        db.query(Message)
-        .filter(Message.chat_id == chat.id)
-        .order_by(Message.created_at.asc())
-        .all()
-    )
+    return db.query(Message).filter(Message.chat_id == chat.id).order_by(Message.created_at.asc()).all()
 
 
 @router.get(
@@ -411,9 +393,11 @@ def get_active_run(
             from app.services.orchestration.run_queue import is_run_claimed
 
             if not is_run_claimed(str(run.id)):
-                run.status = "error" if any(
-                    isinstance(t, dict) and t.get("status") == "done" for t in plan
-                ) else "awaiting_plan_confirm"
+                run.status = (
+                    "error"
+                    if any(isinstance(t, dict) and t.get("status") == "done" for t in plan)
+                    else "awaiting_plan_confirm"
+                )
             db.commit()
         else:
             run.status = "interrupted"
@@ -562,7 +546,7 @@ async def send_message(
                 yield push_step("select_files", t("step_select_files", locale), "running")
                 llm_messages = await build_llm_messages(
                     project_id=project_id_str,
-                    history=history + [("user", wire_prompt)],
+                    history=[*history, ("user", wire_prompt)],
                     user_query=wire_prompt,
                     db=db,
                     user_id=user.id,
@@ -962,6 +946,7 @@ async def submit_clarify(
 
     return _event_stream(stream())
 
+
 @router.post("/projects/{project_id}/chats/{chat_id}/runs/{run_id}/confirm-plan")
 async def confirm_plan(
     project_id: UUID,
@@ -977,7 +962,9 @@ async def confirm_plan(
     if run.status not in ("awaiting_plan_confirm", "error"):
         raise HTTPException(status_code=400, detail=t("run_invalid_state", locale))  # type: ignore[arg-type]
     require_rodi_for_paid_capability(user, db)
-    gen_auth = await resolve_generation_auth(db, user)
+    # Called for its side effect: raises early if the account has no usable
+    # generation key, before we start mutating the run.
+    await resolve_generation_auth(db, user)
 
     plan = body.plan if body.plan else (json.loads(run.plan_json) if run.plan_json else [])
     if not plan:

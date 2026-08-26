@@ -27,11 +27,7 @@ def runtime_dir() -> Path:
 async def transform_project_to_dir(project_id: str, out_dir: Path, *, title: str = "Forge app") -> dict:
     files = collect_project_source_files(project_id)
     # Drop DESIGN.md / AI_RULES from transform input (not JS)
-    source = {
-        k: v
-        for k, v in files.items()
-        if k.endswith((".tsx", ".ts", ".jsx", ".js", ".css"))
-    }
+    source = {k: v for k, v in files.items() if k.endswith((".tsx", ".ts", ".jsx", ".js", ".css"))}
     payload = json.dumps(
         {"files": source, "entry": "src/main.tsx", "title": title},
         ensure_ascii=False,

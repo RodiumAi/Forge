@@ -22,12 +22,7 @@ def _candidate_literals(text: str) -> list[str]:
     esc = text.replace("\\", "\\\\").replace("'", "\\'").replace('"', '\\"')
     if esc != text:
         variants.append(esc)
-    html = (
-        text.replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace('"', "&quot;")
-    )
+    html = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
     if html != text:
         variants.append(html)
     # Dedupe preserving order
@@ -48,12 +43,7 @@ def _escape_like(lit: str, old: str, new: str) -> str:
     if '\\"' in lit:
         return new.replace("\\", "\\\\").replace('"', '\\"')
     if "&amp;" in lit or "&lt;" in lit or "&gt;" in lit:
-        return (
-            new.replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-            .replace('"', "&quot;")
-        )
+        return new.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
     return new
 
 

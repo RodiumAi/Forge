@@ -6,8 +6,8 @@ from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import Any
 
 from app.i18n import Locale, t
-from app.services.filesystem import delete_file
 from app.services.apply_writes import apply_validated_writes
+from app.services.filesystem import delete_file
 from app.services.llm import RodiumError, is_transient_network_error, stream_chat_completion
 from app.services.orchestration.context import build_llm_messages
 from app.services.rodium_generation import RodiumGenerationAuth
@@ -22,11 +22,7 @@ def _sse(payload: dict) -> str:
 
 
 def _resume_context_block(tasks: list[dict[str, Any]], applied: list[dict], idx: int) -> str:
-    done = [
-        str(t.get("title") or t.get("id") or "")
-        for t in tasks
-        if str(t.get("status") or "") == "done"
-    ]
+    done = [str(t.get("title") or t.get("id") or "") for t in tasks if str(t.get("status") or "") == "done"]
     paths = sorted({str(a.get("path") or "") for a in applied if a.get("path")})
     lines = [
         "Resume context:",
@@ -77,11 +73,11 @@ def ensure_coherence_task(tasks: list[dict[str, Any]], locale: Locale) -> list[d
         return tasks
     if any(str(t.get("id") or "") == "coherence" for t in tasks):
         return tasks
-    return list(tasks) + [_coherence_task(locale)]
+    return [*list(tasks), _coherence_task(locale)]
 
 
 def _task_prompt_block(task: dict[str, Any], *, idx: int, total: int) -> str:
-    title = str(task.get("title") or task.get("id") or f"task_{idx+1}")
+    title = str(task.get("title") or task.get("id") or f"task_{idx + 1}")
     acceptance = str(task.get("acceptance") or "").strip()
     files = task.get("files") or []
     tid = str(task.get("id") or "").lower()
@@ -144,9 +140,7 @@ def _is_surgical_task(task: dict[str, Any], *, total_tasks: int) -> bool:
     if total_tasks >= 2 and tid not in ("architecture", "structure"):
         # Multi-task plans after architecture: prefer minimal CSS/TSX diffs.
         return True
-    if total_tasks == 1 and ("edit" in tid or "modif" in title or "change" in title):
-        return True
-    return False
+    return bool(total_tasks == 1 and ("edit" in tid or "modif" in title or "change" in title))
 
 
 async def run_plan_tasks(
@@ -213,7 +207,7 @@ async def run_plan_tasks(
         if str(task.get("status") or "") == "done":
             continue
 
-        tid = str(task.get("id") or f"task_{idx+1}")
+        tid = str(task.get("id") or f"task_{idx + 1}")
         title = str(task.get("title") or tid)
         task["status"] = "running"
         await emit_progress(idx)
@@ -241,7 +235,7 @@ async def run_plan_tasks(
         yield push_step("select_files", t("step_select_files", locale), "running")
         llm_messages = await build_llm_messages(
             project_id=project_id,
-            history=history + [("user", task_prompt)],
+            history=[*history, ("user", task_prompt)],
             user_query=task_prompt,
             db=db,
             user_id=user_id,
@@ -280,11 +274,7 @@ async def run_plan_tasks(
                         yield _sse({"type": "token", "content": chunk.content})
                 break
             except RodiumError as exc:
-                if (
-                    not auth_retried
-                    and resolve_auth
-                    and exc.status_code in (401, 403)
-                ):
+                if not auth_retried and resolve_auth and exc.status_code in (401, 403):
                     auth_retried = True
                     current_auth = await resolve_auth()
                     # Drop partial tokens from this failed attempt.
@@ -329,9 +319,7 @@ async def run_plan_tasks(
         yield push_step("apply_writes", t("step_apply_writes", locale), "running")
         assistant_text = "".join(task_buf)
         writes, deletes = parse_forge_tags(assistant_text)
-        written, violations = apply_validated_writes(
-            project_id, writes, snapshot_label=f"before: {title}"
-        )
+        written, violations = apply_validated_writes(project_id, writes, snapshot_label=f"before: {title}")
         applied.extend(written)
         for item in written:
             yield _sse({"type": "file_write", "path": item["path"]})
@@ -350,11 +338,11 @@ async def run_plan_tasks(
 
         # Mid-plan CSS/build check — catch orphan classes before the next rewrite.
         if len(tasks) >= 2 and tid != "coherence":
+            from app.services.orchestration.router import route_task
             from app.services.orchestration.verify_build import (
                 format_findings_for_prompt,
                 verify_project_build,
             )
-            from app.services.orchestration.router import route_task
 
             mid_findings = verify_project_build(project_id)
             critical_mid = [
@@ -367,9 +355,7 @@ async def run_plan_tasks(
                 yield _sse(
                     {
                         "type": "warning",
-                        "message": (
-                            f"[verify-mid:{finding.severity}] {finding.code}: {finding.message}"
-                        ),
+                        "message": (f"[verify-mid:{finding.severity}] {finding.code}: {finding.message}"),
                         "finding": finding.to_dict(),
                     }
                 )
@@ -387,7 +373,7 @@ async def run_plan_tasks(
                 )
                 repair_messages = await build_llm_messages(
                     project_id=project_id,
-                    history=history + [("user", repair_prompt)],
+                    history=[*history, ("user", repair_prompt)],
                     user_query=repair_prompt,
                     db=db,
                     user_id=user_id,
@@ -406,9 +392,7 @@ async def run_plan_tasks(
                         locale=locale,
                     ):
                         if run_id and is_cancelled(run_id):
-                            yield push_step(
-                                "verify_repair_mid", "Repairing mid-plan CSS/build", "error"
-                            )
+                            yield push_step("verify_repair_mid", "Repairing mid-plan CSS/build", "error")
                             yield _sse({"type": "error", "message": "cancelled", "plan": tasks})
                             return
                         if chunk.kind == "thinking":
@@ -454,13 +438,9 @@ async def run_plan_tasks(
                                 "finding": recheck[0].to_dict(),
                             }
                         )
-                    yield push_step(
-                        "verify_repair_mid", "Repairing mid-plan CSS/build", "done"
-                    )
+                    yield push_step("verify_repair_mid", "Repairing mid-plan CSS/build", "done")
                 except Exception as exc:
-                    yield push_step(
-                        "verify_repair_mid", "Repairing mid-plan CSS/build", "error"
-                    )
+                    yield push_step("verify_repair_mid", "Repairing mid-plan CSS/build", "error")
                     yield _sse(
                         {
                             "type": "warning",
@@ -469,12 +449,12 @@ async def run_plan_tasks(
                     )
 
     # Deterministic verify + optional repair (black-preview prevention)
+    from app.services.orchestration.router import route_task
     from app.services.orchestration.verify_build import (
         findings_have_critical,
         format_findings_for_prompt,
         verify_project_build,
     )
-    from app.services.orchestration.router import route_task
 
     yield push_step("verify_build", "Verifying build", "running")
     findings = verify_project_build(project_id)
@@ -501,7 +481,7 @@ async def run_plan_tasks(
         )
         repair_messages = await build_llm_messages(
             project_id=project_id,
-            history=history + [("user", repair_prompt)],
+            history=[*history, ("user", repair_prompt)],
             user_query=repair_prompt,
             db=db,
             user_id=user_id,
@@ -584,13 +564,10 @@ async def run_plan_tasks(
         # the new source bundle straight from the browser on the next refresh.
         yield _sse({"type": "preview_refresh"})
 
-    summary = to_plain_text(
-        build_run_summary(tasks=tasks, applied=applied, locale=locale)
-    )
+    summary = to_plain_text(build_run_summary(tasks=tasks, applied=applied, locale=locale))
     if findings_have_critical(findings):
         summary = (
-            summary
-            + "\n\nWarning: critical build verify findings remain — preview may be black."
+            summary + "\n\nWarning: critical build verify findings remain — preview may be black."
         ).strip()
 
     yield push_step("done", t("step_done", locale), "done")

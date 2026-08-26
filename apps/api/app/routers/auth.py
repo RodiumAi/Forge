@@ -11,6 +11,7 @@ from app.db import get_db
 from app.i18n import resolve_locale, t
 from app.models import User, UserSettings
 from app.schemas import (
+    FirebaseCustomTokenResponse,
     LoginRequest,
     LogoutResponse,
     OAuthCallbackRequest,
@@ -23,7 +24,6 @@ from app.schemas import (
     RodiumSelectKeyRequest,
     RodiumSelectKeyResponse,
     RodiumWalletOut,
-    FirebaseCustomTokenResponse,
     TokenResponse,
     UserOut,
 )
@@ -31,7 +31,6 @@ from app.services.rodium_generation import (
     ensure_default_api_key_id,
     ensure_rodium_access_token,
     has_generation_key,
-    key_hint_from_list,
     pick_default_api_key_id,
     select_api_key_id,
     store_oauth_tokens,
@@ -105,7 +104,11 @@ def _wallet_out(raw: dict | None) -> RodiumWalletOut | None:
         credits = raw.get("providedCredits") or raw.get("provided_credits")
         if isinstance(credits, list):
             try:
-                total = sum(float(c.get("remainingRodi") or c.get("amountRodi") or c.get("balance") or 0) for c in credits if isinstance(c, dict))
+                total = sum(
+                    float(c.get("remainingRodi") or c.get("amountRodi") or c.get("balance") or 0)
+                    for c in credits
+                    if isinstance(c, dict)
+                )
                 provided_total = str(total)
             except Exception:
                 provided_total = None
@@ -169,7 +172,6 @@ async def rodium_oauth_callback(
     request: Request,
     db: Session = Depends(get_db),
 ) -> TokenResponse:
-    locale = resolve_locale(request)
     try:
         verifier = parse_oauth_state(body.state)
         tokens = await exchange_code(code=body.code, code_verifier=verifier)
@@ -462,7 +464,9 @@ def change_password(
     if not user.password_hash:
         raise HTTPException(status_code=400, detail=t("rodium_oauth_no_password", locale))
     if not verify_password(body.current_password, user.password_hash):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=t("invalid_current_password", locale))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=t("invalid_current_password", locale)
+        )
     user.password_hash = hash_password(body.new_password)
     db.commit()
     return PasswordChangeResponse()

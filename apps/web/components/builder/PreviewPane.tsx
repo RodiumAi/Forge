@@ -82,7 +82,6 @@ export function PreviewPane({
   const [bridgeWarning, setBridgeWarning] = useState(false);
   const [editMissHint, setEditMissHint] = useState<string | null>(null);
   const frameRef = useRef<HTMLIFrameElement>(null);
-  const loadTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const toolRetryTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const pingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const bridgeWarnTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);

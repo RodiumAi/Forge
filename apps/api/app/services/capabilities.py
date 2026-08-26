@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import date
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
@@ -35,13 +35,12 @@ def require_rodi_for_paid_capability(user: User, db: Session) -> None:
         return
     if cached_wallet_balance(user, db) > 0:
         return
-    raise insufficient_rodi(
-        "Insufficient RODI credits. Recharge your RodiumAi wallet to keep generating."
-    )
+    raise insufficient_rodi("Insufficient RODI credits. Recharge your RodiumAi wallet to keep generating.")
 
 
 def usage_row(db: Session, user: User, project_id) -> SiteUsageDay:
-    day = date.today().isoformat()
+    # UTC-anchored so the daily bucket does not shift with server timezone.
+    day = datetime.now(UTC).date().isoformat()
     row = (
         db.query(SiteUsageDay)
         .filter(

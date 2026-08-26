@@ -6,7 +6,6 @@ import base64
 import re
 from dataclasses import dataclass
 from typing import Any
-from urllib.parse import urlparse
 from uuid import UUID
 
 import httpx
@@ -14,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.models import StoredObject
 from app.services.asset_storage import asset_display_name
-from app.services.filesystem import project_dir, read_file
+from app.services.filesystem import project_dir
 
 _IMAGE_MARKER_RE = re.compile(
     r"\[(?:Reference screenshot|Capture de référence|Image attached|Image jointe):\s*"
@@ -45,7 +44,7 @@ REFERENCE_VISION_INSTRUCTION = (
 ASSET_VISION_INSTRUCTION = (
     "This is an uploaded site asset (logo/icon/image). "
     "Use the exact CDN url: from the markers in generated code "
-    "(<img src=\"...\"> or CSS background-image). "
+    '(<img src="..."> or CSS background-image). '
     "Do NOT generate a new image. Do NOT use a placeholder path."
 )
 
@@ -91,7 +90,9 @@ def extract_image_urls(user_text: str) -> list[ResolvedImage]:
 
     # Also scan bare https URLs in asset instruction blocks
     for url in re.findall(r"https?://[^\s`'\"<>]+", text):
-        if url not in seen and any(url.lower().endswith(ext) for ext in (".png", ".jpg", ".jpeg", ".webp", ".gif")):
+        if url not in seen and any(
+            url.lower().endswith(ext) for ext in (".png", ".jpg", ".jpeg", ".webp", ".gif")
+        ):
             seen.add(url)
             found.append(ResolvedImage(url=url, name=url.rsplit("/", 1)[-1]))
 
@@ -143,9 +144,7 @@ def _stored_object_url(db: Session, project_id: str, url: str) -> StoredObject |
     except ValueError:
         return None
     row = (
-        db.query(StoredObject)
-        .filter(StoredObject.project_id == pid, StoredObject.public_url == url)
-        .first()
+        db.query(StoredObject).filter(StoredObject.project_id == pid, StoredObject.public_url == url).first()
     )
     return row
 
@@ -157,11 +156,7 @@ def _read_stored_object(db: Session, project_id: str, object_id: str) -> tuple[b
         oid = UUID(object_id)
     except ValueError:
         return None
-    row = (
-        db.query(StoredObject)
-        .filter(StoredObject.project_id == pid, StoredObject.id == oid)
-        .first()
-    )
+    row = db.query(StoredObject).filter(StoredObject.project_id == pid, StoredObject.id == oid).first()
     if row is None:
         return None
     try:
@@ -203,7 +198,7 @@ async def resolve_image_part(
     if not url:
         return None
 
-    if url.startswith("http://") or url.startswith("https://"):
+    if url.startswith(("http://", "https://")):
         fetched = await _fetch_url(url)
         if fetched:
             body, ctype = fetched
@@ -234,7 +229,9 @@ async def resolve_image_part(
             return await resolve_image_part(
                 db,
                 project_id,
-                ResolvedImage(url=row.public_url, name=asset_display_name(row.object_key), object_id=str(row.id)),
+                ResolvedImage(
+                    url=row.public_url, name=asset_display_name(row.object_key), object_id=str(row.id)
+                ),
             )
 
     return {"type": "text", "text": f"[Attached image {resolved.name}: {url}]"}
@@ -261,8 +258,10 @@ def vision_instruction_for_message(user_text: str) -> str | None:
         names.append(name)
     if names and all(_REFERENCE_FILENAME_RE.search(n) for n in names):
         return REFERENCE_VISION_INSTRUCTION
-    if names and any(_ASSET_FILENAME_RE.search(n) for n in names) and not any(
-        _REFERENCE_FILENAME_RE.search(n) for n in names
+    if (
+        names
+        and any(_ASSET_FILENAME_RE.search(n) for n in names)
+        and not any(_REFERENCE_FILENAME_RE.search(n) for n in names)
     ):
         return ASSET_VISION_INSTRUCTION
     return REFERENCE_VISION_INSTRUCTION

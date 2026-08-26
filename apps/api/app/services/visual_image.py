@@ -65,7 +65,7 @@ def apply_visual_image_replace(
     new_path = (new_public_path or "").strip().replace("\\", "/")
     if not new_path:
         raise ValueError("Missing new image path")
-    if new_path.startswith("http://") or new_path.startswith("https://"):
+    if new_path.startswith(("http://", "https://")):
         web_path = new_path
         new_path = new_path
     elif new_path.startswith("public/"):
@@ -119,9 +119,9 @@ def apply_visual_image_replace(
         path, content, lit, _ = best
 
     # Prefer web path (/file.png) or full CDN URL when replacing absolute-looking literals.
-    if new_path.startswith("http://") or new_path.startswith("https://"):
+    if new_path.startswith(("http://", "https://")):
         replacement = new_path
-    elif lit.startswith("/") or lit.startswith("http"):
+    elif lit.startswith(("/", "http")):
         replacement = web_path
     else:
         replacement = new_path if lit.startswith("public/") else web_path.lstrip("/")

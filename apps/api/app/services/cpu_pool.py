@@ -6,8 +6,9 @@ import atexit
 import logging
 import os
 import sys
+from collections.abc import Callable
 from concurrent.futures import BrokenExecutor, ProcessPoolExecutor, ThreadPoolExecutor
-from typing import Any, Callable, TypeVar
+from typing import Any, TypeVar
 
 logger = logging.getLogger("cpu_pool")
 
@@ -39,7 +40,7 @@ def shutdown_cpu_pool() -> None:
         _pool = None
 
 
-def run_cpu(fn: Callable[..., T], *args: Any, timeout: float | None = 60.0) -> T:
+def run_cpu[T](fn: Callable[..., T], *args: Any, timeout: float | None = 60.0) -> T:
     """Run a picklable callable in the CPU pool (blocking)."""
     try:
         fut = get_cpu_pool().submit(fn, *args)
@@ -51,7 +52,7 @@ def run_cpu(fn: Callable[..., T], *args: Any, timeout: float | None = 60.0) -> T
         return fut.result(timeout=timeout)
 
 
-async def run_cpu_async(fn: Callable[..., T], *args: Any, timeout: float | None = 60.0) -> T:
+async def run_cpu_async[T](fn: Callable[..., T], *args: Any, timeout: float | None = 60.0) -> T:
     """Async wrapper around run_cpu."""
     import asyncio
 

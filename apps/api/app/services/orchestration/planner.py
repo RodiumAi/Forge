@@ -83,10 +83,7 @@ def needs_clarify(
     # Existing project: major ambiguity only (e.g. "améliore le site").
     if _GENERIC_ONLY_RE.search(text):
         return True
-    if _VAGUE_RE.search(text) and not _SECTION_RE.search(text) and not _EDIT_VERB_RE.search(text):
-        return True
-
-    return False
+    return bool(_VAGUE_RE.search(text) and not _SECTION_RE.search(text) and not _EDIT_VERB_RE.search(text))
 
 
 def build_clarify_questions(
@@ -313,7 +310,7 @@ async def build_plan(
     locale: Locale = "en",
 ) -> list[dict[str, Any]]:
     """Build a short task plan. Falls back to templates if LLM fails."""
-    if task_class.startswith("code.scaffold") or task_class.startswith("plan.scaffold"):
+    if task_class.startswith(("code.scaffold", "plan.scaffold")):
         fallback = _default_scaffold_plan(locale)
         max_tasks = 8
         min_tasks = 2
@@ -370,7 +367,7 @@ async def build_plan(
         for i, item in enumerate(parsed[:max_tasks]):
             if not isinstance(item, dict):
                 continue
-            tid = str(item.get("id") or f"task_{i+1}").strip()[:64]
+            tid = str(item.get("id") or f"task_{i + 1}").strip()[:64]
             title = str(item.get("title") or tid).strip()[:200]
             if not title:
                 continue
@@ -381,7 +378,7 @@ async def build_plan(
                 files = [str(p).strip()[:120] for p in files_raw if str(p).strip()][:8]
             out.append(
                 {
-                    "id": tid or f"task_{i+1}",
+                    "id": tid or f"task_{i + 1}",
                     "title": title,
                     "acceptance": acceptance,
                     "files": files,
@@ -397,8 +394,7 @@ async def build_plan(
                             "id": "coherence",
                             "title": "Passe cohérence finale App + CSS + DESIGN + Context API",
                             "acceptance": (
-                                "Provider keys = consumers; classes TSX↔CSS; "
-                                "createRoot; mount sans throw"
+                                "Provider keys = consumers; classes TSX↔CSS; createRoot; mount sans throw"
                             ),
                             "files": [
                                 "src/context",
@@ -416,8 +412,7 @@ async def build_plan(
                             "id": "coherence",
                             "title": "Final coherence pass App + CSS + DESIGN + Context API",
                             "acceptance": (
-                                "Provider keys match consumers; TSX↔CSS; "
-                                "named createRoot; mounts"
+                                "Provider keys match consumers; TSX↔CSS; named createRoot; mounts"
                             ),
                             "files": [
                                 "src/context",

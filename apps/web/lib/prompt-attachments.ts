@@ -252,7 +252,7 @@ function parseImageMarkerBody(body: string): {
   objectId: string | null;
 } {
   const parts = body.split("|").map((p) => p.trim()).filter(Boolean);
-  let name = parts[0] || "";
+  const name = parts[0] || "";
   let url: string | null = null;
   let objectId: string | null = null;
   for (const part of parts.slice(1)) {

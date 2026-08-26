@@ -24,18 +24,41 @@ def _manifest() -> dict:
 @lru_cache(maxsize=1)
 def allowed_packages() -> dict[str, str]:
     """package -> caret version pin, for every package in the shared manifest."""
-    return {
-        name: f"^{spec['version']}"
-        for name, spec in _manifest()["packages"].items()
-    }
+    return {name: f"^{spec['version']}" for name, spec in _manifest()["packages"].items()}
 
 
 @lru_cache(maxsize=1)
 def browser_packages() -> frozenset[str]:
     """Packages resolvable in the browser import map (subset of allowed)."""
-    return frozenset(
-        name for name, spec in _manifest()["packages"].items() if spec.get("browser")
-    )
+    return frozenset(name for name, spec in _manifest()["packages"].items() if spec.get("browser"))
+
+
+def _cdn_url(name: str, spec: dict, subpath: str = "") -> str:
+    manifest = _manifest()
+    base = f"{manifest['cdn']}/{name}@{spec['version']}"
+    path = f"/{subpath}" if subpath else ""
+    react = manifest["reactVersion"]
+    query = f"?deps=react@{react},react-dom@{react}" if spec.get("peerReact") else ""
+    return f"{base}{path}{query}"
+
+
+@lru_cache(maxsize=1)
+def browser_import_map() -> dict[str, str]:
+    """Specifier -> CDN URL, for the preview runner's <script type="importmap">.
+
+    Mirrors `runtime/importmap.mjs`; both read the same packages.json and CI
+    asserts they produce byte-identical maps. The runner shell used to carry a
+    hand-written copy of this map, which silently drifted: packages accepted by
+    the AST validator failed to resolve in the browser.
+    """
+    out: dict[str, str] = {}
+    for name, spec in _manifest()["packages"].items():
+        if not spec.get("browser"):
+            continue
+        out[name] = _cdn_url(name, spec)
+        for subpath in spec.get("subpaths", []):
+            out[f"{name}/{subpath}"] = _cdn_url(name, spec, subpath)
+    return out
 
 
 def package_version(package: str) -> str | None:
@@ -44,12 +67,7 @@ def package_version(package: str) -> str | None:
 
 
 def is_relative_or_alias(spec: str) -> bool:
-    return (
-        spec.startswith("./")
-        or spec.startswith("../")
-        or spec.startswith("/")
-        or spec.startswith("@/")
-    )
+    return spec.startswith(("./", "../", "/", "@/"))
 
 
 FORBIDDEN_BARE_PREFIXES = (

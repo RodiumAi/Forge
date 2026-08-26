@@ -6,6 +6,7 @@ so get_active_run can treat orphaned "running" rows as resumable.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 from typing import Any
@@ -48,9 +49,7 @@ def claim_run(run_id: str, ttl_seconds: int = 7200) -> bool:
     if client is None:
         return True  # no redis: allow in-process execution
     try:
-        return bool(
-            client.set(CLAIM_KEY.format(run_id=run_id), "1", nx=True, ex=ttl_seconds)
-        )
+        return bool(client.set(CLAIM_KEY.format(run_id=run_id), "1", nx=True, ex=ttl_seconds))
     except Exception:
         return True
 
@@ -59,10 +58,8 @@ def release_run(run_id: str) -> None:
     client = _redis()
     if client is None:
         return
-    try:
+    with contextlib.suppress(Exception):
         client.delete(CLAIM_KEY.format(run_id=run_id))
-    except Exception:
-        pass
 
 
 def enqueue_plan_run(run_id: str) -> bool:
@@ -115,10 +112,8 @@ def clear_run_events(run_id: str) -> None:
     client = _redis()
     if client is None:
         return
-    try:
+    with contextlib.suppress(Exception):
         client.delete(EVENTS_KEY.format(run_id=run_id))
-    except Exception:
-        pass
 
 
 def event_count(run_id: str) -> int:
@@ -135,10 +130,8 @@ def mark_cancelled(run_id: str) -> None:
     client = _redis()
     if client is None:
         return
-    try:
+    with contextlib.suppress(Exception):
         client.set(CANCEL_KEY.format(run_id=run_id), "1", ex=86400)
-    except Exception:
-        pass
 
 
 def is_cancelled_redis(run_id: str) -> bool:
@@ -155,7 +148,5 @@ def clear_cancelled_redis(run_id: str) -> None:
     client = _redis()
     if client is None:
         return
-    try:
+    with contextlib.suppress(Exception):
         client.delete(CANCEL_KEY.format(run_id=run_id))
-    except Exception:
-        pass
