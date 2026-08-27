@@ -17,8 +17,9 @@ import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from app.runtime_manifest import package_version
+from app.runtime_manifest import browser_packages, package_version
 from app.services.filesystem import project_dir
+from app.services.import_validator import bare_package, extract_import_specifiers
 
 SKIP_DIR_NAMES = {
     "node_modules",
@@ -207,14 +208,40 @@ _TSCONFIG = """{
 _IMPORTMAP_RE = re.compile(r"\s*<script type=\"importmap\">.*?</script>", re.DOTALL)
 
 _DEV_DEPENDENCIES = ("vite", "@vitejs/plugin-react", "typescript", "@types/react", "@types/react-dom")
+_SOURCE_SUFFIXES = {".ts", ".tsx", ".js", ".jsx", ".mjs"}
+
+
+def _discover_source_packages(front: Path) -> set[str]:
+    """Bare npm packages imported under front/src (or the whole frontend tree)."""
+    src = front / "src"
+    root = src if src.is_dir() else front
+    allow = browser_packages()
+    found: set[str] = set()
+    for path in root.rglob("*"):
+        if not path.is_file() or path.suffix.lower() not in _SOURCE_SUFFIXES:
+            continue
+        if any(part in SKIP_DIR_NAMES or part.startswith(".") for part in path.parts):
+            continue
+        try:
+            text = path.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        for spec in extract_import_specifiers(text):
+            pkg = bare_package(spec)
+            if pkg and pkg in allow:
+                found.add(pkg)
+    return found
 
 
 def _export_package_json(front: Path, project_name: str) -> str:
-    """Complete package.json: keep the project's deps, add scripts + toolchain.
+    """Complete package.json: sync deps from imports, pin Vite toolchain + scripts.
 
-    Inside Forge the app runs without npm at all, so the stored package.json has
-    neither scripts nor devDependencies; versions come from the same manifest
-    that feeds the import map and the AST allowlist.
+    Inside Forge the app runs without npm at all, so the stored package.json often
+    lacks scripts/devDependencies — and agents may drop runtime deps that the
+    preview still resolves via the CDN import map. Export must therefore:
+    1. keep declared dependencies
+    2. re-add every browser package actually imported in source
+    3. overwrite the Vite toolchain + scripts to known-good manifest pins
     """
     raw: dict = {}
     pkg_file = front / "package.json"
@@ -225,20 +252,30 @@ def _export_package_json(front: Path, project_name: str) -> str:
             raw = {}
 
     deps = dict(raw.get("dependencies") or {})
+    # Drop toolchain packages that sometimes land in dependencies by mistake.
+    for name in _DEV_DEPENDENCIES:
+        deps.pop(name, None)
+
     deps.setdefault("react", package_version("react") or "^18.3.1")
     deps.setdefault("react-dom", package_version("react-dom") or "^18.3.1")
+    for pkg in sorted(_discover_source_packages(front)):
+        deps.setdefault(pkg, package_version(pkg) or "latest")
 
-    dev = dict(raw.get("devDependencies") or {})
-    for name in _DEV_DEPENDENCIES:
-        dev.setdefault(name, package_version(name) or "latest")
+    # Always pin the local Vite toolchain from the shared manifest (don't keep a
+    # stale Vite 8 / broken `tsc -b` script an agent may have written).
+    dev = {
+        name: package_version(name) or "latest"
+        for name in _DEV_DEPENDENCIES
+    }
 
-    scripts = dict(raw.get("scripts") or {})
-    scripts.setdefault("dev", "vite")
-    # No tsc gate on build: generated code must always produce a site, and a
-    # separate `typecheck` script stays available for the curious.
-    scripts.setdefault("build", "vite build")
-    scripts.setdefault("preview", "vite preview")
-    scripts.setdefault("typecheck", "tsc --noEmit")
+    scripts = {
+        "dev": "vite",
+        # No tsc gate on build: generated code must always produce a site, and a
+        # separate `typecheck` script stays available for the curious.
+        "build": "vite build",
+        "preview": "vite preview",
+        "typecheck": "tsc --noEmit",
+    }
 
     slug = re.sub(r"[^a-z0-9-]+", "-", project_name.lower()).strip("-") or "forge-app"
     out = {
@@ -299,11 +336,11 @@ def frontend_overrides(front: Path, project_name: str) -> dict[str, str]:
     overrides: dict[str, str] = {
         "package.json": _export_package_json(front, project_name),
         "index.html": _export_index_html(front, project_name),
+        # Always ship a known-good Vite + TS config so exports don't inherit
+        # half-broken agent rewrites (e.g. Vite 8 + `tsc -b` without refs).
+        "vite.config.ts": _VITE_CONFIG,
+        "tsconfig.json": _TSCONFIG,
     }
-    if not (front / "vite.config.ts").is_file() and not (front / "vite.config.js").is_file():
-        overrides["vite.config.ts"] = _VITE_CONFIG
-    if not (front / "tsconfig.json").is_file():
-        overrides["tsconfig.json"] = _TSCONFIG
     return overrides
 
 

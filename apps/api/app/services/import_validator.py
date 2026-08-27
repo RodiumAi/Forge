@@ -35,13 +35,18 @@ class ImportViolation:
         }
 
 
-def _bare_package(spec: str) -> str | None:
+def bare_package(spec: str) -> str | None:
+    """Return the npm package name for a bare import specifier, or None."""
     if not spec or is_relative_or_alias(spec):
         return None
     if spec.startswith("node:"):
         return spec
     m = _PKG_NAME_RE.match(spec)
     return m.group(1) if m else spec
+
+
+def _bare_package(spec: str) -> str | None:
+    return bare_package(spec)
 
 
 def _extract_imports_regex(source: str) -> list[str]:

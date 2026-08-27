@@ -1,14 +1,43 @@
 import type { Metadata } from "next";
 import { TopProgressHost } from "@/components/TopProgressHost";
+import { LandingJsonLd } from "@/components/landing/LandingJsonLd";
 import { appFonts } from "@/lib/fonts";
 import { I18nProvider } from "@/lib/i18n/I18nProvider";
 import { ThemeProvider } from "@/lib/theme/ThemeProvider";
 import "highlight.js/styles/github-dark.css";
 import "./globals.css";
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || "http://localhost:3100";
+
+const titleDefault = "Forge by RodiumAi — Prototype en moins de 5 minutes";
+const description =
+  "Prototype ton projet web en moins de 5 minutes avec un seul prompt. Forge génère une vraie app React, preview live, templates et export — propulsé par RodiumAi.";
+
 export const metadata: Metadata = {
-  title: "Forge by RodiumAi",
-  description: "Build web apps with AI — powered by RodiumAi",
+  metadataBase: new URL(siteUrl),
+  applicationName: "Forge by RodiumAi",
+  title: {
+    default: titleDefault,
+    template: "%s · Forge by RodiumAi",
+  },
+  description,
+  keywords: [
+    "Forge",
+    "RodiumAi",
+    "AI web builder",
+    "prototype IA",
+    "générateur d'app React",
+    "Vite React AI",
+    "no-code AI",
+    "prompt to app",
+    "live preview",
+    "templates web",
+  ],
+  authors: [{ name: "RodiumAi", url: "https://rodiumai.io" }],
+  creator: "RodiumAi",
+  publisher: "RodiumAi",
+  category: "technology",
   icons: {
     icon: [
       { url: "/icon.png", type: "image/png", sizes: "any" },
@@ -16,6 +45,41 @@ export const metadata: Metadata = {
     ],
     apple: [{ url: "/icon.png", type: "image/png" }],
     shortcut: ["/icon.png"],
+  },
+  openGraph: {
+    type: "website",
+    url: siteUrl,
+    siteName: "Forge by RodiumAi",
+    title: titleDefault,
+    description,
+    locale: "fr_FR",
+    alternateLocale: ["en_US"],
+    images: [
+      {
+        url: "/og.png",
+        width: 1200,
+        height: 630,
+        alt: "Forge by RodiumAi — Prototype in minutes",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: titleDefault,
+    description,
+    images: ["/og.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, "max-image-preview": "large" },
+  },
+  alternates: {
+    canonical: "/",
+    languages: {
+      fr: "/",
+      en: "/",
+    },
   },
 };
 
@@ -31,6 +95,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        <LandingJsonLd siteUrl={siteUrl} />
       </head>
       <body>
         <ThemeProvider>
