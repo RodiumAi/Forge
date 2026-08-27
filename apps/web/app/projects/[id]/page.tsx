@@ -1627,7 +1627,7 @@ export default function ProjectPage() {
           setDesignOpen(true);
           syncBuilderUrl({ designOpen: true });
         }}
-        onOpenHistory={() => setHistoryOpen(true)}
+                onOpenHistory={() => setHistoryOpen((v) => !v)}
         onOpenDraftExternal={async () => {
           // Standalone draft page: the runner shell with the bundle embedded.
           // Opening the bare runner URL showed an empty page (it waits for a

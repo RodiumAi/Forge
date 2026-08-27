@@ -334,6 +334,19 @@ export function PublishPopover({
 
   const panel = open && mounted
     ? createPortal(
+        <>
+          {/* Real backdrop: a document-level mousedown listener never fires
+              when the click lands on the preview iframe (iframe events don't
+              bubble to the parent document), so the popover looked stuck. */}
+          <button
+            type="button"
+            className="publish-popover-backdrop"
+            aria-label={t("close")}
+            tabIndex={-1}
+            onClick={() => {
+              if (!busy && !exporting) setOpen(false);
+            }}
+          />
         <div
           ref={popoverRef}
           className={`publish-popover publish-popover-portal${busy ? " is-busy" : ""}`}
@@ -519,7 +532,8 @@ export function PublishPopover({
               )}
             </button>
           </div>
-        </div>,
+        </div>
+        </>,
         document.body,
       )
     : null;

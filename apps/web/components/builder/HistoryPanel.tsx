@@ -105,7 +105,21 @@ export function HistoryPanel({
   if (!open) return null;
 
   return (
-    <div className="history-panel" role="dialog" aria-modal="true" aria-label={t("historyTitle")}>
+    <div className="design-slideover-root">
+      {/* Backdrop: also catches clicks over the preview iframe, which never
+          reach a document-level listener. */}
+      <button
+        type="button"
+        className="design-slideover-backdrop"
+        aria-label={t("close")}
+        onClick={onClose}
+      />
+      <aside
+        className="design-slideover history-slideover"
+        role="dialog"
+        aria-modal="true"
+        aria-label={t("historyTitle")}
+      >
       <header className="history-panel-head">
         <span className="history-panel-title">
           <Icon icon={History} className="ui-icon-sm" />
@@ -159,6 +173,7 @@ export function HistoryPanel({
       )}
 
       {error ? <p className="history-panel-error">{error}</p> : null}
+      </aside>
     </div>
   );
 }
