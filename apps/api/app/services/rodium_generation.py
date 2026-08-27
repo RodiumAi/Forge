@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Literal
 
+import httpx
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
@@ -68,40 +70,79 @@ def store_oauth_tokens(row: UserSettings, tokens: dict) -> None:
     row.rodium_token_expires_at = datetime.now(UTC) + timedelta(seconds=max(expires_in - 60, 60))
 
 
+# One refresh at a time per user. Concurrent requests (chat + wallet + keys
+# fire together) used to race the token endpoint; with refresh-token rotation
+# the second call got invalid_grant, and the error handler wiped ALL tokens —
+# the user then saw "account is not linked" while still signed into Forge.
+_refresh_locks: dict[str, asyncio.Lock] = {}
+
+
+def _refresh_lock(user_id: str) -> asyncio.Lock:
+    lock = _refresh_locks.get(user_id)
+    if lock is None:
+        lock = _refresh_locks.setdefault(user_id, asyncio.Lock())
+    return lock
+
+
+def _token_expiry(row: UserSettings) -> datetime | None:
+    expires = row.rodium_token_expires_at
+    if expires is not None and expires.tzinfo is None:
+        expires = expires.replace(tzinfo=UTC)
+    return expires
+
+
 async def ensure_rodium_access_token(db: Session, user: User, row: UserSettings) -> str:
     if not row.rodium_access_token_encrypted:
         raise HTTPException(
             status_code=403,
             detail="RodiumAi account is not linked. Sign in with RodiumAi again.",
         )
-    access = decrypt_secret(row.rodium_access_token_encrypted)
-    expires = row.rodium_token_expires_at
-    if expires is not None and expires.tzinfo is None:
-        expires = expires.replace(tzinfo=UTC)
+    expires = _token_expiry(row)
     now = datetime.now(UTC)
     if expires and expires > now:
-        return access
-    if not row.rodium_refresh_token_encrypted:
-        raise HTTPException(
-            status_code=403,
-            detail="RodiumAi session expired. Sign in with RodiumAi again to continue generating.",
-        )
-    refresh = decrypt_secret(row.rodium_refresh_token_encrypted)
-    try:
-        tokens = await refresh_access_token(refresh)
-    except RodiumOidcError as exc:
-        # Invalid/expired refresh — clear so the UI can force a clean re-link.
-        row.rodium_access_token_encrypted = None
-        row.rodium_refresh_token_encrypted = None
-        row.rodium_token_expires_at = None
+        return decrypt_secret(row.rodium_access_token_encrypted)
+
+    async with _refresh_lock(str(user.id)):
+        # Another request may have refreshed while we waited for the lock.
+        db.refresh(row)
+        expires = _token_expiry(row)
+        if row.rodium_access_token_encrypted and expires and expires > datetime.now(UTC):
+            return decrypt_secret(row.rodium_access_token_encrypted)
+
+        if not row.rodium_refresh_token_encrypted:
+            raise HTTPException(
+                status_code=403,
+                detail="RodiumAi session expired. Sign in with RodiumAi again to continue generating.",
+            )
+        refresh = decrypt_secret(row.rodium_refresh_token_encrypted)
+        try:
+            tokens = await refresh_access_token(refresh)
+        except RodiumOidcError as exc:
+            if exc.status_code in (400, 401, 403):
+                # The gateway explicitly rejected the refresh token: clear so
+                # the UI can force a clean re-link.
+                row.rodium_access_token_encrypted = None
+                row.rodium_refresh_token_encrypted = None
+                row.rodium_token_expires_at = None
+                db.commit()
+                raise HTTPException(
+                    status_code=403,
+                    detail="RodiumAi session expired. Sign in with RodiumAi again to continue generating.",
+                ) from exc
+            # Gateway 5xx: transient — keep the tokens, ask the user to retry.
+            # Wiping here turned every gateway blip into a forced re-login.
+            raise HTTPException(
+                status_code=503,
+                detail="RodiumAi is temporarily unreachable. Retry in a moment.",
+            ) from exc
+        except httpx.HTTPError as exc:
+            raise HTTPException(
+                status_code=503,
+                detail="RodiumAi is temporarily unreachable. Retry in a moment.",
+            ) from exc
+        store_oauth_tokens(row, tokens)
         db.commit()
-        raise HTTPException(
-            status_code=403,
-            detail="RodiumAi session expired. Sign in with RodiumAi again to continue generating.",
-        ) from exc
-    store_oauth_tokens(row, tokens)
-    db.commit()
-    return decrypt_secret(row.rodium_access_token_encrypted or "")
+        return decrypt_secret(row.rodium_access_token_encrypted or "")
 
 
 def _keys_from_row(row: UserSettings) -> list:

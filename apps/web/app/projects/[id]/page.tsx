@@ -170,7 +170,7 @@ function friendlyStreamError(err: unknown, fallback: string, rodiumExpired: stri
     return fallback;
   }
   if (
-    /rodiumai session expired|sign in with rodiumai again|invalid_grant|refresh token is invalid|session rodiumai expir/i.test(
+    /rodiumai session expired|sign in with rodiumai again|account is not linked|invalid_grant|refresh token is invalid|session rodiumai expir/i.test(
       raw,
     )
   ) {
@@ -1255,8 +1255,14 @@ export default function ProjectPage() {
             logoutToHome("expired");
             return;
           }
-          if (res.status === 403 && /rodiumai session expired|sign in with rodiumai/i.test(detail)) {
-            throw new Error(detail);
+          if (
+            res.status === 403 &&
+            /account is not linked|rodiumai session expired|sign in with rodiumai/i.test(detail)
+          ) {
+            // Dead RodiumAI link: sign out so the next login re-links cleanly,
+            // instead of a signed-in UI where every prompt fails.
+            logoutToHome("expired");
+            return;
           }
           throw new Error(detail || res.statusText);
         }
