@@ -7321,3 +7321,99 @@ button.file-op-path:focus-visible { outline: 2px solid #f2620a; outline-offset: 
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* -- Assistant: collapsible file operations -- */
+.assistant-body { display: grid; gap: 0.5rem; }
+
+.file-op-block {
+  border: 1px solid var(--home-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  overflow: hidden;
+}
+
+.file-op-block.is-open { background: rgba(255, 255, 255, 0.035); }
+.file-op-block.is-delete { border-color: rgba(239, 68, 68, 0.28); }
+
+.file-op-block-head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding-right: 0.4rem;
+}
+
+.file-op-block-toggle {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--home-text);
+  padding: 0.45rem 0.55rem;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+
+.file-op-block-toggle:disabled { cursor: default; }
+.file-op-block-toggle:hover:not(:disabled) { background: rgba(255, 255, 255, 0.04); }
+.file-op-block-toggle:focus-visible { outline: 2px solid #f2620a; outline-offset: -2px; }
+
+.file-op-block-path {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.78rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-op-block.is-delete .file-op-block-path {
+  color: #fca5a5;
+  text-decoration: line-through;
+}
+
+.file-op-block-meta {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  color: var(--home-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.file-op-block-open {
+  flex-shrink: 0;
+  appearance: none;
+  border: 1px solid var(--home-border-strong);
+  background: transparent;
+  color: var(--home-muted);
+  border-radius: 6px;
+  padding: 0.2rem 0.45rem;
+  font-size: 0.7rem;
+  cursor: pointer;
+  opacity: 0;
+}
+
+.file-op-block:hover .file-op-block-open,
+.file-op-block-open:focus-visible { opacity: 1; }
+.file-op-block-open:hover { color: var(--home-text); background: var(--home-hover); }
+
+.file-op-block-code {
+  margin: 0;
+  padding: 0.6rem 0.8rem;
+  border-top: 1px solid var(--home-border);
+  background: #0d0d12;
+  font-size: 0.76rem;
+  line-height: 1.5;
+  max-height: 22rem;
+  overflow: auto;
+  white-space: pre;
+}
+
+.file-op-block-code code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: none;
+  padding: 0;
+}
