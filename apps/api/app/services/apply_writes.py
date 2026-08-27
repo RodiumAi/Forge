@@ -32,13 +32,26 @@ def is_locked_brand_path(path: str) -> bool:
     return bool(_LOCKED_BRAND_RE.match(rel))
 
 
-def _validate(path: str, content: str) -> list[ImportViolation]:
+def _validate(path: str, content: str, allowlist: dict[str, str] | None = None) -> list[ImportViolation]:
     try:
-        return run_cpu(validate_write_content, path, content)
+        return run_cpu(validate_write_content, path, content, allowlist)
     except Exception:
         # Pool/pickle failure — fall back to in-process validation.
         logger.warning("cpu pool validation failed for %s, running inline", path, exc_info=True)
-        return validate_write_content(path, content)
+        return validate_write_content(path, content, allowlist)
+
+
+def _batch_allowlist(project_id: str, writes: list[Any]) -> dict[str, str]:
+    """Allowlist = base manifest + project package.json deps + deps declared by
+    a package.json in THIS batch (the agent adds the dependency and imports it
+    in the same turn; disk-only validation would reject that batch)."""
+    from app.services.project_packages import project_allowed_packages, sanitize_batch_dependencies
+
+    allow = dict(project_allowed_packages(project_id))
+    for op in writes:
+        if str(getattr(op, "path", "") or "").strip().lstrip("/") == "package.json":
+            allow.update(sanitize_batch_dependencies(str(getattr(op, "content", "") or "")))
+    return allow
 
 
 def apply_validated_writes(
@@ -58,6 +71,7 @@ def apply_validated_writes(
     # --- Phase 1: validate everything, write nothing -------------------------
     accepted: list[tuple[str, str]] = []
     violations: list[dict] = []
+    allowlist = _batch_allowlist(project_id, writes)
 
     for op in writes:
         path = str(getattr(op, "path", "") or "")
@@ -77,7 +91,7 @@ def apply_validated_writes(
                 }
             )
             continue
-        found = _validate(path, content)
+        found = _validate(path, content, allowlist)
         if found:
             violations.extend(v.as_dict() for v in found)
             continue

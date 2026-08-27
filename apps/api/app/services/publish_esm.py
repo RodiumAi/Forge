@@ -25,11 +25,19 @@ def runtime_dir() -> Path:
 
 
 async def transform_project_to_dir(project_id: str, out_dir: Path, *, title: str = "Forge app") -> dict:
+    from app.services.project_packages import extra_import_map
+
     files = collect_project_source_files(project_id)
     # Drop DESIGN.md / AI_RULES from transform input (not JS)
     source = {k: v for k, v in files.items() if k.endswith((".tsx", ".ts", ".jsx", ".js", ".css"))}
     payload = json.dumps(
-        {"files": source, "entry": "src/main.tsx", "title": title},
+        {
+            "files": source,
+            "entry": "src/main.tsx",
+            "title": title,
+            # Project-declared dependencies ride into the published import map.
+            "extraImports": extra_import_map(project_id),
+        },
         ensure_ascii=False,
     )
     cli = runtime_dir() / "cli.mjs"

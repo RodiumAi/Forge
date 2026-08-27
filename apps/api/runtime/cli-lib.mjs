@@ -13,14 +13,20 @@ import { DEFAULT_CDN_IMPORTS } from "./importmap.mjs";
  * @param {Record<string, string>} files
  * @param {string} entry
  * @param {"preview"|"publish"} mode
+ * @param {Record<string, string>} [extraImports] project package.json deps
+ *   (import-map entries; keys ending in "/" are subpath prefixes)
  */
-export function buildGraph(files, entry, mode = "preview") {
+export function buildGraph(files, entry, mode = "preview", extraImports = {}) {
   /** @type {Map<string, { code: string, imports: any[] }>} */
   const transformed = new Map();
   /** @type {any[]} */
   const errors = [];
 
-  const allowedBare = new Set(Object.keys(DEFAULT_CDN_IMPORTS));
+  const importKeys = [...Object.keys(DEFAULT_CDN_IMPORTS), ...Object.keys(extraImports)];
+  const exactBare = new Set(importKeys);
+  const prefixBare = importKeys.filter((k) => k.endsWith("/"));
+  const isAllowedBare = (spec) =>
+    exactBare.has(spec) || prefixBare.some((prefix) => spec.startsWith(prefix));
 
   for (const [path, content] of Object.entries(files)) {
     if (!/\.(tsx|ts|jsx|js)$/i.test(path)) continue;
@@ -33,9 +39,9 @@ export function buildGraph(files, entry, mode = "preview") {
     }
     for (const imp of r.imports) {
       if (imp.kind !== "bare") continue;
-      // Allow subpath of a packaged root only when the exact key is in the map
-      // (e.g. react/jsx-runtime) — otherwise reject unknown packages.
-      if (!allowedBare.has(imp.specifier)) {
+      // Exact key in the map (e.g. react/jsx-runtime) or a declared package's
+      // subpath prefix — otherwise reject unknown packages.
+      if (!isAllowedBare(imp.specifier)) {
         errors.push({
           path,
           message: `IMPORT_NOT_IN_MANIFEST: "${imp.specifier}" is not in the CDN import map`,

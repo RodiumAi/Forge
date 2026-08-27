@@ -349,19 +349,22 @@ async function mount(files, entry, tokensCss, assets) {
   const tokensEl = document.getElementById("forge-tokens");
   if (tokensEl && tokensCss) tokensEl.textContent = tokensCss;
 
-  const ALLOWED_BARE = new Set([
-    "react",
-    "react-dom",
-    "react-dom/client",
-    "react/jsx-runtime",
-    "react/jsx-dev-runtime",
-    "lucide-react",
-    "react-router-dom",
-    "@tanstack/react-query",
-    "zod",
-    "clsx",
-    "date-fns",
-  ]);
+  // The allowlist IS the document's import map — base manifest plus the
+  // project's own package.json dependencies injected by the shell (?p=).
+  // The hardcoded set it replaces drifted from the manifest and rejected
+  // packages the user had legitimately declared.
+  const importMapKeys = (() => {
+    try {
+      const el = document.getElementById("forge-importmap");
+      return Object.keys(JSON.parse(el?.textContent || "{}").imports || {});
+    } catch {
+      return [];
+    }
+  })();
+  const exactBare = new Set(importMapKeys);
+  const prefixBare = importMapKeys.filter((k) => k.endsWith("/"));
+  const isAllowedBare = (spec) =>
+    exactBare.has(spec) || prefixBare.some((prefix) => spec.startsWith(prefix));
 
   const transformed = new Map();
   for (const [path, content] of Object.entries(files)) {
@@ -373,12 +376,14 @@ async function mount(files, entry, tokensCss, assets) {
       return;
     }
     for (const imp of r.imports || []) {
-      if (imp.kind === "bare" && !ALLOWED_BARE.has(imp.specifier)) {
+      if (imp.kind === "bare" && !isAllowedBare(imp.specifier)) {
         send({
           type: "forge:transform-error",
           error: {
             path,
-            message: `IMPORT_NOT_IN_MANIFEST: "${imp.specifier}" is not in the CDN import map`,
+            message:
+              `IMPORT_NOT_IN_MANIFEST: "${imp.specifier}" is not available — ` +
+              'declare it in package.json "dependencies" to make it importable',
           },
         });
         return;

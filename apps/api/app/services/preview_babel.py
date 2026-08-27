@@ -19,13 +19,22 @@ def runtime_public_dir() -> Path:
     return Path(__file__).resolve().parents[2] / "runtime" / "public"
 
 
-def runner_url() -> str:
+def runner_url(project_id: str | None = None) -> str:
     settings = get_settings()
     base = settings.api_base_url.rstrip("/")
-    return f"{base}/runner/"
+    # ?p= extends the shell's import map with the project's own package.json
+    # dependencies — import maps cannot be modified after document load, so
+    # the extension has to happen at shell render time.
+    suffix = f"?p={project_id}" if project_id else ""
+    return f"{base}/runner/{suffix}"
 
 
-def render_runner_shell(bundle: dict | None = None, *, thumb: bool = False) -> str:
+def render_runner_shell(
+    bundle: dict | None = None,
+    *,
+    thumb: bool = False,
+    extra_imports: dict[str, str] | None = None,
+) -> str:
     """Build the preview shell HTML.
 
     Served dynamically rather than as a static file because three things must be
@@ -46,7 +55,7 @@ def render_runner_shell(bundle: dict | None = None, *, thumb: bool = False) -> s
     from app.runtime_manifest import browser_import_map
 
     settings = get_settings()
-    import_map = json.dumps({"imports": browser_import_map()}, indent=2)
+    import_map = json.dumps({"imports": {**browser_import_map(), **(extra_imports or {})}}, indent=2)
     origins = json.dumps(settings.runner_parent_origins)
     draft = ""
     if bundle:
