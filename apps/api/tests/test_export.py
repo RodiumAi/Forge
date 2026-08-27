@@ -46,6 +46,50 @@ class TestPackageJson:
         assert "react" in pkg["dependencies"]
         assert "lucide-react" in pkg["dependencies"]
 
+    def test_build_script_is_not_gated_on_tsc(self, exported):
+        files, _ = exported
+        pkg = json.loads(files["package.json"])
+        assert pkg["scripts"]["build"] == "vite build"
+        assert "tsc -b" not in pkg["scripts"]["build"]
+        assert pkg["devDependencies"]["vite"].startswith("^5.")
+
+    def test_resyncs_deps_from_source_even_if_package_json_dropped_them(self, project):
+        scaffold_vite_react(project, "Portfolio")
+
+        from app.services.filesystem import project_dir
+
+        root = project_dir(project)
+        # Simulate an agent rewrite that keeps the import but drops the dep.
+        (root / "package.json").write_text(
+            json.dumps(
+                {
+                    "name": "broken-export",
+                    "private": True,
+                    "dependencies": {"react": "^18.3.1", "react-dom": "^18.3.1"},
+                    "scripts": {"build": "tsc -b && vite build"},
+                    "devDependencies": {"vite": "^8.2.2"},
+                }
+            ),
+            encoding="utf-8",
+        )
+        app = root / "src" / "App.tsx"
+        app.write_text(
+            'import { Sparkles } from "lucide-react";\n'
+            'import { z } from "zod";\n'
+            "export default function App() { return <div>{String(z)}{String(Sparkles)}</div>; }\n",
+            encoding="utf-8",
+        )
+
+        data, _ = build_export_zip(project_id=project, project_name="Portfolio", locale="en")
+        with zipfile.ZipFile(io.BytesIO(data)) as zf:
+            pkg = json.loads(zf.read("package.json"))
+
+        assert pkg["dependencies"]["lucide-react"].startswith("^")
+        assert pkg["dependencies"]["zod"].startswith("^")
+        assert pkg["scripts"]["build"] == "vite build"
+        assert pkg["devDependencies"]["vite"].startswith("^5.")
+        assert "vite" not in pkg["dependencies"]
+
 
 class TestIndexHtml:
     def test_no_esm_sh_import_map(self, exported):
