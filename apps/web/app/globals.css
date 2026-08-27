@@ -44,55 +44,62 @@ html.forge-fonts-fallback {
   --body-gradient: radial-gradient(1200px 600px at 10% -10%, #1a0f08 0%, var(--bg) 55%);
 }
 
-/* Fixed top loading indicator (route + preview / async work). */
-.forge-top-progress {
+/* Global activity indicator (route + preview / async work).
+   A discreet top-right spinner pill — replaced the full-width 3px bar, which
+   read as "the whole page is loading" on every small background action. */
+.forge-top-loader {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
+  top: 72px;
+  right: 18px;
   z-index: 9999;
   pointer-events: none;
-  background: transparent;
-  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: rgba(18, 18, 20, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(6px);
+  animation: forge-top-loader-in 0.18s ease-out;
 }
 
-.forge-top-progress-bar {
-  position: relative;
-  height: 100%;
-  width: 100%;
-  transform-origin: left center;
-  transform: scaleX(0.02);
-  background: linear-gradient(90deg, #f2620a 0%, #ff8a3d 55%, #ffc08a 100%);
-  box-shadow: 0 0 12px rgba(242, 98, 10, 0.55);
-  transition: transform 0.2s ease-out;
+[data-theme="light"] .forge-top-loader {
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.14);
 }
 
-.forge-top-progress.is-done .forge-top-progress-bar {
-  transition: transform 0.18s ease-in, opacity 0.25s ease;
+.forge-top-loader.is-done {
   opacity: 0;
+  transition: opacity 0.22s ease;
 }
 
-.forge-top-progress-bar::after {
-  content: "";
-  position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  width: 80px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55));
-  animation: forge-top-progress-shine 1s linear infinite;
+.forge-top-loader-spinner {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgba(242, 98, 10, 0.22);
+  border-top-color: #f2620a;
+  animation: forge-top-loader-spin 0.7s linear infinite;
 }
 
-@keyframes forge-top-progress-shine {
-  from {
-    opacity: 0.35;
+@keyframes forge-top-loader-spin {
+  to {
+    transform: rotate(360deg);
   }
-  50% {
-    opacity: 1;
+}
+
+@keyframes forge-top-loader-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.9);
   }
   to {
-    opacity: 0.35;
+    opacity: 1;
+    transform: none;
   }
 }
 
@@ -5805,6 +5812,29 @@ html:has(.builder) body {
 }
 
 /* Connector detail skeletons */
+.home-card-skel {
+  pointer-events: none;
+  cursor: default;
+}
+
+.home-card-skel-thumb {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border-radius: 0;
+  border-bottom: 1px solid var(--home-border);
+}
+
+.home-card-skel-title {
+  height: 0.95rem;
+  width: 62%;
+  margin-bottom: 0.45rem;
+}
+
+.home-card-skel-meta {
+  height: 0.75rem;
+  width: 42%;
+}
+
 .home-skel {
   position: relative;
   overflow: hidden;

@@ -24,7 +24,9 @@ function isInternalHref(href: string): boolean {
 }
 
 /**
- * Fixed top loading bar for route changes and explicit loads (preview, etc.).
+ * Global activity indicator for route changes and explicit loads (preview,
+ * publish, generation…). Renders as a discreet top-right spinner pill: the old
+ * full-width top bar suggested a whole-page load on every background action.
  */
 export function TopProgressBar() {
   const pathname = usePathname();
@@ -90,17 +92,12 @@ export function TopProgressBar() {
 
   return (
     <div
-      className={`forge-top-progress${state.value >= 1 ? " is-done" : ""}`}
-      role="progressbar"
-      aria-valuemin={0}
-      aria-valuemax={100}
-      aria-valuenow={Math.round(state.value * 100)}
-      aria-hidden={!visible}
+      className={`forge-top-loader${state.value >= 1 ? " is-done" : ""}`}
+      role="status"
+      aria-live="polite"
+      aria-label="Loading"
     >
-      <div
-        className="forge-top-progress-bar"
-        style={{ transform: `scaleX(${Math.max(0.02, state.value)})` }}
-      />
+      <span className="forge-top-loader-spinner" />
     </div>
   );
 }

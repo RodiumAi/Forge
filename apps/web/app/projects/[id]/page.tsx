@@ -338,7 +338,8 @@ export default function ProjectPage() {
     startPreview,
     forcePreviewRefresh,
     schedulePreviewRefresh,
-    flashUpdating,
+    repushPreview,
+    renderNonce,
   } = usePreviewControl({
     projectId,
     loading,
@@ -2035,6 +2036,7 @@ export default function ProjectPage() {
             previewTool={previewTool}
             projectId={projectId}
             remountKey={previewKey}
+            renderNonce={renderNonce}
             onPreviewToolChange={(tool) => {
               setPreviewTool(tool);
               syncBuilderUrl({ previewTool: tool });
@@ -2053,7 +2055,7 @@ export default function ProjectPage() {
             onImageSelect={(sel) => setImageSelection(sel)}
             onVisualEdit={async (oldText, newText) => {
               try {
-                const res = await api<{ path: string }>(
+                await api<{ path: string }>(
                   `/projects/${projectId}/visual-edit`,
                   {
                     method: "POST",
@@ -2061,10 +2063,10 @@ export default function ProjectPage() {
                   },
                 );
                 setError(null);
-                void forcePreviewRefresh({ softStart: true, remount: true });
-                if (res?.path) {
-                  flashUpdating();
-                }
+                // The bridge already patched the text in place; a soft bundle
+                // re-push keeps code and DOM in sync without the hard iframe
+                // reload that flashed blank and lit the global loader.
+                repushPreview();
               } catch (err) {
                 pushChatError(
                   err instanceof Error ? err.message : t("visualEditFailed"),
@@ -2089,8 +2091,7 @@ export default function ProjectPage() {
                     setImageSelection(null);
                   }}
                   onReplaced={() => {
-                    void forcePreviewRefresh({ softStart: true, remount: true });
-                    flashUpdating();
+                    repushPreview();
                   }}
                 />
               ) : null

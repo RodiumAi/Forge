@@ -16,6 +16,11 @@ type Props = {
   previewPath?: string;
   viewport: ViewportMode;
   previewUpdating: boolean;
+  /**
+   * Bump to re-post the source bundle into the live runner (soft sync after a
+   * visual edit) — no iframe reload, no shell/Babel refetch, no blank flash.
+   */
+  renderNonce?: number;
   previewBusy: boolean;
   previewLiveStatus?: string | null;
   previewTool: PreviewTool | null;
@@ -63,6 +68,7 @@ export function PreviewPane({
   previewPath = "/",
   viewport,
   previewUpdating,
+  renderNonce = 0,
   previewBusy,
   previewLiveStatus = null,
   previewTool,
@@ -173,7 +179,8 @@ export function PreviewPane({
       window.removeEventListener("message", onMessage);
       window.clearTimeout(t);
     };
-  }, [previewSrc, projectId, remountKey]);
+    // renderNonce: soft sync — same iframe, fresh bundle push.
+  }, [previewSrc, projectId, remountKey, renderNonce]);
 
   useEffect(() => {
     setLoadError(false);

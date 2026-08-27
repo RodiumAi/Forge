@@ -479,9 +479,20 @@ function DashboardInner() {
         {error && error !== t("createNeedsKey") && (
           <p className="error home-panel-error">{error}</p>
         )}
-        {loading && <p className="home-panel-empty">{t("loading")}</p>}
 
-        {showTemplates ? (
+        {loading ? (
+          <div className="home-grid home-grid-3" aria-busy="true" aria-label={t("loading")}>
+            {Array.from({ length: 6 }, (_, i) => (
+              <div key={i} className="home-card home-card-skel" aria-hidden>
+                <div className="home-skel home-card-skel-thumb" />
+                <div className="home-card-body">
+                  <div className="home-skel home-card-skel-title" />
+                  <div className="home-skel home-card-skel-meta" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : showTemplates ? (
           <>
             <div className="home-grid home-grid-3">
               {filteredTemplates.map((tpl) => (
@@ -508,7 +519,7 @@ function DashboardInner() {
                 </button>
               ))}
             </div>
-            {!loading && filteredTemplates.length === 0 && (
+            {filteredTemplates.length === 0 && (
               <p className="home-panel-empty">{t("noTemplates")}</p>
             )}
           </>
@@ -532,7 +543,7 @@ function DashboardInner() {
                       title={p.name}
                       className="home-card-thumb"
                     />
-                      <div className="home-card-body">
+                    <div className="home-card-body">
                       <strong>{p.name}</strong>
                       <span>
                         {p.slug}
@@ -553,7 +564,7 @@ function DashboardInner() {
                 );
               })}
             </div>
-            {!loading && filteredProjects.length === 0 && (
+            {filteredProjects.length === 0 && (
               <p className="home-panel-empty">{t("noProjects")}</p>
             )}
           </>
@@ -563,9 +574,25 @@ function DashboardInner() {
   );
 }
 
+function DashboardSuspenseFallback() {
+  return (
+    <div className="home-grid home-grid-3" style={{ padding: "1.5rem" }} aria-busy="true">
+      {Array.from({ length: 6 }, (_, i) => (
+        <div key={i} className="home-card home-card-skel" aria-hidden>
+          <div className="home-skel home-card-skel-thumb" />
+          <div className="home-card-body">
+            <div className="home-skel home-card-skel-title" />
+            <div className="home-skel home-card-skel-meta" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<DashboardSuspenseFallback />}>
       <DashboardInner />
     </Suspense>
   );
