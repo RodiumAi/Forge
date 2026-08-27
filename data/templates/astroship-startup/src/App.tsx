@@ -32,11 +32,11 @@ export default function App() {
       </header>
 
       <section className="hero container">
-        <div className="hero-art" aria-hidden="true">
-          <div className="orbit" />
-          <div className="planet" />
-          <div className="spark spark-a" />
-          <div className="spark spark-b" />
+        <div className="hero-art">
+          <img
+            src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&q=70"
+            alt="Analytics dashboard showing product metrics on a screen"
+          />
         </div>
         <div className="hero-copy">
           <h1>Ship your startup site before lunch</h1>
@@ -83,6 +83,13 @@ export default function App() {
       </section>
 
       <section className="cta container">
+        <div className="cta-visual">
+          <img
+            src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&q=70"
+            alt="Laptop displaying growth charts on a desk"
+            loading="lazy"
+          />
+        </div>
         <div className="cta-box">
           <h2>Build faster. Launch sooner.</h2>
           <p>Spin up a polished marketing site today and iterate as your product finds its audience.</p>

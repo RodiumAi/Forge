@@ -56,10 +56,13 @@ a { text-decoration: none; color: inherit; }
 .top-actions { display: flex; align-items: center; gap: 16px; }
 .bell { cursor: pointer; }
 .avatar {
-  width: 36px; height: 36px; border-radius: 50%; background: var(--accent);
+  width: 36px; height: 36px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), #1e40af);
   color: #fff; font-weight: 700; font-size: 0.8rem;
   display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
 }
+.avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 
 .content { padding: 24px; max-width: 1100px; width: 100%; }
 .page-title { font-size: 1.5rem; }
@@ -104,6 +107,12 @@ a { text-decoration: none; color: inherit; }
 .data-table td { padding: 11px 12px; border-bottom: 1px solid #f1f5f9; }
 .data-table tr:hover td { background: #f8fafc; }
 .mono { font-family: Consolas, monospace; color: var(--muted); }
+
+.customer-cell { display: inline-flex; align-items: center; gap: 8px; }
+.table-avatar {
+  width: 24px; height: 24px; border-radius: 50%; object-fit: cover;
+  background: linear-gradient(135deg, #e2e8f0, #cbd5e1); flex-shrink: 0;
+}
 
 .status { padding: 3px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
 .status-paid { background: #dcfce7; color: #166534; }

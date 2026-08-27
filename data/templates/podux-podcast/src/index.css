@@ -69,10 +69,12 @@ body {
   justify-content: center;
   overflow: hidden;
 }
-.wave {
+.hero-img {
   position: absolute;
   inset: 0;
-  background: repeating-linear-gradient(90deg, transparent 0 14px, rgba(255,255,255,0.12) 14px 18px);
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 .hero-play {
   background: #fff;
@@ -103,7 +105,8 @@ body {
   box-shadow: 0 2px 10px rgba(24, 19, 48, 0.06);
 }
 .ep-num { color: var(--muted); font-weight: 700; width: 2ch; }
-.ep-cover { width: 56px; height: 56px; border-radius: 10px; flex-shrink: 0; }
+.ep-cover { width: 56px; height: 56px; border-radius: 10px; flex-shrink: 0; overflow: hidden; }
+.ep-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .ep-info { flex: 1; }
 .ep-info h3 { font-size: 1rem; }
 .dur {
@@ -140,7 +143,9 @@ body {
   color: #fff;
   font-weight: 800;
   font-size: 1.2rem;
+  overflow: hidden;
 }
+.avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 .host p { color: var(--muted); font-size: 0.9rem; }
 
 .subscribe {

@@ -30,19 +30,25 @@ const PROJECTS = [
     name: "Driftlog",
     tags: ["TypeScript", "React", "SQLite"],
     blurb: "An offline-first field notebook for research teams. Entries sync when a connection returns and merge without conflicts.",
-    gradient: "linear-gradient(150deg, #134e4a, #0f2942 85%)"
+    gradient: "linear-gradient(150deg, #134e4a, #0f2942 85%)",
+    thumb: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=800&q=70",
+    alt: "Code editor showing colorful source code on a dark screen"
   },
   {
     name: "Quorum Board",
     tags: ["Next.js", "Postgres", "WebSockets"],
     blurb: "A lightweight decision-tracking board for distributed teams: proposals, votes and a permanent audit trail.",
-    gradient: "linear-gradient(160deg, #3b2f5e, #101726 85%)"
+    gradient: "linear-gradient(160deg, #3b2f5e, #101726 85%)",
+    thumb: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?auto=format&fit=crop&w=800&q=70",
+    alt: "Laptop screen displaying a programming environment"
   },
   {
     name: "Pinch Metrics",
     tags: ["Node.js", "ClickHouse", "D3"],
     blurb: "Self-hosted product analytics that fits in a single container and answers questions in under a second.",
-    gradient: "linear-gradient(140deg, #7c3f2d, #1a1420 85%)"
+    gradient: "linear-gradient(140deg, #7c3f2d, #1a1420 85%)",
+    thumb: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=800&q=70",
+    alt: "MacBook with lines of code on the screen in a dim room"
   }
 ];
 
@@ -66,13 +72,17 @@ const TESTIMONIALS = [
     quote: "Mira turns vague requirements into systems that quietly keep working. Half our tooling still carries her fingerprints.",
     name: "Devon Aker",
     role: "Engineering Manager, Northwind Systems",
-    gradient: "linear-gradient(135deg, #5eead4, #2563eb)"
+    gradient: "linear-gradient(135deg, #5eead4, #2563eb)",
+    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=70",
+    alt: "Portrait of Devon Aker smiling"
   },
   {
     quote: "She reviews code the way good editors review prose: firmly, kindly, and always making the whole thing sharper.",
     name: "Priya Ranganathan",
     role: "Staff Engineer, Cobalt Harbor Labs",
-    gradient: "linear-gradient(135deg, #f0abfc, #7c3aed)"
+    gradient: "linear-gradient(135deg, #f0abfc, #7c3aed)",
+    avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=400&q=70",
+    alt: "Portrait of Priya Ranganathan smiling"
   }
 ];
 
@@ -94,7 +104,12 @@ export default function App() {
       </header>
 
       <section className="hero">
-        <div className="avatar" aria-hidden="true" />
+        <div className="avatar">
+          <img
+            src="https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=400&q=70"
+            alt="Portrait of Mira Solano"
+          />
+        </div>
         <h1>Hi, I&apos;m Mira Solano</h1>
         <p className="hero-sub">
           I build calm, dependable software for teams that ship every week.
@@ -127,7 +142,9 @@ export default function App() {
         <div className="projects">
           {PROJECTS.map((proj) => (
             <article key={proj.name} className="card">
-              <div className="card-thumb" style={{ background: proj.gradient }} />
+              <div className="card-thumb" style={{ background: proj.gradient }}>
+                <img src={proj.thumb} alt={proj.alt} loading="lazy" />
+              </div>
               <div className="card-body">
                 <h3>{proj.name}</h3>
                 <div className="tags">
@@ -165,7 +182,9 @@ export default function App() {
             <blockquote key={t.name} className="quote">
               <p>&quot;{t.quote}&quot;</p>
               <footer className="quote-foot">
-                <span className="quote-avatar" style={{ background: t.gradient }} />
+                <span className="quote-avatar" style={{ background: t.gradient }}>
+                  <img src={t.avatar} alt={t.alt} loading="lazy" />
+                </span>
                 <span>
                   <strong>{t.name}</strong>
                   <em className="muted"> — {t.role}</em>

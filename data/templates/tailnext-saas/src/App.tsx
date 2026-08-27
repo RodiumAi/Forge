@@ -27,6 +27,21 @@ const plans = [
 
 const partners = ["Northbeam", "Kitefox", "Lumora", "Draftly", "Quanta", "Heliodor"];
 
+const gallery = [
+  {
+    src: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=800&q=70",
+    alt: "Team gathered around laptops during a product planning session",
+  },
+  {
+    src: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=800&q=70",
+    alt: "Laptop showing source code during a release build",
+  },
+  {
+    src: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=800&q=70",
+    alt: "Team collaborating at a shared desk in a bright office",
+  },
+];
+
 export default function App() {
   return (
     <div className="page">
@@ -53,26 +68,26 @@ export default function App() {
             <a className="btn btn-ghost" href="#features">See how it works</a>
           </div>
         </div>
-        <div className="hero-visual" aria-hidden="true">
-          <div className="mock-card">
-            <div className="mock-row wide"></div>
-            <div className="mock-row"></div>
-            <div className="mock-row short"></div>
-            <div className="mock-chart">
-              <span style={{ height: "30%" }}></span>
-              <span style={{ height: "55%" }}></span>
-              <span style={{ height: "42%" }}></span>
-              <span style={{ height: "78%" }}></span>
-              <span style={{ height: "64%" }}></span>
-              <span style={{ height: "92%" }}></span>
-            </div>
-          </div>
+        <div className="hero-visual">
+          <img
+            className="hero-photo"
+            src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&q=70"
+            alt="Laptop displaying analytics charts on a desk"
+          />
         </div>
       </section>
 
       <section className="logos" aria-label="Trusted by">
         {partners.map((p) => (
           <span key={p} className="logo-pill">{p}</span>
+        ))}
+      </section>
+
+      <section className="gallery" aria-label="Product in use">
+        {gallery.map((img) => (
+          <figure key={img.src} className="gallery-item">
+            <img src={img.src} alt={img.alt} loading="lazy" />
+          </figure>
         ))}
       </section>
 

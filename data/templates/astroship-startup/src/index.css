@@ -63,20 +63,13 @@ a { text-decoration: none; color: inherit; }
   background: radial-gradient(circle at 70% 30%, var(--soft), #f8fafc 70%);
   overflow: hidden;
 }
-.orbit {
-  position: absolute; inset: 40px;
-  border: 2px dashed #c7d2fe; border-radius: 50%;
+.hero-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 24px;
 }
-.planet {
-  position: absolute; top: 50%; left: 50%;
-  width: 120px; height: 120px; margin: -60px 0 0 -60px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent), #818cf8);
-  box-shadow: 0 20px 50px rgba(79, 70, 229, 0.35);
-}
-.spark { position: absolute; border-radius: 50%; background: var(--accent); }
-.spark-a { width: 14px; height: 14px; top: 18%; right: 22%; opacity: 0.6; }
-.spark-b { width: 8px; height: 8px; bottom: 22%; left: 18%; opacity: 0.4; }
 
 /* Logos */
 .logos { padding: 24px 0 56px; text-align: center; }
@@ -107,10 +100,22 @@ a { text-decoration: none; color: inherit; }
 
 /* CTA */
 .cta { padding-bottom: 72px; }
+.cta-visual {
+  aspect-ratio: 21 / 9;
+  border-radius: 20px 20px 0 0;
+  background: radial-gradient(circle at 70% 30%, var(--soft), #f8fafc 70%);
+  overflow: hidden;
+}
+.cta-visual img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
 .cta-box {
   background: var(--fg);
   color: #fff;
-  border-radius: 20px;
+  border-radius: 0 0 20px 20px;
   text-align: center;
   padding: 64px 32px;
 }
