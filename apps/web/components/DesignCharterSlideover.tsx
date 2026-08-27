@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useId, useMemo, useRef, useState } from "react";
 import { ImagePlus, Palette, X } from "lucide-react";
 import { api, apiBase, getToken } from "@/lib/api";
+import { parseCharterPalette, parseCharterTone } from "@/lib/design-charter";
 import { Icon } from "@/components/ui/icon";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 
@@ -94,6 +95,8 @@ export function DesignCharterSlideover({ projectId, open, onClose }: Props) {
     () => persistedLogoUrl(projectId, existingLogoPath, logoBust),
     [projectId, existingLogoPath, logoBust],
   );
+  const palette = useMemo(() => parseCharterPalette(markdown), [markdown]);
+  const tone = useMemo(() => parseCharterTone(markdown), [markdown]);
 
   if (!open) return null;
 
@@ -329,6 +332,19 @@ export function DesignCharterSlideover({ projectId, open, onClose }: Props) {
           </form>
 
           <div className="design-preview">
+            {palette.length > 0 && (
+              <div className="design-palette" aria-label={t("designPalette")}>
+                {palette.map((c) => (
+                  <span key={c.name} className="design-swatch" title={`--${c.name}: ${c.hex}`}>
+                    <i style={{ background: c.hex }} aria-hidden />
+                    <small>
+                      {c.name} · {c.hex}
+                    </small>
+                  </span>
+                ))}
+              </div>
+            )}
+            {tone && <p className="design-tone">{tone}</p>}
             <label className="design-label">
               {t("designContent")}
               <p className="design-logo-hint">{t("designContentHint")}</p>

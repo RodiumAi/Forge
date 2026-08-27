@@ -2031,6 +2031,11 @@ export default function ProjectPage() {
             }}
             onCommentAnchor={(sel) => setCommentAnchor(sel)}
             onImageSelect={(sel) => setImageSelection(sel)}
+            onPreviewPathChange={(path) => {
+              setPreviewPath(path);
+              setPages((prev) => (prev.includes(path) ? prev : [...prev, path].sort((a, b) => (a === "/" ? -1 : b === "/" ? 1 : a.localeCompare(b)))));
+              syncBuilderUrl({ previewPath: path });
+            }}
             onVisualEdit={async (oldText, newText) => {
               try {
                 await api<{ path: string }>(

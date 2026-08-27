@@ -127,6 +127,7 @@ def preview_start(
     db.commit()
     return _status(project, running=True)
 
+
 @router.post("/projects/{project_id}/preview/restart", response_model=PreviewStatus)
 def preview_restart(
     project_id: UUID,

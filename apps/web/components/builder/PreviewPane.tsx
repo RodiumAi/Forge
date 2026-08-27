@@ -33,6 +33,8 @@ type Props = {
   onElementSelect?: (sel: ElementSelection) => void;
   onCommentAnchor?: (sel: ElementSelection) => void;
   onImageSelect?: (sel: ImageSelection) => void;
+  /** Fired when the preview app navigates (hash / history) so the page picker can sync. */
+  onPreviewPathChange?: (path: string) => void;
   sidePanel?: ReactNode;
 };
 
@@ -81,6 +83,7 @@ export function PreviewPane({
   onElementSelect,
   onCommentAnchor,
   onImageSelect,
+  onPreviewPathChange,
   sidePanel,
 }: Props) {
   const { t } = useI18n();
@@ -99,11 +102,15 @@ export function PreviewPane({
   const onElementSelectRef = useRef(onElementSelect);
   const onCommentAnchorRef = useRef(onCommentAnchor);
   const onImageSelectRef = useRef(onImageSelect);
+  const onPreviewPathChangeRef = useRef(onPreviewPathChange);
+  const previewPathRef = useRef(previewPath);
   const navigateRetryTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   onVisualEditRef.current = onVisualEdit;
   onElementSelectRef.current = onElementSelect;
   onCommentAnchorRef.current = onCommentAnchor;
   onImageSelectRef.current = onImageSelect;
+  onPreviewPathChangeRef.current = onPreviewPathChange;
+  previewPathRef.current = previewPath;
   desiredToolRef.current = previewTool;
 
   const runnerReadyRef = useRef(false);
@@ -371,6 +378,14 @@ export function PreviewPane({
           alt: typeof data.alt === "string" ? data.alt : "",
           selector: typeof data.selector === "string" ? data.selector : "",
         });
+        return;
+      }
+
+      if (type === "forge-preview-location") {
+        const path = typeof data.path === "string" ? data.path : "";
+        if (!path) return;
+        if (path === previewPathRef.current) return;
+        onPreviewPathChangeRef.current?.(path);
       }
     }
     window.addEventListener("message", onMessage);
