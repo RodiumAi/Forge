@@ -6,7 +6,7 @@ from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import Any
 
 from app.i18n import Locale, t
-from app.services.apply_writes import apply_validated_writes
+from app.services.apply_writes import apply_validated_writes_async
 from app.services.filesystem import delete_file
 from app.services.llm import RodiumError, is_transient_network_error, stream_chat_completion
 from app.services.orchestration.context import build_llm_messages
@@ -319,7 +319,9 @@ async def run_plan_tasks(
         yield push_step("apply_writes", t("step_apply_writes", locale), "running")
         assistant_text = "".join(task_buf)
         writes, deletes = parse_forge_tags(assistant_text)
-        written, violations = apply_validated_writes(project_id, writes, snapshot_label=f"before: {title}")
+        written, violations = await apply_validated_writes_async(
+            project_id, writes, snapshot_label=f"before: {title}"
+        )
         applied.extend(written)
         for item in written:
             yield _sse({"type": "file_write", "path": item["path"]})
@@ -403,7 +405,7 @@ async def run_plan_tasks(
                             full.append(chunk.content)
                             yield _sse({"type": "token", "content": chunk.content})
                     writes, deletes = parse_forge_tags("".join(repair_buf))
-                    written, violations = apply_validated_writes(
+                    written, violations = await apply_validated_writes_async(
                         project_id, writes, snapshot_label=f"before repair: {title}"
                     )
                     applied.extend(written)
@@ -511,7 +513,7 @@ async def run_plan_tasks(
                     full.append(chunk.content)
                     yield _sse({"type": "token", "content": chunk.content})
             writes, deletes = parse_forge_tags("".join(repair_buf))
-            written, violations = apply_validated_writes(
+            written, violations = await apply_validated_writes_async(
                 project_id, writes, snapshot_label="before final repair"
             )
             applied.extend(written)

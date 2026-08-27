@@ -9,6 +9,7 @@ the whole batch can be rolled back from the UI.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 from typing import Any
@@ -114,3 +115,26 @@ def apply_validated_writes(
         except Exception:
             pass
     return applied, violations
+
+
+async def apply_validated_writes_async(
+    project_id: str,
+    writes: list[Any],
+    *,
+    allow_brand_writes: bool = False,
+    snapshot_label: str | None = None,
+) -> tuple[list[dict], list[dict]]:
+    """Off-loop variant for the SSE generators.
+
+    The sync version runs tree-sitter validation and a git snapshot subprocess.
+    Called directly from an async generator it froze the whole event loop for
+    the duration of a large batch, which made every other request (preview
+    restart, file tree...) time out client-side during heavy generations.
+    """
+    return await asyncio.to_thread(
+        apply_validated_writes,
+        project_id,
+        writes,
+        allow_brand_writes=allow_brand_writes,
+        snapshot_label=snapshot_label,
+    )
