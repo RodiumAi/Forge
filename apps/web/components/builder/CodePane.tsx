@@ -13,12 +13,20 @@ import {
   X,
 } from "lucide-react";
 import { ApiError, api } from "@/lib/api";
+import { projectPublicUrl } from "@/lib/asset-url";
 import { Icon } from "@/components/ui/icon";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { CodeEditor } from "./CodeEditor";
 import { FileTypeIcon } from "./file-icons";
 import { QuickOpen } from "./QuickOpen";
 import type { FileNode } from "./types";
+
+// SVG stays out: it is text and belongs in the editor.
+const IMAGE_EXT_RE = /\.(png|jpe?g|gif|webp|avif|bmp|ico)$/i;
+
+function isImagePath(path: string): boolean {
+  return IMAGE_EXT_RE.test(path);
+}
 
 type Props = {
   projectId: string;
@@ -189,6 +197,10 @@ export function CodePane({
   const requestSeq = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
 
+  // Binary images can't ride the text-content endpoint ("this file is not
+  // text"); they get a viewer through the authenticated project-public route.
+  const [imageView, setImageView] = useState<string | null>(null);
+
   const allFiles = useMemo(() => flattenFiles(tree), [tree]);
 
   const loadTree = useCallback(async () => {
@@ -214,6 +226,14 @@ export function CodePane({
 
   const openFile = useCallback(
     async (path: string, opts?: { reload?: boolean }) => {
+      if (isImagePath(path)) {
+        setImageView(path);
+        setActive(null);
+        setError(null);
+        setConflict(false);
+        return;
+      }
+      setImageView(null);
       // Already open and clean: just focus the tab, no refetch.
       const existing = tabsRef.current.find((tab) => tab.path === path);
       if (existing && !opts?.reload) {
@@ -507,7 +527,12 @@ export function CodePane({
 
         <header className="builder-pane-head">
           <div className="code-editor-path">
-            {active ? (
+            {imageView ? (
+              <>
+                <FileTypeIcon path={imageView} size="md" />
+                <code>{imageView}</code>
+              </>
+            ) : active ? (
               <>
                 <FileTypeIcon path={active} size="md" />
                 <code>{active}</code>
@@ -551,6 +576,15 @@ export function CodePane({
 
         {fileLoading ? (
           <p className="builder-empty">{t("loading")}</p>
+        ) : imageView ? (
+          <div className="code-image-view">
+            { }
+            <img
+              src={projectPublicUrl(projectId, imageView, filesRevision) ?? undefined}
+              alt={imageView}
+            />
+            <span className="code-image-name">{imageView.split("/").pop()}</span>
+          </div>
         ) : activeTab ? (
           <CodeEditor
             path={activeTab.path}
