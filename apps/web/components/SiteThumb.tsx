@@ -124,11 +124,31 @@ export function SiteThumb({
   className,
 }: Props) {
   const shellRef = useRef<HTMLDivElement>(null);
+  const frameRef = useRef<HTMLIFrameElement>(null);
   const key = cacheKey(src, authPath);
   const [visible, setVisible] = useState(false);
   const [html, setHtml] = useState<string | null>(() => (key ? readCache(key) : null));
   const [failed, setFailed] = useState(false);
   const [scale, setScale] = useState(0.25);
+  // Live mode: the draft page is blank while Babel transforms and mounts the
+  // app, so the iframe stays hidden under the loading shimmer until the
+  // runner posts forge:mounted (grace timer in case the message never comes).
+  const [frameReady, setFrameReady] = useState(false);
+
+  useEffect(() => {
+    if (!frameSrc || !visible) return;
+    function onMessage(e: MessageEvent) {
+      if (!frameRef.current || e.source !== frameRef.current.contentWindow) return;
+      const type = e.data && typeof e.data === "object" ? e.data.type : "";
+      if (type === "forge:mounted") setFrameReady(true);
+    }
+    window.addEventListener("message", onMessage);
+    const grace = window.setTimeout(() => setFrameReady(true), 12000);
+    return () => {
+      window.removeEventListener("message", onMessage);
+      window.clearTimeout(grace);
+    };
+  }, [frameSrc, visible]);
 
   useEffect(() => {
     const el = shellRef.current;
@@ -211,22 +231,25 @@ export function SiteThumb({
       }}
     >
       {frameSrc ? (
-        visible ? (
-          <div className="site-thumb-scaler">
-            <iframe
-              src={frameSrc}
-              title={title || "Preview"}
-              tabIndex={-1}
-              // Scripts are required (the draft page transforms and mounts the
-              // app in-browser); everything else stays locked down and the
-              // scaler is pointer-events: none.
-              sandbox="allow-scripts"
-              loading="lazy"
-            />
-          </div>
-        ) : (
-          <div className="site-thumb-fallback is-loading" />
-        )
+        <>
+          {visible && (
+            <div className="site-thumb-scaler" style={frameReady ? undefined : { visibility: "hidden" }}>
+              <iframe
+                ref={frameRef}
+                src={frameSrc}
+                title={title || "Preview"}
+                tabIndex={-1}
+                // Scripts are required (the draft page transforms and mounts
+                // the app in-browser); everything else stays locked down and
+                // the scaler is pointer-events: none. No loading="lazy": the
+                // IntersectionObserver already gates mounting, and a lazy
+                // hidden iframe may never start loading.
+                sandbox="allow-scripts"
+              />
+            </div>
+          )}
+          {!frameReady && <div className="site-thumb-fallback is-loading" />}
+        </>
       ) : html ? (
         <div className="site-thumb-scaler">
           <iframe
