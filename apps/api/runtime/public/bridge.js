@@ -467,28 +467,112 @@
     }
   });
 
-  /** Best-effort client-side route change for react-router previews. */
+  /**
+   * Best-effort client-side route change for preview apps.
+   *
+   * The runner lives at `/runner/` on the API origin. Absolute path navigations
+   * like `/privacy` leave the shell (404) and kill the preview — never do that.
+   * Prefer hash routing (common for setCurrentPage / HashRouter prototypes),
+   * then in-page controls, then a runner-scoped History API update.
+   */
   function navigatePreviewPath(path) {
     var normalized = (path || "/").replace(/\/+$/, "") || "/";
-    var links = document.querySelectorAll("a[href],[data-forge-page]");
-    for (var i = 0; i < links.length; i++) {
-      var el = links[i];
-      var page = el.getAttribute("data-forge-page");
-      if (page && ("/" + page.replace(/^\//, "")) === normalized) {
-        el.click();
+    var pageKey = normalized === "/" ? "" : normalized.replace(/^\//, "");
+    var targetHash = pageKey ? "#" + pageKey : "";
+    var pathname = window.location.pathname || "/";
+    var onRunner = /^\/runner\/?/i.test(pathname);
+
+    function setPreviewHash(nextKey) {
+      var current = (window.location.hash || "").replace(/^#/, "");
+      if ((nextKey || "") === current) {
+        // Re-fire so late-mounted listeners still pick it up.
+        window.dispatchEvent(new HashChangeEvent("hashchange"));
         return;
       }
-      var href = el.getAttribute("href") || "";
-      if (href && href.replace(/\/+$/, "") === normalized) {
+      if (nextKey) {
+        window.location.hash = nextKey;
+        return;
+      }
+      var keep = (onRunner ? pathname : "/runner/") + (window.location.search || "");
+      window.history.pushState({}, "", keep);
+      window.dispatchEvent(new HashChangeEvent("hashchange"));
+    }
+
+    // 1) Hash first — works for this project's setCurrentPage + hashchange,
+    //    and never leaves /runner/.
+    try {
+      setPreviewHash(pageKey);
+    } catch (eHash) {
+      /* ignore */
+    }
+
+    // 2) data-forge-page hooks (explicit opt-in from generated markup).
+    var forgePages = document.querySelectorAll("[data-forge-page]");
+    for (var i = 0; i < forgePages.length; i++) {
+      var el = forgePages[i];
+      var page = el.getAttribute("data-forge-page") || "";
+      var pageNorm = "/" + String(page).replace(/^\//, "").replace(/\/+$/, "");
+      if (pageNorm === "/" ) pageNorm = "/";
+      if (pageNorm === normalized || String(page).toLowerCase() === pageKey.toLowerCase()) {
         el.click();
         return;
       }
     }
-    // No matching link: fall back to the History API so react-router reacts.
+
+    // 3) Same-document hash links only (never absolute "/privacy" — that 404s).
+    var anchors = document.querySelectorAll("a[href]");
+    for (var a = 0; a < anchors.length; a++) {
+      var link = anchors[a];
+      var href = link.getAttribute("href") || "";
+      if (!href || href.startsWith("mailto:") || href.startsWith("http")) continue;
+      // Block real document navigations off the runner shell.
+      if (href.startsWith("/") && !href.startsWith("/#") && !/^\/runner\/?/i.test(href)) {
+        continue;
+      }
+      var h = href.replace(/\/+$/, "");
+      var match =
+        (pageKey && (h === targetHash || h === "/#" + pageKey)) ||
+        (!pageKey && (h === "#" || h === "#top" || h === "/#top"));
+      if (match) {
+        link.click();
+        return;
+      }
+    }
+
+    // 4) Exact-label page buttons (e.g. "Privacy") — after hash so state apps sync even if click no-ops.
+    if (pageKey) {
+      var keyLower = pageKey.toLowerCase();
+      var clickables = document.querySelectorAll("button, [role='button']");
+      for (var j = 0; j < clickables.length; j++) {
+        var btn = clickables[j];
+        var label = (btn.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+        if (label === keyLower || label === keyLower + " policy") {
+          btn.click();
+          return;
+        }
+      }
+    }
+
+    // 5) BrowserRouter fallback — stay under /runner/ when hosted there.
     try {
-      window.history.pushState({}, "", normalized);
-      window.dispatchEvent(new PopStateEvent("popstate"));
-    } catch (e) {
+      if (!onRunner) {
+        // Recover if a prior bug left the URL at /privacy while the shell is gone.
+        return;
+      }
+      var runnerBase = pathname.match(/^(\/runner\/?)/i);
+      var base = runnerBase
+        ? runnerBase[1].endsWith("/")
+          ? runnerBase[1]
+          : runnerBase[1] + "/"
+        : "/runner/";
+      var nextPath = pageKey ? base + pageKey : base;
+      var currentPath = pathname.replace(/\/+$/, "") || "/";
+      var wantPath = nextPath.replace(/\/+$/, "") || "/";
+      if (currentPath !== wantPath) {
+        window.history.pushState({}, "", nextPath + (window.location.search || "") + (pageKey ? "#" + pageKey : ""));
+        window.dispatchEvent(new PopStateEvent("popstate"));
+      }
+    } catch (eHist) {
       /* ignore */
     }
   }

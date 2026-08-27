@@ -81,8 +81,8 @@ def render_runner_shell(bundle: dict | None = None, *, thumb: bool = False) -> s
 </head>
 <body>
   <div id="root"></div>
-  <script src="/runner/bridge.js"></script>
-  <script type="module" src="/runner/runner.js"></script>
+  <script src="/runner/bridge.js?v=nav2"></script>
+  <script type="module" src="/runner/runner.js?v=nav2"></script>
 </body>
 </html>
 """

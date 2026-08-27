@@ -2393,6 +2393,16 @@ html:has(.builder) body {
   align-items: stretch;
 }
 
+/* Device modes: darker gutters so the constrained frame is obvious */
+.builder-preview-stage.viewport-tablet,
+.builder-preview-stage.viewport-phone {
+  background:
+    radial-gradient(ellipse at center, rgba(255, 255, 255, 0.03), transparent 70%),
+    #12161c;
+  padding: 0.75rem 0;
+  align-items: stretch;
+}
+
 .builder-preview-layout {
   display: flex;
   flex: 1;
@@ -2669,11 +2679,27 @@ html:has(.builder) body {
   margin-inline: auto;
   background: #0a0a0a;
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 12px 40px rgba(0, 0, 0, 0.35);
-  transition: width 0.2s ease;
+  transition: width 0.2s ease, border-radius 0.2s ease, box-shadow 0.2s ease;
   min-height: 0;
-  flex: 1;
+  /* Do NOT use flex-grow — it would ignore tablet/phone widths */
+  flex: 0 1 auto;
   display: flex;
   flex-direction: column;
+}
+
+.builder-preview-stage.viewport-desktop .builder-viewport-frame {
+  flex: 1 1 auto;
+  width: 100%;
+}
+
+.builder-preview-stage.viewport-tablet .builder-viewport-frame,
+.builder-preview-stage.viewport-phone .builder-viewport-frame {
+  flex: 0 0 auto;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 16px 48px rgba(0, 0, 0, 0.45);
 }
 
 .builder-viewport-frame .builder-preview-frame {
