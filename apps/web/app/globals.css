@@ -7330,7 +7330,17 @@ button.file-op-path:focus-visible { outline: 2px solid #f2620a; outline-offset: 
 }
 
 /* -- Assistant: collapsible file operations -- */
-.assistant-body { display: grid; gap: 0.5rem; }
+/* Rendered directly in the bubble (the old collapse wrapper carried the
+   spacing), so it needs its own padding or the prose touches the border. */
+.assistant-body {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.35rem 0.85rem 0.85rem;
+}
+
+.builder-msg .assistant-pending {
+  padding: 0.5rem 0.85rem 0.85rem;
+}
 
 .file-op-block {
   border: 1px solid var(--home-border);
