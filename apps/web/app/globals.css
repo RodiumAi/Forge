@@ -2996,6 +2996,37 @@ html:has(.builder) body {
   background: #0d1117;
 }
 
+/* Binary image viewer in the code pane (icons, photos — not editable text). */
+.code-image-view {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 1.5rem;
+  overflow: auto;
+  /* Checkerboard so transparency is visible. */
+  background:
+    repeating-conic-gradient(rgba(127, 127, 127, 0.12) 0% 25%, transparent 0% 50%) 0 0 / 22px 22px,
+    var(--bg-soft, #171717);
+}
+
+.code-image-view img {
+  max-width: min(90%, 640px);
+  max-height: 70vh;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+}
+
+.code-image-name {
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+
 .code-editor-path {
   display: flex;
   align-items: center;
