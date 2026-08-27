@@ -243,6 +243,10 @@ async def run_plan_tasks(
             auth=auth,
             model=model,
             surgical_edit=surgical,
+            # The plan names the files each task touches: guarantee their
+            # current content is in the prompt, or the model rewrites them
+            # from stale conversation memory.
+            focus_paths=[str(f) for f in (task.get("files") or []) if isinstance(f, str)],
         )
         yield push_step("select_files", t("step_select_files", locale), "done")
         yield push_step("generate", t("step_generate", locale), "running")
