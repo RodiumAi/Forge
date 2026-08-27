@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { width: 480px; height: 300px; overflow: hidden; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; background: #ffffff; color: #111111; }
+  .bar { display: flex; justify-content: space-between; align-items: center; padding: 8px 14px; border-bottom: 2px solid #111; }
+  .brand { font-size: 12px; font-weight: 900; }
+  .brand span { color: #ff5941; }
+  .nav { font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #111; }
+  .nav b { background: #111; color: #fff; padding: 3px 8px; margin-left: 8px; }
+  .tags { display: flex; gap: 6px; padding: 10px 14px 8px; }
+  .tag { font-size: 8px; font-weight: 800; text-transform: uppercase; padding: 3px 8px; color: #fff; }
+  .t1 { background: #ff5941; } .t2 { background: #0000ff; } .t3 { background: #00ff85; color: #111; }
+  .mq { border-top: 2px solid #111; border-bottom: 2px solid #111; padding: 4px 0; white-space: nowrap; overflow: hidden; font-weight: 900; font-size: 34px; letter-spacing: -0.04em; line-height: 1; }
+  .mq + .mq { border-top: none; }
+  .o { color: transparent; -webkit-text-stroke: 1.5px #111; }
+  .d { font-size: 12px; color: #ff5941; vertical-align: middle; padding: 0 6px; }
+  .mq2 { padding-left: -20px; text-indent: -34px; }
+  .lede { display: flex; justify-content: space-between; align-items: flex-end; padding: 10px 14px; }
+  .lede p { font-size: 9px; color: #6b6b6b; max-width: 260px; line-height: 1.5; }
+  .cta { font-size: 8px; font-weight: 800; text-transform: uppercase; background: #ff5941; color: #fff; padding: 6px 12px; border: 2px solid #ff5941; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 2px solid #111; }
+  .stat { padding: 8px 14px; border-right: 2px solid #111; }
+  .stat:last-child { border-right: none; }
+  .n { font-size: 18px; font-weight: 900; color: #ff5941; line-height: 1; }
+  .l { font-size: 7px; font-weight: 700; text-transform: uppercase; color: #6b6b6b; margin-top: 3px; }
+  .speakers { display: flex; gap: 8px; padding: 10px 14px; }
+  .sp { flex: 1; }
+  .ph { border: 2px solid #111; background: #ff5941; overflow: hidden; }
+  .ph img { width: 100%; height: 52px; object-fit: cover; display: block; filter: grayscale(1) contrast(1.15); mix-blend-mode: multiply; }
+  .sn { font-size: 8px; font-weight: 900; text-transform: uppercase; margin-top: 4px; }
+</style>
+</head>
+<body>
+  <div class="bar">
+    <div class="brand">KINETIC<span>27</span></div>
+    <div class="nav">Program · Speakers · Venue <b>Tickets →</b></div>
+  </div>
+  <div class="tags">
+    <span class="tag t1">Berlin · Funkhaus</span>
+    <span class="tag t2">May 14–16, 2027</span>
+    <span class="tag t3">3 stages</span>
+  </div>
+  <div class="mq"><span class="o">DESIGN</span><span class="d">✳</span>CODE<span class="d">✳</span><span class="o">MOTION</span><span class="d">✳</span>TYPE</div>
+  <div class="mq">2027<span class="d">✳</span><span class="o">BERLIN</span><span class="d">✳</span>MAY 14–16<span class="d">✳</span><span class="o">LIVE</span></div>
+  <div class="lede">
+    <p>The conference where design and engineering stop pretending to be different disciplines. Three days of talks, workshops and arguments about craft.</p>
+    <span class="cta">Get your pass</span>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="n">48</div><div class="l">Talks</div></div>
+    <div class="stat"><div class="n">2,400</div><div class="l">Attendees</div></div>
+    <div class="stat"><div class="n">3</div><div class="l">Stages</div></div>
+    <div class="stat"><div class="n">32</div><div class="l">Countries</div></div>
+  </div>
+  <div class="speakers">
+    <div class="sp"><div class="ph"><img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=1200&q=70" alt="" /></div><div class="sn">Mara Voss</div></div>
+    <div class="sp"><div class="ph"><img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=1200&q=70" alt="" /></div><div class="sn">Kenji Nakamura</div></div>
+    <div class="sp"><div class="ph"><img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=1200&q=70" alt="" /></div><div class="sn">Amara Diallo</div></div>
+    <div class="sp"><div class="ph"><img src="https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=1200&q=70" alt="" /></div><div class="sn">Tomas Okafor</div></div>
+  </div>
+</body>
+</html>

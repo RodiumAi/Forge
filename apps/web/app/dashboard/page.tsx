@@ -364,8 +364,6 @@ function DashboardInner() {
       const base = apiBase().replace(/\/$/, "");
       const parent = encodeURIComponent(window.location.origin);
       return {
-        // parent_origin: draft iframes often lack a usable referrer; the
-        // runner needs it to post forge:mounted after the hero has painted.
         frameSrc: `${base}/projects/${p.id}/draft?access_token=${encodeURIComponent(token)}&parent_origin=${parent}&thumb=1`,
         src: null as string | null,
         authPath: null as string | null,
@@ -539,7 +537,6 @@ function DashboardInner() {
                       frameSrc={thumb.frameSrc}
                       src={thumb.src}
                       authPath={thumb.authPath}
-                      cacheKey={`${p.id}:${p.updated_at || p.created_at}`}
                       title={p.name}
                       className="home-card-thumb"
                     />

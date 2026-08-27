@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Vertex — preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 480px; height: 300px; overflow: hidden;
+    background: #05070f; color: #eef2ff;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    position: relative;
+  }
+  .glow { position: absolute; width: 260px; height: 260px; border-radius: 50%;
+    top: -110px; right: -70px; filter: blur(60px);
+    background: radial-gradient(circle, rgba(0,229,160,.2), transparent 65%); }
+  .tickerbar { display: flex; gap: 18px; padding: 4px 12px; font-size: 6.5px;
+    font-family: Consolas, monospace; color: #7c85a3;
+    border-bottom: 1px solid rgba(255,255,255,.06); background: rgba(255,255,255,.02); }
+  .tickerbar strong { color: #eef2ff; }
+  .up { color: #00e5a0; } .down { color: #f43f5e; }
+  .nav { position: relative; display: flex; justify-content: space-between; align-items: center;
+    padding: 7px 14px; border-bottom: 1px solid rgba(255,255,255,.06); }
+  .brand { font-weight: 800; letter-spacing: .12em; font-size: 10px; color: #eef2ff; }
+  .brand b { color: #00e5a0; }
+  .links { display: flex; gap: 10px; font-size: 7.5px; color: #7c85a3; }
+  .btn { background: #00e5a0; color: #04120c; font-weight: 700; font-size: 7.5px;
+    padding: 4px 10px; border-radius: 6px; box-shadow: 0 0 12px rgba(0,229,160,.35); }
+  .hero { position: relative; display: flex; gap: 16px; padding: 18px 14px; align-items: center; }
+  .pill { display: inline-block; font-size: 6px; font-weight: 600; color: #00e5a0;
+    background: rgba(0,229,160,.1); border: 1px solid rgba(0,229,160,.3);
+    padding: 2px 7px; border-radius: 99px; margin-bottom: 7px; }
+  h1 { font-size: 18px; line-height: 1.08; letter-spacing: -.02em; font-weight: 800; }
+  .neon { color: #00e5a0; text-shadow: 0 0 14px rgba(0,229,160,.5); }
+  .lede { font-size: 7.5px; color: #7c85a3; margin: 7px 0 9px; max-width: 210px; }
+  .cta { display: flex; gap: 6px; }
+  .btn2 { border: 1px solid rgba(255,255,255,.18); color: #eef2ff; font-size: 7.5px;
+    font-weight: 700; padding: 4px 10px; border-radius: 6px; background: rgba(255,255,255,.03); }
+  .panel { flex-shrink: 0; width: 185px; padding: 10px; border-radius: 12px;
+    background: linear-gradient(rgba(255,255,255,.035), rgba(255,255,255,.035)) padding-box,
+      linear-gradient(140deg, rgba(0,229,160,.5), rgba(59,130,246,.25) 45%, rgba(255,255,255,.08)) border-box;
+    border: 1px solid transparent; box-shadow: 0 16px 40px rgba(0,0,0,.6); }
+  .pair { display: flex; justify-content: space-between; margin-bottom: 7px; }
+  .pn { font-size: 6.5px; color: #7c85a3; font-family: Consolas, monospace; display: block; }
+  .pp { font-size: 13px; font-weight: 800; font-family: Consolas, monospace; }
+  .pc { font-size: 7px; font-weight: 700; font-family: Consolas, monospace; }
+  .chart { display: flex; align-items: flex-end; gap: 3px; height: 58px; padding: 5px;
+    background: rgba(255,255,255,.02); border-radius: 7px; border: 1px solid rgba(255,255,255,.05);
+    margin-bottom: 7px; }
+  .bar { flex: 1; border-radius: 2px 2px 0 0;
+    background: linear-gradient(to top, rgba(0,229,160,.25), #00e5a0); }
+  .bar.b { background: linear-gradient(to top, rgba(59,130,246,.2), #3b82f6); }
+  .row { display: flex; justify-content: space-between; font-size: 5.5px; color: #7c85a3;
+    font-family: Consolas, monospace; margin-bottom: 7px; }
+  .row strong { color: #eef2ff; display: block; }
+  .bb { display: block; text-align: center; background: #00e5a0; color: #04120c;
+    font-weight: 700; font-size: 7.5px; padding: 5px; border-radius: 6px; }
+  .stats { display: flex; gap: 8px; padding: 4px 14px; }
+  .stat { flex: 1; text-align: center; padding: 8px 4px; border-radius: 9px;
+    background: rgba(255,255,255,.035); border: 1px solid rgba(255,255,255,.08); }
+  .sv { display: block; font-size: 11px; font-weight: 800; color: #00e5a0; font-family: Consolas, monospace; }
+  .sl { font-size: 5.5px; color: #7c85a3; }
+</style>
+</head>
+<body>
+  <div class="glow"></div>
+  <div class="tickerbar">
+    <span><strong>BTC</strong> $97,412.50 <span class="up">+2.34%</span></span>
+    <span><strong>ETH</strong> $3,486.20 <span class="up">+1.87%</span></span>
+    <span><strong>SOL</strong> $212.84 <span class="down">-0.92%</span></span>
+    <span><strong>AVAX</strong> $41.16 <span class="up">+4.61%</span></span>
+  </div>
+  <div class="nav">
+    <span class="brand"><b>▼</b> VERTEX</span>
+    <span class="links"><span>Markets</span><span>Trade</span><span>Security</span><span>Learn</span></span>
+    <span class="btn">Get started</span>
+  </div>
+  <div class="hero">
+    <div>
+      <span class="pill">◆ Now live: EU MiCA-regulated entity</span>
+      <h1>Trade crypto at the <span class="neon">speed of thought.</span></h1>
+      <p class="lede">280+ pairs, 7ms execution, industry-lowest fees — with the security posture of a Swiss bank.</p>
+      <div class="cta"><span class="btn">Create free account</span><span class="btn2">View markets</span></div>
+    </div>
+    <div class="panel">
+      <div class="pair">
+        <div><span class="pn">BTC / USDT</span><span class="pp">$97,412.50</span></div>
+        <span class="pc up">▲ +2.34%</span>
+      </div>
+      <div class="chart">
+        <span class="bar" style="height:34%"></span><span class="bar" style="height:52%"></span>
+        <span class="bar b" style="height:41%"></span><span class="bar" style="height:68%"></span>
+        <span class="bar" style="height:55%"></span><span class="bar b" style="height:74%"></span>
+        <span class="bar" style="height:62%"></span><span class="bar" style="height:88%"></span>
+        <span class="bar b" style="height:71%"></span><span class="bar" style="height:95%"></span>
+        <span class="bar" style="height:83%"></span><span class="bar" style="height:100%"></span>
+      </div>
+      <div class="row"><span>24h High <strong>$98,105</strong></span><span>24h Low <strong>$94,880</strong></span><span>Vol <strong>$2.41B</strong></span></div>
+      <span class="bb">Buy BTC</span>
+    </div>
+  </div>
+  <div class="stats">
+    <div class="stat"><span class="sv">$14.2B</span><span class="sl">30-day volume</span></div>
+    <div class="stat"><span class="sv">3.8M</span><span class="sl">verified traders</span></div>
+    <div class="stat"><span class="sv">0.02%</span><span class="sl">maker fee</span></div>
+    <div class="stat"><span class="sv">7ms</span><span class="sl">median execution</span></div>
+  </div>
+</body>
+</html>

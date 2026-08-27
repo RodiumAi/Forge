@@ -12,13 +12,29 @@ from app.services.templates import _TEMPLATE_KEYWORDS, list_templates, templates
 
 EXPECTED_IDS = {
     "astroship-startup",
-    "nexora-agency",
+    "atelier-mode",
+    "aurora-ai",
+    "bloom-wellness",
+    "brutalist-studio",
+    "forge-devtools",
     "gallery-photos",
+    "glacier-travel",
+    "holo-portfolio",
+    "kinetic-conf",
     "logsfolio-portfolio",
-    "tailstore-shop",
-    "podux-podcast",
-    "tailnext-saas",
+    "lumen-architecture",
+    "mono-journal",
+    "nexora-agency",
     "orbit-dashboard",
+    "origami-3d",
+    "podux-podcast",
+    "pulse-fitness",
+    "quantum-consult",
+    "synthwave-music",
+    "tailnext-saas",
+    "tailstore-shop",
+    "terra-eco",
+    "vertex-crypto",
 }
 
 

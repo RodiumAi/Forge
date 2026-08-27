@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Quantum Consult preview</title>
+<style>
+  :root{--bg:#0b1c33;--fg:#eef2f7;--muted:#8ba0ba;--accent:#d97757;--line:rgba(139,160,186,.22)}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--fg);font-family:"Segoe UI",sans-serif;padding:16px}
+  .bar{display:flex;justify-content:space-between;align-items:center;padding-bottom:10px;
+    border-bottom:1px solid var(--line);margin-bottom:14px}
+  .wm{font-weight:700;letter-spacing:.12em;font-size:10px}
+  .wm span{color:var(--accent);font-weight:400}
+  .nav{display:flex;gap:10px;font-size:8px;color:var(--muted)}
+  .btn{border:1px solid var(--accent);font-size:8px;padding:3px 9px;border-radius:2px}
+  .label{font-size:7px;letter-spacing:.26em;text-transform:uppercase;color:var(--accent);margin-bottom:5px}
+  h1{font-size:17px;font-weight:600;line-height:1.2;margin-bottom:5px;max-width:320px}
+  h1 em{font-style:normal;color:var(--accent)}
+  .sub{font-size:8px;color:var(--muted);max-width:280px;margin-bottom:14px}
+  .figs{display:flex;border:1px solid var(--line);margin-bottom:14px}
+  .fig{flex:1;padding:10px;border-right:1px solid var(--line)}
+  .fig:last-child{border-right:none}
+  .fv{font-size:16px;font-weight:700;line-height:1}
+  .fl{font-size:6.5px;color:var(--muted);margin-top:3px;letter-spacing:.04em}
+  .row{display:flex;gap:14px;align-items:center}
+  .donut{width:74px;height:74px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;
+    background:conic-gradient(#d97757 0% 34%,#eef2f7 34% 61%,#5d7ba1 61% 82%,#33507a 82% 100%)}
+  .hole{width:46px;height:46px;border-radius:50%;background:var(--bg);display:grid;place-items:center;
+    font-size:9px;font-weight:700}
+  .bars{flex:1}
+  .brow{display:grid;grid-template-columns:80px 1fr 20px;gap:6px;align-items:center;margin-bottom:6px}
+  .bl{font-size:7px;color:var(--muted)}
+  .bt{height:6px;background:rgba(139,160,186,.14)}
+  .bf{height:100%;background:var(--accent)}
+  .bp{font-size:7px;font-weight:600;text-align:right}
+</style>
+</head>
+<body>
+  <div class="bar">
+    <span class="wm">QUANTUM<span>PARTNERS</span></span>
+    <span class="nav"><span>Practices</span><span>Evidence</span><span>Case Studies</span><span>Leadership</span></span>
+    <span class="btn">Start a conversation</span>
+  </div>
+  <div class="label">Strategy · Operations · Transactions</div>
+  <h1>Advice that survives contact with the <em>balance sheet.</em></h1>
+  <p class="sub">Retained by boards for decisions where the cost of being wrong is measured in billions.</p>
+  <div class="figs">
+    <div class="fig"><div class="fv">$2.4B</div><div class="fl">Client value created</div></div>
+    <div class="fig"><div class="fv">340+</div><div class="fl">Engagements delivered</div></div>
+    <div class="fig"><div class="fv">94%</div><div class="fl">Clients retained</div></div>
+    <div class="fig"><div class="fv">27</div><div class="fl">Markets served</div></div>
+  </div>
+  <div class="row">
+    <div class="donut"><div class="hole">340+</div></div>
+    <div class="bars">
+      <div class="brow"><span class="bl">Financial services</span><div class="bt"><div class="bf" style="width:34%"></div></div><span class="bp">34%</span></div>
+      <div class="brow"><span class="bl">Industrials</span><div class="bt"><div class="bf" style="width:27%"></div></div><span class="bp">27%</span></div>
+      <div class="brow"><span class="bl">Healthcare</span><div class="bt"><div class="bf" style="width:21%"></div></div><span class="bp">21%</span></div>
+      <div class="brow"><span class="bl">Technology</span><div class="bt"><div class="bf" style="width:18%"></div></div><span class="bp">18%</span></div>
+    </div>
+  </div>
+</body>
+</html>

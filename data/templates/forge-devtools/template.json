@@ -1,0 +1,19 @@
+{
+  "id": "forge-devtools",
+  "title": { "en": "Hexbin Devtools", "fr": "Hexbin Devtools" },
+  "description": {
+    "en": "Dark GitHub-style landing for a developer tool: animated terminal hero with blinking cursor, one-line install, glow-on-hover feature grid, before/after diff and open-source stats.",
+    "fr": "Landing sombre façon GitHub pour un outil développeur : terminal animé avec curseur clignotant, install en une commande, features à bordures lumineuses, diff avant/après et stats open-source."
+  },
+  "tags": ["devtool", "cli", "dark", "open-source"],
+  "preview": "preview.html",
+  "bootHint": {
+    "en": "Adapt forge-devtools: tool name, terminal demo, install command, features.",
+    "fr": "Adapte forge-devtools : nom de l'outil, démo terminal, commande d'install, features."
+  },
+  "accent": "#3fb950",
+  "bg": "#0d1117",
+  "fg": "#e6edf3",
+  "muted": "#8b949e",
+  "tone": "technical, dry-witted, trustworthy"
+}

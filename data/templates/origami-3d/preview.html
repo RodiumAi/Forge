@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { width: 480px; background: #f4f4f8; color: #18181b; font-family: -apple-system, "Segoe UI", Arial, sans-serif; overflow: hidden; }
+  .nav { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; border-bottom: 1px solid rgba(24,24,27,.1); }
+  .logo { display: flex; align-items: center; gap: 5px; font-weight: 800; font-size: 10px; }
+  .mark { width: 8px; height: 8px; background: #6366f1; transform: rotate(45deg); border-radius: 1px; display: inline-block; }
+  .links { font-size: 7px; color: #71717a; }
+  .links span { margin-left: 8px; }
+  .btn { background: #6366f1; color: #fff; font-size: 7px; font-weight: 700; padding: 4px 8px; border-radius: 5px; }
+  .hero { display: grid; grid-template-columns: 1.1fr .9fr; align-items: center; gap: 14px; padding: 18px 16px; }
+  .badge { display: inline-block; background: #e0e1fc; color: #6366f1; font-size: 6px; font-weight: 700; padding: 2px 7px; border-radius: 99px; margin-bottom: 7px; }
+  h1 { font-size: 20px; font-weight: 800; line-height: 1.05; letter-spacing: -0.03em; }
+  h1 span { color: #6366f1; }
+  .sub { font-size: 8px; color: #71717a; margin: 7px 0 9px; line-height: 1.5; }
+  .cta { display: flex; gap: 6px; }
+  .ghost { background: #fff; color: #18181b; border: 1px solid rgba(24,24,27,.15); }
+  .scene { perspective: 400px; display: flex; justify-content: center; }
+  .cube { position: relative; width: 74px; height: 74px; transform-style: preserve-3d; transform: rotateX(-18deg) rotateY(32deg); }
+  .face { position: absolute; width: 74px; height: 74px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 11px; color: #6366f1; background: rgba(255,255,255,.9); border: 1.5px solid #6366f1; border-radius: 6px; }
+  .f1 { transform: translateZ(37px); }
+  .f2 { transform: rotateY(90deg) translateZ(37px); }
+  .f3 { transform: rotateX(90deg) translateZ(37px); }
+  .row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 4px 16px 16px; }
+  .panel { position: relative; background: #fff; border: 1px solid rgba(24,24,27,.1); border-radius: 8px; padding: 9px; box-shadow: 0 5px 12px rgba(24,24,27,.08); transform: perspective(500px) rotateY(-10deg); }
+  .num { font-size: 7px; font-weight: 800; color: #6366f1; }
+  .panel h3 { font-size: 9px; font-weight: 800; margin: 3px 0 3px; }
+  .panel p { font-size: 6.5px; color: #71717a; line-height: 1.45; }
+</style>
+</head>
+<body>
+  <div class="nav">
+    <div class="logo"><span class="mark"></span>Foldspace</div>
+    <div class="links"><span>How it works</span><span>Features</span><span>Pricing</span></div>
+    <div class="btn">Start folding</div>
+  </div>
+  <div class="hero">
+    <div>
+      <span class="badge">✦ Foldspace 2.0 — live load simulation</span>
+      <h1>Prototype in<br /><span>three dimensions,</span><br />think in one sheet.</h1>
+      <p class="sub">The browser-native platform where flat sketches become folded, fabricable parts.</p>
+      <div class="cta"><span class="btn">Start free — no card</span><span class="btn ghost">Watch it fold ↓</span></div>
+    </div>
+    <div class="scene">
+      <div class="cube">
+        <div class="face f1">FOLD</div>
+        <div class="face f2">CUT</div>
+        <div class="face f3">✦</div>
+      </div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="panel"><span class="num">01</span><h3>Sketch flat</h3><p>Start in 2D. Every crease is a live hinge with real thickness.</p></div>
+    <div class="panel"><span class="num">02</span><h3>Fold in space</h3><p>Pull an edge and the sheet folds along its hinges.</p></div>
+    <div class="panel"><span class="num">03</span><h3>Ship the part</h3><p>Simulate load, unfold to a cut pattern, send to fab.</p></div>
+  </div>
+</body>
+</html>

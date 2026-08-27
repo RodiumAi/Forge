@@ -1,0 +1,19 @@
+{
+  "id": "bloom-wellness",
+  "title": { "en": "Bloom Wellness", "fr": "Bloom Wellness" },
+  "description": {
+    "en": "Serene spa and wellness studio site: soft pastel gradients, generously rounded cards, treatment menu with prices, class schedule and a numbered ritual walkthrough.",
+    "fr": "Site de spa et bien-être serein : dégradés pastel doux, cartes très arrondies, carte des soins avec prix, planning de cours et rituels en étapes numérotées."
+  },
+  "tags": ["spa", "wellness", "booking", "pastel"],
+  "preview": "preview.html",
+  "bootHint": {
+    "en": "Adapt bloom-wellness: studio name, treatments, schedule, testimonials.",
+    "fr": "Adapte bloom-wellness : nom du studio, soins, planning, témoignages."
+  },
+  "accent": "#b76e79",
+  "bg": "#fdfaf8",
+  "fg": "#3d3734",
+  "muted": "#9b8f88",
+  "tone": "serene, soft, nurturing"
+}

@@ -5487,24 +5487,6 @@ html:has(.builder) body {
   pointer-events: none;
 }
 
-.site-thumb-snap {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: top center;
-  display: block;
-  pointer-events: none;
-  background: #111;
-}
-
-.site-thumb-host {
-  width: var(--thumb-vw, 1280px);
-  height: var(--thumb-vh, 800px);
-}
-
-.site-thumb-host iframe,
 .site-thumb iframe {
   width: var(--thumb-vw, 1280px);
   height: var(--thumb-vh, 800px);

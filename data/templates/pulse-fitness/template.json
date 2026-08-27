@@ -1,0 +1,19 @@
+{
+  "id": "pulse-fitness",
+  "title": { "en": "Pulse Club", "fr": "Pulse Club" },
+  "description": {
+    "en": "High-voltage fitness club site: diagonal clip-path sections, giant condensed italic type, animated progress bars, coach grid and membership plans in electric lime on black.",
+    "fr": "Site de club fitness haute tension : sections en diagonales clip-path, typographie condensée italique géante, barres de progression animées, grille de coachs et abonnements en lime électrique sur noir."
+  },
+  "tags": ["fitness", "gym", "sport", "membership"],
+  "preview": "preview.html",
+  "bootHint": {
+    "en": "Adapt pulse-fitness: club name, programs, coaches, membership tiers.",
+    "fr": "Adapte pulse-fitness : nom du club, programmes, coachs, formules d'abonnement."
+  },
+  "accent": "#ccff00",
+  "bg": "#0a0a0a",
+  "fg": "#f5f5f5",
+  "muted": "#8a8a8a",
+  "tone": "loud, energetic, no-excuses"
+}

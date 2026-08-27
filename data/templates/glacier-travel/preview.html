@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { width: 480px; background: #061621; color: #e8f4fb; font-family: -apple-system, "Segoe UI", Arial, sans-serif; overflow: hidden; }
+  .hero { position: relative; height: 190px; overflow: hidden; }
+  .hero img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .veil { position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(6,22,33,.55), rgba(6,22,33,.25) 40%, rgba(6,22,33,.95)); }
+  .nav { position: absolute; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; z-index: 2; }
+  .logo { font-weight: 800; font-size: 9px; }
+  .logo b { color: #0ea5e9; font-weight: 800; }
+  .links { font-size: 7px; color: rgba(232,244,251,.85); }
+  .links span { margin-left: 9px; }
+  .links .book { border: 1px solid #0ea5e9; color: #0ea5e9; padding: 2px 6px; border-radius: 4px; }
+  .content { position: absolute; left: 16px; bottom: 12px; z-index: 2; }
+  .kicker { font-size: 6px; letter-spacing: .24em; text-transform: uppercase; color: #0ea5e9; margin-bottom: 5px; }
+  h1 { font-size: 21px; font-weight: 800; line-height: 1.02; letter-spacing: -0.02em; }
+  h1 span { color: #0ea5e9; }
+  .sub { font-size: 7.5px; color: rgba(232,244,251,.85); margin: 6px 0 8px; max-width: 250px; line-height: 1.5; }
+  .btn { display: inline-block; background: #0ea5e9; color: #04222f; font-size: 7px; font-weight: 700; padding: 4px 10px; border-radius: 4px; }
+  .line { background: transparent; border: 1px solid rgba(232,244,251,.4); color: #e8f4fb; margin-left: 5px; }
+  .dest { padding: 12px 16px; }
+  .eyebrow { font-size: 6px; letter-spacing: .22em; text-transform: uppercase; color: #0ea5e9; margin-bottom: 4px; }
+  h2 { font-size: 12px; font-weight: 800; margin-bottom: 8px; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .card { background: #0b2231; border: 1px solid rgba(232,244,251,.12); border-radius: 7px; overflow: hidden; }
+  .card img { width: 100%; height: 42px; object-fit: cover; display: block; }
+  .body { padding: 6px 7px; }
+  .name { font-size: 7.5px; font-weight: 700; line-height: 1.3; }
+  .place { font-size: 6px; color: #7ba3b8; margin: 2px 0 4px; }
+  .foot { display: flex; justify-content: space-between; border-top: 1px solid rgba(232,244,251,.12); padding-top: 3px; font-size: 6px; color: #7ba3b8; }
+  .price { color: #0ea5e9; font-weight: 700; }
+</style>
+</head>
+<body>
+  <div class="hero">
+    <img src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1200&q=70" alt="Mountain range" />
+    <div class="veil"></div>
+    <div class="nav">
+      <div class="logo"><b>▲</b> Glacier Expeditions</div>
+      <div class="links"><span>Destinations</span><span>Itinerary</span><span>Guides</span><span class="book">Book a journey</span></div>
+    </div>
+    <div class="content">
+      <p class="kicker">Guided journeys · 78°N to 50°S</p>
+      <h1>The cold ends of the earth,<br /><span>in good hands.</span></h1>
+      <p class="sub">Small-team expeditions to icefields, polar coasts and high glaciers — led by IFMGA guides.</p>
+      <span class="btn">Explore expeditions</span><span class="btn line">Sample itinerary</span>
+    </div>
+  </div>
+  <div class="dest">
+    <p class="eyebrow">2026 – 2027 season</p>
+    <h2>Four journeys. No shortcuts.</h2>
+    <div class="grid">
+      <div class="card">
+        <img src="https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1200&q=70" alt="Patagonia" />
+        <div class="body"><div class="name">Patagonia Icefield</div><div class="place">Chile / Argentina</div><div class="foot"><span>14 days</span><span class="price">$6,400</span></div></div>
+      </div>
+      <div class="card">
+        <img src="https://images.unsplash.com/photo-1483728642387-6c3bdd6c93e5?auto=format&fit=crop&w=1200&q=70" alt="Svalbard" />
+        <div class="body"><div class="name">Svalbard Circuit</div><div class="place">Norway, 78°N</div><div class="foot"><span>10 days</span><span class="price">$5,200</span></div></div>
+      </div>
+      <div class="card">
+        <img src="https://images.unsplash.com/photo-1478827536114-da961b7f86d2?auto=format&fit=crop&w=1200&q=70" alt="Vatnajökull" />
+        <div class="body"><div class="name">Vatnajökull Caves</div><div class="place">Iceland</div><div class="foot"><span>6 days</span><span class="price">$2,900</span></div></div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
