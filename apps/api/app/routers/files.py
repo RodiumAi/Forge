@@ -18,6 +18,8 @@ from app.services import history
 from app.services.asset_storage import (
     asset_display_name,
     get_project_asset,
+    get_project_asset_by_public_url,
+    is_private_upload_url,
     list_project_assets,
     materialize_asset_to_public,
     upload_project_asset,
@@ -466,16 +468,26 @@ def visual_edit_image(
     _owned(db, user, project_id, locale)
     history.snapshot(str(project_id), "before visual image replace")
     new_path = body.new_public_path
-    if body.object_id is not None:
-        # The uploads bucket is private: its URL written into the JSX gives a
-        # 403 in the preview and breaks at publish/export. Materialize the
-        # bytes into the project instead and reference them relatively.
+    # The uploads bucket is private: writing its URL into JSX gives AccessDenied
+    # in the preview and breaks publish/export. Always materialize into
+    # public/images/ and reference with a relative /images/... src.
+    object_id = body.object_id
+    if object_id is None and is_private_upload_url(body.new_public_path):
+        row = get_project_asset_by_public_url(db, project_id, body.new_public_path)
+        if row is not None:
+            object_id = row.id
+    if object_id is not None:
         try:
-            new_path = materialize_asset_to_public(db, project_id, body.object_id)
+            new_path = materialize_asset_to_public(db, project_id, object_id)
         except FileNotFoundError as exc:
             raise HTTPException(status_code=404, detail="Asset not found") from exc
         except Exception as exc:
             raise HTTPException(status_code=503, detail=str(exc)[:300]) from exc
+    elif is_private_upload_url(body.new_public_path):
+        raise HTTPException(
+            status_code=400,
+            detail="Private upload URL cannot be used as image src — re-upload or pass object_id",
+        )
     try:
         result = apply_visual_image_replace(
             str(project_id),

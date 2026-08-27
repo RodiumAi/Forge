@@ -83,6 +83,12 @@ def _resolve_target(new_public_path: str) -> tuple[str, str]:
         raise ValueError("Missing new image path")
 
     if value.startswith(("http://", "https://")):
+        # Private uploads bucket URLs must never be written into project source:
+        # browsers get AccessDenied, and publish/export would hardcode MinIO.
+        from app.services.asset_storage import is_private_upload_url
+
+        if is_private_upload_url(value):
+            raise ValueError("Private upload URL cannot be used as image src — pass object_id to materialize")
         if not _allowed_absolute_url(value):
             raise ValueError("Image URL is not served by this instance")
         return value, value

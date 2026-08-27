@@ -16,10 +16,13 @@ function isAllowedOrigin(origin) {
   return ALLOWED_PARENT_ORIGINS.has(origin);
 }
 
-// The embedder is the only peer we talk to. Derived from the referrer, kept
-// only if allowed, and never widened at runtime.
+// The embedder is the only peer we talk to. Prefer an explicit allowlisted
+// `parent_origin` query (dashboard thumbs often lack a usable referrer under
+// sandbox), then fall back to document.referrer. Never widened at runtime.
 let PARENT_ORIGIN = (() => {
   try {
+    const fromQuery = new URLSearchParams(location.search).get("parent_origin") || "";
+    if (fromQuery && isAllowedOrigin(fromQuery)) return fromQuery;
     const ref = document.referrer ? new URL(document.referrer).origin : "";
     return isAllowedOrigin(ref) ? ref : "";
   } catch {
@@ -316,6 +319,29 @@ function stripSideEffectImport(code, imp) {
 /** @type {Map<string, string>|null} */
 let previousBlobs = null;
 
+/**
+ * `import(entry)` resolves as soon as the module runs — typically before
+ * React's first paint. Dashboard thumbs were revealing a solid white #root
+ * because forge:mounted fired on that empty frame. Wait until the tree has
+ * content and at least one paint has committed.
+ */
+async function waitForFirstPaint(timeoutMs = 8000) {
+  const root = document.getElementById("root");
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (root && root.childElementCount > 0) break;
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+  }
+  await new Promise((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(resolve));
+  });
+  try {
+    if (document.fonts && document.fonts.ready) await document.fonts.ready;
+  } catch {
+    /* ignore */
+  }
+}
+
 async function mount(files, entry, tokensCss, assets) {
   if (assets && typeof assets.base === "string" && assets.base) ASSETS = assets;
   const cssEl = document.getElementById("forge-app-css");
@@ -413,6 +439,8 @@ async function mount(files, entry, tokensCss, assets) {
     previousBlobs = blobUrls;
     // The observer only sees future mutations; images already in the tree
     // (or an ASSETS config arriving after the first render) need one pass.
+    rewriteImagesUnder(document.body);
+    await waitForFirstPaint();
     rewriteImagesUnder(document.body);
     send({ type: "forge:mounted", entry });
   } catch (e) {

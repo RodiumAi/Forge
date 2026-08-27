@@ -124,7 +124,8 @@ def draft_page(
     if token:
         assets["token"] = token
     html = preview_babel.render_runner_shell(
-        bundle={"files": files, "entry": "src/main.tsx", "title": project.name, "assets": assets}
+        bundle={"files": files, "entry": "src/main.tsx", "title": project.name, "assets": assets},
+        thumb=request.query_params.get("thumb") in {"1", "true", "yes"},
     )
     return HTMLResponse(html, headers={"Cache-Control": "no-store"})
 

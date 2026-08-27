@@ -77,6 +77,33 @@ def get_project_asset(db: Session, project_id: UUID, object_id: UUID) -> StoredO
     )
 
 
+def get_project_asset_by_public_url(db: Session, project_id: UUID, public_url: str) -> StoredObject | None:
+    """Resolve a StoredObject from the URL returned by upload (private bucket)."""
+    url = (public_url or "").strip()
+    if not url:
+        return None
+    return (
+        db.query(StoredObject)
+        .filter(StoredObject.project_id == project_id, StoredObject.public_url == url)
+        .order_by(StoredObject.created_at.desc())
+        .first()
+    )
+
+
+def is_private_upload_url(url: str) -> bool:
+    """True when `url` points at our private uploads bucket (never usable as img src)."""
+    value = (url or "").strip()
+    if not value.startswith(("http://", "https://")):
+        return False
+    settings = get_settings()
+    bucket = (settings.bucket_uploads or settings.aws_s3_bucket or "").strip()
+    if not bucket:
+        return False
+    # Path-style: http://host:9000/forge-uploads/key
+    # Virtual-style: http://forge-uploads.host/key
+    return f"/{bucket}/" in value or value.startswith((f"http://{bucket}.", f"https://{bucket}."))
+
+
 def materialize_asset_to_public(db: Session, project_id: UUID, object_id: UUID) -> str:
     """Copy a stored upload into the project's `public/images/`; return its web path.
 

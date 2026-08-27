@@ -111,14 +111,16 @@ export function ImageEditPanel({ projectId, selection, onClose, onReplaced }: Pr
           <p className="comments-anchor">
             {t("imageSelected")} <code>{selection.selector || "img"}</code>
           </p>
-          { }
           <img
             // Root-path srcs live in the project's public/ — unreachable from
-            // the builder origin without the authenticated endpoint.
+            // the builder origin without the authenticated endpoint. Never use
+            // raw forge-uploads URLs: that bucket is private (AccessDenied).
             src={
               selection.src.startsWith("/")
                 ? (projectPublicUrl(projectId, selection.src) ?? selection.src)
-                : selection.src
+                : selection.src.includes("/forge-uploads/")
+                  ? ""
+                  : selection.src
             }
             alt={selection.alt || ""}
             className="image-panel-preview"
@@ -156,18 +158,18 @@ export function ImageEditPanel({ projectId, selection, onClose, onReplaced }: Pr
           <li className="comments-empty">{t("filesEmpty")}</li>
         ) : (
           assets.map((asset) => {
-            const thumbUrl = assetContentUrl(projectId, asset.id) ?? asset.public_url;
+            // Prefer the authenticated proxy — public_url hits a private bucket.
+            const thumbUrl = assetContentUrl(projectId, asset.id);
             return (
               <li key={asset.id}>
                 <button
                   type="button"
                   className="image-panel-thumb"
-                  disabled={busy || !selection}
+                  disabled={busy || !selection || !thumbUrl}
                   title={asset.name}
                   onClick={() => void applyUrl(asset.public_url, asset.id)}
                 >
-                  { }
-                  <img src={thumbUrl} alt={asset.name} />
+                  {thumbUrl ? <img src={thumbUrl} alt={asset.name} /> : null}
                   <span>{asset.name}</span>
                 </button>
               </li>
