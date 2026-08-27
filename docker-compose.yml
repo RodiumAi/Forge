@@ -92,7 +92,10 @@ services:
       RUNNER_PARENT_ORIGINS: http://localhost:3100,http://127.0.0.1:3100
       SSE_HEARTBEAT_SECONDS: "15"
       ALB_IDLE_TIMEOUT_SECONDS: "600"
-      FIRESTORE_ENABLED: "true"
+      # Off by default: the mirror needs the Firestore emulator on the host
+      # (infra/local/firestore-emulator.md). Set FIRESTORE_ENABLED=true in .env
+      # once it runs — with it down, mirror writes are wasted work.
+      FIRESTORE_ENABLED: ${FIRESTORE_ENABLED:-false}
       FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-rodiumai-local}
       FIRESTORE_DATABASE: ${FIRESTORE_DATABASE:-rodiumaidb}
       # Always host gateway from containers (do not inherit 127.0.0.1 from .env).
