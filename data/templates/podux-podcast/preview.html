@@ -12,12 +12,14 @@ body{margin:0;font-family:"Segoe UI",system-ui,sans-serif;background:#f7f6fc;col
 .chip{background:#ece9f8;color:#7c5cff;border-radius:99px;padding:2px 8px;font-size:8px;font-weight:700}
 .hero h1{font-size:15px;margin:6px 0;max-width:24ch}
 .hero p{color:#6f6a86;font-size:9px;margin:0}
-.art{flex:1;min-height:80px;border-radius:12px;background:linear-gradient(150deg,#7c5cff,#2b1a6e 75%);display:flex;align-items:center;justify-content:center}
-.pl{background:#fff;color:#7c5cff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px}
+.art{flex:1;min-height:80px;border-radius:12px;background:linear-gradient(150deg,#7c5cff,#2b1a6e 75%);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.pl{background:#fff;color:#7c5cff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;position:relative;z-index:1}
 .eps{padding:0 18px 14px}
 .ep{display:flex;align-items:center;gap:8px;background:#fff;border-radius:9px;padding:6px 10px;margin-bottom:6px;font-size:9px;box-shadow:0 1px 5px rgba(24,19,48,.07)}
 .n{color:#6f6a86;font-weight:700}
-.cv{width:22px;height:22px;border-radius:6px}
+.cv{width:22px;height:22px;border-radius:6px;overflow:hidden;flex:none}
+.cv img{width:100%;height:100%;object-fit:cover;display:block}
 .t{flex:1;font-weight:600}
 .d{background:#ece9f8;color:#6f6a86;border-radius:99px;padding:0 6px;font-size:8px}
 .p2{background:#ece9f8;color:#7c5cff;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:7px}
@@ -28,12 +30,12 @@ body{margin:0;font-family:"Segoe UI",system-ui,sans-serif;background:#f7f6fc;col
 <div class="h"><b>Signal&amp;Noise</b><span class="cta">Follow the show</span></div>
 <div class="hero">
   <div><span class="chip">Season 4 now streaming</span><h1>Signal&amp;Noise, a podcast about building software people actually use</h1><p>New episode every other Tuesday.</p></div>
-  <div class="art"><span class="pl">&#9654;</span></div>
+  <div class="art"><img src="https://images.unsplash.com/photo-1478737270239-2f02b77fc618?auto=format&fit=crop&w=400&q=70" alt=""><span class="pl">&#9654;</span></div>
 </div>
 <div class="eps">
-  <div class="ep"><span class="n">01</span><span class="cv" style="background:linear-gradient(135deg,#7c5cff,#4b32c3)"></span><span class="t">Why your side project deserves a launch day</span><span class="d">38 min</span><span class="p2">&#9654;</span></div>
+  <div class="ep"><span class="n">01</span><span class="cv" style="background:linear-gradient(135deg,#7c5cff,#4b32c3)"><img src="https://images.unsplash.com/photo-1590602847861-f357a9332bbc?auto=format&fit=crop&w=200&q=70" alt=""></span><span class="t">Why your side project deserves a launch day</span><span class="d">38 min</span><span class="p2">&#9654;</span></div>
   <div class="ep"><span class="n">02</span><span class="cv" style="background:linear-gradient(135deg,#ff7ab8,#b83280)"></span><span class="t">Debugging in production without losing sleep</span><span class="d">52 min</span><span class="p2">&#9654;</span></div>
-  <div class="ep"><span class="n">03</span><span class="cv" style="background:linear-gradient(135deg,#5ccfff,#2a7fb8)"></span><span class="t">The art of the tiny pull request</span><span class="d">27 min</span><span class="p2">&#9654;</span></div>
+  <div class="ep"><span class="n">03</span><span class="cv" style="background:linear-gradient(135deg,#5ccfff,#2a7fb8)"><img src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=200&q=70" alt=""></span><span class="t">The art of the tiny pull request</span><span class="d">27 min</span><span class="p2">&#9654;</span></div>
 </div>
 <div class="f">&copy; 2026 Signal&amp;Noise &mdash; fictional demo podcast</div>
 </body>
