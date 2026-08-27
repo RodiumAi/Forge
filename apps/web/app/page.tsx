@@ -346,7 +346,6 @@ export default function LandingPage() {
         <div className="lp-hero-wash" aria-hidden />
         <div className="lp-hero-inner">
           <h1 className="lp-hero-title">
-            <span className="lp-hero-brand">{t("landingTitleBrand")}</span>
             <span className="lp-hero-claim">{t("landingTitleClaim")}</span>
           </h1>
           <p className="lp-hero-sub">{t("landingSub")}</p>
