@@ -21,7 +21,6 @@ import { api, apiBase } from "@/lib/api";
 import { Icon } from "@/components/ui/icon";
 import { LocaleSwitch, useI18n } from "@/lib/i18n/I18nProvider";
 import type { BuilderMode, ViewportMode } from "./types";
-import { formatRouteLabel } from "./types";
 import { PublishPopover } from "./PublishPopover";
 
 type Props = {
@@ -383,52 +382,47 @@ export function BuilderTopbar({
               )}
             </div>
 
-            {pages.length > 1 ? (
-              <div className="builder-page-picker" ref={pageMenuRef}>
-                <button
-                  type="button"
-                  className="builder-page-picker-trigger"
-                  aria-haspopup="listbox"
-                  aria-expanded={pageMenuOpen}
-                  aria-label={t("builderPage")}
-                  onClick={() => {
-                    setOpenMenu(false);
-                    setPageMenuOpen((open) => !open);
-                  }}
-                >
-                  <span className="builder-page-picker-label">
-                    {formatRouteLabel(previewPath, t("builderHomePage"))}
-                  </span>
-                  <Icon
-                    icon={ChevronDown}
-                    className={`builder-page-picker-chevron ui-icon-sm${pageMenuOpen ? " open" : ""}`}
-                  />
-                </button>
-                {pageMenuOpen ? (
-                  <div className="builder-page-menu" role="listbox" aria-label={t("builderPage")}>
-                    {pages.map((p) => {
-                      const label = formatRouteLabel(p, t("builderHomePage"));
-                      const active = p === previewPath;
-                      return (
-                        <button
-                          key={p}
-                          type="button"
-                          role="option"
-                          aria-selected={active}
-                          className={active ? "active" : undefined}
-                          onClick={() => {
-                            onPreviewPathChange(p);
-                            setPageMenuOpen(false);
-                          }}
-                        >
-                          {label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
+            <div className="builder-page-picker" ref={pageMenuRef}>
+              <button
+                type="button"
+                className="builder-page-picker-trigger"
+                aria-haspopup="listbox"
+                aria-expanded={pageMenuOpen}
+                aria-label={t("builderPage")}
+                onClick={() => {
+                  setOpenMenu(false);
+                  setPageMenuOpen((open) => !open);
+                }}
+              >
+                <span className="builder-page-picker-label">{previewPath || "/"}</span>
+                <Icon
+                  icon={ChevronDown}
+                  className={`builder-page-picker-chevron ui-icon-sm${pageMenuOpen ? " open" : ""}`}
+                />
+              </button>
+              {pageMenuOpen ? (
+                <div className="builder-page-menu" role="listbox" aria-label={t("builderPage")}>
+                  {(pages.length ? pages : ["/"]).map((p) => {
+                    const active = p === previewPath;
+                    return (
+                      <button
+                        key={p}
+                        type="button"
+                        role="option"
+                        aria-selected={active}
+                        className={active ? "active" : undefined}
+                        onClick={() => {
+                          onPreviewPathChange(p);
+                          setPageMenuOpen(false);
+                        }}
+                      >
+                        {p}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
             <button
               type="button"
               className="builder-toolbar-btn builder-toolbar-btn-restart"
