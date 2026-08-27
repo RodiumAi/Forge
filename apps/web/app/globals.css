@@ -33,6 +33,12 @@ html.forge-fonts-fallback {
   --font-body: "Open Sauce Sans", system-ui, sans-serif;
 }
 
+/* Display serif for headings (hero tagline, section titles, greetings).
+   Loaded at runtime from Google Fonts in app/layout.tsx. */
+:root {
+  --font-serif-display: "Fraunces", Georgia, "Times New Roman", serif;
+}
+
 :root,
 [data-theme="dark"] {
   color-scheme: dark;
@@ -190,12 +196,14 @@ html:has(.home) body {
 html:has(.landing) {
   overflow-x: clip;
   overflow-y: auto;
+  background: #050505;
 }
 
 html:has(.landing) body {
   overflow: visible;
   min-height: 100%;
   height: auto;
+  background: transparent;
 }
 
 a {
@@ -3916,20 +3924,21 @@ html:has(.builder) body {
 }
 
 [data-theme="light"] .landing {
-  --lp-bg: #faf7f3;
-  --lp-ink: #14110f;
-  --lp-muted: rgba(20, 17, 15, 0.62);
-  --lp-soft: #f3eee8;
+  --lp-bg: #f6f3ee;
+  --lp-ink: #1c1917;
+  --lp-muted: rgba(28, 25, 23, 0.58);
+  --lp-soft: #efeae3;
   --lp-panel: #ffffff;
-  --lp-line: rgba(20, 17, 15, 0.1);
-  --lp-ember: #e85d04;
-  --lp-ember-deep: #c2410c;
-  --lp-wash-a: #ff8a3d;
-  --lp-wash-b: #ffb347;
-  --lp-wash-c: #f97316;
-  --lp-cta: #14110f;
+  --lp-line: rgba(28, 25, 23, 0.1);
+  --lp-ember: #d4540a;
+  --lp-ember-deep: #b45309;
+  /* Softer peach washes — high-chroma orange was too harsh in light mode. */
+  --lp-wash-a: #e8a06a;
+  --lp-wash-b: #efc49a;
+  --lp-wash-c: #e2b18a;
+  --lp-cta: #1c1917;
   --lp-cta-ink: #ffffff;
-  --lp-prompt-shadow: 0 18px 50px rgba(20, 17, 15, 0.1);
+  --lp-prompt-shadow: 0 18px 50px rgba(28, 25, 23, 0.08);
   color-scheme: light;
 }
 
@@ -4085,22 +4094,42 @@ html:has(.builder) body {
   color: #fff;
 }
 
-/* Floating pill navbar over the hero wash. */
+/* Floating navbar — transparent on hero, frosted once content scrolls under. */
 .lp-nav {
-  position: sticky;
-  top: 0.75rem;
-  z-index: 20;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
   display: flex;
   align-items: center;
   gap: 1rem;
-  width: min(1120px, calc(100% - 2rem));
-  margin: 0.75rem auto 0;
-  padding: 0.5rem 0.9rem;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--lp-ink) 10%, transparent);
-  background: color-mix(in srgb, var(--lp-bg) 68%, transparent);
-  backdrop-filter: blur(14px) saturate(1.3);
-  box-shadow: 0 8px 30px color-mix(in srgb, var(--lp-ink) 8%, transparent);
+  width: 100%;
+  margin: 0;
+  padding: 0.7rem max(1rem, calc((100% - 1120px) / 2 + 0.25rem));
+  border: 0;
+  border-bottom: 1px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  backdrop-filter: none;
+  box-shadow: none;
+  transition:
+    background 0.22s ease,
+    border-color 0.22s ease,
+    backdrop-filter 0.22s ease,
+    box-shadow 0.22s ease;
+}
+
+.lp-nav.is-scrolled {
+  background: color-mix(in srgb, var(--lp-bg) 88%, transparent);
+  backdrop-filter: blur(18px) saturate(1.25);
+  border-bottom-color: color-mix(in srgb, var(--lp-ink) 10%, transparent);
+  box-shadow: 0 8px 28px color-mix(in srgb, #000 16%, transparent);
+}
+
+[data-theme="light"] .lp-nav.is-scrolled {
+  background: color-mix(in srgb, var(--lp-bg) 92%, transparent);
+  box-shadow: 0 8px 24px color-mix(in srgb, #000 6%, transparent);
 }
 
 .lp-nav-brand {
@@ -4174,27 +4203,84 @@ html:has(.builder) body {
 
 .lp-hero {
   position: relative;
-  isolation: isolate;
-  overflow: clip;
-  min-height: min(88vh, 820px);
+  z-index: 1;
+  min-height: min(92vh, 860px);
   display: grid;
   place-items: center;
-  padding: 3.5rem 1rem 4rem;
+  /* Clear the fixed floating nav; wash paints edge-to-edge under it. */
+  padding: 5.75rem 1rem 4.25rem;
   text-align: center;
 }
 
-.lp-hero-wash,
-.lp-cta-wash,
-.lp-footer-wash {
+/* Page-level wash + subtle square grid (Rodium-style dark/light). */
+.landing::before {
+  content: "";
   position: absolute;
-  inset: -12% -8%;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: min(100vh, 920px);
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 90% 70% at 50% 8%, color-mix(in srgb, var(--lp-wash-a) 42%, transparent), transparent 62%),
+    radial-gradient(ellipse 50% 45% at 88% 28%, color-mix(in srgb, var(--lp-wash-c) 22%, transparent), transparent 70%),
+    linear-gradient(180deg, color-mix(in srgb, var(--lp-wash-a) 16%, var(--lp-bg)) 0%, var(--lp-bg) 78%);
+  animation: lpWash 14s ease-in-out infinite alternate;
+}
+
+.landing::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: min(100vh, 920px);
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.32;
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--lp-ink) 16%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--lp-ink) 14%, transparent) 1px, transparent 1px);
+  background-size: 52px 52px;
+  mask-image: radial-gradient(ellipse 85% 70% at 50% -10%, #000 35%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse 85% 70% at 50% -10%, #000 35%, transparent 75%);
+}
+
+/* Light mode: keep the wash, drop the intensity so it doesn't glare. */
+[data-theme="light"] .landing::before {
+  background:
+    radial-gradient(ellipse 95% 75% at 50% 10%, color-mix(in srgb, var(--lp-wash-a) 22%, transparent), transparent 64%),
+    linear-gradient(180deg, color-mix(in srgb, var(--lp-wash-a) 8%, var(--lp-bg)) 0%, var(--lp-bg) 72%);
+  animation: none;
+}
+
+[data-theme="light"] .landing::after {
+  opacity: 0.42;
+}
+
+.lp-hero-wash {
+  display: none;
+}
+
+/* Only the CTA keeps a soft wash; footer stays flat on --lp-bg (no double glow). */
+.lp-cta-wash {
+  position: absolute;
+  inset: 0;
   z-index: -1;
   background:
-    radial-gradient(ellipse 70% 55% at 50% 35%, color-mix(in srgb, var(--lp-wash-a) 42%, transparent), transparent 70%),
-    radial-gradient(ellipse 45% 50% at 18% 70%, color-mix(in srgb, var(--lp-wash-b) 38%, transparent), transparent 68%),
-    radial-gradient(ellipse 40% 45% at 85% 25%, color-mix(in srgb, var(--lp-wash-c) 45%, transparent), transparent 65%),
-    linear-gradient(180deg, color-mix(in srgb, var(--lp-wash-a) 8%, var(--lp-bg)) 0%, var(--lp-bg) 72%);
-  animation: lpWash 14s ease-in-out infinite alternate;
+    radial-gradient(ellipse 80% 70% at 50% 100%, color-mix(in srgb, var(--lp-wash-a) 28%, transparent), transparent 70%),
+    linear-gradient(180deg, var(--lp-bg) 0%, color-mix(in srgb, var(--lp-wash-a) 10%, var(--lp-bg)) 45%, var(--lp-bg) 100%);
+}
+
+.lp-footer-wash {
+  display: none;
+}
+
+[data-theme="light"] .lp-cta-wash {
+  background:
+    radial-gradient(ellipse 80% 70% at 50% 100%, color-mix(in srgb, var(--lp-wash-a) 16%, transparent), transparent 72%),
+    linear-gradient(180deg, var(--lp-bg) 0%, color-mix(in srgb, var(--lp-wash-a) 6%, var(--lp-bg)) 50%, var(--lp-bg) 100%);
 }
 
 @keyframes lpWash {
@@ -4239,7 +4325,7 @@ html:has(.builder) body {
   max-width: 22ch;
   /* Fraunces display serif; --lp-ink flips white (dark theme) / near-black
      (light theme), like the reference hero. */
-  font-family: "Fraunces", Georgia, "Times New Roman", serif;
+  font-family: var(--font-serif-display);
   font-size: clamp(2.4rem, 6.2vw, 4.2rem);
   font-weight: 600;
   letter-spacing: -0.02em;
@@ -4297,6 +4383,7 @@ html:has(.builder) body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .landing::before,
   .lp-hero-wash,
   .lp-cta-wash,
   .lp-footer-wash,
@@ -4308,8 +4395,16 @@ html:has(.builder) body {
   .lp-reveal {
     animation: none !important;
     transition: none !important;
-    opacity: 1 !important;
     transform: none !important;
+  }
+
+  .lp-hero-inner,
+  .lp-hero-brand,
+  .lp-hero-claim,
+  .lp-hero-sub,
+  .lp-prompt,
+  .lp-reveal {
+    opacity: 1 !important;
   }
 }
 
@@ -4404,7 +4499,7 @@ html:has(.builder) body {
 
 .lp-proof {
   width: min(980px, calc(100% - 2rem));
-  margin: 0 auto 2.5rem;
+  margin: 3.75rem auto 2.75rem;
   text-align: center;
 }
 
@@ -4434,10 +4529,10 @@ html:has(.builder) body {
 
 .lp-section-title {
   margin: 0;
-  font-family: var(--font-display), sans-serif;
+  font-family: var(--font-serif-display);
   font-size: clamp(1.7rem, 3.4vw, 2.35rem);
-  font-weight: 750;
-  letter-spacing: -0.03em;
+  font-weight: 600;
+  letter-spacing: -0.015em;
 }
 
 .lp-how,
@@ -4465,6 +4560,78 @@ html:has(.builder) body {
   gap: 0.65rem;
 }
 
+.lp-how-video-shell {
+  position: relative;
+  isolation: isolate;
+}
+
+.lp-how-video-glow {
+  position: absolute;
+  inset: 8% -4% -6%;
+  z-index: -1;
+  border-radius: 28px;
+  background: radial-gradient(
+    ellipse 70% 60% at 50% 60%,
+    color-mix(in srgb, var(--lp-wash-a) 34%, transparent),
+    transparent 72%
+  );
+  filter: blur(18px);
+  pointer-events: none;
+}
+
+.lp-how-video-frame {
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--lp-panel) 94%, var(--lp-bg));
+  border: 1px solid var(--lp-line);
+  box-shadow:
+    0 24px 60px color-mix(in srgb, #000 28%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--lp-ink) 4%, transparent);
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+[data-theme="light"] .lp-how-video-frame {
+  box-shadow:
+    0 22px 50px color-mix(in srgb, #000 10%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--lp-ink) 5%, transparent);
+}
+
+.lp-how-video-chrome {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.7rem 0.9rem;
+  border-bottom: 1px solid var(--lp-line);
+  background: color-mix(in srgb, var(--lp-soft) 80%, var(--lp-panel));
+}
+
+.lp-how-video-chrome-label {
+  margin-left: 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--lp-muted);
+}
+
+.lp-how-video-stage {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  background: #0a0a0a;
+  overflow: hidden;
+}
+
+.lp-how-video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border: 0;
+  outline: none;
+  pointer-events: none;
+}
+
 .lp-how-visual-dot {
   width: 0.55rem;
   height: 0.55rem;
@@ -4472,6 +4639,18 @@ html:has(.builder) body {
   background: color-mix(in srgb, var(--lp-ink) 18%, transparent);
   display: inline-block;
   margin-right: 0.35rem;
+}
+
+.lp-how-visual-dot:nth-child(1) {
+  background: #ff5f57;
+}
+
+.lp-how-visual-dot:nth-child(2) {
+  background: #febc2e;
+}
+
+.lp-how-visual-dot:nth-child(3) {
+  background: #28c840;
 }
 
 .lp-how-visual-body {
@@ -4669,7 +4848,7 @@ html:has(.builder) body {
   position: relative;
   isolation: isolate;
   overflow: clip;
-  padding: 3.5rem 1rem 4rem;
+  padding: 4rem 1rem 3.25rem;
   text-align: center;
 }
 
@@ -4683,9 +4862,10 @@ html:has(.builder) body {
 
 .lp-cta-title {
   margin: 0;
-  font-family: var(--font-display), sans-serif;
+  font-family: var(--font-serif-display);
   font-size: clamp(1.8rem, 3.5vw, 2.5rem);
-  letter-spacing: -0.03em;
+  font-weight: 600;
+  letter-spacing: -0.015em;
 }
 
 .lp-cta-sub {
@@ -4697,7 +4877,8 @@ html:has(.builder) body {
   position: relative;
   isolation: isolate;
   overflow: clip;
-  padding: 2rem 1rem 2.5rem;
+  padding: 0.5rem 1rem 2.5rem;
+  background: var(--lp-bg);
 }
 
 .lp-footer-panel {
@@ -5491,9 +5672,10 @@ html:has(.builder) body {
 
 .home-greeting {
   margin: 0 0 1.25rem;
+  font-family: var(--font-serif-display);
   font-size: clamp(1.8rem, 4vw, 2.75rem);
-  font-weight: 700;
-  letter-spacing: -0.03em;
+  font-weight: 600;
+  letter-spacing: -0.015em;
   max-width: 20ch;
   color: var(--home-text);
 }
@@ -5935,8 +6117,9 @@ html:has(.builder) body {
 
 .home-settings-head h1 {
   margin: 0 0 0.35rem;
+  font-family: var(--font-serif-display);
   font-size: clamp(1.6rem, 3vw, 2.1rem);
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.03em;
 }
 
@@ -6561,8 +6744,9 @@ html:has(.builder) body {
 
 .settings-panel-head h1 {
   margin: 0 0 0.35rem;
+  font-family: var(--font-serif-display);
   font-size: clamp(1.7rem, 3vw, 2.2rem);
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.03em;
 }
 
@@ -6728,8 +6912,9 @@ html:has(.builder) body {
 
 .app-error-title {
   margin: 0;
+  font-family: var(--font-serif-display);
   font-size: 1.35rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--home-text, #f4f4f6);
 }
 
