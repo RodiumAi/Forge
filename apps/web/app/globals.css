@@ -6728,12 +6728,19 @@ html:has(.builder) body {
 }
 
 /* Jump to latest */
-.chat-jump {
-  position: absolute;
-  left: 50%;
-  bottom: 8.5rem;
-  transform: translateX(-50%);
+/* Sticky inside the scrollable list: the previous absolute offset from the
+   sidebar landed the button behind the composer, clipped to a sliver. */
+.chat-jump-holder {
+  position: sticky;
+  bottom: 0.6rem;
   z-index: 20;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.chat-jump {
+  pointer-events: auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;

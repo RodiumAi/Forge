@@ -23,15 +23,20 @@ export function ScrollToBottom({
 }) {
   if (!visible) return null;
   return (
-    <button
-      type="button"
-      className={`chat-jump${unread ? " has-unread" : ""}`}
-      onClick={onClick}
-      aria-label={label}
-      title={label}
-    >
-      <Icon icon={ArrowDown} size={16} />
-      {unread ? <span className="chat-jump-dot" aria-hidden="true" /> : null}
-    </button>
+    // Sticky INSIDE the scroll container: the previous absolute positioning
+    // (bottom offset from the sidebar) landed the button behind the composer
+    // and it showed as a clipped sliver at the panel edge.
+    <div className="chat-jump-holder">
+      <button
+        type="button"
+        className={`chat-jump${unread ? " has-unread" : ""}`}
+        onClick={onClick}
+        aria-label={label}
+        title={label}
+      >
+        <Icon icon={ArrowDown} size={16} />
+        {unread ? <span className="chat-jump-dot" aria-hidden="true" /> : null}
+      </button>
+    </div>
   );
 }
