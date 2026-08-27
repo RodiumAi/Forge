@@ -19,7 +19,7 @@ from app.schemas import (
     MessageOut,
     SendMessageRequest,
 )
-from app.services.apply_writes import apply_validated_writes
+from app.services.apply_writes import apply_validated_writes_async
 from app.services.attachments import extract_image_urls
 from app.services.capabilities import require_rodi_for_paid_capability
 from app.services.filesystem import delete_file
@@ -272,7 +272,9 @@ async def _iter_single_pass(
             writes, deletes = parse_forge_tags("".join(full))
         yield push_step("generate", t("step_generate_code", locale), "done")
 
-    written, violations = apply_validated_writes(project_id_str, writes, snapshot_label="before edit")
+    written, violations = await apply_validated_writes_async(
+        project_id_str, writes, snapshot_label="before edit"
+    )
     applied.extend(written)
     for item in written:
         yield _sse({"type": "file_write", "path": item["path"]})
@@ -571,7 +573,7 @@ async def send_message(
                 yield push_step("generate", t("step_generate_code", locale), "done")
                 yield push_step("apply_writes", t("step_apply_writes", locale), "running")
                 writes, deletes = parse_forge_tags("".join(full))
-                written, violations = apply_validated_writes(
+                written, violations = await apply_validated_writes_async(
                     project_id_str, writes, snapshot_label="before edit"
                 )
                 applied.extend(written)

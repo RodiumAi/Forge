@@ -57,13 +57,16 @@ export class NetworkError extends ApiError {
 }
 
 export type ApiOptions = RequestInit & {
-  /** Abort after N ms. Default 30 s; pass 0 to disable (SSE/streams). */
+  /** Abort after N ms. Default 90 s; pass 0 to disable (SSE/streams). */
   timeoutMs?: number;
   /** Extra attempts on network errors / 502-504. Default 2. */
   retries?: number;
 };
 
-const DEFAULT_TIMEOUT_MS = 30_000;
+// 90s, not 30s: during a generation the backend legitimately spends long spans
+// on LLM calls and file batches, and calls made alongside (preview restart,
+// file tree) must not be killed by an aggressive client-side deadline.
+const DEFAULT_TIMEOUT_MS = 90_000;
 const DEFAULT_RETRIES = 2;
 const RETRY_STATUSES = new Set([429, 502, 503, 504]);
 /** Retries only make sense for operations that are safe to repeat. */
