@@ -8,6 +8,7 @@ from app.services.filesystem import (
     delete_file,
     file_tree,
     list_files,
+    project_dir,
     read_file,
     rename_path,
     safe_resolve,
@@ -107,6 +108,30 @@ class TestDelete:
         write_file(project, "src/App.tsx", "x")
         with pytest.raises(ValueError, match="history"):
             delete_file(project, ".git")
+
+
+class TestPublicAssets:
+    """Files under public/ are served to the builder (favicon, OG image).
+
+    They used to be reachable only through the Vite preview proxy, which no
+    longer exists; the builder rendered broken images until a dedicated route
+    replaced it.
+    """
+
+    def test_scaffold_ships_a_favicon(self, project):
+        from app.services.scaffold import scaffold_vite_react
+
+        scaffold_vite_react(project, "Demo")
+        favicon = project_dir(project) / "public" / "favicon.png"
+        assert favicon.is_file()
+        assert favicon.stat().st_size > 0
+
+    def test_public_files_resolve_under_the_project_root(self, project):
+        write_bytes(project, "public/favicon.png", b"\x89PNG\r\n\x1a\n")
+        root = project_dir(project).resolve()
+        target = (root / "public" / "favicon.png").resolve()
+        assert target.is_file()
+        assert target.relative_to(root)
 
 
 class TestRename:

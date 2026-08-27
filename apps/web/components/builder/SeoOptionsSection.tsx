@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { ImagePlus, Loader2, Save, Sparkles, Upload } from "lucide-react";
 import { api, apiBase, getToken } from "@/lib/api";
+import { projectPublicUrl } from "@/lib/asset-url";
 import { Icon } from "@/components/ui/icon";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { SeoCropModal } from "@/components/builder/SeoCropModal";
@@ -50,10 +51,7 @@ const EMPTY: SeoMeta = {
 };
 
 function assetUrl(projectId: string, path: string | null | undefined, bust: number): string | null {
-  if (!path) return null;
-  if (path.startsWith("http://") || path.startsWith("https://")) return path;
-  const rel = path.replace(/^public\//i, "").replace(/^\//, "");
-  return `${apiBase()}/preview/${projectId}/${rel}?v=${bust}`;
+  return projectPublicUrl(projectId, path, bust);
 }
 
 export function SeoOptionsSection({ projectId, onOk, onError }: Props) {

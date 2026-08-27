@@ -14,6 +14,7 @@ import {
   Upload,
 } from "lucide-react";
 import { api, apiBase, getToken } from "@/lib/api";
+import { projectPublicUrl } from "@/lib/asset-url";
 import { Icon } from "@/components/ui/icon";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { topProgressDone, topProgressStart } from "@/lib/top-progress";
@@ -96,11 +97,32 @@ export function PublishPopover({
   const [editing, setEditing] = useState(false);
   const [draftSlug, setDraftSlug] = useState(slugProp || "");
   const [mounted, setMounted] = useState(false);
+  const [faviconUrl, setFaviconUrl] = useState<string | null>(null);
   const publishLive = usePublishLive(projectId);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Resolve the project's own favicon when the popover opens.
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const seo = await api<{ favicon_path?: string | null }>(`/projects/${projectId}/seo`);
+        if (cancelled) return;
+        setFaviconUrl(
+          projectPublicUrl(projectId, seo.favicon_path || "/favicon.png", Date.now()),
+        );
+      } catch {
+        if (!cancelled) setFaviconUrl(projectPublicUrl(projectId, "/favicon.png", Date.now()));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, projectId]);
 
   useEffect(() => {
     if (slugProp) setSlug(slugProp);
@@ -400,7 +422,19 @@ export function PublishPopover({
               <>
                 <div className="publish-url-main">
                   <span className="publish-favicon" aria-hidden>
-                    <img src="/icon.png" alt="" width={16} height={16} />
+                    {/* The site's own favicon, not Forge's app icon. Falls back
+                        to a neutral globe when the project has none yet. */}
+                    {faviconUrl ? (
+                      <img
+                        src={faviconUrl}
+                        alt=""
+                        width={16}
+                        height={16}
+                        onError={() => setFaviconUrl(null)}
+                      />
+                    ) : (
+                      <Icon icon={Globe} className="ui-icon-sm" />
+                    )}
                   </span>
                   {hasPublished && url ? (
                     <a href={url} target="_blank" rel="noreferrer" className="publish-url-link">

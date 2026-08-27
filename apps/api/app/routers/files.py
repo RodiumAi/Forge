@@ -1,3 +1,4 @@
+import mimetypes
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
@@ -25,6 +26,7 @@ from app.services.filesystem import (
     content_version,
     delete_file,
     file_tree,
+    project_dir,
     read_file,
     rename_path,
     write_file,
@@ -217,6 +219,47 @@ def rename_file(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"ok": True, "path": dst}
+
+
+@router.get("/{project_id}/public/{asset_path:path}", include_in_schema=False)
+def get_public_asset(
+    project_id: UUID,
+    asset_path: str,
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Serve a file from the project's `public/` folder (favicon, OG image...).
+
+    These used to be reachable through the Vite preview proxy at
+    /preview/{id}/<file>; that proxy is gone, so favicon and SEO previews in the
+    builder pointed at a dead route. Auth rides the `?access_token=` support so
+    the URL works directly in an <img src>.
+    """
+    locale = resolve_locale(request)
+    _owned(db, user, project_id, locale)
+
+    rel = asset_path.strip().lstrip("/")
+    if not rel or ".." in rel.split("/"):
+        raise HTTPException(status_code=404, detail=t("file_not_found", locale))
+
+    root = project_dir(str(project_id))
+    candidates = [root / "public" / rel, root / rel]
+    for candidate in candidates:
+        try:
+            resolved = candidate.resolve()
+            resolved.relative_to(root.resolve())
+        except (OSError, ValueError):
+            continue
+        if resolved.is_file():
+            media_type = mimetypes.guess_type(resolved.name)[0] or "application/octet-stream"
+            return Response(
+                content=resolved.read_bytes(),
+                media_type=media_type,
+                headers={"Cache-Control": "no-cache"},
+            )
+
+    raise HTTPException(status_code=404, detail=t("file_not_found", locale))
 
 
 @router.delete("/{project_id}/files")
