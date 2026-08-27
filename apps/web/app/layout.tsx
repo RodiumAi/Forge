@@ -10,9 +10,9 @@ import "./globals.css";
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || "http://localhost:3100";
 
-const titleDefault = "Forge by RodiumAi — Prototype en moins de 5 minutes";
+const titleDefault = "Forge by RodiumAi · Prototype en moins de 5 minutes";
 const description =
-  "Prototype ton projet web en moins de 5 minutes avec un seul prompt. Forge génère une vraie app React, preview live, templates et export — propulsé par RodiumAi.";
+  "Créez des applications et des sites web en discutant avec l'IA. Forge génère une vraie app React, preview live, templates et export. Propulsé par RodiumAi.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -59,7 +59,7 @@ export const metadata: Metadata = {
         url: "/og.png",
         width: 1200,
         height: 630,
-        alt: "Forge by RodiumAi — Prototype in minutes",
+        alt: "Forge by RodiumAi · Prototype in minutes",
       },
     ],
   },
@@ -95,6 +95,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        {/* Display serif for the hero tagline. Runtime <link> (not next/font):
+            Docker builds run offline with FORGE_FONT_MODE=fallback, where a
+            build-time font fetch would fail. */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* eslint-disable-next-line @next/next/no-page-custom-font -- App Router root layout applies to every page */}
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap"
+        />
         <LandingJsonLd siteUrl={siteUrl} />
       </head>
       <body>

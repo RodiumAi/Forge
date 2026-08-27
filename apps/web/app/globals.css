@@ -4085,18 +4085,22 @@ html:has(.builder) body {
   color: #fff;
 }
 
+/* Floating pill navbar over the hero wash. */
 .lp-nav {
   position: sticky;
-  top: 0;
+  top: 0.75rem;
   z-index: 20;
   display: flex;
   align-items: center;
   gap: 1rem;
   width: min(1120px, calc(100% - 2rem));
-  margin: 0 auto;
-  padding: 0.85rem 0;
-  background: color-mix(in srgb, var(--lp-bg) 82%, transparent);
-  backdrop-filter: blur(12px);
+  margin: 0.75rem auto 0;
+  padding: 0.5rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--lp-ink) 10%, transparent);
+  background: color-mix(in srgb, var(--lp-bg) 68%, transparent);
+  backdrop-filter: blur(14px) saturate(1.3);
+  box-shadow: 0 8px 30px color-mix(in srgb, var(--lp-ink) 8%, transparent);
 }
 
 .lp-nav-brand {
@@ -4113,15 +4117,22 @@ html:has(.builder) body {
 .lp-nav-links {
   display: none;
   align-items: center;
-  gap: 1.25rem;
-  margin-left: 1.5rem;
+  gap: 0.35rem;
+  margin-left: 1rem;
   font-size: 0.92rem;
   font-weight: 550;
   color: var(--lp-muted);
 }
 
+.lp-nav-links a {
+  padding: 0.42rem 0.8rem;
+  border-radius: 999px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
 .lp-nav-links a:hover {
   color: var(--lp-ink);
+  background: color-mix(in srgb, var(--lp-ink) 8%, transparent);
 }
 
 .lp-nav-right {
@@ -4220,40 +4231,21 @@ html:has(.builder) body {
   gap: 0.55rem;
   justify-items: center;
   max-width: none;
-  font-family: var(--font-display), sans-serif;
   color: var(--lp-ink);
-}
-
-.lp-hero-brand {
-  display: block;
-  font-size: clamp(3.2rem, 9vw, 5.6rem);
-  font-weight: 800;
-  letter-spacing: -0.055em;
-  line-height: 0.92;
-  color: var(--lp-ink);
-  animation: lpBrandIn 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .lp-hero-claim {
   display: block;
-  max-width: 28ch;
-  font-size: clamp(1.35rem, 3.4vw, 2rem);
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1.15;
-  color: var(--lp-ember);
-  animation: lpClaimIn 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
-}
-
-@keyframes lpBrandIn {
-  from {
-    opacity: 0;
-    transform: translateY(22px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+  max-width: 22ch;
+  /* Fraunces display serif; --lp-ink flips white (dark theme) / near-black
+     (light theme), like the reference hero. */
+  font-family: "Fraunces", Georgia, "Times New Roman", serif;
+  font-size: clamp(2.4rem, 6.2vw, 4.2rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.06;
+  color: var(--lp-ink);
+  animation: lpClaimIn 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.05s both;
 }
 
 @keyframes lpClaimIn {
