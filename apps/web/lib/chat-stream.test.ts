@@ -117,10 +117,33 @@ describe("file operations", () => {
       { type: "file_delete", path: "src/Old.tsx" },
     ]);
     expect(state.ops).toEqual([
-      { op: "write", path: "src/App.tsx" },
-      { op: "delete", path: "src/Old.tsx" },
+      { op: "write", path: "src/App.tsx", taskId: undefined },
+      { op: "delete", path: "src/Old.tsx", taskId: undefined },
     ]);
     expect(state.applied).toBe(true);
+  });
+
+  it("tags ops with the plan task that produced them", () => {
+    const { state } = run([
+      { type: "plan", needs_confirm: false, tasks: [{ id: "t1" }, { id: "t2" }] },
+      { type: "step", id: "task:t1", status: "running" },
+      { type: "file_write", path: "src/A.tsx" },
+      { type: "step", id: "task:t1", status: "done" },
+      { type: "step", id: "task:t2", status: "running" },
+      { type: "file_write", path: "src/B.tsx" },
+    ]);
+    expect(state.ops).toEqual([
+      { op: "write", path: "src/A.tsx", taskId: "t1" },
+      { op: "write", path: "src/B.tsx", taskId: "t2" },
+    ]);
+  });
+
+  it("leaves ops untagged outside plan execution", () => {
+    const { state } = run([
+      { type: "step", id: "generate", status: "running" },
+      { type: "file_write", path: "src/A.tsx" },
+    ]);
+    expect(state.ops[0].taskId).toBeUndefined();
   });
 
   it("asks to refresh routes and start the preview only on writes", () => {

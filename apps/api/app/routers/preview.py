@@ -9,6 +9,7 @@ browser receives the source bundle over postMessage and transforms it in-page.
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -99,6 +100,27 @@ def source_bundle(
         mode="babel_runner",
         runner_url=preview_babel.runner_url(),
     )
+
+
+@router.get("/projects/{project_id}/draft", include_in_schema=False)
+def draft_page(
+    project_id: UUID,
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    """Standalone draft: the runner shell with the source bundle embedded.
+
+    The plain runner waits for a builder parent to postMessage the bundle, so
+    opening it in its own tab showed an empty page. This is the "open draft in
+    a new tab" target; auth rides the `?access_token=` query support.
+    """
+    project = _owned(db, user, project_id, resolve_locale(request))
+    files = preview_babel.collect_project_source_files(str(project_id))
+    html = preview_babel.render_runner_shell(
+        bundle={"files": files, "entry": "src/main.tsx", "title": project.name}
+    )
+    return HTMLResponse(html, headers={"Cache-Control": "no-store"})
 
 
 @router.post("/projects/{project_id}/preview/start", response_model=PreviewStatus)

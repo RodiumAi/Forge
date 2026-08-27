@@ -384,4 +384,12 @@ window.addEventListener("message", (e) => {
   }
 });
 
-send({ type: "forge:ready" });
+// Standalone draft mode: the API can embed the source bundle directly in the
+// shell (GET /projects/{id}/draft), so the page renders without a builder
+// parent to postMessage it. In that mode there is no peer to notify.
+const DRAFT = window.__FORGE_DRAFT__;
+if (DRAFT && DRAFT.files) {
+  void mount(DRAFT.files, DRAFT.entry || "src/main.tsx", DRAFT.tokens || "");
+} else {
+  send({ type: "forge:ready" });
+}

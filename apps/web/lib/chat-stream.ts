@@ -30,6 +30,8 @@ export type ChatStreamState = {
   busy: boolean;
   /** True once the run wrote at least one file. */
   applied: boolean;
+  /** Plan task currently executing, so file ops can be grouped under it. */
+  currentTaskId: string | null;
 };
 
 export function initialStreamState(): ChatStreamState {
@@ -47,6 +49,7 @@ export function initialStreamState(): ChatStreamState {
     activeRunId: null,
     busy: true,
     applied: false,
+    currentTaskId: null,
   };
 }
 
@@ -129,17 +132,20 @@ export function reduceStreamEvent(
     const steps = i === -1 ? [...withoutBoot, step] : withoutBoot.map((s, k) => (k === i ? step : s));
 
     // The dispatcher reports task progress as `task:<id>` steps; keep the plan
-    // checklist in sync from the same source.
+    // checklist in sync from the same source, and remember which task is
+    // running so file operations can be grouped under it.
     let planTasks = next.planTasks;
+    let currentTaskId = next.currentTaskId;
     if (step.id.startsWith("task:")) {
       const tid = step.id.slice("task:".length);
+      if (step.status === "running") currentTaskId = tid;
       planTasks = planTasks.map((task) =>
         String(task.id) === tid
           ? { ...task, status: step.status, title: step.label || task.title }
           : task,
       );
     }
-    return { state: { ...next, steps, planTasks }, effects };
+    return { state: { ...next, steps, planTasks, currentTaskId }, effects };
   }
 
   if (type === "route") {
@@ -198,6 +204,7 @@ export function reduceStreamEvent(
     const op: FileOp = {
       op: type === "file_write" ? "write" : "delete",
       path: String(event.path),
+      taskId: next.currentTaskId || undefined,
     };
     next = { ...next, ops: [...next.ops, op], applied: true };
     effects.push({ kind: "schedule-preview-refresh" });
