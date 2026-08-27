@@ -87,9 +87,23 @@ class TestRunnerShell:
         from app.services.preview_babel import render_runner_shell
 
         html = render_runner_shell()
-        assert "./bridge.js" in html
-        assert "./runner.js" in html
+        # Absolute paths: the same shell is served from /runner/ and from
+        # /projects/{id}/draft, where relative script URLs would 404.
+        assert "/runner/bridge.js" in html
+        assert "/runner/runner.js" in html
         assert "__FORGE_PARENT_ORIGINS" in html
+        assert "__FORGE_DRAFT__" not in html
         # A hand-written copy of this map used to live in a static index.html.
         for package in ("recharts", "framer-motion", "react-hook-form"):
             assert package in html
+
+    def test_shell_can_embed_a_standalone_draft_bundle(self):
+        from app.services.preview_babel import render_runner_shell
+
+        html = render_runner_shell(
+            bundle={"files": {"src/main.tsx": "const a = '</script>';"}, "entry": "src/main.tsx"}
+        )
+        assert "__FORGE_DRAFT__" in html
+        # A file containing "</script>" must not terminate the tag early.
+        assert "</script>';" not in html
+        assert "<\\/script>" in html

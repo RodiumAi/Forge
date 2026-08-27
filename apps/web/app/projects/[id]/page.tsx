@@ -25,7 +25,6 @@ import { useI18n } from "@/lib/i18n/I18nProvider";
 import {
   AgentActivityPanel,
   type AgentStep,
-  type AgentWarning,
   type FileOp,
 } from "@/components/AgentActivityPanel";
 import { ClarifyCard, type ClarifyQuestion } from "@/components/ClarifyCard";
@@ -223,7 +222,6 @@ export default function ProjectPage() {
     initialBoot ? [{ id: "boot", label: "…", status: "running" }] : [],
   );
   const [streamOps, setStreamOps] = useState<FileOp[]>([]);
-  const [streamWarnings, setStreamWarnings] = useState<AgentWarning[]>([]);
   const [streamEffort, setStreamEffort] = useState<string | null>(null);
   const [streamSummary, setStreamSummary] = useState("");
   const [showJumpToBottom, setShowJumpToBottom] = useState(false);
@@ -839,7 +837,11 @@ export default function ProjectPage() {
         setStreamThinking(state.thinking);
         setStreamSteps(state.steps);
         setStreamOps(state.ops);
-        setStreamWarnings(state.warnings);
+        // Repair-loop warnings (css orphans, brand lock...) are internal
+        // machinery: the agent fixes them itself, end users only see progress.
+        if (state.warnings.length > before.warnings.length) {
+          console.debug("[forge] agent warning:", state.warnings.at(-1));
+        }
         setStreamEffort(state.effort);
         setPlanTasks(state.planTasks);
         setPlanNeedsConfirm(state.planNeedsConfirm);
@@ -1106,7 +1108,6 @@ export default function ProjectPage() {
     setStreamThinking("");
     setStreamSteps([]);
     setStreamOps([]);
-    setStreamWarnings([]);
     setStreamEffort(null);
     setPlanTasks((prev) =>
       prev.map((task) => (task.status === "running" ? { ...task, status: "pending" } : task)),
@@ -1195,7 +1196,6 @@ export default function ProjectPage() {
           : [],
       );
       setStreamOps([]);
-    setStreamWarnings([]);
       setStreamEffort(null);
       setMessages((m) => {
         if (isBranch) {
@@ -1323,7 +1323,6 @@ export default function ProjectPage() {
         setStreamThinking("");
         setStreamSteps([]);
         setStreamOps([]);
-    setStreamWarnings([]);
         setStreamEffort(null);
         setClarifyQuestions([]);
       } finally {
@@ -1651,12 +1650,15 @@ export default function ProjectPage() {
         }}
         onOpenHistory={() => setHistoryOpen(true)}
         onOpenDraftExternal={async () => {
-          await forcePreviewRefresh({ softStart: true, remount: false });
-          // The Vite proxy at /preview/{id}/ no longer exists: the draft lives
-          // in the Babel runner, whose URL the preview status hands us.
-          if (previewSrc) {
-            window.open(previewSrc, "_blank", "noopener,noreferrer");
-          }
+          // Standalone draft page: the runner shell with the bundle embedded.
+          // Opening the bare runner URL showed an empty page (it waits for a
+          // builder parent to postMessage the bundle, which a new tab lacks).
+          const token = getToken() || "";
+          window.open(
+            `${apiBase()}/projects/${projectId}/draft?access_token=${encodeURIComponent(token)}`,
+            "_blank",
+            "noopener,noreferrer",
+          );
         }}
       />
 
@@ -1812,7 +1814,6 @@ export default function ProjectPage() {
                   steps={streamSteps}
                   thinking={streamThinking}
                   fileOps={streamOps}
-                  warnings={streamWarnings}
                   effortLabel={streamEffort}
                   streaming={busy && !awaitingHitl}
                   live
@@ -1823,6 +1824,8 @@ export default function ProjectPage() {
                     tasks={planTasks}
                     needsConfirm={planNeedsConfirm}
                     busy={busy}
+                    ops={streamOps}
+                    onOpenFile={openFileInEditor}
                     executing={
                       busy &&
                       !planNeedsConfirm &&

@@ -1,8 +1,9 @@
 "use client";
 
-import { Check, Circle, CircleAlert, Loader2, ListTodo, Play } from "lucide-react";
+import { Check, Circle, CircleAlert, FileCode2, Loader2, ListTodo, Play, Trash2 } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import { useI18n } from "@/lib/i18n/I18nProvider";
+import type { FileOp } from "@/components/AgentActivityPanel";
 
 export type PlanTask = {
   id: string;
@@ -15,8 +16,11 @@ type Props = {
   needsConfirm?: boolean;
   busy?: boolean;
   executing?: boolean;
+  /** File operations of the run; grouped under their task when tagged. */
+  ops?: FileOp[];
   onExecute?: () => void;
   onDismiss?: () => void;
+  onOpenFile?: (path: string) => void;
 };
 
 function TaskIcon({ status }: { status?: string }) {
@@ -37,8 +41,10 @@ export function PlanPanel({
   needsConfirm = false,
   busy = false,
   executing = false,
+  ops = [],
   onExecute,
   onDismiss,
+  onOpenFile,
 }: Props) {
   const { t } = useI18n();
   if (!tasks.length) return null;
@@ -110,18 +116,47 @@ export function PlanPanel({
       ) : null}
 
       <ol className="plan-tasks">
-        {tasks.map((task, index) => (
-          <li
-            key={task.id}
-            className={`plan-task plan-task-${task.status || "pending"}${
-              task.status === "running" ? " plan-task-active" : ""
-            }`}
-          >
-            <span className="plan-task-index">{index + 1}</span>
-            <TaskIcon status={task.status} />
-            <span className="plan-task-title">{task.title}</span>
-          </li>
-        ))}
+        {tasks.map((task, index) => {
+          const taskOps = ops.filter((op) => op.taskId && String(op.taskId) === String(task.id));
+          return (
+            <li
+              key={task.id}
+              className={`plan-task plan-task-${task.status || "pending"}${
+                task.status === "running" ? " plan-task-active" : ""
+              }`}
+            >
+              <span className="plan-task-index">{index + 1}</span>
+              <TaskIcon status={task.status} />
+              <span className="plan-task-title">
+                {task.title}
+                {taskOps.length > 0 && (
+                  <details className="plan-task-files">
+                    <summary>
+                      {t("planTaskFiles").replace("{n}", String(taskOps.length))}
+                    </summary>
+                    <ul>
+                      {taskOps.map((op, i) => (
+                        <li key={`${op.op}-${op.path}-${i}`} className={`plan-task-file is-${op.op}`}>
+                          <Icon
+                            icon={op.op === "delete" ? Trash2 : FileCode2}
+                            className="ui-icon-sm"
+                          />
+                          {onOpenFile && op.op !== "delete" ? (
+                            <button type="button" onClick={() => onOpenFile(op.path)}>
+                              {op.path}
+                            </button>
+                          ) : (
+                            <span>{op.path}</span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
+              </span>
+            </li>
+          );
+        })}
       </ol>
 
       {showExecute ? (

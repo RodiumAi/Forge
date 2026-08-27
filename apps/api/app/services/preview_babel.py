@@ -25,7 +25,7 @@ def runner_url() -> str:
     return f"{base}/runner/"
 
 
-def render_runner_shell() -> str:
+def render_runner_shell(bundle: dict | None = None) -> str:
     """Build the preview shell HTML.
 
     Served dynamically rather than as a static file because three things must be
@@ -34,6 +34,10 @@ def render_runner_shell() -> str:
         live in index.html and drifted from the AST allowlist),
       - the allowed parent origins, so postMessage can be pinned on both sides,
       - the visual-edit bridge, which no longer has any other injection point.
+
+    When `bundle` is given (standalone draft link), the source files are embedded
+    so the page renders on its own — the runner otherwise waits for a builder
+    parent to postMessage the bundle, which an external tab does not have.
     """
     import json
 
@@ -42,6 +46,11 @@ def render_runner_shell() -> str:
     settings = get_settings()
     import_map = json.dumps({"imports": browser_import_map()}, indent=2)
     origins = json.dumps(settings.runner_parent_origins)
+    draft = ""
+    if bundle:
+        # `</` must not terminate the script tag early when a file contains it.
+        payload = json.dumps(bundle).replace("</", "<\\/")
+        draft = f"<script>window.__FORGE_DRAFT__ = {payload};</script>\n  "
 
     return f"""<!doctype html>
 <html lang="en">
@@ -56,12 +65,12 @@ def render_runner_shell() -> str:
   <style id="forge-tokens"></style>
   <style id="forge-app-css"></style>
   <script>window.__FORGE_PARENT_ORIGINS = {origins};</script>
-  <script src="https://unpkg.com/@babel/standalone@7.26.9/babel.min.js"></script>
+  {draft}<script src="https://unpkg.com/@babel/standalone@7.26.9/babel.min.js"></script>
 </head>
 <body>
   <div id="root"></div>
-  <script src="./bridge.js"></script>
-  <script type="module" src="./runner.js"></script>
+  <script src="/runner/bridge.js"></script>
+  <script type="module" src="/runner/runner.js"></script>
 </body>
 </html>
 """

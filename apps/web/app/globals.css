@@ -7417,3 +7417,64 @@ button.file-op-path:focus-visible { outline: 2px solid #f2620a; outline-offset: 
   background: none;
   padding: 0;
 }
+
+/* -- Plan: files grouped under their task -- */
+.plan-task-title { min-width: 0; }
+
+.plan-task-files { margin-top: 0.25rem; }
+
+.plan-task-files summary {
+  cursor: pointer;
+  font-size: 0.72rem;
+  color: var(--home-muted);
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  user-select: none;
+}
+
+.plan-task-files summary::before {
+  content: "▸";
+  font-size: 0.65rem;
+  transition: transform 0.15s ease;
+}
+
+.plan-task-files[open] summary::before { transform: rotate(90deg); }
+.plan-task-files summary:hover { color: var(--home-text); }
+.plan-task-files summary:focus-visible { outline: 2px solid #f2620a; outline-offset: 2px; border-radius: 4px; }
+
+.plan-task-files ul {
+  list-style: none;
+  margin: 0.3rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.15rem;
+}
+
+.plan-task-file {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.72rem;
+  color: #86efac;
+}
+
+.plan-task-file.is-delete { color: #fca5a5; }
+.plan-task-file.is-delete span { text-decoration: line-through; }
+
+.plan-task-file button {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.plan-task-file button:hover { text-decoration: underline dotted; }
+.plan-task-file button:focus-visible { outline: 2px solid #f2620a; outline-offset: 2px; border-radius: 3px; }

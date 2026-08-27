@@ -23,7 +23,7 @@ export type AgentStep = {
   endedAt?: number;
 };
 
-export type FileOp = { op: string; path: string };
+export type FileOp = { op: string; path: string; taskId?: string };
 
 export type AgentWarning = { code?: string; message: string; path?: string };
 
