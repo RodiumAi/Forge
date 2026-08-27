@@ -101,14 +101,6 @@ class Settings(BaseSettings):
     # Target ALB idle timeout (seconds) — document & IaC must match before streaming runs.
     alb_idle_timeout_seconds: int = 600
 
-    # Firestore live mirror (Admin SDK writes; UI listens via custom token).
-    # Emulator: set FIRESTORE_EMULATOR_HOST + FIREBASE_AUTH_EMULATOR_HOST (standard Google env vars).
-    firestore_enabled: bool = False
-    firebase_project_id: str = "rodiumai-local"
-    firestore_database: str = "rodiumaidb"
-    # Path to service account JSON for production; unused when emulator env is set.
-    google_application_credentials: str = ""
-
     managed_storage_bytes_limit: int = 500 * 1024 * 1024
 
     @property

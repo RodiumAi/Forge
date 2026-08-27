@@ -21,6 +21,5 @@ docker compose down
 
 **SSE / ALB** : heartbeats SSE toutes les ~15s. Avant le premier run streamé en prod, porter l’idle timeout ALB à **600 secondes** (`ALB_IDLE_TIMEOUT_SECONDS`).
 
-**Firestore live** : démarrer les émulateurs Auth+Firestore (port **8085**, pas 8080) — voir `infra/local/firestore-emulator.md`. Puis `FIRESTORE_ENABLED=true` sur api/build-worker.
 
 **Note preview** : le process Vite tourne encore dans le conteneur `api` (dev). Pour un confort max en local Windows, préfère API sur l’hôte (`uvicorn`) + `docker compose up -d postgres valkey` — ainsi `npm`/`node` du host démarrent la preview.

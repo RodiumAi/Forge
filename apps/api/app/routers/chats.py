@@ -159,19 +159,6 @@ async def _iter_single_pass(
             existing["label"] = label
         else:
             steps.append({"id": step_id, "label": label, "status": st})
-        try:
-            from app.services import firestore_live
-
-            firestore_live.set_run(
-                project_id_str,
-                run_id=run_id_str,
-                status="running",
-                owner_user_id=str(user_id) if user_id else None,
-                step_id=step_id,
-                step_label=label,
-            )
-        except Exception:
-            pass
         return _sse({"type": "step", "id": step_id, "label": label, "status": st})
 
     yield push_step("select_files", t("step_select_files", locale), "running")
@@ -310,18 +297,6 @@ async def _iter_single_pass(
         _persist_assistant(db, live, payload, locale)
         live.status = "done"
         db.commit()
-        try:
-            from app.services import firestore_live
-
-            firestore_live.set_run(
-                project_id_str,
-                run_id=run_id_str,
-                status="done",
-                owner_user_id=str(user_id) if user_id else None,
-                throttle=False,
-            )
-        except Exception:
-            pass
     yield _sse({"type": "done", **payload, "effort_label": route_effort})
 
 
@@ -499,19 +474,6 @@ async def send_message(
                     existing["label"] = label
                 else:
                     steps.append({"id": step_id, "label": label, "status": st})
-                try:
-                    from app.services import firestore_live
-
-                    firestore_live.set_run(
-                        str(project_id),
-                        run_id=str(run.id),
-                        status="running",
-                        owner_user_id=str(user.id),
-                        step_id=step_id,
-                        step_label=label,
-                    )
-                except Exception:
-                    pass
                 return _sse({"type": "step", "id": step_id, "label": label, "status": st})
 
             yield _sse({"type": "user_message", "id": user_msg_id, "run_id": str(run.id)})
@@ -1051,18 +1013,6 @@ def cancel_run(
     mark_cancelled(str(run.id))
     run.status = "cancelled"
     db.commit()
-    try:
-        from app.services import firestore_live
-
-        firestore_live.set_run(
-            str(project_id),
-            run_id=str(run.id),
-            status="cancelled",
-            owner_user_id=str(user.id),
-            throttle=False,
-        )
-    except Exception:
-        pass
     return {"ok": True}
 
 

@@ -18,7 +18,6 @@ import { projectPublicUrl } from "@/lib/asset-url";
 import { Icon } from "@/components/ui/icon";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { topProgressDone, topProgressStart } from "@/lib/top-progress";
-import { usePublishLive } from "@/lib/firebase/live";
 
 type Props = {
   projectId: string;
@@ -98,7 +97,6 @@ export function PublishPopover({
   const [draftSlug, setDraftSlug] = useState(slugProp || "");
   const [mounted, setMounted] = useState(false);
   const [faviconUrl, setFaviconUrl] = useState<string | null>(null);
-  const publishLive = usePublishLive(projectId);
 
   useEffect(() => {
     setMounted(true);
@@ -141,21 +139,6 @@ export function PublishPopover({
     }, 500);
     return () => window.clearInterval(id);
   }, [busy]);
-
-  useEffect(() => {
-    const phase = publishLive?.phase;
-    if (!phase) return;
-    if (phase === "done") {
-      setBusy(false);
-      if (publishLive.published_at) setLastPublished(publishLive.published_at);
-    } else if (phase === "error") {
-      setBusy(false);
-      if (publishLive.message) setError(publishLive.message);
-    } else if (phase !== "idle") {
-      setBusy(true);
-      setOpen(true);
-    }
-  }, [publishLive]);
 
   const updatePos = () => {
     const btn = btnRef.current;
@@ -338,25 +321,16 @@ export function PublishPopover({
       ? `${slug}.lvh.me:8080`
       : t("publishEmpty");
 
-  const phaseFromLive = publishLive?.phase;
+  // Publish is a single synchronous POST: phase labels are estimated from
+  // elapsed time (the granular Firestore phases went away with the mirror).
   const phaseLabel =
-    phaseFromLive === "queued"
+    elapsed < 8
       ? t("publishPhaseDeps")
-      : phaseFromLive === "deps"
-        ? t("publishPhaseDeps")
-        : phaseFromLive === "build"
-          ? t("publishPhaseBuild")
-          : phaseFromLive === "upload"
-            ? t("publishPhaseUpload")
-            : phaseFromLive === "done"
-              ? t("publishPhaseFinalize")
-              : elapsed < 8
-                ? t("publishPhaseDeps")
-                : elapsed < 45
-                  ? t("publishPhaseBuild")
-                  : elapsed < 90
-                    ? t("publishPhaseUpload")
-                    : t("publishPhaseFinalize");
+      : elapsed < 45
+        ? t("publishPhaseBuild")
+        : elapsed < 90
+          ? t("publishPhaseUpload")
+          : t("publishPhaseFinalize");
 
   const panel = open && mounted
     ? createPortal(

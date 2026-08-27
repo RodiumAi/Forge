@@ -19,13 +19,6 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
 
 
-class FirebaseCustomTokenResponse(BaseModel):
-    token: str
-    project_id: str
-    database_id: str
-    enabled: bool = True
-
-
 class UserOut(BaseModel):
     id: UUID
     email: EmailStr

@@ -70,20 +70,10 @@ async def publish_now(
 
     from datetime import datetime
 
-    from app.services import firestore_live
-
     project.published_at = datetime.now(UTC)
     project.status = "published"
     db.commit()
     db.refresh(project)
-
-    firestore_live.set_publish(
-        str(project.id),
-        phase="done",
-        owner_user_id=str(user.id),
-        published_at=project.published_at.isoformat() if project.published_at else None,
-        name=project.name,
-    )
 
     return PublishResponse(
         public_url=result["public_url"],

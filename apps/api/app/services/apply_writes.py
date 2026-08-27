@@ -107,13 +107,6 @@ def apply_validated_writes(
             continue
         applied.append({"op": "write", "path": path})
 
-    if applied:
-        try:
-            from app.services.firestore_live import bump_files
-
-            bump_files(project_id, [str(a.get("path") or "") for a in applied])
-        except Exception:
-            pass
     return applied, violations
 
 

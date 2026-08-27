@@ -55,24 +55,6 @@ def _status(project: Project, *, running: bool) -> PreviewStatus:
     )
 
 
-def _mirror(project: Project, user: User, *, status_label: str, running: bool) -> None:
-    """Best-effort Firestore mirror; never breaks the request."""
-    try:
-        from app.services import firestore_live
-
-        firestore_live.set_preview(
-            str(project.id),
-            status=status_label,
-            owner_user_id=str(user.id),
-            port=0,
-            url=preview_babel.runner_url() if running else None,
-            public_url=get_settings().preview_url_for_slug(project.slug),
-            name=project.name,
-        )
-    except Exception:
-        pass
-
-
 @router.get("/projects/{project_id}/preview", response_model=PreviewStatus)
 def preview_status(
     project_id: UUID,
@@ -143,9 +125,7 @@ def preview_start(
     project.preview_running = True
     project.preview_port = 0
     db.commit()
-    _mirror(project, user, status_label="ready", running=True)
     return _status(project, running=True)
-
 
 @router.post("/projects/{project_id}/preview/restart", response_model=PreviewStatus)
 def preview_restart(
@@ -170,5 +150,4 @@ def preview_stop(
     project.preview_running = False
     project.preview_port = 0
     db.commit()
-    _mirror(project, user, status_label="stopped", running=False)
     return _status(project, running=False)
