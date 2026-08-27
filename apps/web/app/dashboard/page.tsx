@@ -55,6 +55,7 @@ type Project = {
   slug: string;
   status: string;
   created_at: string;
+  updated_at?: string;
   template_id?: string | null;
   preview_running?: boolean;
   public_url?: string | null;
@@ -361,8 +362,11 @@ function DashboardInner() {
     const token = getToken();
     if (token) {
       const base = apiBase().replace(/\/$/, "");
+      const parent = encodeURIComponent(window.location.origin);
       return {
-        frameSrc: `${base}/projects/${p.id}/draft?access_token=${encodeURIComponent(token)}`,
+        // parent_origin: draft iframes often lack a usable referrer; the
+        // runner needs it to post forge:mounted after the hero has painted.
+        frameSrc: `${base}/projects/${p.id}/draft?access_token=${encodeURIComponent(token)}&parent_origin=${parent}&thumb=1`,
         src: null as string | null,
         authPath: null as string | null,
       };
@@ -524,6 +528,7 @@ function DashboardInner() {
                       frameSrc={thumb.frameSrc}
                       src={thumb.src}
                       authPath={thumb.authPath}
+                      cacheKey={`${p.id}:${p.updated_at || p.created_at}`}
                       title={p.name}
                       className="home-card-thumb"
                     />

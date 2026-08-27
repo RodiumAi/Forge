@@ -86,10 +86,16 @@ class TestImageReplace:
             apply_visual_image_replace(project, "/logo.png", "https://evil.example.com/x.png")
         assert read_file(project, "src/App.tsx") == original
 
-    def test_accepts_an_object_store_url(self, project, object_store_host):
+    def test_rejects_a_private_uploads_bucket_url(self, project, object_store_host):
+        # These URLs used to be written verbatim into the JSX: the bucket is
+        # private, so the preview <img> got AccessDenied, and the hardcoded
+        # MinIO host broke the image at publish and export time. Callers must
+        # pass object_id so the bytes are materialized into public/images/.
         write_file(project, "src/App.tsx", '<img src="/logo.png" />')
-        apply_visual_image_replace(project, "/logo.png", f"{object_store_host}/forge-uploads/a.png")
-        assert f"{object_store_host}/forge-uploads/a.png" in read_file(project, "src/App.tsx")
+        original = read_file(project, "src/App.tsx")
+        with pytest.raises(ValueError, match="object_id"):
+            apply_visual_image_replace(project, "/logo.png", f"{object_store_host}/forge-uploads/a.png")
+        assert read_file(project, "src/App.tsx") == original
 
     def test_does_not_use_the_bare_filename_as_a_needle(self, project):
         # "hero.png" also appears in a comment; only the real src must change.

@@ -25,7 +25,7 @@ def runner_url() -> str:
     return f"{base}/runner/"
 
 
-def render_runner_shell(bundle: dict | None = None) -> str:
+def render_runner_shell(bundle: dict | None = None, *, thumb: bool = False) -> str:
     """Build the preview shell HTML.
 
     Served dynamically rather than as a static file because three things must be
@@ -38,6 +38,8 @@ def render_runner_shell(bundle: dict | None = None) -> str:
     When `bundle` is given (standalone draft link), the source files are embedded
     so the page renders on its own — the runner otherwise waits for a builder
     parent to postMessage the bundle, which an external tab does not have.
+
+    `thumb=True` hides scrollbars for dashboard card miniatures.
     """
     import json
 
@@ -51,6 +53,16 @@ def render_runner_shell(bundle: dict | None = None) -> str:
         # `</` must not terminate the script tag early when a file contains it.
         payload = json.dumps(bundle).replace("</", "<\\/")
         draft = f"<script>window.__FORGE_DRAFT__ = {payload};</script>\n  "
+    thumb_css = ""
+    if thumb:
+        thumb_css = (
+            "<style data-forge-thumb>"
+            "html,body{overflow:hidden!important;scrollbar-width:none!important;"
+            "-ms-overflow-style:none!important}"
+            "html::-webkit-scrollbar,body::-webkit-scrollbar,"
+            "#root::-webkit-scrollbar{display:none!important;width:0!important;height:0!important}"
+            "</style>\n  "
+        )
 
     return f"""<!doctype html>
 <html lang="en">
@@ -65,7 +77,7 @@ def render_runner_shell(bundle: dict | None = None) -> str:
   <style id="forge-tokens"></style>
   <style id="forge-app-css"></style>
   <script>window.__FORGE_PARENT_ORIGINS = {origins};</script>
-  {draft}<script src="https://unpkg.com/@babel/standalone@7.26.9/babel.min.js"></script>
+  {thumb_css}{draft}<script src="https://unpkg.com/@babel/standalone@7.26.9/babel.min.js"></script>
 </head>
 <body>
   <div id="root"></div>
