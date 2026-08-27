@@ -42,6 +42,11 @@ export function usePreviewControl({ projectId, loading, onError, previewFailedLa
   const [previewBusy, setPreviewBusy] = useState(false);
   const [previewUpdating, setPreviewUpdating] = useState(false);
   const [previewLiveStatus, setPreviewLiveStatus] = useState<string | null>(null);
+  // Bumped to re-post the source bundle into the ALREADY LOADED runner iframe.
+  // Visual edits used to remount the iframe (new ?t= src): full shell + Babel
+  // reload and a blank flash, only to re-render content the bridge had already
+  // patched optimistically in place.
+  const [renderNonce, setRenderNonce] = useState(0);
 
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const updatingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -136,6 +141,12 @@ export function usePreviewControl({ projectId, loading, onError, previewFailedLa
     }, ms);
   }, []);
 
+  /** Soft sync after a visual edit: re-push the bundle, keep the iframe alive. */
+  const repushPreview = useCallback(() => {
+    setRenderNonce((n) => n + 1);
+    flashUpdating();
+  }, [flashUpdating]);
+
   useEffect(
     () => () => {
       if (refreshTimer.current) clearTimeout(refreshTimer.current);
@@ -145,9 +156,12 @@ export function usePreviewControl({ projectId, loading, onError, previewFailedLa
   );
 
   useEffect(() => {
-    if (previewBusy || previewUpdating) topProgressStart("preview");
+    // Only real lifecycle work (start/restart) reaches the global loader.
+    // previewUpdating fires on every visual edit and mostly flagged a refresh
+    // that did nothing visible — the local preview badge covers that.
+    if (previewBusy) topProgressStart("preview");
     else topProgressDone("preview");
-  }, [previewBusy, previewUpdating]);
+  }, [previewBusy]);
 
   // Start the preview once, after the project is loaded.
   useEffect(() => {
@@ -181,9 +195,11 @@ export function usePreviewControl({ projectId, loading, onError, previewFailedLa
     previewBusy,
     previewUpdating,
     previewLiveStatus,
+    renderNonce,
     startPreview,
     forcePreviewRefresh,
     schedulePreviewRefresh,
     flashUpdating,
+    repushPreview,
   };
 }
