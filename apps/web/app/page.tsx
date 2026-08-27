@@ -137,6 +137,7 @@ export default function LandingPage() {
   const [templates, setTemplates] = useState<GalleryTemplate[]>([]);
   const [forkingId, setForkingId] = useState<string | null>(null);
   const [authed, setAuthed] = useState(false);
+  const [navScrolled, setNavScrolled] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const ctaTextareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -144,6 +145,13 @@ export default function LandingPage() {
 
   useEffect(() => {
     setAuthed(Boolean(getToken()));
+  }, []);
+
+  useEffect(() => {
+    const onScroll = () => setNavScrolled(window.scrollY > 16);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   useEffect(() => {
@@ -325,7 +333,7 @@ export default function LandingPage() {
 
   return (
     <div className="landing">
-      <header className="lp-nav">
+      <header className={`lp-nav${navScrolled ? " is-scrolled" : ""}`}>
         <Link href="/" className="lp-nav-brand" aria-label={t("brandAlt")}>
           <BrandLogo alt="" width={132} height={38} priority />
         </Link>
@@ -373,17 +381,32 @@ export default function LandingPage() {
       <section className="lp-how" id="how">
         <h2 className="lp-section-title">{t("landingHowTitle")}</h2>
         <div className="lp-how-grid">
-          <div className="lp-how-visual" aria-hidden>
-            <div className="lp-how-visual-frame">
-              <span className="lp-how-visual-dot" />
-              <span className="lp-how-visual-dot" />
-              <span className="lp-how-visual-dot" />
-              <div className="lp-how-visual-body">
-                <div className="lp-how-visual-chat" />
-                <div className="lp-how-visual-preview" />
+          <div className="lp-how-visual">
+            <div className="lp-how-video-shell">
+              <div className="lp-how-video-glow" aria-hidden />
+              <div className="lp-how-video-frame">
+                <div className="lp-how-video-chrome" aria-hidden>
+                  <span className="lp-how-visual-dot" />
+                  <span className="lp-how-visual-dot" />
+                  <span className="lp-how-visual-dot" />
+                  <span className="lp-how-video-chrome-label">Forge preview</span>
+                </div>
+                <div className="lp-how-video-stage">
+                  <video
+                    className="lp-how-video"
+                    src="/video.mp4"
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    preload="metadata"
+                    controls={false}
+                    disablePictureInPicture
+                    aria-label={t("landingHowVisualAlt")}
+                  />
+                </div>
               </div>
             </div>
-            <span className="sr-only">{t("landingHowVisualAlt")}</span>
           </div>
           <ol className="lp-how-steps">
             <li>
