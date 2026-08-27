@@ -260,6 +260,20 @@ def _sanitize_turn(role: str, content: str, *, limit: int) -> str:
     return text[:limit]
 
 
+_GATEWAY_CONTENT_MAX = 480_000
+
+
+def _gateway_safe_content(text: str, *, fallback: str) -> str:
+    """Nest playground rejects empty or oversized message content."""
+    out = (text or "").strip() or fallback
+    if len(out) > _GATEWAY_CONTENT_MAX:
+        out = (
+            out[: _GATEWAY_CONTENT_MAX - 96]
+            + "\n\n[…truncated for gateway message size limit…]"
+        )
+    return out
+
+
 async def build_llm_messages(
     *,
     project_id: str,
@@ -313,10 +327,28 @@ async def build_llm_messages(
     ]
 
     messages: list[dict[str, Any]] = [
-        {"role": "system", "content": layer1},
-        {"role": "system", "content": prototype_layer},
-        {"role": "system", "content": layer2},
-        {"role": "system", "content": layer3},
+        {
+            "role": "system",
+            "content": _gateway_safe_content(layer1, fallback="Forge system instructions."),
+        },
+        {
+            "role": "system",
+            "content": _gateway_safe_content(
+                prototype_layer, fallback="Prototype mode: frontend UI only."
+            ),
+        },
+        {
+            "role": "system",
+            "content": _gateway_safe_content(
+                layer2, fallback="Project conventions and file skeletons."
+            ),
+        },
+        {
+            "role": "system",
+            "content": _gateway_safe_content(
+                layer3, fallback="No focused source files for this turn."
+            ),
+        },
     ]
     if surgical_edit:
         messages.append({"role": "system", "content": SURGICAL_EDIT_HINT})
@@ -343,7 +375,10 @@ async def build_llm_messages(
         messages.append(
             {
                 "role": "system",
-                "content": "Earlier conversation (structured summary):\n" + compacted_summary[:12_000],
+                "content": _gateway_safe_content(
+                    "Earlier conversation (structured summary):\n" + compacted_summary[:12_000],
+                    fallback="Earlier conversation summary unavailable.",
+                ),
             }
         )
     elif early:
@@ -354,13 +389,22 @@ async def build_llm_messages(
         messages.append(
             {
                 "role": "system",
-                "content": "Earlier conversation (compacted):\n" + "\n".join(summary_bits),
+                "content": _gateway_safe_content(
+                    "Earlier conversation (compacted):\n" + "\n".join(summary_bits),
+                    fallback="Earlier conversation compacted.",
+                ),
             }
         )
     for idx, (role, content) in enumerate(recent):
         if role == "user" and idx == len(recent) - 1:
             enriched = await enrich_user_message_with_vision(db, project_id, content)
+            if isinstance(enriched, str):
+                enriched = _gateway_safe_content(enriched, fallback=user_query or "Continue.")
             messages.append({"role": role, "content": enriched})
         else:
-            messages.append({"role": role, "content": content})
+            safe = _gateway_safe_content(
+                content,
+                fallback="[assistant update applied]" if role == "assistant" else "Continue.",
+            )
+            messages.append({"role": role, "content": safe})
     return messages
