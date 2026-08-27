@@ -210,7 +210,14 @@ def verify_project_build(project_id: str) -> list[VerifyFinding]:
             )
         )
 
-    css_classes = _css_classes(css)
+    # Class lookup must span EVERY stylesheet the project ships, not just
+    # index.css: rules written to src/styles/*.css were reported as orphans and
+    # the agent was told to duplicate them.
+    css_classes: set[str] = set()
+    for path, content in files.items():
+        if path.endswith((".css", ".scss")):
+            css_classes |= _css_classes(content)
+
     orphan_samples: list[str] = []
     hero_layout_orphans = 0
     all_orphan_count = 0

@@ -280,6 +280,50 @@ export default function ProjectPage() {
   const bootPromptRef = useRef<string | null>(initialBoot);
   const chatRetryRef = useRef<ChatRetryAction | null>(null);
 
+  /** True while an SSE stream is open, whichever path opened it. */
+  const [streamActive, setStreamActive] = useState(false);
+
+  /**
+   * Live mirror of the stream-related state.
+   *
+   * A stream must resume from what the UI currently shows, not from values
+   * captured when its callback was created — seeding from stale closures wiped
+   * the plan checklist as soon as execution started.
+   */
+  const liveRef = useRef({
+    steps: [] as AgentStep[],
+    ops: [] as FileOp[],
+    effort: null as string | null,
+    planTasks: [] as PlanTask[],
+    planNeedsConfirm: false,
+    clarify: [] as ClarifyQuestion[],
+  });
+  liveRef.current = {
+    steps: streamSteps,
+    ops: streamOps,
+    effort: streamEffort,
+    planTasks,
+    planNeedsConfirm,
+    clarify: clarifyQuestions,
+  };
+
+  /** Seed a fresh stream state from what is currently on screen. */
+  const seedStreamState = useCallback(
+    (overrides?: Partial<ChatStreamState>): { current: ChatStreamState } => ({
+      current: {
+        ...initialStreamState(),
+        steps: [...liveRef.current.steps],
+        ops: [...liveRef.current.ops],
+        effort: liveRef.current.effort,
+        planTasks: [...liveRef.current.planTasks],
+        planNeedsConfirm: liveRef.current.planNeedsConfirm,
+        clarify: [...liveRef.current.clarify],
+        ...overrides,
+      },
+    }),
+    [],
+  );
+
   // `pushChatError` is declared further down but the preview hook needs it now;
   // this indirection keeps the callback identity stable.
   const chatErrorRef = useRef<(message: string) => void>(() => {});
@@ -386,7 +430,11 @@ export default function ProjectPage() {
   }, [projectId]);
 
   const awaitingHitl = clarifyQuestions.length > 0 || planNeedsConfirm;
-  const composerInputLocked = busy || awaitingHitl;
+  // `busy` alone was not enough: a mid-run `plan` event releases it while the
+  // server keeps writing files, and the composer offered "send" during work.
+  // An open SSE connection is the honest signal that a run is in flight.
+  const working = busy || streamActive;
+  const composerInputLocked = working || awaitingHitl;
 
   useEffect(() => {
     activeRunIdRef.current = activeRunId;
@@ -924,14 +972,8 @@ export default function ProjectPage() {
         if (!res.ok || !res.body) {
           throw new Error(res.statusText || t("streamError"));
         }
-        const stateRef = {
-          current: {
-            ...initialStreamState(),
-            steps: [...streamSteps],
-            ops: [...streamOps],
-            effort: streamEffort,
-          },
-        };
+        const stateRef = seedStreamState();
+        setStreamActive(true);
         await readSseStream(res, async (payloadEvent) => {
           if (
             String(payloadEvent.type || "") === "error" &&
@@ -957,11 +999,12 @@ export default function ProjectPage() {
       } finally {
         if (streamAbortRef.current === abortCtrl) streamAbortRef.current = null;
         if (streamingRunIdRef.current === runId) streamingRunIdRef.current = null;
+        setStreamActive(false);
         setBusy(false);
         void refreshRodiumWallet();
       }
     },
-    [chatId, handleStreamEvent, locale, projectId, pushChatError, streamEffort, streamOps, streamSteps, t],
+    [chatId, handleStreamEvent, locale, projectId, pushChatError, seedStreamState, t],
   );
 
   useEffect(() => {
@@ -1239,7 +1282,7 @@ export default function ProjectPage() {
           throw new Error(detail || res.statusText);
         }
 
-        const stateRef = { current: initialStreamState() };
+        const stateRef = seedStreamState({ steps: [], ops: [], effort: null, planTasks: [], planNeedsConfirm: false, clarify: [] });
         let bootCleared = false;
         const clearBootOnce = () => {
           if (bootCleared || !opts.bootKey) return;
@@ -1247,6 +1290,8 @@ export default function ProjectPage() {
           bootPromptRef.current = null;
           bootCleared = true;
         };
+
+        setStreamActive(true);
 
         await readSseStream(res, async (payloadEvent) => {
           handleStreamEvent(payloadEvent, {
@@ -1284,11 +1329,12 @@ export default function ProjectPage() {
       } finally {
         streamAbortRef.current = null;
         streamingRunIdRef.current = null;
+        setStreamActive(false);
         setBusy(false);
         void refreshRodiumWallet();
       }
     },
-    [busy, chatId, editingMessageId, elementSelection, handleStreamEvent, locale, planMode, projectId, pushChatError, t],
+    [busy, chatId, editingMessageId, elementSelection, handleStreamEvent, locale, planMode, projectId, pushChatError, seedStreamState, t],
   );
 
   const submitClarify = useCallback(
@@ -1312,14 +1358,8 @@ export default function ProjectPage() {
         if (!res.ok || !res.body) {
           throw new Error(res.statusText);
         }
-        const stateRef = {
-          current: {
-            ...initialStreamState(),
-            steps: [...streamSteps],
-            ops: [...streamOps],
-            effort: streamEffort,
-          },
-        };
+        const stateRef = seedStreamState();
+        setStreamActive(true);
         await readSseStream(res, async (payloadEvent) => {
           handleStreamEvent(payloadEvent, {
             stateRef,
@@ -1333,11 +1373,12 @@ export default function ProjectPage() {
           answers,
         });
       } finally {
+        setStreamActive(false);
         setBusy(false);
         void refreshRodiumWallet();
       }
     },
-    [activeRunId, chatId, handleStreamEvent, locale, projectId, pushChatError, streamEffort, streamOps, streamSteps, t],
+    [activeRunId, chatId, handleStreamEvent, locale, projectId, pushChatError, seedStreamState, t],
   );
 
   const executePlan = useCallback(async () => {
@@ -1393,13 +1434,8 @@ export default function ProjectPage() {
         }
         throw new Error(detail);
       }
-      const stateRef = {
-          current: {
-            ...initialStreamState(),
-            steps: [...streamSteps],
-            effort: streamEffort,
-          },
-        };
+      const stateRef = seedStreamState();
+      setStreamActive(true);
       await readSseStream(res, async (payloadEvent) => {
         handleStreamEvent(payloadEvent, {
           stateRef,
@@ -1428,10 +1464,11 @@ export default function ProjectPage() {
       }
     } finally {
       streamAbortRef.current = null;
+      setStreamActive(false);
       setBusy(false);
       void refreshRodiumWallet();
     }
-  }, [activeRunId, chatId, handleStreamEvent, locale, planTasks, projectId, pushChatError, streamEffort, streamSteps, t]);
+  }, [activeRunId, chatId, handleStreamEvent, locale, planTasks, projectId, pushChatError, seedStreamState, t]);
 
   useEffect(() => {
     if (!chatId || loading || bootSentRef.current || bootInFlight.has(projectId)) return;
@@ -1964,7 +2001,7 @@ export default function ProjectPage() {
                       ) : null}
                     </span>
                   </button>
-                  {busy ? (
+                  {working ? (
                     <button
                       type="button"
                       className="builder-send builder-send-stop"
