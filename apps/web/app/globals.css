@@ -1232,6 +1232,45 @@ html:has(.builder) body {
   gap: 0.75rem;
 }
 
+/* Parsed charter identity: color swatches + tone line above the raw markdown. */
+.design-palette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.design-swatch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.55rem 0.25rem 0.3rem;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  border-radius: 999px;
+  background: var(--bg-soft, rgba(255, 255, 255, 0.03));
+}
+
+.design-swatch i {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  flex-shrink: 0;
+}
+
+.design-swatch small {
+  font-size: 0.68rem;
+  color: var(--muted);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  white-space: nowrap;
+}
+
+.design-tone {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+  font-style: italic;
+}
+
 .design-label {
   display: grid;
   gap: 0.35rem;

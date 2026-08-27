@@ -161,6 +161,14 @@ async def create_project(
         # inline it would stall the event loop inside this async endpoint.
         if template_id:
             await asyncio.to_thread(fork_template, template_id, str(project.id), project.name)
+            # The kit ships a DESIGN.md; seed the design brief from the template
+            # description so the charter panel never opens on an empty form.
+            meta = get_template(template_id)
+            if meta is not None:
+                desc = meta.description_fr if str(locale).startswith("fr") else meta.description_en
+                if desc:
+                    project.design_brief = desc
+                    db.commit()
         else:
             await asyncio.to_thread(scaffold_vite_react, str(project.id), project.name)
     except Exception as exc:

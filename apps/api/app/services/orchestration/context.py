@@ -267,10 +267,7 @@ def _gateway_safe_content(text: str, *, fallback: str) -> str:
     """Nest playground rejects empty or oversized message content."""
     out = (text or "").strip() or fallback
     if len(out) > _GATEWAY_CONTENT_MAX:
-        out = (
-            out[: _GATEWAY_CONTENT_MAX - 96]
-            + "\n\n[…truncated for gateway message size limit…]"
-        )
+        out = out[: _GATEWAY_CONTENT_MAX - 96] + "\n\n[…truncated for gateway message size limit…]"
     return out
 
 
@@ -333,21 +330,15 @@ async def build_llm_messages(
         },
         {
             "role": "system",
-            "content": _gateway_safe_content(
-                prototype_layer, fallback="Prototype mode: frontend UI only."
-            ),
+            "content": _gateway_safe_content(prototype_layer, fallback="Prototype mode: frontend UI only."),
         },
         {
             "role": "system",
-            "content": _gateway_safe_content(
-                layer2, fallback="Project conventions and file skeletons."
-            ),
+            "content": _gateway_safe_content(layer2, fallback="Project conventions and file skeletons."),
         },
         {
             "role": "system",
-            "content": _gateway_safe_content(
-                layer3, fallback="No focused source files for this turn."
-            ),
+            "content": _gateway_safe_content(layer3, fallback="No focused source files for this turn."),
         },
     ]
     if surgical_edit:

@@ -452,8 +452,67 @@
     }
   }, true);
 
+  var navigatingFromParent = false;
+  var lastReportedPath = null;
+  var SECTION_HASHES = {
+    top: 1,
+    work: 1,
+    services: 1,
+    process: 1,
+    faq: 1,
+    contact: 1,
+    home: 1,
+  };
+
+  /** Logical app path for the Forge page picker (`/` or `/privacy`). */
+  function currentPreviewPath() {
+    var hash = (window.location.hash || "").replace(/^#/, "").split(/[/?]/)[0];
+    if (hash) {
+      if (SECTION_HASHES[hash.toLowerCase()]) return "/";
+      return "/" + hash.toLowerCase();
+    }
+    var pathname = window.location.pathname || "/";
+    var runner = pathname.match(/^\/runner\/?(.*)$/i);
+    if (runner) {
+      var rest = (runner[1] || "").replace(/\/+$/, "").split("/")[0];
+      if (rest) return "/" + rest.toLowerCase();
+      return "/";
+    }
+    var seg = pathname.replace(/\/+$/, "") || "/";
+    if (seg === "/" || /^\/runner$/i.test(seg)) return "/";
+    return seg.toLowerCase();
+  }
+
+  function reportPreviewLocation() {
+    if (navigatingFromParent) return;
+    if (!PARENT_ORIGIN) return;
+    var path = currentPreviewPath();
+    if (path === lastReportedPath) return;
+    lastReportedPath = path;
+    post({ type: "forge-preview-location", path: path });
+  }
+
+  function wrapHistoryMethod(method) {
+    var orig = window.history[method];
+    if (typeof orig !== "function") return;
+    window.history[method] = function () {
+      var result = orig.apply(this, arguments);
+      try {
+        reportPreviewLocation();
+      } catch (e) {
+        /* ignore */
+      }
+      return result;
+    };
+  }
+  wrapHistoryMethod("pushState");
+  wrapHistoryMethod("replaceState");
+  window.addEventListener("hashchange", reportPreviewLocation);
+  window.addEventListener("popstate", reportPreviewLocation);
+
   window.addEventListener("message", function (ev) {
     if (!isAllowedOrigin(ev.origin)) return;
+    var firstParent = !PARENT_ORIGIN;
     if (!PARENT_ORIGIN) PARENT_ORIGIN = ev.origin;
     var data = ev.data;
     if (!data || typeof data !== "object") return;
@@ -462,9 +521,20 @@
     } else if (data.type === "forge-tool-ping") {
       notifyReady();
       ackTool(TOOL);
+      reportPreviewLocation();
     } else if (data.type === "forge-preview-navigate") {
-      navigatePreviewPath(typeof data.path === "string" ? data.path : "/");
+      navigatingFromParent = true;
+      try {
+        navigatePreviewPath(typeof data.path === "string" ? data.path : "/");
+        lastReportedPath = currentPreviewPath();
+      } finally {
+        // Defer so hashchange/pushState from navigate don't echo back.
+        setTimeout(function () {
+          navigatingFromParent = false;
+        }, 0);
+      }
     }
+    if (firstParent) reportPreviewLocation();
   });
 
   /**
@@ -579,4 +649,6 @@
 
   ensureStyle();
   notifyReady();
+  // Initial path once the parent origin is known (may no-op until first parent message).
+  reportPreviewLocation();
 })();
