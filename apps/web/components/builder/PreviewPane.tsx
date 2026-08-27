@@ -1,7 +1,7 @@
 "use client";
 
 import { ReactNode, useEffect, useRef, useState } from "react";
-import { api } from "@/lib/api";
+import { api, apiBase, getToken } from "@/lib/api";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { PreviewToolbar } from "./PreviewToolbar";
 import type {
@@ -122,6 +122,12 @@ export function PreviewPane({
             type: "forge:render",
             files: bundle.files,
             entry: bundle.entry || "src/main.tsx",
+            // Root-path images (/images/x.png) live in the project's public/
+            // folder; the runner rewrites them to this authenticated endpoint.
+            assets: {
+              base: `${apiBase().replace(/\/$/, "")}/projects/${projectId}/public`,
+              token: getToken() ?? "",
+            },
           },
           target,
         );

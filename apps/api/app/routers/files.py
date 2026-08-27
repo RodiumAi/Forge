@@ -19,6 +19,7 @@ from app.services.asset_storage import (
     asset_display_name,
     get_project_asset,
     list_project_assets,
+    materialize_asset_to_public,
     upload_project_asset,
 )
 from app.services.filesystem import (
@@ -93,6 +94,9 @@ class VisualEditResponse(BaseModel):
 class VisualImageRequest(BaseModel):
     old_src: str = Field(min_length=1, max_length=2000)
     new_public_path: str = Field(min_length=1, max_length=2000)
+    # Stored-upload id: the API copies the bytes into the project's public/
+    # and writes a relative /images/... src instead of an object-store URL.
+    object_id: UUID | None = None
 
 
 class VisualImageResponse(BaseModel):
@@ -461,11 +465,22 @@ def visual_edit_image(
     locale = resolve_locale(request)
     _owned(db, user, project_id, locale)
     history.snapshot(str(project_id), "before visual image replace")
+    new_path = body.new_public_path
+    if body.object_id is not None:
+        # The uploads bucket is private: its URL written into the JSX gives a
+        # 403 in the preview and breaks at publish/export. Materialize the
+        # bytes into the project instead and reference them relatively.
+        try:
+            new_path = materialize_asset_to_public(db, project_id, body.object_id)
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=404, detail="Asset not found") from exc
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail=str(exc)[:300]) from exc
     try:
         result = apply_visual_image_replace(
             str(project_id),
             body.old_src,
-            body.new_public_path,
+            new_path,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)[:200]) from exc
