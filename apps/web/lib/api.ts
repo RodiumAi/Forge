@@ -190,6 +190,18 @@ export async function api<T>(
       throw new ApiError(detail || "Unauthorized", 401);
     }
 
+    // The RodiumAI link is definitively dead (refresh token rejected or tokens
+    // cleared): staying "signed in" to Forge while every generation fails with
+    // "account is not linked" is incoherent — sign out so the next login
+    // re-links the account in one step.
+    if (
+      res.status === 403 &&
+      /account is not linked|session expired.*sign in with rodiumai|sign in with rodiumai again/i.test(detail)
+    ) {
+      logoutToHome("expired");
+      throw new ApiError(detail, 403);
+    }
+
     lastError = new ApiError(detail, res.status);
     if (RETRY_STATUSES.has(res.status) && attempt < maxAttempts - 1) {
       await sleep(2 ** attempt * 300);
