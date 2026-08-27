@@ -65,8 +65,12 @@ class TestCatalog:
             unexpected = [i for i in imports if i != "react"]
             assert unexpected == [], f"{template.id} imports {unexpected}"
 
-    def test_previews_are_self_contained(self):
+    def test_previews_are_static_and_single_origin(self):
+        # Card thumbnails must stay script-free; the only allowed remote
+        # dependency is the Unsplash CDN already used by the kits themselves.
         for template in list_templates():
             preview = (template.path / "preview.html").read_text(encoding="utf-8")
             assert "<script" not in preview.lower(), template.id
-            assert "http://" not in preview and "https://" not in preview, template.id
+            urls = re.findall(r"https?://[^\s\"')]+", preview)
+            offsite = [u for u in urls if not u.startswith("https://images.unsplash.com/")]
+            assert offsite == [], f"{template.id} references {offsite}"

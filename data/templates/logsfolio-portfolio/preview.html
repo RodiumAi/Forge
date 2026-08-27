@@ -12,7 +12,8 @@
   .brand { font-weight:700; } .brand span { color:var(--accent); }
   .nav { color:var(--muted); }
   .hero { text-align:center; padding:18px 0 16px; }
-  .avatar { width:44px; height:44px; border-radius:50%; margin:0 auto 10px; background:linear-gradient(140deg,var(--accent),#2563eb); }
+  .avatar { width:44px; height:44px; border-radius:50%; margin:0 auto 10px; background:linear-gradient(140deg,var(--accent),#2563eb); overflow:hidden; }
+  .avatar img, .th img { width:100%; height:100%; object-fit:cover; display:block; }
   h1 { font-size:18px; }
   .sub { color:var(--muted); font-size:11px; margin-top:4px; }
   .btns { margin-top:10px; }
@@ -31,15 +32,15 @@
 <body>
   <div class="topbar"><span class="brand">mira.solano<span>()</span></span><span class="nav">Experience · Projects · Education · Blogs</span></div>
   <div class="hero">
-    <div class="avatar"></div>
+    <div class="avatar"><img src="https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=200&q=70" alt=""></div>
     <h1>Hi, I&apos;m Mira Solano</h1>
     <div class="sub">Calm, dependable software for teams that ship weekly.</div>
     <div class="btns"><span class="btn">See my work</span></div>
   </div>
   <div class="grid">
-    <div class="c"><div class="th t1"></div><div class="cb"><b>Driftlog</b><i>TypeScript · React</i></div></div>
-    <div class="c"><div class="th t2"></div><div class="cb"><b>Quorum Board</b><i>Next.js · Postgres</i></div></div>
-    <div class="c"><div class="th t3"></div><div class="cb"><b>Pinch Metrics</b><i>Node.js · D3</i></div></div>
+    <div class="c"><div class="th t1"><img src="https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=400&q=70" alt=""></div><div class="cb"><b>Driftlog</b><i>TypeScript · React</i></div></div>
+    <div class="c"><div class="th t2"><img src="https://images.unsplash.com/photo-1461749280684-dccba630e2f6?auto=format&fit=crop&w=400&q=70" alt=""></div><div class="cb"><b>Quorum Board</b><i>Next.js · Postgres</i></div></div>
+    <div class="c"><div class="th t3"><img src="https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=400&q=70" alt=""></div><div class="cb"><b>Pinch Metrics</b><i>Node.js · D3</i></div></div>
   </div>
 </body>
 </html>
