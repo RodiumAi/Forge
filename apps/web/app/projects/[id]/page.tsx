@@ -137,14 +137,6 @@ type AgentMode = "agent" | "plan";
 /** Survive React Strict Mode remounts for a given project boot. */
 const bootInFlight = new Set<string>();
 
-function displayContent(raw: string) {
-  return raw
-    .replace(/<forge-write[\s\S]*?<\/forge-write>/gi, "")
-    .replace(/<forge-delete[^>]*\/?>/gi, "")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
-}
-
 function parseJsonArray<T>(raw: string | null | undefined): T[] {
   if (!raw) return [];
   try {
@@ -1712,10 +1704,8 @@ export default function ProjectPage() {
                 );
               }
               if (m.role === "user" && !m.content.trim()) return null;
-              const text =
-                m.role === "assistant"
-                  ? displayContent(m.content) || m.content
-                  : m.content.trim();
+              // AssistantBody splits forge tags into collapsible cards itself.
+              const text = m.role === "assistant" ? m.content : m.content.trim();
               const steps = parseJsonArray<AgentStep>(m.steps_json);
               const ops = parseJsonArray<FileOp>(m.file_ops_json);
               const msgPlan = parseJsonArray<PlanTask>(m.plan_json);
@@ -1772,7 +1762,7 @@ export default function ProjectPage() {
                       />
                     </div>
                   ) : (
-                    <AssistantBody content={text} />
+                    <AssistantBody content={text} onOpenFile={openFileInEditor} />
                   )}
                 </article>
               );
@@ -1816,6 +1806,7 @@ export default function ProjectPage() {
                 <AssistantBody
                   content={streamSummary || streaming}
                   streaming={busy && !awaitingHitl}
+                  onOpenFile={openFileInEditor}
                 />
               </article>
             )}
