@@ -34,7 +34,16 @@ export default function LoginPage() {
         </div>
         <div style={{ textAlign: "center", marginBottom: "1.25rem" }}>
           <BrandLogo alt={t("brandAlt")} width={220} height={64} priority />
-          <h1 style={{ margin: "0.85rem 0 0.35rem", fontSize: "1.25rem" }}>{t("loginTitle")}</h1>
+          <h1
+            style={{
+              margin: "0.85rem 0 0.35rem",
+              fontSize: "1.25rem",
+              fontFamily: "var(--font-serif-display)",
+              fontWeight: 600,
+            }}
+          >
+            {t("loginTitle")}
+          </h1>
           <p className="muted" style={{ margin: 0 }}>
             {t("loginRodiumSub")}
           </p>
