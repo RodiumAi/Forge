@@ -1,12 +1,23 @@
-"""Build a downloadable ZIP of a Forge project with a local README."""
+"""Build a downloadable ZIP of a Forge project with a local README.
+
+Projects run in the Babel/ESM runner in Forge: their package.json has no
+scripts and no Vite, and index.html carries an esm.sh import map and a
+`/src/main.js` entry rewritten at publish time. Exported as-is, `npm run dev`
+and `npm run build` fail exactly as the README promises they work. The export
+therefore NORMALISES the frontend into a standard, runnable Vite project:
+complete package.json, Vite-compatible index.html, and the config files.
+"""
 
 from __future__ import annotations
 
 import io
+import json
+import re
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
+from app.runtime_manifest import package_version
 from app.services.filesystem import project_dir
 
 SKIP_DIR_NAMES = {
@@ -29,6 +40,10 @@ SKIP_FILE_NAMES = {
     ".env.development",
     ".env.production",
     ".env.test",
+    # Forge-internal machinery; meaningless outside the builder.
+    "forge.json",
+    "ai_rules.md",
+    "preview.html",
 }
 SKIP_SUFFIXES = {".pyc", ".pyo", ".log"}
 ENV_PREFIX = ".env."
@@ -156,6 +171,140 @@ def _arcname_for(path: Path, source_root: Path, prefix: str) -> str:
     if prefix:
         return f"{prefix.rstrip('/')}/{rel}"
     return rel
+
+
+# --- frontend normalisation ---------------------------------------------------
+
+_VITE_CONFIG = """import react from "@vitejs/plugin-react";
+import { defineConfig } from "vite";
+
+export default defineConfig({ plugins: [react()] });
+"""
+
+_TSCONFIG = """{
+  "compilerOptions": {
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "baseUrl": ".",
+    "paths": { "@/*": ["src/*"] }
+  },
+  "include": ["src"]
+}
+"""
+
+_IMPORTMAP_RE = re.compile(r"\s*<script type=\"importmap\">.*?</script>", re.DOTALL)
+
+_DEV_DEPENDENCIES = ("vite", "@vitejs/plugin-react", "typescript", "@types/react", "@types/react-dom")
+
+
+def _export_package_json(front: Path, project_name: str) -> str:
+    """Complete package.json: keep the project's deps, add scripts + toolchain.
+
+    Inside Forge the app runs without npm at all, so the stored package.json has
+    neither scripts nor devDependencies; versions come from the same manifest
+    that feeds the import map and the AST allowlist.
+    """
+    raw: dict = {}
+    pkg_file = front / "package.json"
+    if pkg_file.is_file():
+        try:
+            raw = json.loads(pkg_file.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            raw = {}
+
+    deps = dict(raw.get("dependencies") or {})
+    deps.setdefault("react", package_version("react") or "^18.3.1")
+    deps.setdefault("react-dom", package_version("react-dom") or "^18.3.1")
+
+    dev = dict(raw.get("devDependencies") or {})
+    for name in _DEV_DEPENDENCIES:
+        dev.setdefault(name, package_version(name) or "latest")
+
+    scripts = dict(raw.get("scripts") or {})
+    scripts.setdefault("dev", "vite")
+    # No tsc gate on build: generated code must always produce a site, and a
+    # separate `typecheck` script stays available for the curious.
+    scripts.setdefault("build", "vite build")
+    scripts.setdefault("preview", "vite preview")
+    scripts.setdefault("typecheck", "tsc --noEmit")
+
+    slug = re.sub(r"[^a-z0-9-]+", "-", project_name.lower()).strip("-") or "forge-app"
+    out = {
+        "name": raw.get("name") if raw.get("name") not in (None, "", "forge-app", "new-project") else slug,
+        "private": True,
+        "version": raw.get("version") or "0.0.1",
+        "type": "module",
+        "scripts": scripts,
+        "dependencies": deps,
+        "devDependencies": dev,
+    }
+    return json.dumps(out, indent=2) + "\n"
+
+
+def _export_index_html(front: Path, project_name: str) -> str:
+    """Vite-compatible index.html.
+
+    The stored one carries an esm.sh import map (would fight Vite's bundling
+    with a second React copy) and points at `/src/main.js`, an entry that only
+    exists after the publish rewrite.
+    """
+    html = ""
+    src = front / "index.html"
+    if src.is_file():
+        try:
+            html = src.read_text(encoding="utf-8")
+        except OSError:
+            html = ""
+
+    if html:
+        html = _IMPORTMAP_RE.sub("", html)
+        html = html.replace('src="/src/main.js"', 'src="/src/main.tsx"')
+        # The runner injects CSS itself; Vite resolves it from main.tsx.
+        html = re.sub(r"\s*<link rel=\"stylesheet\" href=\"/src/index\.css\" />", "", html)
+        if "/src/main.tsx" not in html:
+            html = html.replace("</body>", '  <script type="module" src="/src/main.tsx"></script>\n  </body>')
+        return html
+
+    title = project_name.strip() or "Forge App"
+    return (
+        "<!doctype html>\n"
+        '<html lang="en">\n'
+        "  <head>\n"
+        '    <meta charset="UTF-8" />\n'
+        '    <meta name="viewport" content="width=device-width, initial-scale=1.0" />\n'
+        f"    <title>{title}</title>\n"
+        "  </head>\n"
+        "  <body>\n"
+        '    <div id="root"></div>\n'
+        '    <script type="module" src="/src/main.tsx"></script>\n'
+        "  </body>\n"
+        "</html>\n"
+    )
+
+
+def frontend_overrides(front: Path, project_name: str) -> dict[str, str]:
+    """arcname (relative to the frontend root) -> normalised content."""
+    overrides: dict[str, str] = {
+        "package.json": _export_package_json(front, project_name),
+        "index.html": _export_index_html(front, project_name),
+    }
+    if not (front / "vite.config.ts").is_file() and not (front / "vite.config.js").is_file():
+        overrides["vite.config.ts"] = _VITE_CONFIG
+    if not (front / "tsconfig.json").is_file():
+        overrides["tsconfig.json"] = _TSCONFIG
+    return overrides
 
 
 def build_readme(*, project_name: str, layout: ExportLayout, locale: str) -> str:
@@ -396,12 +545,22 @@ def build_export_zip(*, project_id: str, project_name: str, locale: str = "fr") 
             zf.write(src, arcname=arc)
 
         if layout.mode == "spa":
+            assert layout.front_root
+            overrides = frontend_overrides(layout.front_root, project_name)
+            for arc, content in overrides.items():
+                written.add(arc)
+                zf.writestr(arc, content)
             for path in _iter_files(root):
                 add_file(path, _arcname_for(path, root, ""))
         else:
             assert layout.front_root and layout.back_root
             front = layout.front_root.resolve()
             back = layout.back_root.resolve()
+
+            overrides = frontend_overrides(front, project_name)
+            for arc, content in overrides.items():
+                written.add(f"frontend/{arc}")
+                zf.writestr(f"frontend/{arc}", content)
 
             for path in _iter_files(front):
                 try:
