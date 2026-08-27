@@ -8,6 +8,20 @@ type Props = {
   src?: string | null;
   /** Authenticated API path (fetched as HTML for srcDoc) */
   authPath?: string | null;
+  /**
+   * Direct iframe URL for a live render (the project draft route). Unlike the
+   * srcDoc modes this executes scripts: it is the only way to show the real
+   * site of a generated project, which has no static preview.html.
+   */
+  frameSrc?: string | null;
+  /**
+   * Virtual viewport the page is laid out in before being scaled down to the
+   * card. Real sites want a desktop width (1280); template preview.html files
+   * are hand-made miniatures with 8-10px type — at 1280 they render as a
+   * whole squashed page, so they get a near-native 480px viewport instead.
+   */
+  viewportWidth?: number;
+  viewportHeight?: number;
   title?: string;
   className?: string;
 };
@@ -100,7 +114,15 @@ async function fetchThumbHtml(src?: string | null, authPath?: string | null): Pr
  * Scaled homepage thumbnail via srcDoc (avoids cross-origin iframe blanks).
  * HTML is cached in-memory and only fetched when the card is visible.
  */
-export function SiteThumb({ src, authPath, title, className }: Props) {
+export function SiteThumb({
+  src,
+  authPath,
+  frameSrc,
+  viewportWidth = 1280,
+  viewportHeight = 800,
+  title,
+  className,
+}: Props) {
   const shellRef = useRef<HTMLDivElement>(null);
   const key = cacheKey(src, authPath);
   const [visible, setVisible] = useState(false);
@@ -113,13 +135,13 @@ export function SiteThumb({ src, authPath, title, className }: Props) {
     if (!el) return;
     const update = () => {
       const w = el.clientWidth || 320;
-      setScale(Math.max(0.08, w / 1280));
+      setScale(Math.max(0.08, w / viewportWidth));
     };
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [viewportWidth]);
 
   useEffect(() => {
     const el = shellRef.current;
@@ -143,6 +165,7 @@ export function SiteThumb({ src, authPath, title, className }: Props) {
 
   useEffect(() => {
     let alive = true;
+    if (frameSrc) return; // live iframe mode: nothing to fetch
     if (!key) {
       setHtml(null);
       setFailed(true);
@@ -174,16 +197,37 @@ export function SiteThumb({ src, authPath, title, className }: Props) {
     return () => {
       alive = false;
     };
-  }, [src, authPath, key, visible]);
+  }, [src, authPath, key, visible, frameSrc]);
 
   return (
     <div
       ref={shellRef}
       className={`site-thumb ${className || ""}`.trim()}
       aria-hidden
-      style={{ ["--thumb-scale" as string]: String(scale) }}
+      style={{
+        ["--thumb-scale" as string]: String(scale),
+        ["--thumb-vw" as string]: `${viewportWidth}px`,
+        ["--thumb-vh" as string]: `${viewportHeight}px`,
+      }}
     >
-      {html ? (
+      {frameSrc ? (
+        visible ? (
+          <div className="site-thumb-scaler">
+            <iframe
+              src={frameSrc}
+              title={title || "Preview"}
+              tabIndex={-1}
+              // Scripts are required (the draft page transforms and mounts the
+              // app in-browser); everything else stays locked down and the
+              // scaler is pointer-events: none.
+              sandbox="allow-scripts"
+              loading="lazy"
+            />
+          </div>
+        ) : (
+          <div className="site-thumb-fallback is-loading" />
+        )
+      ) : html ? (
         <div className="site-thumb-scaler">
           <iframe
             srcDoc={html}

@@ -12,7 +12,7 @@ import {
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Plus, Search } from "lucide-react";
-import { api, getToken } from "@/lib/api";
+import { api, apiBase, getToken } from "@/lib/api";
 import { HomeLayout } from "@/components/HomeLayout";
 import { PromptFileChips } from "@/components/PromptFileChips";
 import { SiteThumb, invalidateThumbCache } from "@/components/SiteThumb";
@@ -354,12 +354,23 @@ function DashboardInner() {
   const showTemplates = tab === "templates";
 
   function projectThumb(p: Project) {
-    // Prefer static HTML thumbs (template preview / card-preview) — never the live Vite
-    // preview URL, which is slow and often cross-origin for gallery cards.
-    if (p.template_id) {
-      return { src: `/templates/${p.template_id}/preview`, authPath: null as string | null };
+    // Live render of the actual site via the standalone draft route. The old
+    // card-preview served a static "Forge" placeholder for every generated
+    // project (nothing writes a preview.html for them), and the template
+    // preview showed the kit's mockup — not what the user built on top of it.
+    const token = getToken();
+    if (token) {
+      const base = apiBase().replace(/\/$/, "");
+      return {
+        frameSrc: `${base}/projects/${p.id}/draft?access_token=${encodeURIComponent(token)}`,
+        src: null as string | null,
+        authPath: null as string | null,
+      };
     }
-    return { src: null, authPath: `/projects/${p.id}/card-preview` };
+    if (p.template_id) {
+      return { frameSrc: null, src: `/templates/${p.template_id}/preview`, authPath: null as string | null };
+    }
+    return { frameSrc: null, src: null, authPath: `/projects/${p.id}/card-preview` };
   }
 
   return (
@@ -479,6 +490,8 @@ function DashboardInner() {
                 >
                   <SiteThumb
                     src={tpl.preview_url || `/templates/${tpl.id}/preview`}
+                    viewportWidth={480}
+                    viewportHeight={300}
                     title={tpl.title}
                     className="home-card-thumb"
                   />
@@ -508,6 +521,7 @@ function DashboardInner() {
                     onClick={() => router.push(`/projects/${p.id}`)}
                   >
                     <SiteThumb
+                      frameSrc={thumb.frameSrc}
                       src={thumb.src}
                       authPath={thumb.authPath}
                       title={p.name}
