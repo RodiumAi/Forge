@@ -1,0 +1,19 @@
+{
+  "id": "lumen-architecture",
+  "title": { "en": "Lumen Atelier", "fr": "Lumen Atelier" },
+  "description": {
+    "en": "Editorial architecture studio site: huge serif headlines on warm off-white, asymmetric full-bleed project grid, numbered sections, hairline rules, philosophy and team.",
+    "fr": "Site de cabinet d'architecture éditorial : immenses titres serif sur blanc cassé, grille de projets asymétrique pleine image, sections numérotées, lignes fines, philosophie et équipe."
+  },
+  "tags": ["architecture", "portfolio", "editorial", "studio"],
+  "preview": "preview.html",
+  "bootHint": {
+    "en": "Adapt lumen-architecture: studio name, project photos, philosophy copy, team.",
+    "fr": "Adapte lumen-architecture : nom du cabinet, photos de projets, texte philosophie, équipe."
+  },
+  "accent": "#b45309",
+  "bg": "#faf9f6",
+  "fg": "#1c1917",
+  "muted": "#78716c",
+  "tone": "editorial, restrained, museum-grade"
+}

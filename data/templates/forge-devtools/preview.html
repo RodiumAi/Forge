@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { width: 480px; height: 300px; overflow: hidden; font-family: -apple-system, "Segoe UI", Arial, sans-serif; background: #0d1117; color: #e6edf3; }
+  .mono { font-family: Consolas, Menlo, monospace; }
+  .bar { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; border-bottom: 1px solid #30363d; }
+  .brand { font-family: Consolas, monospace; font-size: 11px; font-weight: 700; }
+  .brand b { color: #3fb950; }
+  .nav { font-size: 8px; color: #8b949e; }
+  .nav span { background: #3fb950; color: #04260c; font-weight: 700; padding: 3px 10px; border-radius: 5px; margin-left: 8px; }
+  .hero { text-align: center; padding: 14px 20px 0; }
+  .badge { display: inline-block; font-family: Consolas, monospace; font-size: 7px; color: #bc8cff; border: 1px solid rgba(188,140,255,0.4); border-radius: 999px; padding: 2px 10px; background: rgba(188,140,255,0.08); }
+  h1 { font-size: 21px; font-weight: 800; letter-spacing: -0.02em; margin-top: 8px; line-height: 1.15; }
+  .grad { background: linear-gradient(90deg, #3fb950, #bc8cff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .lede { font-size: 8.5px; color: #8b949e; max-width: 320px; margin: 6px auto 0; line-height: 1.5; }
+  .install { font-family: Consolas, monospace; font-size: 9px; display: inline-flex; gap: 10px; align-items: center; margin-top: 8px; background: #161b22; border: 1px solid #30363d; border-radius: 7px; padding: 6px 14px; }
+  .d { color: #3fb950; } .cp { color: #8b949e; font-size: 7px; border: 1px solid #30363d; border-radius: 4px; padding: 2px 6px; }
+  .term { max-width: 400px; margin: 12px auto 0; border: 1px solid #30363d; border-radius: 9px; background: #010409; text-align: left; box-shadow: 0 0 24px rgba(63,185,80,0.12); }
+  .tbar { display: flex; gap: 4px; padding: 6px 10px; border-bottom: 1px solid #30363d; align-items: center; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; }
+  .r { background: #ff5f57; } .y { background: #febc2e; } .g { background: #28c840; }
+  .tt { font-family: Consolas, monospace; font-size: 6.5px; color: #8b949e; margin-left: 6px; }
+  pre { font-family: Consolas, monospace; font-size: 8px; line-height: 1.7; padding: 9px 12px; }
+  .p { color: #bc8cff; font-weight: 700; } .dim { color: #8b949e; } .gr { color: #3fb950; } .vi { color: #bc8cff; } .ye { color: #d29922; } .re { color: #ff7b72; }
+  .cur { display: inline-block; width: 5px; height: 9px; background: #3fb950; vertical-align: middle; }
+  .feats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 12px 20px; }
+  .f { background: #161b22; border: 1px solid #30363d; border-radius: 7px; padding: 8px; }
+  .f:first-child { border-color: #3fb950; box-shadow: 0 0 10px rgba(63,185,80,0.25); }
+  .ft { font-size: 8px; font-weight: 700; margin-top: 3px; }
+  .fd { font-size: 6.5px; color: #8b949e; margin-top: 2px; line-height: 1.4; }
+</style>
+</head>
+<body>
+  <div class="bar">
+    <div class="brand">⬡ <b>hexbin</b></div>
+    <div class="nav">Features · Compare · Open Source <span>Install</span></div>
+  </div>
+  <div class="hero">
+    <span class="badge">v3.2 — now with esbuild metafile support</span>
+    <h1>Trace <span class="grad">every byte</span> your build ships.</h1>
+    <p class="lede">Bundle forensics CLI. What's in your JavaScript, why it's there, and how to make it smaller — one command, zero config.</p>
+    <div class="install"><span><span class="d">$</span> npm install -g hexbin</span><span class="cp">Copy</span></div>
+    <div class="term">
+      <div class="tbar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="tt">hexbin — zsh</span></div>
+      <pre><span class="p">➜ ~ </span><span>hexbin analyze ./dist</span>
+<span class="gr">  ✓ </span><span class="dim">parsed 1,284 modules in </span><span class="vi">0.42s</span>
+<span class="dim">  1. moment/locale/*   </span><span class="ye">291 KB </span><span class="re">24.1%</span>
+<span class="dim">  💡 fix: </span><span class="gr">hexbin fix --dedupe  -38.4%</span> <span class="cur"></span></pre>
+    </div>
+  </div>
+  <div class="feats">
+    <div class="f">🔬<div class="ft">Byte-level attribution</div><div class="fd">Every byte traced to its import.</div></div>
+    <div class="f">⚡<div class="ft">Zero-config tracing</div><div class="fd">Vite, webpack, Rollup, esbuild.</div></div>
+    <div class="f">📉<div class="ft">Regression gates</div><div class="fd">Fail CI over byte budget.</div></div>
+  </div>
+</body>
+</html>

@@ -256,6 +256,107 @@ _TEMPLATE_KEYWORDS: tuple[tuple[str, tuple[str, ...]], ...] = (
             "back-office",
         ),
     ),
+    (
+        "aurora-ai",
+        (
+            "intelligence artificielle",
+            "artificial intelligence",
+            " ia ",
+            " ai ",
+            "chatbot",
+            "llm",
+            "machine learning",
+        ),
+    ),
+    (
+        "vertex-crypto",
+        ("crypto", "bitcoin", "blockchain", "trading", "fintech", "finance", "bourse", "exchange"),
+    ),
+    (
+        "brutalist-studio",
+        ("brutalist", "brutalisme", "studio design", "direction artistique", "art director"),
+    ),
+    (
+        "synthwave-music",
+        ("musique", "music", "artiste", "artist", "album", "dj", "label", "concert", "tournée", "tour"),
+    ),
+    (
+        "lumen-architecture",
+        ("architecture", "architecte", "architect", "immobilier", "real estate", "interior design"),
+    ),
+    (
+        "origami-3d",
+        ("3d", "prototype", "prototyping", "maquette produit", "produit interactif"),
+    ),
+    (
+        "glacier-travel",
+        (
+            "voyage",
+            "travel",
+            "expédition",
+            "expedition",
+            "tourisme",
+            "tourism",
+            "aventure",
+            "adventure",
+            "trek",
+        ),
+    ),
+    (
+        "pulse-fitness",
+        ("fitness", "gym", "salle de sport", "musculation", "coach sportif", "workout", "crossfit"),
+    ),
+    (
+        "kinetic-conf",
+        ("conférence", "conference", "événement", "event", "sommet", "summit", "meetup", "festival tech"),
+    ),
+    (
+        "terra-eco",
+        (
+            "écologie",
+            "ecology",
+            "durable",
+            "sustainable",
+            "environnement",
+            "environment",
+            "climat",
+            "climate",
+            "ong",
+        ),
+    ),
+    (
+        "mono-journal",
+        ("blog", "magazine", "journal", "revue", "éditorial", "editorial", "articles", "newsletter"),
+    ),
+    (
+        "forge-devtools",
+        (
+            "developer tool",
+            "outil développeur",
+            "cli",
+            "api docs",
+            "open source",
+            "devtool",
+            "sdk",
+            "terminal",
+        ),
+    ),
+    (
+        "atelier-mode",
+        ("mode", "fashion", "luxe", "luxury", "couture", "maison de mode", "lookbook", "prêt-à-porter"),
+    ),
+    (
+        "bloom-wellness",
+        ("spa", "bien-être", "wellness", "massage", "yoga", "méditation", "meditation", "institut"),
+    ),
+    (
+        "quantum-consult",
+        ("conseil", "consulting", "cabinet", "avocat", "law firm", "audit", "stratégie", "strategy"),
+    ),
+    (
+        "holo-portfolio",
+        ("portfolio créatif", "creative portfolio", "motion design", "designer 3d", "digital artist"),
+    ),
 )
 
 

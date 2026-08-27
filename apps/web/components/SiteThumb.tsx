@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { apiBase, getToken } from "@/lib/api";
 
 type Props = {
@@ -15,10 +15,11 @@ type Props = {
    */
   frameSrc?: string | null;
   /**
-   * Stable id for snapshot reuse across dashboard navigations
-   * (e.g. project id + updated_at). Volatile query params (token) are ignored.
+   * Virtual viewport the page is laid out in before being scaled down to the
+   * card. Real sites want a desktop width (1280); template preview.html files
+   * are hand-made miniatures with 8-10px type — at 1280 they render as a
+   * whole squashed page, so they get a near-native 480px viewport instead.
    */
-  cacheKey?: string | null;
   viewportWidth?: number;
   viewportHeight?: number;
   title?: string;
@@ -31,101 +32,18 @@ const HTML_CACHE = new Map<string, CacheEntry>();
 const HTML_TTL_MS = 10 * 60 * 1000;
 const INFLIGHT = new Map<string, Promise<string>>();
 
-/** JPEG data-URLs for live draft thumbs — never keep live React iframes around. */
-const SNAP_CACHE = new Map<string, string>();
-const SNAP_ORDER: string[] = [];
-const MAX_SNAPS = 20;
-const SNAP_STORAGE_PREFIX = "forge_thumb_snap_v1:";
-
-/** At most one live draft iframe on the whole page (OOM guard). */
-let liveSlotBusy = false;
-const liveWaiters: Array<() => void> = [];
-
-function acquireLiveSlot(): Promise<void> {
-  if (!liveSlotBusy) {
-    liveSlotBusy = true;
-    return Promise.resolve();
-  }
-  return new Promise((resolve) => {
-    liveWaiters.push(resolve);
-  });
-}
-
-function releaseLiveSlot() {
-  const next = liveWaiters.shift();
-  if (next) next();
-  else liveSlotBusy = false;
-}
-
-function htmlCacheKey(src?: string | null, authPath?: string | null) {
+function cacheKey(src?: string | null, authPath?: string | null) {
   return authPath || src || "";
 }
 
-function snapKey(frameSrc: string, explicit?: string | null): string {
-  if (explicit) return explicit;
-  try {
-    const u = new URL(frameSrc, typeof window !== "undefined" ? window.location.origin : "http://local");
-    u.searchParams.delete("access_token");
-    u.searchParams.delete("parent_origin");
-    u.searchParams.delete("thumb");
-    return `${u.origin}${u.pathname}`;
-  } catch {
-    return frameSrc;
+function suppressThumbScroll(html: string): string {
+  if (html.includes("data-forge-thumb")) return html;
+  const css =
+    "<style data-forge-thumb>html,body{overflow:hidden!important;scrollbar-width:none!important;-ms-overflow-style:none!important}html::-webkit-scrollbar,body::-webkit-scrollbar{display:none!important;width:0!important;height:0!important}</style>";
+  if (/<head[^>]*>/i.test(html)) {
+    return html.replace(/<head([^>]*)>/i, `<head$1>${css}`);
   }
-}
-
-function touchSnap(key: string) {
-  const idx = SNAP_ORDER.indexOf(key);
-  if (idx >= 0) SNAP_ORDER.splice(idx, 1);
-  SNAP_ORDER.push(key);
-  while (SNAP_ORDER.length > MAX_SNAPS) {
-    const drop = SNAP_ORDER.shift();
-    if (!drop) break;
-    SNAP_CACHE.delete(drop);
-    try {
-      sessionStorage.removeItem(SNAP_STORAGE_PREFIX + drop);
-    } catch {
-      /* ignore */
-    }
-  }
-}
-
-function readSnap(key: string): string | null {
-  const mem = SNAP_CACHE.get(key);
-  if (mem) {
-    touchSnap(key);
-    return mem;
-  }
-  try {
-    const stored = sessionStorage.getItem(SNAP_STORAGE_PREFIX + key);
-    if (stored && stored.startsWith("data:image/")) {
-      SNAP_CACHE.set(key, stored);
-      touchSnap(key);
-      return stored;
-    }
-  } catch {
-    /* ignore quota / private mode */
-  }
-  return null;
-}
-
-function writeSnap(key: string, dataUrl: string) {
-  SNAP_CACHE.set(key, dataUrl);
-  touchSnap(key);
-  try {
-    sessionStorage.setItem(SNAP_STORAGE_PREFIX + key, dataUrl);
-  } catch {
-    // Quota exceeded — keep memory copy only; drop oldest storage entries.
-    try {
-      for (const old of [...SNAP_ORDER]) {
-        if (old === key) continue;
-        sessionStorage.removeItem(SNAP_STORAGE_PREFIX + old);
-      }
-      sessionStorage.setItem(SNAP_STORAGE_PREFIX + key, dataUrl);
-    } catch {
-      /* ignore */
-    }
-  }
+  return css + html;
 }
 
 function readCache(key: string): string | null {
@@ -149,35 +67,15 @@ function writeCache(key: string, html: string) {
 export function invalidateThumbCache(match?: string) {
   if (!match) {
     HTML_CACHE.clear();
-    for (const key of [...SNAP_CACHE.keys()]) {
-      SNAP_CACHE.delete(key);
-      try {
-        sessionStorage.removeItem(SNAP_STORAGE_PREFIX + key);
-      } catch {
-        /* ignore */
-      }
-    }
-    SNAP_ORDER.length = 0;
     return;
   }
   for (const key of [...HTML_CACHE.keys()]) {
     if (key.includes(match)) HTML_CACHE.delete(key);
   }
-  for (const key of [...SNAP_CACHE.keys()]) {
-    if (!key.includes(match)) continue;
-    SNAP_CACHE.delete(key);
-    const idx = SNAP_ORDER.indexOf(key);
-    if (idx >= 0) SNAP_ORDER.splice(idx, 1);
-    try {
-      sessionStorage.removeItem(SNAP_STORAGE_PREFIX + key);
-    } catch {
-      /* ignore */
-    }
-  }
 }
 
 async function fetchThumbHtml(src?: string | null, authPath?: string | null): Promise<string> {
-  const key = htmlCacheKey(src, authPath);
+  const key = cacheKey(src, authPath);
   const cached = readCache(key);
   if (cached) return cached;
 
@@ -221,51 +119,46 @@ async function fetchThumbHtml(src?: string | null, authPath?: string | null): Pr
   }
 }
 
-function suppressThumbScroll(html: string): string {
-  if (html.includes("data-forge-thumb")) return html;
-  const css =
-    "<style data-forge-thumb>html,body{overflow:hidden!important;scrollbar-width:none!important;-ms-overflow-style:none!important}html::-webkit-scrollbar,body::-webkit-scrollbar{display:none!important;width:0!important;height:0!important}</style>";
-  if (/<head[^>]*>/i.test(html)) {
-    return html.replace(/<head([^>]*)>/i, `<head$1>${css}`);
-  }
-  return css + html;
-}
-
-function createLiveIframe(frameSrc: string, title?: string): HTMLIFrameElement {
-  const iframe = document.createElement("iframe");
-  iframe.title = title || "Preview";
-  iframe.tabIndex = -1;
-  iframe.setAttribute("scrolling", "no");
-  iframe.setAttribute("sandbox", "allow-scripts allow-same-origin");
-  iframe.src = frameSrc;
-  return iframe;
-}
-
 /**
- * Project cards: live-render once → JPEG snapshot → destroy iframe.
- * Templates: cheap srcDoc HTML (cached). Never parks live React apps.
+ * Scaled homepage thumbnail. Project cards use a live draft iframe (no snapshot
+ * / warm-frame cache — that froze the dashboard). Templates use cached srcDoc.
  */
 export function SiteThumb({
   src,
   authPath,
   frameSrc,
-  cacheKey: warmCacheKey,
   viewportWidth = 1280,
   viewportHeight = 800,
   title,
   className,
 }: Props) {
   const shellRef = useRef<HTMLDivElement>(null);
-  const hostRef = useRef<HTMLDivElement>(null);
-  const key = htmlCacheKey(src, authPath);
-  const keySnap = frameSrc ? snapKey(frameSrc, warmCacheKey) : "";
+  const frameRef = useRef<HTMLIFrameElement>(null);
+  const key = cacheKey(src, authPath);
   const [visible, setVisible] = useState(false);
   const [html, setHtml] = useState<string | null>(() => (key ? readCache(key) : null));
   const [failed, setFailed] = useState(false);
   const [scale, setScale] = useState(0.25);
-  const [snapshot, setSnapshot] = useState<string | null>(() =>
-    frameSrc && keySnap ? readSnap(keySnap) : null,
-  );
+  const [frameReady, setFrameReady] = useState(false);
+
+  useEffect(() => {
+    if (!frameSrc || !visible) {
+      setFrameReady(false);
+      return;
+    }
+    setFrameReady(false);
+    function onMessage(e: MessageEvent) {
+      if (!frameRef.current || e.source !== frameRef.current.contentWindow) return;
+      const type = e.data && typeof e.data === "object" ? e.data.type : "";
+      if (type === "forge:mounted") setFrameReady(true);
+    }
+    window.addEventListener("message", onMessage);
+    const grace = window.setTimeout(() => setFrameReady(true), 12000);
+    return () => {
+      window.removeEventListener("message", onMessage);
+      window.clearTimeout(grace);
+    };
+  }, [frameSrc, visible]);
 
   useEffect(() => {
     const el = shellRef.current;
@@ -299,82 +192,6 @@ export function SiteThumb({
     io.observe(el);
     return () => io.disconnect();
   }, []);
-
-  // Live draft → one-at-a-time capture → static image.
-  useLayoutEffect(() => {
-    if (!frameSrc || !visible || snapshot) return;
-    const host = hostRef.current;
-    if (!host) return;
-
-    let cancelled = false;
-    let iframe: HTMLIFrameElement | null = null;
-    let graceTimer = 0;
-
-    void (async () => {
-      await acquireLiveSlot();
-      if (cancelled) {
-        releaseLiveSlot();
-        return;
-      }
-
-      // Another card may have filled the cache while we waited.
-      const raced = readSnap(keySnap);
-      if (raced) {
-        setSnapshot(raced);
-        releaseLiveSlot();
-        return;
-      }
-
-      iframe = createLiveIframe(frameSrc, title);
-      host.replaceChildren(iframe);
-
-      const onMessage = (e: MessageEvent) => {
-        if (cancelled || !iframe || e.source !== iframe.contentWindow) return;
-        const type = e.data && typeof e.data === "object" ? e.data.type : "";
-        if (type === "forge:thumb-snapshot" && typeof e.data.dataUrl === "string") {
-          writeSnap(keySnap, e.data.dataUrl);
-          setSnapshot(e.data.dataUrl);
-          try {
-            iframe.remove();
-          } catch {
-            /* ignore */
-          }
-          iframe = null;
-          host.replaceChildren();
-          window.removeEventListener("message", onMessage);
-          window.clearTimeout(graceTimer);
-          releaseLiveSlot();
-        }
-      };
-      window.addEventListener("message", onMessage);
-
-      // If capture never arrives, drop the live frame so we don't OOM.
-      graceTimer = window.setTimeout(() => {
-        try {
-          iframe?.remove();
-        } catch {
-          /* ignore */
-        }
-        iframe = null;
-        host.replaceChildren();
-        window.removeEventListener("message", onMessage);
-        releaseLiveSlot();
-      }, 20000);
-    })();
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(graceTimer);
-      if (iframe) {
-        try {
-          iframe.remove();
-        } catch {
-          /* ignore */
-        }
-        releaseLiveSlot();
-      }
-    };
-  }, [frameSrc, visible, snapshot, keySnap, title]);
 
   useEffect(() => {
     let alive = true;
@@ -412,8 +229,6 @@ export function SiteThumb({
     };
   }, [src, authPath, key, visible, frameSrc]);
 
-  const showLiveCapture = Boolean(frameSrc && !snapshot && visible);
-
   return (
     <div
       ref={shellRef}
@@ -427,18 +242,22 @@ export function SiteThumb({
     >
       {frameSrc ? (
         <>
-          {snapshot ? (
-            <img className="site-thumb-snap" src={snapshot} alt="" draggable={false} />
-          ) : (
-            <>
-              {showLiveCapture && (
-                <div className="site-thumb-scaler" style={{ visibility: "hidden" }}>
-                  <div className="site-thumb-host" ref={hostRef} />
-                </div>
-              )}
-              <div className="site-thumb-fallback is-loading" />
-            </>
+          {visible && (
+            <div
+              className="site-thumb-scaler"
+              style={frameReady ? undefined : { visibility: "hidden" }}
+            >
+              <iframe
+                ref={frameRef}
+                src={frameSrc}
+                title={title || "Preview"}
+                tabIndex={-1}
+                scrolling="no"
+                sandbox="allow-scripts allow-same-origin"
+              />
+            </div>
           )}
+          {!frameReady && <div className="site-thumb-fallback is-loading" />}
         </>
       ) : html ? (
         <div className="site-thumb-scaler">
