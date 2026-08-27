@@ -92,15 +92,6 @@ services:
       RUNNER_PARENT_ORIGINS: http://localhost:3100,http://127.0.0.1:3100
       SSE_HEARTBEAT_SECONDS: "15"
       ALB_IDLE_TIMEOUT_SECONDS: "600"
-      # Off by default: the mirror needs the Firestore emulator on the host
-      # (infra/local/firestore-emulator.md). Set FIRESTORE_ENABLED=true in .env
-      # once it runs — with it down, mirror writes are wasted work.
-      FIRESTORE_ENABLED: ${FIRESTORE_ENABLED:-false}
-      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-rodiumai-local}
-      FIRESTORE_DATABASE: ${FIRESTORE_DATABASE:-rodiumaidb}
-      # Always host gateway from containers (do not inherit 127.0.0.1 from .env).
-      FIRESTORE_EMULATOR_HOST: host.docker.internal:8085
-      FIREBASE_AUTH_EMULATOR_HOST: host.docker.internal:9099
     volumes:
       - ./data/projects:/data/projects
       - ./data/templates:/data/templates:ro
@@ -127,11 +118,6 @@ services:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8100}
       DOCKER_BUILD: "1"
       FORGE_FONT_MODE: fallback
-      NEXT_PUBLIC_USE_FIREBASE_EMULATOR: ${NEXT_PUBLIC_USE_FIREBASE_EMULATOR:-1}
-      NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${NEXT_PUBLIC_FIREBASE_PROJECT_ID:-rodiumai-local}
-      NEXT_PUBLIC_FIRESTORE_DATABASE: ${NEXT_PUBLIC_FIRESTORE_DATABASE:-rodiumaidb}
-      NEXT_PUBLIC_FIRESTORE_EMULATOR_HOST: ${NEXT_PUBLIC_FIRESTORE_EMULATOR_HOST:-127.0.0.1:8085}
-      NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST: ${NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST:-127.0.0.1:9099}
     depends_on:
       - api
 

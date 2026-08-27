@@ -11,7 +11,6 @@ from app.db import get_db
 from app.i18n import resolve_locale, t
 from app.models import User, UserSettings
 from app.schemas import (
-    FirebaseCustomTokenResponse,
     LoginRequest,
     LogoutResponse,
     OAuthCallbackRequest,
@@ -424,33 +423,6 @@ async def logout(
         row.rodium_token_expires_at = None
         db.commit()
     return LogoutResponse()
-
-
-@router.post("/firebase-custom-token", response_model=FirebaseCustomTokenResponse)
-def firebase_custom_token(
-    request: Request,
-    user: User = Depends(get_current_user),
-) -> FirebaseCustomTokenResponse:
-    """Exchange Forge JWT for a Firebase Auth custom token (Firestore listeners)."""
-    locale = resolve_locale(request)
-    settings = get_settings()
-    from app.services import firestore_live
-
-    if not firestore_live.enabled():
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=t("firestore_disabled", locale) if False else "Firestore live is disabled",
-        )
-    try:
-        token = firestore_live.create_custom_token(str(user.id))
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc)[:500]) from exc
-    return FirebaseCustomTokenResponse(
-        token=token,
-        project_id=settings.firebase_project_id,
-        database_id=settings.firestore_database,
-        enabled=True,
-    )
 
 
 @router.post("/change-password", response_model=PasswordChangeResponse)

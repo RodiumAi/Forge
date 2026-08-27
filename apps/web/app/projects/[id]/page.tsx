@@ -79,12 +79,6 @@ import {
   type OptionsSubview,
   viewToMode,
 } from "@/lib/builder-url-state";
-import {
-  subscribeFiles,
-  subscribeRun,
-  type RunLive,
-} from "@/lib/firebase/live";
-import { firebaseEnabled } from "@/lib/firebase/client";
 import { readSseStream } from "@/lib/sse";
 import { usePreviewControl } from "@/components/builder/usePreviewControl";
 import {
@@ -589,66 +583,50 @@ export default function ProjectPage() {
     else topProgressDone("generation");
   }, [busy]);
 
+  // Cross-tab resync without Firestore: poll the active run while the tab is
+  // visible and no local SSE stream is attached. Detects a run started in
+  // another tab (reattach SSE via activeRunId) and refreshes files/preview
+  // when that remote run finishes.
   useEffect(() => {
-    if (!projectId || !firebaseEnabled()) return;
-    let lastRev = -1;
-    return subscribeFiles(projectId, (live) => {
-      const rev = typeof live?.rev === "number" ? live.rev : -1;
-      if (rev < 0 || rev === lastRev) return;
-      lastRev = rev;
-      // Also refresh the code editor's file tree, which used to stay frozen on
-      // its mount-time snapshot while the agent created/deleted files.
-      setFilesRevision(rev);
-      void refreshRoutes();
-      void forcePreviewRefresh({ softStart: true, remount: true });
-    });
-  }, [projectId, refreshRoutes, forcePreviewRefresh, setPreviewUrl]);
+    if (!projectId || !chatId) return;
+    let stopped = false;
+    let sawRemoteRun = false;
 
-  // Firestore live: run metadata (SSE still streams tokens).
-  useEffect(() => {
-    if (!projectId || !firebaseEnabled()) return;
-    return subscribeRun(projectId, (live: RunLive | null) => {
-      if (!live) return;
-      const runId = live.run_id || null;
-      if (runId && ignoredRunIdsRef.current.has(runId)) {
-        if (live.status === "cancelled" || live.status === "done" || live.status === "error") {
-          ignoredRunIdsRef.current.delete(runId);
+    async function tick() {
+      if (stopped || document.visibilityState !== "visible") return;
+      // Our own stream already keeps everything in sync.
+      if (streamAbortRef.current) return;
+      try {
+        const active = await api<{ id: string; status: string } | null>(
+          `/projects/${projectId}/chats/${chatId}/runs/active`,
+        );
+        if (stopped) return;
+        if (active?.id && !ignoredRunIdsRef.current.has(active.id)) {
+          sawRemoteRun = true;
+          setActiveRunId(active.id);
+        } else if (sawRemoteRun) {
+          // A run seen on a previous tick ended elsewhere: pick up its writes.
+          sawRemoteRun = false;
+          setFilesRevision((rev) => rev + 1);
+          void refreshRoutes();
+          void forcePreviewRefresh({ softStart: true, remount: true });
         }
-        return;
+      } catch {
+        /* transient — next tick retries */
       }
-      if (runId) setActiveRunId(runId);
-      if (live.status === "running" || live.status === "awaiting_clarify" || live.status === "awaiting_plan_confirm") {
-        // Only lock the composer from Firestore when we own an SSE for this run,
-        // or when restoring an awaiting HITL state (clarify/plan).
-        if (
-          live.status === "awaiting_clarify" ||
-          live.status === "awaiting_plan_confirm" ||
-          (runId && streamingRunIdRef.current === runId) ||
-          Boolean(streamAbortRef.current)
-        ) {
-          setBusy(true);
-        }
-      } else if (live.status === "done" || live.status === "error" || live.status === "cancelled") {
-        if (!runId || streamingRunIdRef.current === runId || !streamAbortRef.current) {
-          setBusy(false);
-        }
-      }
-      if (live.step_id && live.step_label) {
-        setStreamSteps((prev) => {
-          const next = [...prev];
-          const idx = next.findIndex((s) => s.id === live.step_id);
-          const row = {
-            id: live.step_id!,
-            label: live.step_label!,
-            status: (live.status === "running" ? "running" : "done") as AgentStep["status"],
-          };
-          if (idx >= 0) next[idx] = { ...next[idx], ...row };
-          else next.push(row);
-          return next;
-        });
-      }
-    });
-  }, [projectId]);
+    }
+
+    const interval = window.setInterval(() => void tick(), 10_000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void tick();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      stopped = true;
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [projectId, chatId, refreshRoutes, forcePreviewRefresh]);
 
 
   useEffect(() => {

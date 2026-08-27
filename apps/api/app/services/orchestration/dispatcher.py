@@ -182,19 +182,6 @@ async def run_plan_tasks(
             existing["label"] = label
         else:
             steps.append({"id": step_id, "label": label, "status": status})
-        try:
-            from app.services import firestore_live
-
-            firestore_live.set_run(
-                project_id,
-                run_id=run_id,
-                status="running" if status == "running" else status,
-                owner_user_id=str(user_id) if user_id else None,
-                step_id=step_id,
-                step_label=label,
-            )
-        except Exception:
-            pass
         return _sse({"type": "step", "id": step_id, "label": label, "status": status})
 
     for idx, task in enumerate(tasks):

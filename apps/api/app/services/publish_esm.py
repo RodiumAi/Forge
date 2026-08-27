@@ -84,25 +84,13 @@ async def publish_project_esm(
     owner_user_id: str | None = None,
     title: str = "Forge app",
 ) -> dict:
-    from app.services import firestore_live
-
     settings = get_settings()
-    firestore_live.set_publish(
-        project_id,
-        phase="build",
-        owner_user_id=owner_user_id,
-    )
 
     with tempfile.TemporaryDirectory(prefix="forge-esm-") as tmp:
         out = Path(tmp) / "dist"
         out.mkdir(parents=True, exist_ok=True)
         await transform_project_to_dir(project_id, out, title=title)
 
-        firestore_live.set_publish(
-            project_id,
-            phase="upload",
-            owner_user_id=owner_user_id,
-        )
         store = get_object_store()
         bucket = store.bucket_site_assets or settings.bucket_site_assets
         if not bucket:
@@ -130,9 +118,4 @@ async def publish_project_esm(
         await asyncio.gather(*(upload_one(p) for p in paths))
 
     public_url = settings.sites_url_for_slug(slug)
-    firestore_live.set_publish(
-        project_id,
-        phase="done",
-        owner_user_id=owner_user_id,
-    )
     return {"public_url": public_url, "files_uploaded": uploaded}

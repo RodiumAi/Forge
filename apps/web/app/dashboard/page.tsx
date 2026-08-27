@@ -12,7 +12,7 @@ import {
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Plus, Search } from "lucide-react";
-import { api, apiBase, getToken } from "@/lib/api";
+import { apiBase, getToken } from "@/lib/api";
 import { HomeLayout } from "@/components/HomeLayout";
 import { PromptFileChips } from "@/components/PromptFileChips";
 import { SiteThumb, invalidateThumbCache } from "@/components/SiteThumb";
@@ -38,8 +38,6 @@ import {
 } from "@/lib/lists-cache";
 import { topProgressDone, topProgressStart } from "@/lib/top-progress";
 import { useI18n } from "@/lib/i18n/I18nProvider";
-import { firebaseEnabled } from "@/lib/firebase/client";
-import { subscribeUserProjects, type UserProjectLive } from "@/lib/firebase/live";
 import {
   PROMPT_FILE_ACCEPT,
   PromptAttachment,
@@ -79,8 +77,6 @@ function DashboardInner() {
   const [creating, setCreating] = useState(false);
   const [forkingId, setForkingId] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
-  const [liveById, setLiveById] = useState<Record<string, UserProjectLive>>({});
-  const [userId, setUserId] = useState<string | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -89,18 +85,6 @@ function DashboardInner() {
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  useEffect(() => {
-    if (!getToken()) return;
-    void api<{ id: string }>("/auth/me")
-      .then((u) => setUserId(u.id))
-      .catch(() => undefined);
-  }, []);
-
-  useEffect(() => {
-    if (!userId || !firebaseEnabled()) return;
-    return subscribeUserProjects(userId, setLiveById);
-  }, [userId]);
 
   useEffect(() => {
     const raw = searchParams.get("tab");
@@ -546,14 +530,6 @@ function DashboardInner() {
                         {p.slug}
                         {mounted
                           ? ` · ${new Date(p.created_at).toLocaleDateString(locale)}`
-                          : ""}
-                        {liveById[p.id]?.preview_status === "ready"
-                          ? ` · ${t("previewLive")}`
-                          : liveById[p.id]?.preview_status === "starting"
-                            ? ` · ${t("builderStarting")}`
-                            : ""}
-                        {liveById[p.id]?.active_run_status === "running"
-                          ? ` · ${t("agentRunning")}`
                           : ""}
                       </span>
                     </div>

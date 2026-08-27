@@ -2,9 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, apiBase } from "@/lib/api";
-import { firebaseEnabled } from "@/lib/firebase/client";
-import { subscribePreview, type PreviewLive } from "@/lib/firebase/live";
-import { buildPreviewSrc, reducePreviewLive } from "@/lib/preview-state";
+import { buildPreviewSrc } from "@/lib/preview-state";
 import { topProgressDone, topProgressStart } from "@/lib/top-progress";
 
 type PreviewStatusResponse = {
@@ -170,22 +168,39 @@ export function usePreviewControl({ projectId, loading, onError, previewFailedLa
     void startPreview();
   }, [loading, previewBusy, previewUrl, startPreview]);
 
-  // Firestore live status is the primary signal when the emulator/prod is on.
+  // Light status poll (visible tab only): detects a runner stopped/restarted
+  // server-side. Replaced the Firestore live mirror — a heavyweight dependency
+  // for what a 20s GET covers.
   useEffect(() => {
-    if (!projectId || !firebaseEnabled()) return;
-    let lastStatus = "";
-    return subscribePreview(projectId, (live: PreviewLive | null) => {
-      const result = reducePreviewLive(live, lastStatus);
-      if (!result) return;
-      lastStatus = String(live?.status || lastStatus);
+    if (!projectId) return;
+    let stopped = false;
 
-      setPreviewLiveStatus(String(live?.status || ""));
-      if (result.url !== undefined) setPreviewUrl(result.url);
-      if (result.busy !== undefined) setPreviewBusy(result.busy);
-      if (result.remount) remount();
-      if (result.error) onError(result.error);
-    });
-  }, [onError, projectId, remount]);
+    async function tick() {
+      if (stopped || document.visibilityState !== "visible") return;
+      try {
+        const status = await api<PreviewStatusResponse>(`/projects/${projectId}/preview`);
+        if (stopped) return;
+        setPreviewLiveStatus(status.running ? "ready" : "stopped");
+        const url = status.runner_url || status.url;
+        if (status.running && url) {
+          setPreviewUrl((prev) => (prev === url ? prev : url));
+        }
+      } catch {
+        /* transient network error — next tick retries */
+      }
+    }
+
+    const interval = window.setInterval(() => void tick(), 20_000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void tick();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      stopped = true;
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [projectId]);
 
   return {
     previewUrl,

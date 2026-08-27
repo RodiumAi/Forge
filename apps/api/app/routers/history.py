@@ -115,11 +115,4 @@ def restore_snapshot(
     except history.HistoryUnavailable as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    try:
-        from app.services import firestore_live
-
-        firestore_live.bump_files(str(project_id), [])
-    except Exception:
-        pass
-
     return RestoreResponse(snapshot_id=new_id, restored_from=snapshot_id)

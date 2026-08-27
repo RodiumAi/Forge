@@ -77,12 +77,6 @@ def delete_file(project_id: str, relative: str) -> None:
             else:
                 child.rmdir()
         path.rmdir()
-    try:
-        from app.services.firestore_live import bump_files
-
-        bump_files(project_id, [relative])
-    except Exception:
-        pass
 
 
 def rename_path(project_id: str, src: str, dst: str) -> None:
@@ -104,13 +98,6 @@ def rename_path(project_id: str, src: str, dst: str) -> None:
 
     target.parent.mkdir(parents=True, exist_ok=True)
     os.replace(source, target)
-
-    try:
-        from app.services.firestore_live import bump_files
-
-        bump_files(project_id, [src, dst])
-    except Exception:
-        pass
 
 
 class BinaryFileError(ValueError):

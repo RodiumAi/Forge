@@ -174,18 +174,6 @@ async def create_project(
     chat = Chat(project_id=project.id, title=t("main_chat", locale))
     db.add(chat)
     db.commit()
-    try:
-        from app.services import firestore_live
-
-        firestore_live.ensure_project(str(project.id), str(user.id), name=project.name)
-        firestore_live.mirror_dashboard(
-            str(user.id),
-            str(project.id),
-            name=project.name,
-            preview_status="stopped",
-        )
-    except Exception:
-        pass
     return _project_out(project)
 
 
