@@ -1766,6 +1766,16 @@ html:has(.builder) body {
   box-shadow: inset 0 0 0 1px rgba(242, 98, 10, 0.35);
 }
 
+/* Lovable-style compact tabs: only the active mode shows its label, the rest
+   stay icon-only. Keeps the topbar quiet without losing orientation. */
+.builder-mode-btn span {
+  display: none;
+}
+
+.builder-mode-btn.active span {
+  display: inline;
+}
+
 .builder-midbar {
   display: flex;
   align-items: center;
@@ -1991,6 +2001,13 @@ html:has(.builder) body {
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
+  /* Raw route path (/, /courses…) — monospace reads as a URL, like Lovable. */
+  font-family: var(--font-mono, ui-monospace, "Cascadia Code", monospace);
+  font-size: 0.78rem;
+}
+
+.builder-page-menu button {
+  font-family: var(--font-mono, ui-monospace, "Cascadia Code", monospace);
 }
 
 .builder-page-picker-chevron {
