@@ -98,6 +98,8 @@ export function TemplateGallery({
           >
             <SiteThumb
               src={tpl.preview_url || `/templates/${tpl.id}/preview`}
+              viewportWidth={480}
+              viewportHeight={300}
               title={tpl.title}
               className="tpl-card-thumb"
             />

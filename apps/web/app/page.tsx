@@ -425,6 +425,8 @@ export default function LandingPage() {
               >
                 <SiteThumb
                   src={tpl.preview_url || `/templates/${tpl.id}/preview`}
+                  viewportWidth={480}
+                  viewportHeight={300}
                   title={tpl.title}
                   className="lp-tpl-thumb"
                 />
