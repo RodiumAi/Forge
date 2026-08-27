@@ -2,15 +2,21 @@
 
 import { ChatMarkdown } from "./ChatMarkdown";
 import { FileOpBlock } from "./FileOpBlock";
-import { splitMessageSegments } from "@/lib/message-segments";
+import {
+  splitMessageSegments,
+  type ProseSegment,
+  type WriteSegment,
+} from "@/lib/message-segments";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 
 /**
  * Assistant message body.
  *
- * Splits the raw answer into prose and file operations: prose is rendered as
- * markdown, each `<forge-write>` becomes a collapsed card. Without this the
- * live stream printed the raw tags and the whole file body as text.
+ * Prose only. File operations are stripped from the body: they are already
+ * listed in the activity panel and grouped under their plan task, so repeating
+ * one card per <forge-write> buried the conversation under dozens of rows.
+ * The single exception is the write currently streaming, shown as a one-line
+ * progress indicator so the user sees work happening.
  */
 export function AssistantBody({
   content,
@@ -37,30 +43,48 @@ export function AssistantBody({
     ) : null;
   }
 
-  // Only the very last segment can still be growing.
   const lastIndex = segments.length - 1;
+  const visible: (ProseSegment | WriteSegment)[] = [];
+  segments.forEach((segment, i) => {
+    if (segment.kind === "text") visible.push(segment);
+    // Only the in-progress write earns a line; finished ops live in the
+    // activity panel / plan checklist.
+    else if (segment.kind === "write" && !segment.complete && streaming && i === lastIndex) {
+      visible.push(segment);
+    }
+  });
+
+  if (!visible.length && streaming) {
+    return (
+      <p className="assistant-pending">
+        <span className="assistant-dots" aria-hidden="true">
+          <i />
+          <i />
+          <i />
+        </span>
+        <span>{t("genBuilding")}</span>
+      </p>
+    );
+  }
 
   return (
     <div className="assistant-body">
-      {segments.map((segment, i) => {
+      {visible.map((segment, i) => {
         if (segment.kind === "text") {
           return (
             <ChatMarkdown
               key={`t-${i}`}
               content={segment.content}
-              streaming={streaming && i === lastIndex}
+              streaming={streaming && i === visible.length - 1}
             />
           );
-        }
-        if (segment.kind === "delete") {
-          return <FileOpBlock key={`d-${i}-${segment.path}`} path={segment.path} />;
         }
         return (
           <FileOpBlock
             key={`w-${i}-${segment.path}`}
             path={segment.path}
             content={segment.content}
-            complete={segment.complete}
+            complete={false}
             onOpenFile={onOpenFile}
           />
         );

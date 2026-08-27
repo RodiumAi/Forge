@@ -1851,15 +1851,14 @@ export default function ProjectPage() {
               </article>
             )}
 
+            <ScrollToBottom
+              visible={showJumpToBottom}
+              unread={hasUnread}
+              onClick={jumpToBottom}
+              label={t("chatJumpToLatest")}
+            />
             <div ref={bottomRef} />
           </div>
-
-          <ScrollToBottom
-            visible={showJumpToBottom}
-            unread={hasUnread}
-            onClick={jumpToBottom}
-            label={t("chatJumpToLatest")}
-          />
 
           <form className="builder-composer" onSubmit={onSend}>
             <div
