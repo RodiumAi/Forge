@@ -199,8 +199,10 @@ def validate_project_sources(root: str, paths: list[str] | None = None) -> list[
     return violations
 
 
-def validate_write_content(path: str, content: str) -> list[ImportViolation]:
+def validate_write_content(
+    path: str, content: str, allowlist: dict[str, str] | None = None
+) -> list[ImportViolation]:
     """Validate a single forge-write payload before applying to disk."""
     if not path.endswith((".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs")):
         return []
-    return validate_source(path, content)
+    return validate_source(path, content, allowlist=allowlist)

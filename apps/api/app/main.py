@@ -73,9 +73,24 @@ app.include_router(preview.router)
 
 @app.get("/runner/", include_in_schema=False)
 @app.get("/runner", include_in_schema=False)
-def runner_shell() -> HTMLResponse:
-    """Preview shell: import map + parent origins + visual-edit bridge."""
-    return HTMLResponse(render_runner_shell(), headers={"Cache-Control": "no-store"})
+def runner_shell(p: str | None = None) -> HTMLResponse:
+    """Preview shell: import map + parent origins + visual-edit bridge.
+
+    `?p=<project uuid>` extends the import map with the project's declared
+    package.json dependencies (esm.sh). Unauthenticated by design — project
+    ids are unguessable UUIDs and the only disclosure is dependency names.
+    """
+    extra: dict[str, str] = {}
+    if p:
+        try:
+            import uuid as _uuid
+
+            from app.services.project_packages import extra_import_map
+
+            extra = extra_import_map(str(_uuid.UUID(p)))
+        except Exception:
+            extra = {}
+    return HTMLResponse(render_runner_shell(extra_imports=extra), headers={"Cache-Control": "no-store"})
 
 
 # Declared after the route above so `/runner/` resolves to the generated shell

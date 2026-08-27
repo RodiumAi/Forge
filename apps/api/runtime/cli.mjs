@@ -27,8 +27,9 @@ function main() {
 
   const files = payload.files || {};
   const entry = payload.entry || "src/main.tsx";
+  const extraImports = payload.extraImports || {};
   const css = files["src/index.css"] || files["index.css"] || "";
-  const result = buildGraph(files, entry, "publish");
+  const result = buildGraph(files, entry, "publish", extraImports);
 
   if (!result.ok) {
     process.stdout.write(JSON.stringify({ ok: false, errors: result.errors }));
@@ -42,7 +43,7 @@ function main() {
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>${escapeHtml(payload.title || "Forge app")}</title>
 <link rel="icon" type="image/png" href="/favicon.png" />
-${importMapScriptTag()}
+${importMapScriptTag(extraImports)}
 <style>${css}</style>
 </head>
 <body>

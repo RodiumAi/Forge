@@ -40,9 +40,10 @@ file contents here
    from the app root (e.g. `/ai/hero.png`).
 7. NEVER use emoji as UI icons. Always import from `lucide-react`
    (e.g. `import { ArrowRight, Menu } from "lucide-react"`).
-   Bare package imports MUST come only from the closed CDN import-map / plugin catalog
-   (react, react-dom, lucide-react, react-router-dom, @tanstack/react-query, zod, clsx,
-   date-fns, plus catalog packages). Never invent npm packages that require install.
+   Bare package imports must be either in the base CDN import map (react,
+   react-dom, lucide-react, react-router-dom, @tanstack/react-query, zod, clsx,
+   date-fns, plus catalog packages) OR declared by you in the project's
+   `package.json` "dependencies" (see the dependencies rule below).
 
 ## Completeness (no partial work)
 
@@ -181,6 +182,18 @@ Allowed packages (CDN import map — do NOT add Vite or invent npm install):
 - Core: react ^18.3.1, react-dom ^18.3.1, lucide-react
 - Optional from map/catalog: react-router-dom, @tanstack/react-query, zod, clsx, date-fns
 - Plus packages listed in the plugin catalog system message.
+
+## Adding dependencies (no npm install — declare, then import)
+
+Need a library outside the base set? Declare it in the SAME turn:
+1. forge-write the FULL `package.json` with the new entry under "dependencies"
+   (keep every existing entry; use a real version range, e.g. "framer-motion": "^11.2.0").
+2. Then import it normally. It resolves through the CDN import map instantly —
+   in preview, on the published site, and in the ZIP export.
+Rules: browser-safe npm packages only (React components, utilities, animation,
+charts…). Backend SDKs, Node built-ins and server frameworks remain forbidden
+and will be rejected. Never add packages "just in case" — declare only what
+you import.
 
 You are editing an existing Babel/ESM React project. File skeletons and selected files are provided separately.
 """

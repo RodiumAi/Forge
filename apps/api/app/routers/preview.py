@@ -41,9 +41,18 @@ def _owned(db: Session, user: User, project_id: UUID, locale: str = "fr") -> Pro
     return project
 
 
+def _project_extra_imports(project_id: str) -> dict[str, str]:
+    try:
+        from app.services.project_packages import extra_import_map
+
+        return extra_import_map(project_id)
+    except Exception:
+        return {}
+
+
 def _status(project: Project, *, running: bool) -> PreviewStatus:
     settings = get_settings()
-    runner = preview_babel.runner_url()
+    runner = preview_babel.runner_url(str(project.id))
     return PreviewStatus(
         running=running,
         port=0,
@@ -80,7 +89,7 @@ def source_bundle(
         entry="src/main.tsx",
         files=files,
         mode="babel_runner",
-        runner_url=preview_babel.runner_url(),
+        runner_url=preview_babel.runner_url(str(project_id)),
     )
 
 
@@ -107,6 +116,7 @@ def draft_page(
         assets["token"] = token
     html = preview_babel.render_runner_shell(
         bundle={"files": files, "entry": "src/main.tsx", "title": project.name, "assets": assets},
+        extra_imports=_project_extra_imports(str(project_id)),
         thumb=request.query_params.get("thumb") in {"1", "true", "yes"},
     )
     return HTMLResponse(html, headers={"Cache-Control": "no-store"})
