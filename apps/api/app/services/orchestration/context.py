@@ -262,6 +262,28 @@ def _sanitize_turn(role: str, content: str, *, limit: int) -> str:
 
 _GATEWAY_CONTENT_MAX = 480_000
 
+FINAL_USER_TURN_MAX = 60_000
+_ATTACHMENT_MARKER_RE = re.compile(
+    r"\[(?:Image attached|Image jointe|Reference screenshot|Capture de référence|Files|Fichiers)\s*:[^\]]*\]"
+)
+
+
+def _final_user_turn(content: str, limit: int = FINAL_USER_TURN_MAX) -> str:
+    """Truncate the final user turn without losing attachment markers.
+
+    Inlined documents can push the image markers past any cap; a marker that
+    does not reach the LLM means the vision parts are never built and the
+    model answers as if nothing was attached.
+    """
+    text = content or ""
+    if len(text) <= limit:
+        return text
+    truncated = text[:limit] + "\n\n[…attachment text truncated…]"
+    lost = [m for m in _ATTACHMENT_MARKER_RE.findall(text) if m not in truncated]
+    if lost:
+        truncated += "\n" + "\n".join(lost)
+    return truncated
+
 
 def _gateway_safe_content(text: str, *, fallback: str) -> str:
     """Nest playground rejects empty or oversized message content."""
@@ -318,10 +340,18 @@ async def build_llm_messages(
 
     # Always strip forge-write bodies — recent turns used to send 100k+ chars and break the stream.
     early = history[:-6]
-    recent = [
-        (role, _sanitize_turn(role, content, limit=1500 if role == "assistant" else 4000))
-        for role, content in history[-6:]
-    ]
+    tail = history[-6:]
+    recent: list[tuple[str, str]] = []
+    for idx, (role, content) in enumerate(tail):
+        is_final_user = role == "user" and idx == len(tail) - 1
+        if is_final_user:
+            # The final user turn carries inlined .md/.txt attachments and the
+            # image markers. The old 4000-char cap silently amputated long
+            # documents — and when the markers sat past the cut, the vision
+            # images vanished with them. The 480k gateway guard still applies.
+            recent.append((role, _final_user_turn(content)))
+        else:
+            recent.append((role, _sanitize_turn(role, content, limit=1500 if role == "assistant" else 4000)))
 
     messages: list[dict[str, Any]] = [
         {
