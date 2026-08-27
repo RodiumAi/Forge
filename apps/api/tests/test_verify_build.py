@@ -90,3 +90,54 @@ class TestEmptyProject:
         findings = verify_project_build(project)
         assert codes(findings) == {"entry.missing"}
         assert findings_have_critical(findings)
+
+
+class TestMissingLocalImports:
+    """MODULE_NOT_FOUND in the preview, caught before the user sees it.
+
+    Observed in the wild: src/components/InteractiveStudio.tsx imported
+    @/components/KanbanBoard which the agent never wrote — the preview died
+    with MODULE_NOT_FOUND and nothing routed it into the repair pass.
+    """
+
+    CSS = ".a { color: red }"
+
+    def test_reports_an_import_of_a_file_that_was_never_written(self, project):
+        write_file(project, "src/index.css", self.CSS)
+        write_file(
+            project,
+            "src/components/InteractiveStudio.tsx",
+            'import KanbanBoard from "@/components/KanbanBoard";\nexport default () => <KanbanBoard />;',
+        )
+        found = verify_project_build(project)
+        assert "import.module_not_found" in codes(found)
+        assert findings_have_critical(found)
+
+    def test_alias_relative_and_index_resolutions_pass(self, project):
+        write_file(project, "src/index.css", self.CSS)
+        write_file(project, "src/components/KanbanBoard.tsx", 'export default () => <div className="a" />;')
+        write_file(project, "src/widgets/index.ts", "export const w = 1;")
+        write_file(
+            project,
+            "src/App.tsx",
+            'import KanbanBoard from "@/components/KanbanBoard";\n'
+            'import { w } from "./widgets";\n'
+            'import "./index.css";\n'
+            "export default () => <KanbanBoard />;",
+        )
+        assert "import.module_not_found" not in codes(verify_project_build(project))
+
+    def test_resolution_is_case_sensitive_like_the_runner(self, project):
+        write_file(project, "src/index.css", self.CSS)
+        write_file(project, "src/components/KanbanBoard.tsx", "export default () => null;")
+        write_file(
+            project,
+            "src/App.tsx",
+            'import KanbanBoard from "@/components/kanbanboard";\nexport default () => <KanbanBoard />;',
+        )
+        assert "import.module_not_found" in codes(verify_project_build(project))
+
+    def test_bare_specifiers_are_left_to_the_ast_allowlist(self, project):
+        write_file(project, "src/index.css", self.CSS)
+        write_file(project, "src/App.tsx", 'import { useState } from "react";\nexport default () => null;')
+        assert "import.module_not_found" not in codes(verify_project_build(project))

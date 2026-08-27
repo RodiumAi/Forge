@@ -60,6 +60,59 @@ _HERO_LAYOUT_CLASS_RE = re.compile(
     r"^(hero|navbar|header|footer|site-|app-|layout-|main-|page-|dh-|home)",
     re.I,
 )
+_LOCAL_IMPORT_RE = re.compile(
+    r"""(?:import|export)\s+[^;]*?from\s+["']([^"']+)["']|import\s*\(\s*["']([^"']+)["']\s*\)""",
+)
+_SOURCE_EXTS = (".tsx", ".ts", ".jsx", ".js")
+_RESOLVE_EXTS = (".tsx", ".ts", ".jsx", ".js", ".css", ".json")
+
+
+def _local_import_exists(spec: str, importer: str, files: dict[str, str]) -> bool:
+    """Mirror the runner's case-sensitive module resolution for local imports."""
+    import posixpath
+
+    if spec.startswith("@/"):
+        base = "src/" + spec[2:]
+    elif spec.startswith("."):
+        base = posixpath.normpath(posixpath.join(posixpath.dirname(importer), spec))
+    else:
+        return True  # bare specifier — validated by the AST allowlist
+    if base in files:
+        return True
+    for ext in _RESOLVE_EXTS:
+        if base + ext in files:
+            return True
+    return any(f"{base}/index{ext}" in files for ext in _SOURCE_EXTS)
+
+
+def _missing_import_findings(files: dict[str, str]) -> list[VerifyFinding]:
+    """Imports of files that do not exist mount as MODULE_NOT_FOUND in the
+    preview (case-sensitive). The agent sometimes imports a component it never
+    wrote, or gets the casing wrong; catching it here routes it into the same
+    repair pass as the other criticals instead of a dead preview."""
+    findings: list[VerifyFinding] = []
+    for path, content in files.items():
+        if not path.endswith(_SOURCE_EXTS):
+            continue
+        for match in _LOCAL_IMPORT_RE.finditer(content):
+            spec = match.group(1) or match.group(2) or ""
+            if not spec or _local_import_exists(spec, path, files):
+                continue
+            findings.append(
+                VerifyFinding(
+                    code="import.module_not_found",
+                    severity="critical",
+                    path=path,
+                    message=(
+                        f'imports "{spec}" but no matching file exists (resolution is '
+                        "case-sensitive). Create that module with a matching default/named "
+                        "export, or fix the import path/casing."
+                    ),
+                )
+            )
+            if len(findings) >= 20:
+                return findings
+    return findings
 
 
 def _split_keys(blob: str) -> set[str]:
@@ -135,6 +188,8 @@ def _tsx_class_tokens(content: str) -> set[str]:
 def verify_project_build(project_id: str) -> list[VerifyFinding]:
     files = list_files(project_id)
     findings: list[VerifyFinding] = []
+
+    findings.extend(_missing_import_findings(files))
 
     main = files.get("src/main.tsx") or files.get("src/main.jsx") or ""
     if main:

@@ -110,7 +110,8 @@ def _read_local_public(project_id: str, web_path: str) -> tuple[bytes, str] | No
         return None
     body = disk.read_bytes()
     if len(body) > MAX_IMAGE_BYTES:
-        body = body[:MAX_IMAGE_BYTES]
+        # A truncated binary is a corrupt image; skip vision rather than send garbage.
+        return None
     ext = disk.suffix.lower()
     ctype = {
         ".png": "image/png",
@@ -131,7 +132,8 @@ async def _fetch_url(url: str) -> tuple[bytes, str] | None:
             return None
         body = resp.content
         if len(body) > MAX_IMAGE_BYTES:
-            body = body[:MAX_IMAGE_BYTES]
+            # A truncated binary is a corrupt image; skip vision rather than send garbage.
+            return None
         ctype = (resp.headers.get("content-type") or "image/png").split(";")[0].strip()
         return body, ctype
     except Exception:
@@ -170,7 +172,8 @@ def _read_stored_object(db: Session, project_id: str, object_id: str) -> tuple[b
         obj = store.internal.get_object(Bucket=bucket, Key=row.object_key)
         body = obj["Body"].read()
         if len(body) > MAX_IMAGE_BYTES:
-            body = body[:MAX_IMAGE_BYTES]
+            # A truncated binary is a corrupt image; skip vision rather than send garbage.
+            return None
         ctype = row.content_type or "image/png"
         return body, ctype, asset_display_name(row.object_key)
     except Exception:

@@ -263,10 +263,7 @@ def _export_package_json(front: Path, project_name: str) -> str:
 
     # Always pin the local Vite toolchain from the shared manifest (don't keep a
     # stale Vite 8 / broken `tsc -b` script an agent may have written).
-    dev = {
-        name: package_version(name) or "latest"
-        for name in _DEV_DEPENDENCIES
-    }
+    dev = {name: package_version(name) or "latest" for name in _DEV_DEPENDENCIES}
 
     scripts = {
         "dev": "vite",
