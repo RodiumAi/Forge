@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import re
@@ -156,10 +157,12 @@ async def create_project(
     db.refresh(project)
 
     try:
+        # to_thread: forking copies files and runs a git snapshot subprocess;
+        # inline it would stall the event loop inside this async endpoint.
         if template_id:
-            fork_template(template_id, str(project.id), project.name)
+            await asyncio.to_thread(fork_template, template_id, str(project.id), project.name)
         else:
-            scaffold_vite_react(str(project.id), project.name)
+            await asyncio.to_thread(scaffold_vite_react, str(project.id), project.name)
     except Exception as exc:
         db.delete(project)
         db.commit()

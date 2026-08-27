@@ -173,15 +173,16 @@ async def suggest_project_name(
     user: User,
     fallback: str = "Nouveau projet",
 ) -> str:
-    """Heuristic first; optionally polish with a short LLM call (3s timeout)."""
+    """Heuristic first; optionally polish with a short LLM call.
+
+    The WHOLE remote path (auth refresh + LLM) is capped at 4s: this runs inside
+    POST /projects, and the dashboard blocks on that response before redirecting
+    to the builder. A slow OIDC refresh used to sit outside the cap and could
+    stall project creation for up to 30s.
+    """
     base = heuristic_project_name(prompt, fallback=fallback)
     raw = (prompt or "").strip()
     if not raw or len(raw) < 12:
-        return base
-
-    try:
-        auth = await resolve_generation_auth(db, user)
-    except Exception:
         return base
 
     settings = get_settings()
@@ -200,17 +201,19 @@ async def suggest_project_name(
         {"role": "system", "content": system},
         {"role": "user", "content": raw[:500]},
     ]
-    try:
-        result = await asyncio.wait_for(
-            complete_chat(
-                auth=auth,
-                model=settings.default_model,
-                messages=messages,
-                locale=locale,
-                temperature=0.2,
-            ),
-            timeout=3.0,
+
+    async def _remote_name() -> str:
+        auth = await resolve_generation_auth(db, user)
+        return await complete_chat(
+            auth=auth,
+            model=settings.default_model,
+            messages=messages,
+            locale=locale,
+            temperature=0.2,
         )
+
+    try:
+        result = await asyncio.wait_for(_remote_name(), timeout=4.0)
         return _clean_llm_title(result, fallback=base)
     except Exception:
         return base
