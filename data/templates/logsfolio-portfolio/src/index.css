@@ -34,7 +34,9 @@ body {
   width: 112px; height: 112px; border-radius: 50%; margin: 0 auto 24px;
   background: linear-gradient(140deg, var(--accent), #2563eb 80%);
   border: 3px solid var(--soft);
+  overflow: hidden;
 }
+.avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
 .hero h1 { font-size: clamp(28px, 5vw, 42px); }
 .hero-sub { color: var(--muted); max-width: 560px; margin: 14px auto 28px; }
 .hero-links { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; }
@@ -59,7 +61,8 @@ body {
 
 .projects { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
 .card { background: var(--soft); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
-.card-thumb { height: 130px; }
+.card-thumb { height: 130px; overflow: hidden; }
+.card-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .card-body { padding: 18px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
 .card-body h3 { font-size: 17px; }
 .card-body p { color: var(--muted); font-size: 14px; flex: 1; }
@@ -76,7 +79,8 @@ body {
 .quote { background: var(--soft); border-left: 3px solid var(--accent); border-radius: 0 12px 12px 0; padding: 20px 22px; }
 .quote p { font-size: 15px; font-style: italic; }
 .quote-foot { display: flex; align-items: center; gap: 12px; margin-top: 16px; font-size: 13.5px; }
-.quote-avatar { width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0; }
+.quote-avatar { width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0; overflow: hidden; }
+.quote-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
 
 .blogs { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
 .blog-card {

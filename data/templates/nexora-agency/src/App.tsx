@@ -13,15 +13,15 @@ const steps = [
 ];
 
 const work = [
-  { tag: "FinTech · Design", title: "Ledgerly Console Refresh", tone: "a" },
-  { tag: "SaaS · Engineering", title: "Chartfox Insights Suite", tone: "b" },
-  { tag: "HealthTech · Brand", title: "Vitalpath Care App", tone: "c" },
+  { tag: "FinTech · Design", title: "Ledgerly Console Refresh", tone: "a", img: "https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=800&q=70", alt: "Bright open-plan office with desks and monitors" },
+  { tag: "SaaS · Engineering", title: "Chartfox Insights Suite", tone: "b", img: "https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=800&q=70", alt: "Team collaborating around a laptop in a meeting" },
+  { tag: "HealthTech · Brand", title: "Vitalpath Care App", tone: "c", img: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=800&q=70", alt: "People working together on laptops at a shared table" },
 ];
 
 const quotes = [
-  { text: "They rewired our signup journey in weeks and the numbers moved almost overnight. Genuinely impressive pace.", name: "Amara Feld", role: "Head of Product, Ledgerly" },
-  { text: "It felt less like hiring an agency and more like unlocking a senior team we could not have recruited ourselves.", name: "Tomas Reine", role: "CTO, Chartfox" },
-  { text: "Clear scope, honest timelines, and the final build went beyond what we asked for. We renewed immediately.", name: "Priya Anand", role: "Founder, Vitalpath" },
+  { text: "They rewired our signup journey in weeks and the numbers moved almost overnight. Genuinely impressive pace.", name: "Amara Feld", role: "Head of Product, Ledgerly", img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=70" },
+  { text: "It felt less like hiring an agency and more like unlocking a senior team we could not have recruited ourselves.", name: "Tomas Reine", role: "CTO, Chartfox", img: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=70" },
+  { text: "Clear scope, honest timelines, and the final build went beyond what we asked for. We renewed immediately.", name: "Priya Anand", role: "Founder, Vitalpath", img: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=70" },
 ];
 
 export default function App() {
@@ -97,8 +97,11 @@ export default function App() {
       </section>
 
       <section className="why container">
-        <div className="why-art" aria-hidden="true">
-          <div className="why-glow" />
+        <div className="why-art">
+          <img
+            src="https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1200&q=70"
+            alt="Modern studio office where the Kovento team works"
+          />
           <div className="why-badge">Top Rated Studio<br />2026</div>
         </div>
         <div className="why-copy">
@@ -142,7 +145,9 @@ export default function App() {
         <div className="work-grid">
           {work.map((w) => (
             <article key={w.title} className={`work-card tone-${w.tone}`}>
-              <div className="work-visual" />
+              <div className="work-visual">
+                <img src={w.img} alt={w.alt} loading="lazy" />
+              </div>
               <p className="work-tag">{w.tag}</p>
               <h3>{w.title}</h3>
             </article>
@@ -159,7 +164,7 @@ export default function App() {
               <span className="stars">★★★★★</span>
               <p>&ldquo;{q.text}&rdquo;</p>
               <footer>
-                <span className="avatar">{q.name.charAt(0)}</span>
+                <img className="avatar" src={q.img} alt={`Portrait of ${q.name}`} loading="lazy" />
                 <span><strong>{q.name}</strong><br />{q.role}</span>
               </footer>
             </blockquote>

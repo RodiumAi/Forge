@@ -21,6 +21,12 @@ const bars = [
   { month: "Oct", h: 66 }, { month: "Nov", h: 92 }, { month: "Dec", h: 97 },
 ];
 
+const avatarPool = [
+  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=70",
+  "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=70",
+  "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=400&q=70",
+];
+
 const orders = [
   { id: "#4821", customer: "Mira Solvang", plan: "Growth", amount: "$490", status: "Paid" },
   { id: "#4820", customer: "Teo Barasso", plan: "Starter", amount: "$190", status: "Pending" },
@@ -53,7 +59,13 @@ export default function App() {
           <input className="search" type="search" placeholder="Search orders, customers..." />
           <div className="top-actions">
             <span className="bell" title="Notifications">🔔</span>
-            <span className="avatar">JD</span>
+            <span className="avatar">
+              <img
+                src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=70"
+                alt="Portrait of the signed-in user"
+                loading="lazy"
+              />
+            </span>
           </div>
         </header>
 
@@ -98,10 +110,20 @@ export default function App() {
                 </tr>
               </thead>
               <tbody>
-                {orders.map((o) => (
+                {orders.map((o, i) => (
                   <tr key={o.id}>
                     <td className="mono">{o.id}</td>
-                    <td>{o.customer}</td>
+                    <td>
+                      <span className="customer-cell">
+                        <img
+                          className="table-avatar"
+                          src={avatarPool[i % avatarPool.length]}
+                          alt={`Portrait of ${o.customer}`}
+                          loading="lazy"
+                        />
+                        {o.customer}
+                      </span>
+                    </td>
                     <td>{o.plan}</td>
                     <td>{o.amount}</td>
                     <td><span className={`status status-${o.status.toLowerCase()}`}>{o.status}</span></td>
