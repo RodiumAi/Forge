@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Upload, X } from "lucide-react";
 import { api, apiBase, getToken } from "@/lib/api";
-import { assetContentUrl } from "@/lib/asset-url";
+import { assetContentUrl, projectPublicUrl } from "@/lib/asset-url";
 import { Icon } from "@/components/ui/icon";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { fetchProjectAssets, type ProjectAsset } from "@/lib/prompt-upload";
@@ -35,7 +35,7 @@ export function ImageEditPanel({ projectId, selection, onClose, onReplaced }: Pr
     void load();
   }, [projectId]);
 
-  async function applyUrl(publicUrl: string) {
+  async function applyUrl(publicUrl: string, objectId?: string) {
     if (!selection?.src) {
       setError(t("imagePickHint"));
       return;
@@ -48,6 +48,11 @@ export function ImageEditPanel({ projectId, selection, onClose, onReplaced }: Pr
         body: JSON.stringify({
           old_src: selection.src,
           new_public_path: publicUrl,
+          // With the id, the API copies the bytes into the project's public/
+          // and writes a relative /images/... src. The raw object-store URL
+          // points at a private bucket: 403 in the preview, broken at
+          // publish/export.
+          object_id: objectId ?? null,
         }),
       });
       onReplaced();
@@ -80,10 +85,10 @@ export function ImageEditPanel({ projectId, selection, onClose, onReplaced }: Pr
         const data = await res.json().catch(() => ({}));
         throw new Error(typeof data.detail === "string" ? data.detail : res.statusText);
       }
-      const data = (await res.json()) as { public_url?: string };
+      const data = (await res.json()) as { public_url?: string; object_id?: string };
       await load();
       if (selection?.src && data.public_url) {
-        await applyUrl(data.public_url);
+        await applyUrl(data.public_url, data.object_id);
       } else {
         setBusy(false);
       }
@@ -107,7 +112,17 @@ export function ImageEditPanel({ projectId, selection, onClose, onReplaced }: Pr
             {t("imageSelected")} <code>{selection.selector || "img"}</code>
           </p>
           { }
-          <img src={selection.src} alt={selection.alt || ""} className="image-panel-preview" />
+          <img
+            // Root-path srcs live in the project's public/ — unreachable from
+            // the builder origin without the authenticated endpoint.
+            src={
+              selection.src.startsWith("/")
+                ? (projectPublicUrl(projectId, selection.src) ?? selection.src)
+                : selection.src
+            }
+            alt={selection.alt || ""}
+            className="image-panel-preview"
+          />
         </div>
       ) : (
         <p className="comments-anchor muted">{t("imagePickHint")}</p>
@@ -149,7 +164,7 @@ export function ImageEditPanel({ projectId, selection, onClose, onReplaced }: Pr
                   className="image-panel-thumb"
                   disabled={busy || !selection}
                   title={asset.name}
-                  onClick={() => void applyUrl(asset.public_url)}
+                  onClick={() => void applyUrl(asset.public_url, asset.id)}
                 >
                   { }
                   <img src={thumbUrl} alt={asset.name} />

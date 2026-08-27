@@ -58,6 +58,61 @@ window.addEventListener("unhandledrejection", (e) => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// Project asset resolution.
+//
+// Generated code references project files with root paths (`/images/x.png`,
+// `/favicon.png`). Those work on the published site — publish copies public/
+// to the site root — but here the iframe origin is the API, where `/images/…`
+// is a 404. The embedder (or the draft route) provides the authenticated
+// project-public endpoint; every root-path <img> is rewritten to it, with the
+// original kept in data-forge-src so the visual-image bridge still reports
+// the literal that actually lives in the source.
+let ASSETS = null; // { base: string, token?: string }
+
+function resolveAssetUrl(src, assets) {
+  if (!assets || !assets.base || typeof src !== "string") return null;
+  if (!src.startsWith("/") || src.startsWith("//")) return null;
+  const base = assets.base.replace(/\/+$/, "");
+  const sep = src.includes("?") ? "&" : "?";
+  return assets.token ? `${base}${src}${sep}access_token=${encodeURIComponent(assets.token)}` : `${base}${src}`;
+}
+
+function rewriteImageEl(el) {
+  const src = el.getAttribute("src") || "";
+  const resolved = resolveAssetUrl(src, ASSETS);
+  if (!resolved || resolved === src) return;
+  el.setAttribute("data-forge-src", src);
+  el.setAttribute("src", resolved);
+}
+
+function rewriteImagesUnder(rootNode) {
+  if (!ASSETS || !rootNode) return;
+  if (rootNode.tagName === "IMG") rewriteImageEl(rootNode);
+  if (rootNode.querySelectorAll) {
+    for (const el of rootNode.querySelectorAll("img")) rewriteImageEl(el);
+  }
+}
+
+new MutationObserver((records) => {
+  if (!ASSETS) return;
+  for (const record of records) {
+    if (record.type === "attributes" && record.target.tagName === "IMG") {
+      rewriteImageEl(record.target);
+      continue;
+    }
+    for (const node of record.addedNodes) {
+      if (node.nodeType === 1) rewriteImagesUnder(node);
+    }
+  }
+}).observe(document.documentElement, {
+  subtree: true,
+  childList: true,
+  attributes: true,
+  attributeFilter: ["src"],
+});
+
+
 ["log", "info", "warn", "error"].forEach((level) => {
   const original = console[level].bind(console);
   console[level] = (...args) => {
@@ -261,7 +316,8 @@ function stripSideEffectImport(code, imp) {
 /** @type {Map<string, string>|null} */
 let previousBlobs = null;
 
-async function mount(files, entry, tokensCss) {
+async function mount(files, entry, tokensCss, assets) {
+  if (assets && typeof assets.base === "string" && assets.base) ASSETS = assets;
   const cssEl = document.getElementById("forge-app-css");
   if (cssEl) cssEl.textContent = files["src/index.css"] || files["index.css"] || "";
   const tokensEl = document.getElementById("forge-tokens");
@@ -355,6 +411,9 @@ async function mount(files, entry, tokensCss) {
       }
     }
     previousBlobs = blobUrls;
+    // The observer only sees future mutations; images already in the tree
+    // (or an ASSETS config arriving after the first render) need one pass.
+    rewriteImagesUnder(document.body);
     send({ type: "forge:mounted", entry });
   } catch (e) {
     send({
@@ -380,7 +439,7 @@ window.addEventListener("message", (e) => {
   const data = e.data;
   if (!data || typeof data !== "object") return;
   if (data.type === "forge:render") {
-    void mount(data.files || {}, data.entry || "src/main.tsx", data.tokens || "");
+    void mount(data.files || {}, data.entry || "src/main.tsx", data.tokens || "", data.assets || null);
   }
 });
 
@@ -389,7 +448,7 @@ window.addEventListener("message", (e) => {
 // parent to postMessage it. In that mode there is no peer to notify.
 const DRAFT = window.__FORGE_DRAFT__;
 if (DRAFT && DRAFT.files) {
-  void mount(DRAFT.files, DRAFT.entry || "src/main.tsx", DRAFT.tokens || "");
+  void mount(DRAFT.files, DRAFT.entry || "src/main.tsx", DRAFT.tokens || "", DRAFT.assets || null);
 } else {
   send({ type: "forge:ready" });
 }

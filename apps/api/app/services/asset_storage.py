@@ -75,3 +75,35 @@ def get_project_asset(db: Session, project_id: UUID, object_id: UUID) -> StoredO
         .filter(StoredObject.project_id == project_id, StoredObject.id == object_id)
         .first()
     )
+
+
+def materialize_asset_to_public(db: Session, project_id: UUID, object_id: UUID) -> str:
+    """Copy a stored upload into the project's `public/images/`; return its web path.
+
+    An image placed in the site must live in the project files: the uploads
+    bucket is private, so writing its URL into the JSX gave a 403 in the
+    preview iframe — and a hardcoded object-store host would break the same
+    image at publish and export time. `public/` is copied verbatim by publish
+    and export, so a `/images/...` path works everywhere.
+    """
+    from app.providers.objects import get_object_store
+    from app.services.filesystem import write_bytes
+
+    row = get_project_asset(db, project_id, object_id)
+    if row is None:
+        raise FileNotFoundError("asset_not_found")
+
+    store = get_object_store()
+    bucket = store.bucket_uploads or get_settings().aws_s3_bucket
+    if not bucket:
+        raise provider_not_configured("Object store (S3/MinIO)")
+    obj = store.internal.get_object(Bucket=bucket, Key=row.object_key)
+    body = obj["Body"].read()
+
+    name = asset_display_name(row.object_key)
+    safe = "".join(c if c.isalnum() or c in ".-_" else "-" for c in name).strip("-.") or "image.png"
+    # Object-id prefix: stable (re-picking the same asset overwrites, no
+    # duplicate files) and collision-free across same-named uploads.
+    rel = f"public/images/{str(object_id)[:8]}-{safe}"
+    write_bytes(str(project_id), rel, body)
+    return "/" + rel[len("public/") :]

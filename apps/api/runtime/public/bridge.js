@@ -422,7 +422,10 @@
     } else if (TOOL === "image") {
       post({
         type: "forge-image-select",
-        src: target.getAttribute("src") || "",
+        // The runner rewrites root-path srcs to the authenticated API URL for
+        // display; the literal that lives in the source is kept in
+        // data-forge-src, and that's what the replace endpoint must match.
+        src: target.getAttribute("data-forge-src") || target.getAttribute("src") || "",
         alt: target.getAttribute("alt") || "",
         selector: info.selector
       });

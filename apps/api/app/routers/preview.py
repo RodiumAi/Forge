@@ -117,8 +117,14 @@ def draft_page(
     """
     project = _owned(db, user, project_id, resolve_locale(request))
     files = preview_babel.collect_project_source_files(str(project_id))
+    # Root-path images (/images/x.png) resolve through the authenticated
+    # project-public endpoint; same-origin here, so a relative base works.
+    assets: dict[str, str] = {"base": f"/projects/{project_id}/public"}
+    token = request.query_params.get("access_token")
+    if token:
+        assets["token"] = token
     html = preview_babel.render_runner_shell(
-        bundle={"files": files, "entry": "src/main.tsx", "title": project.name}
+        bundle={"files": files, "entry": "src/main.tsx", "title": project.name, "assets": assets}
     )
     return HTMLResponse(html, headers={"Cache-Control": "no-store"})
 
