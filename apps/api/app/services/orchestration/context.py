@@ -8,12 +8,13 @@ from typing import Any
 from app.prompts.system import THEME_QUALITY_HINT, system_prompt_with_design
 from app.services.ai_rules import ensure_ai_rules_md, load_ai_rules_md
 from app.services.attachments import enrich_user_message_with_vision
-from app.services.filesystem import list_files, read_file
+from app.services.filesystem import list_files, project_dir, read_file
 from app.services.prototype_mode import format_prototype_plugins_layer
 
 DESIGN_MAX_CHARS = 12_000
-SELECTED_FILE_MAX_CHARS = 28_000
+SELECTED_FILE_MAX_CHARS = 44_000
 CSS_RESERVED_CHARS = 14_000
+RECENT_DISK_PATHS = 3
 FORCED_PATHS = ("src/index.css", "src/App.tsx", "DESIGN.md", "AI_RULES.md")
 SCAFFOLD_EXTRA_K = 8
 SURGICAL_EDIT_HINT = (
@@ -127,6 +128,45 @@ def select_files(query: str, files: dict[str, str], k: int = 4) -> list[str]:
     return picked[: effective_k + len(FORCED_PATHS)]
 
 
+_RECENT_SOURCE_EXTS = (".tsx", ".ts", ".jsx", ".js", ".css", ".html")
+
+
+def recent_disk_paths(project_id: str, files: dict[str, str], limit: int = RECENT_DISK_PATHS) -> list[str]:
+    """Source files most recently modified on disk, newest first.
+
+    Visual edits (text/image tools) write straight to disk without a chat
+    message: keyword selection can miss those files entirely, and the model —
+    told to emit complete file contents — then regenerates them from stale
+    conversation memory, silently reverting the user's manual changes. Forcing
+    the freshest files into the full-content layer closes that hole.
+    """
+    root = project_dir(project_id)
+    scored: list[tuple[float, str]] = []
+    for path in files:
+        if not path.endswith(_RECENT_SOURCE_EXTS):
+            continue
+        try:
+            scored.append((-(root / path).stat().st_mtime, path))
+        except OSError:
+            continue
+    scored.sort()
+    return [path for _, path in scored[:limit]]
+
+
+def merge_context_paths(
+    selected: list[str],
+    focus_paths: list[str] | None,
+    recent_paths: list[str],
+    files: dict[str, str],
+) -> list[str]:
+    """Final full-content layer order: task focus, then selection, then recency."""
+    ordered: list[str] = []
+    for path in [*(focus_paths or []), *selected, *recent_paths]:
+        if path in files and path not in ordered:
+            ordered.append(path)
+    return ordered
+
+
 def _skeleton_for_file(path: str, content: str) -> str:
     lines = content.splitlines()
     n = len(lines)
@@ -160,7 +200,11 @@ DESIGN_PATH = "DESIGN.md"
 
 def _selected_file_blocks(files: dict[str, str], paths: list[str]) -> str:
     """Emit full selected files. Always reserve budget for src/index.css first."""
-    parts = ["Selected files (full):\n"]
+    parts = [
+        "Selected files (full, CURRENT on-disk state — the user may have edited "
+        "these outside the chat; they OVERRIDE any version of the same files "
+        "appearing earlier in this conversation):\n"
+    ]
     used = 0
     ordered = list(paths)
     if "src/index.css" in files:
@@ -227,6 +271,7 @@ async def build_llm_messages(
     auth=None,
     model: str | None = None,
     surgical_edit: bool = False,
+    focus_paths: list[str] | None = None,
 ) -> list[dict[str, Any]]:
     """
     history: list of (role, content) including the latest user message.
@@ -254,7 +299,8 @@ async def build_llm_messages(
     layer2 = "\n\n".join(layer2_parts)
 
     selected = select_files(user_query, files, k=4)
-    layer3 = _selected_file_blocks(files, selected)
+    ordered = merge_context_paths(selected, focus_paths, recent_disk_paths(project_id, files), files)
+    layer3 = _selected_file_blocks(files, ordered)
 
     # Prototype mode: UI plugins only — frontend-only platform, no backend wiring.
     prototype_layer = format_prototype_plugins_layer(locale=locale)

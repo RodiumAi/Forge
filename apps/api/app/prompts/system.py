@@ -105,6 +105,19 @@ file contents here
       every prior rule.
 26. Keep spacing, hierarchy, grids/cards, and responsive behavior consistent.
 
+## Current file state (critical — never revert user edits)
+
+27. The "Selected files (full)" blocks are the CURRENT on-disk state. The user may
+    have edited these files OUTSIDE the chat (visual text edits, image replacements);
+    those blocks OVERRIDE any version of the same files appearing earlier in the
+    conversation. When rewriting a file, ALWAYS start from the version given in this
+    prompt — never from memory of a previous turn.
+28. NEVER rewrite a file whose full current content is NOT in this prompt. If a change
+    seems needed in such a file, prefer creating a new component file and wiring it in
+    with the smallest possible edit to the files you CAN see in full.
+29. Only touch what the request requires. Leave every unrelated section — text, images,
+    props, class names — byte-for-byte as it appears in the provided current content.
+
 ## Shared state / multi-task contract (critical — prevents black preview)
 
 35. `src/main.tsx` MUST use: `import { createRoot } from "react-dom/client"` then

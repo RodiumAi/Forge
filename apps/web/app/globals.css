@@ -5463,12 +5463,12 @@ html:has(.builder) body {
   pointer-events: none;
 }
 
-.site-thumb-host,
-.site-thumb-host iframe {
-  width: 100%;
-  height: 100%;
+.site-thumb-host {
+  width: var(--thumb-vw, 1280px);
+  height: var(--thumb-vh, 800px);
 }
 
+.site-thumb-host iframe,
 .site-thumb iframe {
   width: var(--thumb-vw, 1280px);
   height: var(--thumb-vh, 800px);
