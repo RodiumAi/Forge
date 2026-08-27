@@ -1,0 +1,31 @@
+name: Template proposal
+description: Propose a new starter kit for the gallery. See docs/TEMPLATES.md. (Français accepté / French is welcome)
+labels: ["template"]
+body:
+  - type: input
+    id: name
+    attributes:
+      label: Kit name and id
+      description: "Proposed id must match ^[a-z0-9][a-z0-9-]{1,62}$"
+      placeholder: "aurora-ai — Aurora AI"
+    validations:
+      required: true
+  - type: textarea
+    id: universe
+    attributes:
+      label: Universe
+      description: What is this kit for? (SaaS landing, portfolio, e-commerce, blog…)
+    validations:
+      required: true
+  - type: textarea
+    id: style
+    attributes:
+      label: Visual style
+      description: Palette, tone, signature elements (glassmorphism, brutalist, editorial…).
+    validations:
+      required: true
+  - type: textarea
+    id: inspiration
+    attributes:
+      label: Inspiration links
+      description: Sites, dribbble shots, existing kits…

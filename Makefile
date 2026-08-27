@@ -11,7 +11,6 @@ up: ## Démarre la stack complète
 	@echo "Gateway     http://localhost:8100/docs"
 	@echo "UI          http://localhost:3100"
 	@echo "Sites       http://<slug>.lvh.me:8080"
-	@echo "Mailpit     http://localhost:18025"
 	@echo "MinIO       http://localhost:9001"
 
 down: ## Arrête la stack
