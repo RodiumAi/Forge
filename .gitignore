@@ -10,3 +10,6 @@ data/projects/*
 **/dist/
 *.pyc
 .DS_Store
+
+# Local test exports
+testForge/
