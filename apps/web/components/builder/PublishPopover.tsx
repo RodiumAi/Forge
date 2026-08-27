@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { api, apiBase, getToken } from "@/lib/api";
 import { projectPublicUrl } from "@/lib/asset-url";
+import QRCode from "qrcode";
 import { Icon } from "@/components/ui/icon";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { topProgressDone, topProgressStart } from "@/lib/top-progress";
@@ -97,6 +98,7 @@ export function PublishPopover({
   const [draftSlug, setDraftSlug] = useState(slugProp || "");
   const [mounted, setMounted] = useState(false);
   const [faviconUrl, setFaviconUrl] = useState<string | null>(null);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -315,6 +317,27 @@ export function PublishPopover({
   }
 
   const hasPublished = Boolean(lastPublished);
+
+  // QR of the live URL: scan from the popover to open the published site on a
+  // phone. Regenerated when the panel opens or the slug changes.
+  useEffect(() => {
+    if (!open || !hasPublished || !url) {
+      setQrDataUrl(null);
+      return;
+    }
+    let alive = true;
+    QRCode.toDataURL(url, { margin: 1, width: 264, errorCorrectionLevel: "M" })
+      .then((data) => {
+        if (alive) setQrDataUrl(data);
+      })
+      .catch(() => {
+        if (alive) setQrDataUrl(null);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [open, hasPublished, url]);
+
   const hostLabel = hasPublished && url
     ? displayHost(url)
     : slug
@@ -483,6 +506,14 @@ export function PublishPopover({
           {!hasPublished && (
             <p className="publish-live-hint">{t("publishLiveLockedHint")}</p>
           )}
+
+          {hasPublished && url && qrDataUrl ? (
+            <div className="publish-qr">
+              { }
+              <img src={qrDataUrl} alt={t("publishQrAlt")} width={132} height={132} />
+              <span>{t("publishQrHint")}</span>
+            </div>
+          ) : null}
 
           <div className="publish-visibility">
             <Icon icon={Globe} className="ui-icon-sm" />

@@ -2191,6 +2191,29 @@ html:has(.builder) body {
   cursor: default;
 }
 
+/* QR of the live URL — scan from the popover to open the site on a phone. */
+.publish-qr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.7rem 0 0.2rem;
+}
+
+.publish-qr img {
+  width: 132px;
+  height: 132px;
+  border-radius: 10px;
+  background: #fff;
+  padding: 6px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+}
+
+.publish-qr span {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
 .publish-popover.is-busy {
   outline: 1px solid rgba(242, 98, 10, 0.35);
 }
@@ -4173,7 +4196,7 @@ html:has(.builder) body {
 }
 
 .lp-hero-inner {
-  width: min(760px, 100%);
+  width: min(820px, 100%);
   display: grid;
   gap: 0.85rem;
   justify-items: center;
@@ -4193,17 +4216,55 @@ html:has(.builder) body {
 
 .lp-hero-title {
   margin: 0;
-  max-width: 14ch;
+  display: grid;
+  gap: 0.55rem;
+  justify-items: center;
+  max-width: none;
   font-family: var(--font-display), sans-serif;
-  font-size: clamp(2.4rem, 6.5vw, 4.2rem);
-  font-weight: 800;
-  letter-spacing: -0.045em;
-  line-height: 1.02;
   color: var(--lp-ink);
 }
 
-.lp-hero-title span {
+.lp-hero-brand {
+  display: block;
+  font-size: clamp(3.2rem, 9vw, 5.6rem);
+  font-weight: 800;
+  letter-spacing: -0.055em;
+  line-height: 0.92;
+  color: var(--lp-ink);
+  animation: lpBrandIn 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.lp-hero-claim {
+  display: block;
+  max-width: 28ch;
+  font-size: clamp(1.35rem, 3.4vw, 2rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
   color: var(--lp-ember);
+  animation: lpClaimIn 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
+}
+
+@keyframes lpBrandIn {
+  from {
+    opacity: 0;
+    transform: translateY(22px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes lpClaimIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .lp-hero-sub {
@@ -4212,6 +4273,7 @@ html:has(.builder) body {
   color: var(--lp-muted);
   font-size: clamp(1rem, 2vw, 1.15rem);
   line-height: 1.45;
+  animation: lpClaimIn 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.22s both;
 }
 
 .lp-prompt {
@@ -4226,7 +4288,37 @@ html:has(.builder) body {
   border: 1px solid var(--lp-line);
   box-shadow: var(--lp-prompt-shadow);
   text-align: left;
-  animation: lpRise 0.85s ease 0.08s both;
+  animation: lpClaimIn 0.95s cubic-bezier(0.22, 1, 0.36, 1) 0.32s both;
+}
+
+.lp-reveal {
+  opacity: 0;
+  transform: translateY(22px);
+  transition:
+    opacity 0.65s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.lp-reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-hero-wash,
+  .lp-cta-wash,
+  .lp-footer-wash,
+  .lp-hero-inner,
+  .lp-hero-brand,
+  .lp-hero-claim,
+  .lp-hero-sub,
+  .lp-prompt,
+  .lp-reveal {
+    animation: none !important;
+    transition: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
 }
 
 .lp-prompt:focus-within {

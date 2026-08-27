@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowUp, Plus } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
+import { LandingReveal } from "@/components/landing/LandingReveal";
 import { PromptFileChips } from "@/components/PromptFileChips";
 import { SiteThumb } from "@/components/SiteThumb";
 import { GalleryTemplate } from "@/components/TemplateGallery";
@@ -345,8 +346,8 @@ export default function LandingPage() {
         <div className="lp-hero-wash" aria-hidden />
         <div className="lp-hero-inner">
           <h1 className="lp-hero-title">
-            {t("landingTitleBefore")}{" "}
-            <span>{t("landingTitleAccent")}</span>
+            <span className="lp-hero-brand">{t("landingTitleBrand")}</span>
+            <span className="lp-hero-claim">{t("landingTitleClaim")}</span>
           </h1>
           <p className="lp-hero-sub">{t("landingSub")}</p>
           <LandingPromptBox
@@ -357,6 +358,7 @@ export default function LandingPage() {
         </div>
       </section>
 
+      <LandingReveal>
       <section className="lp-proof" aria-label={t("landingProofLabel")}>
         <p className="lp-proof-label">{t("landingProofLabel")}</p>
         <ul className="lp-proof-row">
@@ -366,7 +368,9 @@ export default function LandingPage() {
           <li>{t("landingProof4")}</li>
         </ul>
       </section>
+      </LandingReveal>
 
+      <LandingReveal>
       <section className="lp-how" id="how">
         <h2 className="lp-section-title">{t("landingHowTitle")}</h2>
         <div className="lp-how-grid">
@@ -398,7 +402,9 @@ export default function LandingPage() {
           </ol>
         </div>
       </section>
+      </LandingReveal>
 
+      <LandingReveal>
       <section className="lp-templates" id="templates">
         <div className="lp-templates-head">
           <h2 className="lp-section-title">{t("landingTemplatesTitle")}</h2>
@@ -443,7 +449,9 @@ export default function LandingPage() {
           <p className="lp-empty">{t("noTemplates")}</p>
         )}
       </section>
+      </LandingReveal>
 
+      <LandingReveal>
       <section className="lp-why">
         <h2 className="lp-section-title">{t("landingWhyTitle")}</h2>
         <div className="lp-why-grid">
@@ -461,7 +469,9 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+      </LandingReveal>
 
+      <LandingReveal>
       <section className="lp-cta">
         <div className="lp-cta-wash" aria-hidden />
         <div className="lp-cta-inner">
@@ -475,6 +485,7 @@ export default function LandingPage() {
           />
         </div>
       </section>
+      </LandingReveal>
 
       <footer className="lp-footer">
         <div className="lp-footer-wash" aria-hidden />
