@@ -587,6 +587,8 @@ def build_export_zip(*, project_id: str, project_name: str, locale: str = "fr") 
             for arc, content in overrides.items():
                 written.add(arc)
                 zf.writestr(arc, content)
+            # Drop alternate Vite configs so only the normalised one ships.
+            written.update({"vite.config.js", "vite.config.mjs"})
             for path in _iter_files(root):
                 add_file(path, _arcname_for(path, root, ""))
         else:
@@ -598,6 +600,7 @@ def build_export_zip(*, project_id: str, project_name: str, locale: str = "fr") 
             for arc, content in overrides.items():
                 written.add(f"frontend/{arc}")
                 zf.writestr(f"frontend/{arc}", content)
+            written.update({"frontend/vite.config.js", "frontend/vite.config.mjs"})
 
             for path in _iter_files(front):
                 try:
