@@ -1990,6 +1990,7 @@ html:has(.builder) body {
   border: 1px solid rgba(251, 191, 36, 0.2);
   border-radius: 10px;
   padding: 0.55rem 0.7rem;
+  overflow-wrap: anywhere;
 }
 
 .builder-preview-edit-switch {
@@ -2167,7 +2168,8 @@ html:has(.builder) body {
   position: absolute;
   right: 0;
   top: calc(100% + 0.5rem);
-  width: min(380px, 90vw);
+  width: min(380px, calc(100vw - 1rem));
+  max-width: calc(100vw - 1rem);
   z-index: 50;
   border: 1px solid #2a2a2e;
   border-radius: 14px;
@@ -2176,6 +2178,8 @@ html:has(.builder) body {
   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
   display: grid;
   gap: 0.7rem;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 .publish-popover-portal {
@@ -2185,7 +2189,8 @@ html:has(.builder) body {
   right: 0;
   z-index: 10000;
   max-height: min(70vh, 520px);
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 /* Invisible click-catcher under the popover; covers the preview iframe too. */
@@ -2276,13 +2281,16 @@ html:has(.builder) body {
   margin: -0.25rem 0 0;
   font-size: 0.78rem;
   color: #9ca3af;
+  overflow-wrap: anywhere;
 }
 
 .publish-section-label {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 0.5rem;
+  flex-wrap: wrap;
+  min-width: 0;
   font-size: 0.82rem;
   font-weight: 600;
   color: #f3f4f6;
@@ -2292,6 +2300,9 @@ html:has(.builder) body {
   font-size: 0.72rem;
   font-weight: 500;
   color: #6b7280;
+  min-width: 0;
+  flex: 1 1 auto;
+  text-align: right;
 }
 
 .publish-url-card {
@@ -2299,10 +2310,13 @@ html:has(.builder) body {
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
+  min-width: 0;
+  max-width: 100%;
   padding: 0.65rem 0.75rem;
   border-radius: 10px;
   background: #111114;
   border: 1px solid #2a2a2e;
+  overflow: hidden;
 }
 
 .publish-url-main {
@@ -2310,7 +2324,8 @@ html:has(.builder) body {
   align-items: center;
   gap: 0.55rem;
   min-width: 0;
-  flex: 1;
+  flex: 1 1 auto;
+  overflow: hidden;
 }
 
 .publish-favicon {
@@ -2327,12 +2342,27 @@ html:has(.builder) body {
 }
 
 .publish-url-link {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
   font-size: 0.82rem;
   color: #f9fafb;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-x: auto;
+  overflow-y: hidden;
   white-space: nowrap;
+  text-overflow: clip;
   text-decoration: none;
+  scrollbar-width: thin;
+  scrollbar-color: #4b5563 transparent;
+}
+
+.publish-url-link::-webkit-scrollbar {
+  height: 4px;
+}
+
+.publish-url-link::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 999px;
 }
 
 .publish-url-link:hover {
@@ -2379,6 +2409,7 @@ html:has(.builder) body {
   align-items: center;
   gap: 0.35rem;
   width: 100%;
+  min-width: 0;
 }
 
 .publish-slug-edit input {
@@ -2415,8 +2446,10 @@ html:has(.builder) body {
   color: #fca5a5;
   font-size: 0.78rem;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
   max-height: 7rem;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .publish-footer {
@@ -2438,6 +2471,7 @@ html:has(.builder) body {
   color: var(--muted);
   font-size: 0.78rem;
   line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
 .publish-export-btn {

@@ -443,6 +443,7 @@ async def run_plan_tasks(
 
     # Deterministic verify + optional repair (black-preview prevention)
     from app.services.orchestration.router import route_task
+    from app.services.orchestration.smoke_check import smoke_transform_findings
     from app.services.orchestration.verify_build import (
         findings_have_critical,
         format_findings_for_prompt,
@@ -450,7 +451,9 @@ async def run_plan_tasks(
     )
 
     yield push_step("verify_build", "Verifying build", "running")
-    findings = verify_project_build(project_id)
+    # Static heuristics + a real compile of the exact bundle the runner mounts:
+    # the authoritative "will the preview be blank?" answer feeds the repair.
+    findings = verify_project_build(project_id) + await smoke_transform_findings(project_id)
     for finding in findings:
         yield _sse(
             {
@@ -527,7 +530,7 @@ async def run_plan_tasks(
             yield push_step("verify_repair", "Repairing verify findings", "error")
             yield _sse({"type": "warning", "message": f"verify repair failed: {str(exc)[:240]}"})
 
-        findings = verify_project_build(project_id)
+        findings = verify_project_build(project_id) + await smoke_transform_findings(project_id)
         for finding in findings:
             yield _sse(
                 {
