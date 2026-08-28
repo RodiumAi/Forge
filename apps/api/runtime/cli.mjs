@@ -31,6 +31,14 @@ function main() {
   const css = files["src/index.css"] || files["index.css"] || "";
   const result = buildGraph(files, entry, "publish", extraImports);
 
+  // --check: smoke-transform only (post-plan self-verification). Reports the
+  // exact errors the browser runner would die on — syntax, MODULE_NOT_FOUND,
+  // imports outside the map — without writing anything.
+  if (args.includes("--check")) {
+    process.stdout.write(JSON.stringify({ ok: result.ok, errors: result.errors || [] }));
+    return;
+  }
+
   if (!result.ok) {
     process.stdout.write(JSON.stringify({ ok: false, errors: result.errors }));
     process.exit(2);

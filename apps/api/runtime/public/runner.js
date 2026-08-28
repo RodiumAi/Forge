@@ -447,6 +447,16 @@ async function mount(files, entry, tokensCss, assets) {
     rewriteImagesUnder(document.body);
     await waitForFirstPaint();
     rewriteImagesUnder(document.body);
+    const rootEl = document.getElementById("root");
+    if (rootEl && rootEl.childElementCount === 0) {
+      // Compiled and mounted, yet nothing rendered — a thrown render or an
+      // App that returns null. Without this signal the user just saw white.
+      send({
+        type: "forge:error",
+        kind: "blank",
+        message: "App mounted but rendered nothing (blank page). Check App.tsx render output.",
+      });
+    }
     send({ type: "forge:mounted", entry });
   } catch (e) {
     send({
