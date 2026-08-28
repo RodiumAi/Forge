@@ -20,6 +20,27 @@ EVENTS_KEY = "forge:run:events:{run_id}"
 QUEUE_KEY = "forge:plan:queue"
 CANCEL_KEY = "forge:run:cancel:{run_id}"
 
+# In-process mirror of run events. Valkey being down used to be a SILENT
+# infinite spinner: `redis.from_url` builds a client without connecting, every
+# call then failed inside a suppress, published events vanished and the UI
+# polled an empty list forever. The plan job runs in this very process, so a
+# memory mirror always has the events; Valkey remains the durable layer when
+# reachable (it survives API restarts).
+_MEM_EVENTS: dict[str, list[dict[str, Any]]] = {}
+_MEM_ORDER: list[str] = []
+_MEM_MAX_RUNS = 50
+
+
+def _mem_track(run_id: str) -> list[dict[str, Any]]:
+    events = _MEM_EVENTS.get(run_id)
+    if events is None:
+        events = _MEM_EVENTS.setdefault(run_id, [])
+        _MEM_ORDER.append(run_id)
+        while len(_MEM_ORDER) > _MEM_MAX_RUNS:
+            drop = _MEM_ORDER.pop(0)
+            _MEM_EVENTS.pop(drop, None)
+    return events
+
 
 def _redis():
     try:
@@ -75,6 +96,7 @@ def enqueue_plan_run(run_id: str) -> bool:
 
 
 def publish_run_event(run_id: str, payload: dict[str, Any]) -> None:
+    _mem_track(run_id).append(payload)
     client = _redis()
     if client is None:
         return
@@ -89,26 +111,32 @@ def publish_run_event(run_id: str, payload: dict[str, Any]) -> None:
 
 
 def list_run_events(run_id: str, after: int = 0) -> list[dict[str, Any]]:
+    start = max(0, after)
+    memory = _MEM_EVENTS.get(run_id) or []
     client = _redis()
-    if client is None:
-        return []
-    try:
-        key = EVENTS_KEY.format(run_id=run_id)
-        rows = client.lrange(key, max(0, after), -1)
-        out: list[dict[str, Any]] = []
-        for raw in rows:
-            try:
-                parsed = json.loads(raw)
-                if isinstance(parsed, dict):
-                    out.append(parsed)
-            except Exception:
-                continue
-        return out
-    except Exception:
-        return []
+    redis_rows: list[dict[str, Any]] = []
+    if client is not None:
+        try:
+            rows = client.lrange(EVENTS_KEY.format(run_id=run_id), start, -1)
+            for raw in rows:
+                try:
+                    parsed = json.loads(raw)
+                    if isinstance(parsed, dict):
+                        redis_rows.append(parsed)
+                except Exception:
+                    continue
+        except Exception:
+            redis_rows = []
+    mem_rows = memory[start:]
+    # Redis is authoritative when it has at least as much (it survives
+    # restarts); the memory mirror covers the Valkey-down case.
+    return redis_rows if len(redis_rows) >= len(mem_rows) else mem_rows
 
 
 def clear_run_events(run_id: str) -> None:
+    _MEM_EVENTS.pop(run_id, None)
+    if run_id in _MEM_ORDER:
+        _MEM_ORDER.remove(run_id)
     client = _redis()
     if client is None:
         return
@@ -118,12 +146,14 @@ def clear_run_events(run_id: str) -> None:
 
 def event_count(run_id: str) -> int:
     client = _redis()
-    if client is None:
-        return 0
-    try:
-        return int(client.llen(EVENTS_KEY.format(run_id=run_id)) or 0)
-    except Exception:
-        return 0
+    if client is not None:
+        try:
+            count = int(client.llen(EVENTS_KEY.format(run_id=run_id)) or 0)
+            if count:
+                return count
+        except Exception:
+            pass
+    return len(_MEM_EVENTS.get(run_id) or [])
 
 
 def mark_cancelled(run_id: str) -> None:
