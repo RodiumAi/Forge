@@ -8,7 +8,7 @@ pointed at removed templates).
 import json
 import re
 
-from app.services.templates import _TEMPLATE_KEYWORDS, list_templates, templates_root
+from app.services.templates import list_templates, templates_root
 
 EXPECTED_IDS = {
     "astroship-startup",
@@ -42,10 +42,13 @@ class TestCatalog:
     def test_all_kits_are_listed(self):
         assert {t.id for t in list_templates()} == EXPECTED_IDS
 
-    def test_every_keyword_target_exists(self):
-        ids = {t.id for t in list_templates()}
-        for tid, _keywords in _TEMPLATE_KEYWORDS:
-            assert tid in ids, f"keyword router points at missing template {tid}"
+    def test_prompt_creation_never_auto_forks_a_template(self):
+        # A "portfolio for a painter" prompt used to silently fork the
+        # portfolio kit. Templates apply only on explicit user choice.
+        from app.services import templates
+
+        assert not hasattr(templates, "suggest_template")
+        assert not hasattr(templates, "_TEMPLATE_KEYWORDS")
 
     def test_every_kit_ships_the_full_contract(self):
         required = [
