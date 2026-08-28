@@ -32,7 +32,7 @@ from app.services.orchestration.plan_persist import (
 )
 from app.services.orchestration.plan_worker import iter_run_event_sse, spawn_plan_job
 from app.services.orchestration.planner import (
-    build_clarify_questions,
+    build_clarify_questions_llm,
     build_plan,
     effort_label,
     format_answers_for_prompt,
@@ -582,9 +582,14 @@ async def send_message(
 
     # Clarify gate
     if clarify:
-        questions = build_clarify_questions(
+        # Contextual questionnaire (LLM) with static-template fallback: a
+        # "developer portfolio" prompt asks for the developer's name/title/
+        # projects, not three generic questions.
+        questions = await build_clarify_questions_llm(
             user_content,
             locale,  # type: ignore[arg-type]
+            auth=gen_auth,
+            model=route.model,
             force_scaffold=force_scaffold,
         )
         run.clarify_json = json.dumps(questions)
@@ -1088,9 +1093,11 @@ async def branch_messages(
     )
 
     if clarify:
-        questions = build_clarify_questions(
+        questions = await build_clarify_questions_llm(
             user_content,
             locale,  # type: ignore[arg-type]
+            auth=gen_auth,
+            model=route.model,
             force_scaffold=force_scaffold,
         )
         run.clarify_json = json.dumps(questions)
