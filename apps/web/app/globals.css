@@ -935,6 +935,60 @@ html:has(.builder) body {
   margin-top: 0.75rem;
 }
 
+/* Free-text answer under the suggested options. */
+.clarify-custom {
+  width: 100%;
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.7rem;
+  border-radius: 10px;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  background: var(--bg-soft, rgba(255, 255, 255, 0.03));
+  color: var(--fg);
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+.clarify-custom.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-soft, rgba(242, 98, 10, 0.25));
+}
+
+/* Wizard progress (shown when the questionnaire has more than 3 questions). */
+.clarify-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0.25rem 0 0.6rem;
+}
+
+.clarify-progress-track {
+  flex: 1;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--bg-soft, rgba(255, 255, 255, 0.07));
+  overflow: hidden;
+}
+
+.clarify-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width 0.25s ease;
+}
+
+.clarify-progress-label {
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.clarify-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
 .plan-execute {
   margin-top: 0.75rem;
   width: 100%;

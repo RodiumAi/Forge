@@ -187,6 +187,107 @@ def build_clarify_questions(
     ]
 
 
+MAX_CLARIFY_QUESTIONS = 10
+_CLARIFY_ID_RE = re.compile(r"[^a-z0-9_]+")
+
+
+def sanitize_clarify_questions(raw: object) -> list[dict[str, Any]]:
+    """Validate/normalize LLM-generated questions; empty list = unusable.
+
+    Contract kept end-to-end: {id, prompt, options: [{id, label}]} with unique
+    slug ids, 2-6 options each, capped at MAX_CLARIFY_QUESTIONS. The web layer
+    always offers a free-text answer on top, so options are suggestions, not
+    a closed set.
+    """
+    if not isinstance(raw, list):
+        return []
+    out: list[dict[str, Any]] = []
+    seen_ids: set[str] = set()
+    for i, item in enumerate(raw):
+        if len(out) >= MAX_CLARIFY_QUESTIONS:
+            break
+        if not isinstance(item, dict):
+            continue
+        prompt = str(item.get("prompt") or item.get("question") or "").strip()[:200]
+        if not prompt:
+            continue
+        qid = _CLARIFY_ID_RE.sub("_", str(item.get("id") or f"q{i + 1}").strip().lower()).strip("_")[:40]
+        if not qid or qid in seen_ids:
+            qid = f"q{i + 1}"
+        if qid in seen_ids:
+            continue
+        options_raw = item.get("options")
+        options: list[dict[str, str]] = []
+        seen_opts: set[str] = set()
+        if isinstance(options_raw, list):
+            for j, opt in enumerate(options_raw[:6]):
+                if isinstance(opt, str):
+                    label, oid = opt.strip(), f"opt{j + 1}"
+                elif isinstance(opt, dict):
+                    label = str(opt.get("label") or opt.get("text") or "").strip()
+                    oid = _CLARIFY_ID_RE.sub("_", str(opt.get("id") or f"opt{j + 1}").lower()).strip("_")[:40]
+                else:
+                    continue
+                if not label or not oid or oid in seen_opts:
+                    continue
+                seen_opts.add(oid)
+                options.append({"id": oid, "label": label[:90]})
+        if len(options) < 2:
+            continue
+        seen_ids.add(qid)
+        out.append({"id": qid, "prompt": prompt, "options": options})
+    return out
+
+
+async def build_clarify_questions_llm(
+    prompt: str,
+    locale: Locale = "en",
+    *,
+    auth: RodiumGenerationAuth,
+    model: str,
+    force_scaffold: bool = False,
+) -> list[dict[str, Any]]:
+    """Contextual questionnaire generated from the actual prompt.
+
+    "Build a developer portfolio" should ask for the developer's NAME, title,
+    projects to feature — not the same three generic template questions. Falls
+    back to the static templates on any failure.
+    """
+    fallback = build_clarify_questions(prompt, locale, force_scaffold=force_scaffold)
+    lang = "French" if locale == "fr" else "English"
+    system = (
+        "You prepare a SHORT clarification questionnaire before building a website. "
+        "Output ONLY a valid JSON array (no markdown fences) of question objects: "
+        '{"id":"snake_case","prompt":"the question","options":[{"id":"snake_case","label":"choice"}]}. '
+        f"All prompts and labels in {lang}. "
+        "Rules: 3 to 8 questions maximum; ask about the CONTENT the site needs "
+        "(names, titles, sections, tone, colors, links, business specifics), most "
+        "important first; every question ships 2 to 5 concrete, plausible example "
+        "options tailored to the request (the user can always type a custom answer, "
+        "so options are smart suggestions, never 'other'); never ask about hosting, "
+        "frameworks, backends or budgets; skip anything the prompt already answers."
+    )
+    try:
+        raw = await complete_chat(
+            auth=auth,
+            model=model,
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": f"Request:\n{prompt.strip()[:4000]}"},
+            ],
+            locale=locale,
+            temperature=0.4,
+        )
+        cleaned = raw.strip()
+        if cleaned.startswith("```"):
+            cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned)
+            cleaned = re.sub(r"\s*```$", "", cleaned)
+        questions = sanitize_clarify_questions(json.loads(cleaned))
+        return questions or fallback
+    except Exception:
+        return fallback
+
+
 def _default_scaffold_plan(locale: Locale) -> list[dict[str, Any]]:
     if locale == "fr":
         items = [
