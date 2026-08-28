@@ -29,7 +29,7 @@ from app.services import preview_babel
 from app.services.filesystem import list_files, project_dir
 from app.services.project_naming import suggest_project_name
 from app.services.scaffold import scaffold_vite_react
-from app.services.templates import fork_template, get_template, preview_path, suggest_template
+from app.services.templates import fork_template, get_template, preview_path
 
 logger = logging.getLogger("projects")
 
@@ -104,11 +104,10 @@ async def create_project(
     locale = resolve_locale(request)
     template_id = (body.template_id or "").strip() or None
     prompt = (body.prompt or "").strip()
-    # Hybrid start: if no explicit template, suggest from prompt keywords.
-    if not template_id and prompt:
-        suggested = suggest_template(prompt)
-        if suggested:
-            template_id = suggested
+    # Templates apply ONLY when the user explicitly picks one. The old keyword
+    # router silently forked a kit from prompt words ("portfolio", "shop"…),
+    # hijacking the user's intent — a bespoke design request landed on a
+    # prebuilt template nobody asked for.
     if template_id and get_template(template_id) is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
