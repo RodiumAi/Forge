@@ -10,12 +10,12 @@ services:
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-forge}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-forge}
-      POSTGRES_DB: ${POSTGRES_DB:-forge_web}
+      POSTGRES_DB: ${POSTGRES_DB:-rodium_forge}
       POSTGRES_INITDB_ARGS: "--locale=C --encoding=UTF8"
     volumes:
       - forge_web_pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-forge} -d ${POSTGRES_DB:-forge_web}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-forge} -d ${POSTGRES_DB:-rodium_forge}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -76,7 +76,7 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-forge}:${POSTGRES_PASSWORD:-forge}@postgres:5432/${POSTGRES_DB:-forge_web}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-forge}:${POSTGRES_PASSWORD:-forge}@postgres:5432/${POSTGRES_DB:-rodium_forge}
       PROJECTS_ROOT: /data/projects
       CORS_ORIGINS: http://localhost:3100,http://127.0.0.1:3100,http://localhost:8080
       OBJECT_STORE_ENDPOINT: http://minio:9000

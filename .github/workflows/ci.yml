@@ -116,7 +116,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate compose file
+      - name: Validate local compose file
         run: |
           cp .env.example .env
           docker compose config --quiet
+      - name: Validate production compose file
+        working-directory: infra/aws/ec2
+        env:
+          FORGE_API_IMAGE: 000000000000.dkr.ecr.eu-west-1.amazonaws.com/forge-web-api:latest
+        run: |
+          cp .env.example .env
+          docker compose -f docker-compose.prod.yml config --quiet

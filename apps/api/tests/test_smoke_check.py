@@ -78,6 +78,19 @@ class TestSmokeTransform:
         )
         assert _run(smoke_transform_findings(project)) == []
 
+    def test_invalid_lucide_named_export_is_reported(self, project):
+        scaffold_vite_react(project, "Demo")
+        write_file(
+            project,
+            "src/App.tsx",
+            'import { MessageSquareCheck } from "lucide-react";\n'
+            "export default function App() { return <MessageSquareCheck />; }",
+        )
+        findings = _run(smoke_transform_findings(project))
+        assert findings
+        assert findings[0].code == "export.named_missing"
+        assert "MessageSquareCheck" in findings[0].message
+
 
 class TestMissingEntry:
     def test_no_entry_defers_to_verify_build(self, project):

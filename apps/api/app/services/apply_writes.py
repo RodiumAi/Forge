@@ -25,11 +25,40 @@ _LOCKED_BRAND_RE = re.compile(
     r"^(DESIGN\.md|public/logo(?:\.(?:png|jpe?g|webp|gif|svg))?)$",
     re.IGNORECASE,
 )
+_CSS_SHRINK_MIN_EXISTING = 800
+_CSS_SHRINK_RATIO = 0.75
 
 
 def is_locked_brand_path(path: str) -> bool:
     rel = (path or "").strip().lstrip("/").replace("\\", "/")
     return bool(_LOCKED_BRAND_RE.match(rel))
+
+
+def _css_shrink_violation(project_id: str, path: str, content: str) -> dict | None:
+    """Reject mid-plan rewrites that drop most of index.css (append-only rule)."""
+    rel = (path or "").strip().lstrip("/").replace("\\", "/")
+    if rel != "src/index.css":
+        return None
+    from app.services.filesystem import read_file
+
+    try:
+        existing = read_file(project_id, path)
+    except FileNotFoundError:
+        return None
+    if len(existing) < _CSS_SHRINK_MIN_EXISTING:
+        return None
+    if len(content) >= int(len(existing) * _CSS_SHRINK_RATIO):
+        return None
+    return {
+        "code": "CSS_SHRINK_REJECTED",
+        "path": path,
+        "specifier": "",
+        "message": (
+            f"Rejected rewrite of src/index.css ({len(content)} chars vs {len(existing)} on disk). "
+            "Mid-plan CSS must APPEND — preserve every existing selector (navbar/hero/layout) "
+            "and add only this task's rules."
+        ),
+    }
 
 
 def _validate(path: str, content: str, allowlist: dict[str, str] | None = None) -> list[ImportViolation]:
@@ -94,6 +123,10 @@ def apply_validated_writes(
         found = _validate(path, content, allowlist)
         if found:
             violations.extend(v.as_dict() for v in found)
+            continue
+        shrink = _css_shrink_violation(project_id, path, content)
+        if shrink:
+            violations.append(shrink)
             continue
         accepted.append((path, content))
 

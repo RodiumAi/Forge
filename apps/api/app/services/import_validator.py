@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import re
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 
 from app.runtime_manifest import (
@@ -17,6 +19,14 @@ from app.runtime_manifest import (
 logger = logging.getLogger("import_validator")
 
 _PKG_NAME_RE = re.compile(r"^((?:@[^/]+/)?[^/]+)")
+_LUCIDE_NAMED_IMPORT_RE = re.compile(
+    r"""^\s*import\s+(?!type\s)(?:[\w*{}\s,]+)\s+from\s+["']lucide-react["']""",
+    re.M,
+)
+_LUCIDE_BRACE_RE = re.compile(r"\{([^}]+)\}")
+_LUCIDE_EXPORTS_PATH = (
+    Path(__file__).resolve().parent.parent.parent / "runtime" / "lucide_exports.json"
+)
 
 
 @dataclass(frozen=True)
@@ -131,6 +141,59 @@ def extract_import_specifiers(source: str) -> list[str]:
     return out
 
 
+@lru_cache(maxsize=1)
+def _lucide_exports() -> frozenset[str]:
+    try:
+        raw = _LUCIDE_EXPORTS_PATH.read_text(encoding="utf-8")
+        names = json.loads(raw)
+        if isinstance(names, list):
+            return frozenset(str(n) for n in names)
+    except OSError as exc:
+        logger.warning("lucide_exports.json unavailable: %s", exc)
+    return frozenset()
+
+
+def _extract_lucide_named_imports(source: str) -> list[str]:
+    names: list[str] = []
+    for line in source.splitlines():
+        if not _LUCIDE_NAMED_IMPORT_RE.match(line):
+            continue
+        brace = _LUCIDE_BRACE_RE.search(line)
+        if not brace:
+            continue
+        for part in brace.group(1).split(","):
+            token = part.strip()
+            if not token or token.startswith("type "):
+                continue
+            alias = re.split(r"\s+as\s+", token, maxsplit=1, flags=re.I)
+            ident = (alias[1] if len(alias) > 1 else alias[0]).strip()
+            if ident and re.match(r"^[A-Za-z_$]", ident):
+                names.append(ident)
+    return names
+
+
+def _lucide_named_violations(path: str, source: str) -> list[ImportViolation]:
+    exports = _lucide_exports()
+    if not exports:
+        return []
+    violations: list[ImportViolation] = []
+    for name in _extract_lucide_named_imports(source):
+        if name in exports:
+            continue
+        violations.append(
+            ImportViolation(
+                path=path,
+                specifier=f"lucide-react/{name}",
+                code="BUILD_INVALID_NAMED_EXPORT",
+                message=(
+                    f"`{name}` is not exported by lucide-react@0.468.0. "
+                    "Use an existing icon name (e.g. MessageSquare, Check)."
+                ),
+            )
+        )
+    return violations
+
+
 def validate_source(
     path: str, source: str, *, allowlist: dict[str, str] | None = None
 ) -> list[ImportViolation]:
@@ -170,6 +233,7 @@ def validate_source(
             continue
         if pkg not in allow:
             violations.append(ImportViolation(path=path, specifier=spec))
+    violations.extend(_lucide_named_violations(path, source))
     return violations
 
 

@@ -81,6 +81,17 @@ class TestImportValidation:
         allowed = set(allowed_packages())
         assert not (allowed & set(FORBIDDEN_BACKEND_PACKAGES))
 
+    def test_rejects_invalid_lucide_named_exports(self):
+        source = 'import { MessageSquareCheck } from "lucide-react";\n'
+        violations = validate_write_content("src/App.tsx", source)
+        assert violations
+        assert violations[0].code == "BUILD_INVALID_NAMED_EXPORT"
+        assert "MessageSquareCheck" in violations[0].message
+
+    def test_accepts_valid_lucide_named_exports(self):
+        source = 'import { MessageSquare } from "lucide-react";\n'
+        assert validate_write_content("src/App.tsx", source) == []
+
 
 class TestRunnerShell:
     def test_shell_embeds_the_generated_import_map_and_the_bridge(self):

@@ -44,7 +44,10 @@ const ROUTE_PATH_RE =
   /<Route[^>]*\spath\s*=\s*["']([^"']+)["']|path\s*:\s*["']([^"']+)["']/gi;
 const NAV_LINK_RE = /(?:to|href)\s*=\s*["'](\/(?!\/)[^"'#?]*)["']/gi;
 const STATE_PAGE_RE =
-  /(?:setCurrentPage\s*\(\s*['"](\w+)['"]|currentPage\s*===\s*['"](\w+)['"]|navigateTo(\w+))/gi;
+  /(?:set(?:Current|Active|Selected)?Page\s*\(\s*['"](\w+)['"]|(?:current|active|selected)Page\s*===\s*['"](\w+)['"]|navigateTo(\w+))/gi;
+const PAGE_TYPE_UNION_RE =
+  /(?:type|interface)\s+\w*(?:Page|View)\w*\s*=\s*([^;]+)/gi;
+const QUOTED_LITERAL_RE = /['"](\w+)['"]/g;
 
 function normalizeRoute(raw: string): string | null {
   let path = raw.trim();
@@ -53,6 +56,64 @@ function normalizeRoute(raw: string): string | null {
   path = path.replace(/\/+$/, "") || "/";
   if (/\.(png|jpe?g|webp|gif|svg|css|js|tsx|jsx|html|pdf)$/i.test(path)) return null;
   return path;
+}
+
+function addStatePageRoute(routes: Set<string>, raw: string) {
+  const page = raw.toLowerCase();
+  if (!page || page === "home") routes.add("/");
+  else routes.add(`/${page}`);
+}
+
+function componentPageSlug(path: string): string | null {
+  const norm = path.replace(/\\/g, "/");
+  const match = norm.match(/^src\/components\/(\w+)Page\.(tsx|jsx)$/i);
+  if (!match) return null;
+  const slug = match[1].toLowerCase();
+  return slug === "home" ? null : slug;
+}
+
+function collectSectionIds(sources: Record<string, string>): Set<string> {
+  const ids = new Set<string>();
+  const re = /\bid\s*=\s*["']([a-z][\w-]*)["']/gi;
+  for (const content of Object.values(sources)) {
+    for (const match of content.matchAll(re)) ids.add(match[1].toLowerCase());
+  }
+  return ids;
+}
+
+function collectStandalonePageSlugs(
+  files: string[],
+  sources: Record<string, string>,
+): Set<string> {
+  const slugs = new Set<string>();
+  for (const path of files) {
+    const slug = componentPageSlug(path);
+    if (slug) slugs.add(slug);
+    const norm = path.replace(/\\/g, "/");
+    if (/^src\/pages\//i.test(norm) && /\.(tsx|jsx|ts|js)$/i.test(norm)) {
+      const route = norm
+        .replace(/^src\/pages/i, "")
+        .replace(/\.(tsx|jsx|ts|js)$/i, "")
+        .replace(/\/index$/i, "")
+        .replace(/^\//, "")
+        .toLowerCase();
+      if (route && route !== "home") slugs.add(route);
+    }
+  }
+  for (const content of Object.values(sources)) {
+    for (const match of content.matchAll(PAGE_TYPE_UNION_RE)) {
+      for (const literal of (match[1] || "").matchAll(QUOTED_LITERAL_RE)) {
+        const page = literal[1].toLowerCase();
+        if (page && page !== "home") slugs.add(page);
+      }
+    }
+    for (const match of content.matchAll(
+      /(?:active|current|selected)Page\s*===\s*['"](\w+)['"]\s*\?\s*<\w+Page/gi,
+    )) {
+      slugs.add(match[1].toLowerCase());
+    }
+  }
+  return slugs;
 }
 
 /** Parse React Router paths and in-app Link/href targets from source text. */
@@ -67,9 +128,13 @@ export function parseRoutesFromSource(content: string): string[] {
     if (normalized) routes.add(normalized);
   }
   for (const match of content.matchAll(STATE_PAGE_RE)) {
-    const page = (match[1] || match[2] || match[3] || "").toLowerCase();
-    if (!page || page === "home") routes.add("/");
-    else routes.add(`/${page}`);
+    addStatePageRoute(routes, match[1] || match[2] || match[3] || "");
+  }
+  for (const match of content.matchAll(PAGE_TYPE_UNION_RE)) {
+    const body = match[1] || "";
+    for (const literal of body.matchAll(QUOTED_LITERAL_RE)) {
+      addStatePageRoute(routes, literal[1] || "");
+    }
   }
   return Array.from(routes);
 }
@@ -80,9 +145,13 @@ export function routeSourceFiles(files: string[]): string[] {
     const norm = path.replace(/\\/g, "/");
     if (/^src\/(App|main|routes|router)\.(tsx|jsx|ts|js)$/i.test(norm)) out.add(path);
     if (/^src\/pages\/.+\.(tsx|jsx|ts|js)$/i.test(norm)) out.add(path);
-    if (/^src\/components\/(Navbar|Header|Nav|Navigation|AboutPage).*\.(tsx|jsx)$/i.test(norm)) {
+    if (
+      /^src\/components\/(Navbar|Header|Nav|Navigation|\w+Page).*\.(tsx|jsx)$/i.test(norm)
+    ) {
       out.add(path);
     }
+    if (/^src\/context\/.*\.(tsx|jsx|ts)$/i.test(norm)) out.add(path);
+    if (/^src\/types\/.*\.(tsx|ts)$/i.test(norm)) out.add(path);
   }
   return Array.from(out).slice(0, 20);
 }
@@ -101,17 +170,18 @@ export function detectRoutes(
   sources: Record<string, string> = {},
 ): string[] {
   const files = flattenFiles(nodes);
+  const standalone = collectStandalonePageSlugs(files, sources);
+  const sectionIds = collectSectionIds(sources);
   const routes = new Set<string>(["/"]);
+
+  for (const slug of standalone) {
+    // A slug that is only an in-page section anchor (e.g. id="contact") is not a route.
+    if (sectionIds.has(slug) && !files.some((f) => componentPageSlug(f) === slug)) continue;
+    routes.add(`/${slug}`);
+  }
+
   for (const path of files) {
     const norm = path.replace(/\\/g, "/");
-    if (/^src\/pages\//i.test(norm) && /\.(tsx|jsx|ts|js)$/i.test(norm)) {
-      const route = norm
-        .replace(/^src\/pages/i, "")
-        .replace(/\.(tsx|jsx|ts|js)$/i, "")
-        .replace(/\/index$/i, "");
-      if (!route || route === "/") routes.add("/");
-      else routes.add(route.startsWith("/") ? route : `/${route}`);
-    }
     if (/^public\/.+\.html$/i.test(norm)) {
       const name = norm.replace(/^public\//i, "");
       if (name.toLowerCase() !== "index.html") {
@@ -119,9 +189,20 @@ export function detectRoutes(
       }
     }
   }
-  for (const content of Object.values(sources)) {
-    for (const route of parseRoutesFromSource(content)) routes.add(route);
+
+  for (const [path, content] of Object.entries(sources)) {
+    const norm = path.replace(/\\/g, "/");
+    if (!/^src\/(App|main|routes|router)\.(tsx|jsx|ts|js)$/i.test(norm)) continue;
+    for (const route of parseRoutesFromSource(content)) {
+      if (route === "/") {
+        routes.add("/");
+        continue;
+      }
+      const slug = route.replace(/^\//, "").toLowerCase();
+      if (standalone.has(slug)) routes.add(route);
+    }
   }
+
   return Array.from(routes).sort((a, b) => (a === "/" ? -1 : b === "/" ? 1 : a.localeCompare(b)));
 }
 

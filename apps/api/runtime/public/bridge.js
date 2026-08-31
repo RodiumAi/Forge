@@ -460,12 +460,64 @@
     services: 1,
     process: 1,
     faq: 1,
-    contact: 1,
+    galerie: 1,
+    expertises: 1,
+    apropos: 1,
+    temoignages: 1,
     home: 1,
   };
 
+  function reportPreviewPath(path) {
+    if (!PARENT_ORIGIN) return;
+    var normalized = (path || "/").replace(/\/+$/, "") || "/";
+    if (normalized === lastReportedPath) return;
+    lastReportedPath = normalized;
+    post({ type: "forge-preview-location", path: normalized });
+  }
+
+  function isVisible(el) {
+    if (!el || !el.getBoundingClientRect) return false;
+    var rect = el.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
+  }
+
+  /** Detect standalone app pages from DOM (not in-page section anchors). */
+  function detectActivePreviewPage() {
+    var markers = document.querySelectorAll("[data-forge-page]");
+    for (var i = 0; i < markers.length; i++) {
+      var marker = markers[i];
+      if (!isVisible(marker)) continue;
+      var page = (marker.getAttribute("data-forge-page") || "").trim().toLowerCase();
+      if (!page || page === "home" || page === "/") return "/";
+      return "/" + page.replace(/^\//, "");
+    }
+
+    var navActives = document.querySelectorAll(".nav-link-active, [aria-current='page']");
+    for (var j = 0; j < navActives.length; j++) {
+      var label = (navActives[j].textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+      var pageMatch = label.match(/page\s+([a-z0-9-]+)|([a-z0-9-]+)\s+page/);
+      if (pageMatch) {
+        var key = (pageMatch[1] || pageMatch[2] || "").toLowerCase();
+        if (key) return "/" + key;
+      }
+    }
+
+    var pageContainers = document.querySelectorAll("[class*='-page-container']");
+    for (var k = 0; k < pageContainers.length; k++) {
+      if (!isVisible(pageContainers[k])) continue;
+      var cls = pageContainers[k].className || "";
+      var slugMatch = cls.match(/(?:^|\s)([a-z0-9-]+)-page-container(?:\s|$)/i);
+      if (slugMatch) return "/" + slugMatch[1].toLowerCase();
+    }
+
+    return null;
+  }
+
   /** Logical app path for the Forge page picker (`/` or `/privacy`). */
   function currentPreviewPath() {
+    var domPage = detectActivePreviewPage();
+    if (domPage) return domPage;
+
     var hash = (window.location.hash || "").replace(/^#/, "").split(/[/?]/)[0];
     if (hash) {
       if (SECTION_HASHES[hash.toLowerCase()]) return "/";
@@ -490,6 +542,92 @@
     if (path === lastReportedPath) return;
     lastReportedPath = path;
     post({ type: "forge-preview-location", path: path });
+  }
+
+  function hasDedicatedPageControl(pageKey) {
+    if (!pageKey) return false;
+    var keyLower = pageKey.toLowerCase();
+    var forgePages = document.querySelectorAll("[data-forge-page]");
+    for (var i = 0; i < forgePages.length; i++) {
+      var page = (forgePages[i].getAttribute("data-forge-page") || "").toLowerCase();
+      if (page === keyLower || page === "/" + keyLower) return true;
+    }
+    if (document.querySelector("." + keyLower + "-page-container")) return true;
+    var clickables = document.querySelectorAll("button, [role='button']");
+    for (var j = 0; j < clickables.length; j++) {
+      var label = (clickables[j].textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+      if (
+        label === "page " + keyLower ||
+        label === keyLower + " page" ||
+        (label.indexOf("page") >= 0 && label.indexOf(keyLower) >= 0)
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function tryNavigateHome() {
+    var back = document.querySelector(
+      ".back-btn, [data-forge-page='/'], [data-forge-page='home'], [data-forge-page='/home']",
+    );
+    if (back) {
+      back.click();
+      return true;
+    }
+    var brand = document.querySelector(".brand-btn, .brand button, button.brand-btn");
+    if (brand) {
+      brand.click();
+      return true;
+    }
+    var clickables = document.querySelectorAll("button, [role='button']");
+    for (var i = 0; i < clickables.length; i++) {
+      var label = (clickables[i].textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+      if (
+        label === "accueil" ||
+        label === "home" ||
+        label.indexOf("accueil") === 0 ||
+        label.indexOf("home") === 0 ||
+        label.indexOf("retour") === 0 ||
+        label.indexOf("back to") === 0
+      ) {
+        clickables[i].click();
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function tryNavigateDedicatedPage(pageKey, normalized) {
+    var keyLower = pageKey.toLowerCase();
+    var forgePages = document.querySelectorAll("[data-forge-page]");
+    for (var i = 0; i < forgePages.length; i++) {
+      var el = forgePages[i];
+      var page = el.getAttribute("data-forge-page") || "";
+      var pageNorm = "/" + String(page).replace(/^\//, "").replace(/\/+$/, "");
+      if (pageNorm === "/" ) pageNorm = "/";
+      if (pageNorm === normalized || String(page).toLowerCase() === keyLower) {
+        el.click();
+        reportPreviewPath(normalized);
+        return true;
+      }
+    }
+
+    var clickables = document.querySelectorAll("button, [role='button']");
+    for (var j = 0; j < clickables.length; j++) {
+      var btn = clickables[j];
+      var label = (btn.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+      var pageMatch =
+        label === "page " + keyLower ||
+        label === keyLower + " page" ||
+        (label.indexOf("page") >= 0 && label.indexOf(keyLower) >= 0);
+      if (pageMatch) {
+        btn.click();
+        reportPreviewPath(normalized);
+        return true;
+      }
+    }
+    return false;
   }
 
   function wrapHistoryMethod(method) {
@@ -531,7 +669,7 @@
         // Defer so hashchange/pushState from navigate don't echo back.
         setTimeout(function () {
           navigatingFromParent = false;
-        }, 0);
+        }, 200);
       }
     }
     if (firstParent) reportPreviewLocation();
@@ -555,7 +693,6 @@
     function setPreviewHash(nextKey) {
       var current = (window.location.hash || "").replace(/^#/, "");
       if ((nextKey || "") === current) {
-        // Re-fire so late-mounted listeners still pick it up.
         window.dispatchEvent(new HashChangeEvent("hashchange"));
         return;
       }
@@ -568,15 +705,20 @@
       window.dispatchEvent(new HashChangeEvent("hashchange"));
     }
 
-    // 1) Hash first — works for this project's setCurrentPage + hashchange,
-    //    and never leaves /runner/.
-    try {
-      setPreviewHash(pageKey);
-    } catch (eHash) {
-      /* ignore */
+    // 1) Home — click in-app controls (setActivePage('home'), brand, back).
+    if (!pageKey) {
+      if (tryNavigateHome()) {
+        reportPreviewPath("/");
+        return;
+      }
     }
 
-    // 2) data-forge-page hooks (explicit opt-in from generated markup).
+    // 2) Dedicated standalone pages — before hash/anchors (avoids #contact sections).
+    if (pageKey && tryNavigateDedicatedPage(pageKey, normalized)) {
+      return;
+    }
+
+    // 3) Explicit opt-in hooks.
     var forgePages = document.querySelectorAll("[data-forge-page]");
     for (var i = 0; i < forgePages.length; i++) {
       var el = forgePages[i];
@@ -585,50 +727,43 @@
       if (pageNorm === "/" ) pageNorm = "/";
       if (pageNorm === normalized || String(page).toLowerCase() === pageKey.toLowerCase()) {
         el.click();
+        reportPreviewPath(normalized);
         return;
       }
     }
 
-    // 3) Same-document hash links only (never absolute "/privacy" — that 404s).
-    var anchors = document.querySelectorAll("a[href]");
-    for (var a = 0; a < anchors.length; a++) {
-      var link = anchors[a];
-      var href = link.getAttribute("href") || "";
-      if (!href || href.startsWith("mailto:") || href.startsWith("http")) continue;
-      // Block real document navigations off the runner shell.
-      if (href.startsWith("/") && !href.startsWith("/#") && !/^\/runner\/?/i.test(href)) {
-        continue;
+    // 4) Hash routing for apps that listen to hashchange (never leaves /runner/).
+    if (!pageKey || !hasDedicatedPageControl(pageKey)) {
+      try {
+        setPreviewHash(pageKey);
+      } catch (eHash) {
+        /* ignore */
       }
-      var h = href.replace(/\/+$/, "");
-      var match =
-        (pageKey && (h === targetHash || h === "/#" + pageKey)) ||
-        (!pageKey && (h === "#" || h === "#top" || h === "/#top"));
-      if (match) {
-        link.click();
-        return;
-      }
-    }
 
-    // 4) Exact-label page buttons (e.g. "Privacy") — after hash so state apps sync even if click no-ops.
-    if (pageKey) {
-      var keyLower = pageKey.toLowerCase();
-      var clickables = document.querySelectorAll("button, [role='button']");
-      for (var j = 0; j < clickables.length; j++) {
-        var btn = clickables[j];
-        var label = (btn.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
-        if (label === keyLower || label === keyLower + " policy") {
-          btn.click();
+      // 5) In-page section anchors — skip when a standalone page control exists.
+      var anchors = document.querySelectorAll("a[href]");
+      for (var a = 0; a < anchors.length; a++) {
+        var link = anchors[a];
+        var href = link.getAttribute("href") || "";
+        if (!href || href.startsWith("mailto:") || href.startsWith("http")) continue;
+        if (href.startsWith("/") && !href.startsWith("/#") && !/^\/runner\/?/i.test(href)) {
+          continue;
+        }
+        var h = href.replace(/\/+$/, "");
+        var match =
+          (pageKey && (h === targetHash || h === "/#" + pageKey)) ||
+          (!pageKey && (h === "#" || h === "#top" || h === "/#top"));
+        if (match) {
+          link.click();
+          reportPreviewPath(normalized);
           return;
         }
       }
     }
 
-    // 5) BrowserRouter fallback — stay under /runner/ when hosted there.
+    // 6) BrowserRouter fallback — stay under /runner/ when hosted there.
     try {
-      if (!onRunner) {
-        // Recover if a prior bug left the URL at /privacy while the shell is gone.
-        return;
-      }
+      if (!onRunner) return;
       var runnerBase = pathname.match(/^(\/runner\/?)/i);
       var base = runnerBase
         ? runnerBase[1].endsWith("/")
@@ -642,6 +777,7 @@
         window.history.pushState({}, "", nextPath + (window.location.search || "") + (pageKey ? "#" + pageKey : ""));
         window.dispatchEvent(new PopStateEvent("popstate"));
       }
+      reportPreviewPath(normalized);
     } catch (eHist) {
       /* ignore */
     }
@@ -649,6 +785,36 @@
 
   ensureStyle();
   notifyReady();
+
+  var previewSyncTimer = null;
+  function schedulePreviewSync() {
+    if (navigatingFromParent) return;
+    clearTimeout(previewSyncTimer);
+    previewSyncTimer = setTimeout(function () {
+      reportPreviewLocation();
+    }, 120);
+  }
+
+  if (document.body) {
+    var previewObserver = new MutationObserver(schedulePreviewSync);
+    previewObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["class", "aria-current"],
+    });
+  } else {
+    document.addEventListener("DOMContentLoaded", function () {
+      var previewObserver = new MutationObserver(schedulePreviewSync);
+      previewObserver.observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ["class", "aria-current"],
+      });
+    });
+  }
+
   // Initial path once the parent origin is known (may no-op until first parent message).
   reportPreviewLocation();
 })();

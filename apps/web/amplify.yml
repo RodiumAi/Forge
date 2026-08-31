@@ -1,0 +1,24 @@
+# AWS Amplify Hosting — monorepo app root: apps/web
+# Console Amplify → App settings → General → Monorepo → appRoot = apps/web
+#
+# Do NOT set DOCKER_BUILD=1 here: standalone output breaks Amplify WEB_COMPUTE routing.
+# See apps/web/next.config.ts
+
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - npm ci --cache .npm --prefer-offline
+    build:
+      commands:
+        - npm run build
+  artifacts:
+    baseDirectory: .next
+    files:
+      - "**/*"
+  cache:
+    paths:
+      - .next/cache/**/*
+      - .npm/**/*
+      - node_modules/**/*

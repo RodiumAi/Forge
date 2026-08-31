@@ -80,7 +80,16 @@ See [docs/TEMPLATES.md](docs/TEMPLATES.md) for authoring guidelines.
 - **api**: ruff + pytest
 - **web**: lint + tsc + vitest + build
 - **runtime**: node --test
-- **compose**: docker compose config
+- **compose**: local + production docker compose validation
+
+## Production deployment (maintainers)
+
+After merge to `main`:
+
+- **Frontend** (`apps/web`) → AWS Amplify (auto build, see `apps/web/amplify.yml`)
+- **API** (`apps/api`) → GitHub Actions `deploy-api.yml` → ECR → EC2
+
+Full guide: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
 
 ## Code style
 

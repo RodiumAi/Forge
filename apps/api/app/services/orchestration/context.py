@@ -215,7 +215,12 @@ def _selected_file_blocks(files: dict[str, str], paths: list[str]) -> str:
     if css is not None:
         css_chunk = css
         if len(css_chunk) > CSS_RESERVED_CHARS:
-            css_chunk = css_chunk[:CSS_RESERVED_CHARS] + "\n/* … index.css truncated (tail omitted) */\n"
+            half = CSS_RESERVED_CHARS // 2
+            css_chunk = (
+                css_chunk[:half]
+                + "\n/* … index.css truncated (middle omitted) … */\n"
+                + css_chunk[-half:]
+            )
         block = f"\n--- src/index.css ---\n{css_chunk}\n"
         parts.append(block)
         used += len(block)

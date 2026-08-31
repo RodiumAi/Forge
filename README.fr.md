@@ -16,7 +16,7 @@ forge-web/
 │       └── runtime/    # Runner Babel navigateur (JS pur) + manifest packages.json
 ├── data/
 │   └── templates/      # 24 templates de départ (voir docs/TEMPLATES.md)
-└── infra/              # Configuration Docker / Caddy
+└── infra/              # Docker local + AWS prod (Amplify / EC2)
 ```
 
 Services d'appui : **MinIO** (uploads S3), **Valkey** (file de runs / annulation), **Caddy** (sites publiés sur `*.lvh.me:8080`), **Adminer** (console DB). Les appels LLM passent par le gateway **RodiumAI** (clé API fournie par l'utilisateur dans les réglages).
@@ -75,6 +75,7 @@ Copiez `.env.example` vers `.env` et ajustez au besoin — il documente toutes l
 ## Documentation
 
 - [CONTRIBUTING.fr.md](CONTRIBUTING.fr.md) — setup dev, vérifications, guide PR
+- [docs/DEPLOYMENT.fr.md](docs/DEPLOYMENT.fr.md) — déploiement prod (Amplify + EC2, maintainers)
 - [docs/TEMPLATES.md](docs/TEMPLATES.md) — création de templates
 - [SECURITY.fr.md](SECURITY.fr.md) — signalement de vulnérabilités
 - [CODE_OF_CONDUCT.fr.md](CODE_OF_CONDUCT.fr.md)

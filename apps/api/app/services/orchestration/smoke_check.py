@@ -77,17 +77,30 @@ async def smoke_transform_findings(project_id: str) -> list[VerifyFinding]:
         message = str(err.get("message") or "transform failed")
         line = err.get("line")
         loc = f" (line {line})" if line else ""
-        findings.append(
-            VerifyFinding(
-                code="transform.error",
-                severity="critical",
-                path=path,
-                message=(
-                    f"The app does not compile{loc}: {message[:400]} — the preview WILL be "
-                    "blank until this is fixed. Rewrite the failing file completely."
-                ),
+        if message.startswith("EXPORT_NOT_FOUND:"):
+            findings.append(
+                VerifyFinding(
+                    code="export.named_missing",
+                    severity="critical",
+                    path=path,
+                    message=(
+                        f"Named export missing{loc}: {message[:400]} — the preview WILL "
+                        "fail at runtime until this import is fixed."
+                    ),
+                )
             )
-        )
+        else:
+            findings.append(
+                VerifyFinding(
+                    code="transform.error",
+                    severity="critical",
+                    path=path,
+                    message=(
+                        f"The app does not compile{loc}: {message[:400]} — the preview WILL be "
+                        "blank until this is fixed. Rewrite the failing file completely."
+                    ),
+                )
+            )
         if len(findings) >= 10:
             break
     return findings

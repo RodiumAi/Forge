@@ -1,0 +1,9 @@
+# CODEOWNERS — replace @your-org/maintainers with your GitHub team or usernames.
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+/apps/web/                    @your-org/forge-web
+/apps/api/                    @your-org/forge-api
+/apps/api/runtime/             @your-org/forge-api
+/infra/aws/                   @your-org/forge-infra
+/.github/workflows/           @your-org/forge-infra
+/data/templates/              @your-org/forge-templates
