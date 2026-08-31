@@ -6,13 +6,14 @@
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { buildGraph } from "./cli-lib.mjs";
+import { checkNamedExports } from "./export_check.mjs";
 import { importMapScriptTag } from "./importmap.mjs";
 
 function readStdin() {
   return readFileSync(0, "utf8");
 }
 
-function main() {
+async function main() {
   const args = process.argv.slice(2);
   const outDirIdx = args.indexOf("--out-dir");
   const outDir = outDirIdx >= 0 ? args[outDirIdx + 1] : null;
@@ -31,11 +32,22 @@ function main() {
   const css = files["src/index.css"] || files["index.css"] || "";
   const result = buildGraph(files, entry, "publish", extraImports);
 
-  // --check: smoke-transform only (post-plan self-verification). Reports the
-  // exact errors the browser runner would die on — syntax, MODULE_NOT_FOUND,
-  // imports outside the map — without writing anything.
+  // --check: smoke-transform + named export resolution (post-plan self-verification).
+  // Reports syntax, MODULE_NOT_FOUND, imports outside the map, and missing
+  // named exports (e.g. lucide-react icons that do not exist in 0.468.0).
   if (args.includes("--check")) {
-    process.stdout.write(JSON.stringify({ ok: result.ok, errors: result.errors || [] }));
+    if (!result.ok) {
+      process.stdout.write(JSON.stringify({ ok: false, errors: result.errors || [] }));
+      return;
+    }
+    const exportErrors = await checkNamedExports(files, extraImports);
+    if (exportErrors.length) {
+      process.stdout.write(
+        JSON.stringify({ ok: false, errors: [...(result.errors || []), ...exportErrors] }),
+      );
+      return;
+    }
+    process.stdout.write(JSON.stringify({ ok: true, errors: [] }));
     return;
   }
 
@@ -99,4 +111,7 @@ function escapeHtml(s) {
     .replace(/"/g, "&quot;");
 }
 
-main();
+main().catch((e) => {
+  console.error(JSON.stringify({ ok: false, errors: [{ message: String(e?.message || e) }] }));
+  process.exit(1);
+});

@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     api_base_url: str = "http://localhost:8100"
     sites_base_domain: str = "lvh.me:8080"
 
-    database_url: str = "postgresql+psycopg://forge:forge@127.0.0.1:5434/forge_web"
+    database_url: str = "postgresql+psycopg://forge:forge@127.0.0.1:5434/rodium_forge"
     secret_key: str = "dev-secret-change-me"
     encryption_key: str = ""
     # Local RodiumAi FastAPI gateway (LLM). Override for prod.

@@ -141,3 +141,32 @@ class TestMissingLocalImports:
         write_file(project, "src/index.css", self.CSS)
         write_file(project, "src/App.tsx", 'import { useState } from "react";\nexport default () => null;')
         assert "import.module_not_found" not in codes(verify_project_build(project))
+
+
+class TestRepairHelpers:
+    def test_repair_focus_paths_includes_css_and_entry(self):
+        from app.services.orchestration.verify_build import (
+            VerifyFinding,
+            format_css_second_pass_prompt,
+            repair_focus_paths,
+        )
+
+        findings = [
+            VerifyFinding(
+                code="css.orphan_classes",
+                severity="critical",
+                path="src/App.tsx",
+                message="orphans",
+            ),
+            VerifyFinding(
+                code="entry.createRoot",
+                severity="critical",
+                path="src/main.tsx",
+                message="bad import",
+            ),
+        ]
+        paths = repair_focus_paths(findings)
+        assert paths == ["src/index.css", "src/App.tsx", "src/main.tsx"]
+        prompt = format_css_second_pass_prompt(findings)
+        assert "SECOND CSS REPAIR PASS" in prompt
+        assert "css.orphan_classes" in prompt

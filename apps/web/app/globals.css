@@ -2646,6 +2646,46 @@ html:has(.builder) body {
   cursor: pointer;
 }
 
+/* Collapse control, separated from the tools it hides. */
+.preview-toolbar-sep {
+  width: 1px;
+  height: 1.4rem;
+  margin: 0 0.15rem;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.preview-toolbar-collapse {
+  color: #6b6b6b;
+}
+
+.preview-toolbar-collapse:hover {
+  color: #111;
+}
+
+/* Parked state: bottom-right pill that brings the toolbar back. */
+.preview-toolbar-restore {
+  position: absolute;
+  right: 1.1rem;
+  bottom: 1.1rem;
+  z-index: 20;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: #fff;
+  color: #222;
+  cursor: pointer;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.22);
+  animation: lpClaimIn 0.18s ease-out;
+}
+
+.preview-toolbar-restore:hover {
+  transform: translateY(-1px);
+}
+
 .preview-toolbar-btn:hover {
   background: rgba(0, 0, 0, 0.06);
 }

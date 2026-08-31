@@ -1,0 +1,144 @@
+# Deploy Forge API to EC2 after merge on main.
+# Frontend: Amplify auto-deploys apps/web when main is updated (see docs/DEPLOYMENT.md).
+
+name: Deploy API
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/api/**"
+      - "infra/aws/ec2/**"
+      - ".github/workflows/deploy-api.yml"
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Docker image tag (default: commit SHA)"
+        required: false
+        type: string
+
+concurrency:
+  group: deploy-api-production
+  cancel-in-progress: false
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  verify:
+    name: Pre-deploy checks (API)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: apps/api/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install ruff==0.16.4 pytest==8.3.4
+
+      - name: Ruff lint
+        run: ruff check app tests
+
+      - name: Unit tests
+        env:
+          ENVIRONMENT: test
+        run: pytest -q
+
+  build-and-push:
+    name: Build image → ECR
+    needs: verify
+    runs-on: ubuntu-latest
+    environment: production
+    outputs:
+      image_tag: ${{ steps.meta.outputs.image_tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve image tag
+        id: meta
+        run: |
+          if [ -n "${{ github.event.inputs.image_tag }}" ]; then
+            echo "image_tag=${{ github.event.inputs.image_tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "image_tag=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push API image
+        env:
+          ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+          IMAGE_TAG: ${{ steps.meta.outputs.image_tag }}
+        run: |
+          IMAGE="${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
+          docker build -t "${IMAGE}" -t "${ECR_REGISTRY}/${ECR_REPOSITORY}:latest" apps/api
+          docker push "${IMAGE}"
+          docker push "${ECR_REGISTRY}/${ECR_REPOSITORY}:latest"
+
+  deploy:
+    name: Roll out on EC2
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Deploy via SSM
+        env:
+          INSTANCE_ID: ${{ secrets.EC2_INSTANCE_ID }}
+          IMAGE_TAG: ${{ needs.build-and-push.outputs.image_tag }}
+          ECR_REGISTRY: ${{ vars.ECR_REGISTRY }}
+          ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+          AWS_REGION: ${{ vars.AWS_REGION }}
+          FORGE_ROOT: ${{ vars.FORGE_ROOT }}
+        run: |
+          jq -n \
+            --arg region "${AWS_REGION}" \
+            --arg registry "${ECR_REGISTRY}" \
+            --arg repo "${ECR_REPOSITORY}" \
+            --arg root "${FORGE_ROOT}" \
+            --arg tag "${IMAGE_TAG}" \
+            --arg id "${INSTANCE_ID}" \
+            '{
+              InstanceIds: [$id],
+              DocumentName: "AWS-RunShellScript",
+              Comment: ("Forge API deploy " + $tag),
+              Parameters: {
+                commands: [
+                  ("export AWS_REGION=" + $region),
+                  ("export ECR_REGISTRY=" + $registry),
+                  ("export ECR_REPOSITORY=" + $repo),
+                  ("export FORGE_ROOT=" + $root),
+                  ("cd " + $root + " && git fetch origin main && git reset --hard origin/main"),
+                  ("chmod +x " + $root + "/infra/aws/ec2/deploy.sh"),
+                  ("cd " + $root + " && ./infra/aws/ec2/deploy.sh " + $tag)
+                ]
+              }
+            }' > /tmp/ssm-input.json
+          COMMAND_ID=$(aws ssm send-command --cli-input-json file:///tmp/ssm-input.json --query Command.CommandId --output text)
+          echo "SSM CommandId: ${COMMAND_ID}"
+          echo "Monitor in AWS Console → Systems Manager → Run Command"

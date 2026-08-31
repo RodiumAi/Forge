@@ -361,6 +361,28 @@ def findings_have_critical(findings: list[VerifyFinding]) -> bool:
     return any(f.severity == "critical" for f in findings)
 
 
+def css_critical_findings(findings: list[VerifyFinding]) -> list[VerifyFinding]:
+    return [f for f in findings if f.severity == "critical" and f.code.startswith("css.")]
+
+
+def repair_focus_paths(findings: list[VerifyFinding]) -> list[str] | None:
+    """Paths to inject into LLM context for a focused verify repair pass."""
+    focus: list[str] = []
+    if any(f.code.startswith("css.") for f in findings):
+        focus.extend(["src/index.css", "src/App.tsx"])
+    if any(f.code == "entry.createRoot" for f in findings):
+        focus.append("src/main.tsx")
+    if any(f.code == "context.api_mismatch" for f in findings):
+        focus.extend(["src/App.tsx", "src/context"])
+    seen: set[str] = set()
+    out: list[str] = []
+    for path in focus:
+        if path not in seen:
+            seen.add(path)
+            out.append(path)
+    return out or None
+
+
 def format_findings_for_prompt(findings: list[VerifyFinding]) -> str:
     if not findings:
         return "No findings."
@@ -374,4 +396,29 @@ def format_findings_for_prompt(findings: list[VerifyFinding]) -> str:
         "remove overflow:hidden from html/body so the page can scroll; "
         "APPEND CSS only — do not drop existing navbar/hero rules."
     )
+    if any(f.code == "export.named_missing" for f in findings):
+        lines.append(
+            "For export.named_missing on lucide-react: replace invented icon names with "
+            "icons that exist in lucide-react@0.468.0 (e.g. MessageSquare instead of "
+            "MessageSquareCheck). Never guess icon names."
+        )
+    if any(f.code.startswith("route.") for f in findings):
+        lines.append(
+            "For route findings: ensure every <Route path=... element={<Page />} /> points "
+            "to an existing src/pages/Page.tsx (or equivalent) module."
+        )
     return "\n".join(lines)
+
+
+def format_css_second_pass_prompt(findings: list[VerifyFinding]) -> str:
+    css = css_critical_findings(findings)
+    if not css:
+        return ""
+    return (
+        "SECOND CSS REPAIR PASS (mandatory):\n"
+        "The first repair did not fix all CSS issues. Read src/index.css from disk "
+        "in full. APPEND missing rules for EVERY orphan className below — use the "
+        "EXACT same spelling as in TSX. Never replace index.css with a shorter file. "
+        "Never drop navbar/hero/layout selectors.\n\n"
+        + format_findings_for_prompt(css)
+    )

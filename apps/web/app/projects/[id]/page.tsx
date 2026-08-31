@@ -140,6 +140,28 @@ function parseJsonArray<T>(raw: string | null | undefined): T[] {
   }
 }
 
+function isPlanComplete(tasks: PlanTask[]): boolean {
+  return tasks.length > 0 && tasks.every((task) => task.status === "done");
+}
+
+function latestPersistedPlan(msgs: Message[]): PlanTask[] {
+  for (let i = msgs.length - 1; i >= 0; i--) {
+    const m = msgs[i];
+    if (m.role !== "assistant") continue;
+    const plan = parseJsonArray<PlanTask>(m.plan_json);
+    if (plan.length) return plan;
+  }
+  return [];
+}
+
+function mapActivePlanTasks(plan: PlanTask[]): PlanTask[] {
+  return plan.map((task, i) => ({
+    id: task.id || `task_${i + 1}`,
+    title: task.title || `Task ${i + 1}`,
+    status: task.status === "running" ? "pending" : task.status || "pending",
+  }));
+}
+
 /** Collapse consecutive identical user turns (boot-loop leftovers). */
 function dedupeMessages(msgs: Message[]): Message[] {
   const out: Message[] = [];
@@ -476,6 +498,8 @@ export default function ProjectPage() {
 
     // Restore HITL plan / clarify after refresh.
     try {
+      const persistedPlan = latestPersistedPlan(msgs);
+      const persistedComplete = isPlanComplete(persistedPlan);
       const active = await api<{
         id: string;
         status: string;
@@ -484,8 +508,14 @@ export default function ProjectPage() {
         clarify: ClarifyQuestion[];
       } | null>(`/projects/${projectId}/chats/${main.id}/runs/active`);
       if (active?.id) {
-        setActiveRunId(active.id);
-        if (active.status === "awaiting_clarify" && Array.isArray(active.clarify) && active.clarify.length) {
+        if (persistedComplete) {
+          setActiveRunId(null);
+          setPlanTasks([]);
+          setPlanNeedsConfirm(false);
+          setClarifyQuestions([]);
+          setBusy(false);
+        } else if (active.status === "awaiting_clarify" && Array.isArray(active.clarify) && active.clarify.length) {
+          setActiveRunId(active.id);
           setClarifyQuestions(active.clarify);
           setPlanNeedsConfirm(false);
           setPlanTasks([]);
@@ -495,25 +525,18 @@ export default function ProjectPage() {
           Array.isArray(active.plan) &&
           active.plan.length
         ) {
-          setPlanTasks(
-            active.plan.map((task, i) => ({
-              id: task.id || `task_${i + 1}`,
-              title: task.title || `Task ${i + 1}`,
-              status: task.status === "running" ? "pending" : task.status || "pending",
-            })),
-          );
-          setPlanNeedsConfirm(true);
+          setActiveRunId(active.id);
+          const mapped = mapActivePlanTasks(active.plan);
+          const doneCount = mapped.filter((task) => task.status === "done").length;
+          const partialProgress = doneCount > 0 && doneCount < mapped.length;
+          setPlanTasks(mapped);
+          setPlanNeedsConfirm(active.status === "awaiting_plan_confirm" && !partialProgress);
           setClarifyQuestions([]);
           setBusy(false);
           setPlanMode(active.mode === "plan");
         } else if (active.status === "running" && Array.isArray(active.plan) && active.plan.length) {
-          setPlanTasks(
-            active.plan.map((task, i) => ({
-              id: task.id || `task_${i + 1}`,
-              title: task.title || `Task ${i + 1}`,
-              status: task.status || "pending",
-            })),
-          );
+          setActiveRunId(active.id);
+          setPlanTasks(mapActivePlanTasks(active.plan));
           setPlanNeedsConfirm(false);
           setBusy(true);
           restoredBgRunRef.current = active.id;
@@ -960,8 +983,28 @@ export default function ProjectPage() {
             String(payloadEvent.type || "") === "error" &&
             String(payloadEvent.message || "") === "run_detached"
           ) {
-            setPlanNeedsConfirm(true);
-            setBusy(false);
+            try {
+              const active = await api<{
+                id: string;
+                status: string;
+                plan: PlanTask[];
+              } | null>(`/projects/${projectId}/chats/${chatId}/runs/active`);
+              if (!active?.id || !Array.isArray(active.plan) || !active.plan.length) {
+                setPlanTasks([]);
+                setPlanNeedsConfirm(false);
+                setBusy(false);
+                return;
+              }
+              const mapped = mapActivePlanTasks(active.plan);
+              const doneCount = mapped.filter((task) => task.status === "done").length;
+              const partialProgress = doneCount > 0 && doneCount < mapped.length;
+              setPlanTasks(mapped);
+              setPlanNeedsConfirm(active.status === "awaiting_plan_confirm" && !partialProgress);
+              setBusy(active.status === "running");
+            } catch {
+              setPlanNeedsConfirm(true);
+              setBusy(false);
+            }
             return;
           }
           handleStreamEvent(payloadEvent, {

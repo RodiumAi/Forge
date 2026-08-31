@@ -52,14 +52,13 @@ export function PlanPanel({
   const doneCount = tasks.filter((task) => task.status === "done").length;
   const runningTask = tasks.find((task) => task.status === "running");
   const errorTask = tasks.find((task) => task.status === "error");
-  const canResume = Boolean(
-    errorTask && tasks.some((task) => task.status === "pending" || task.status === "error"),
-  );
-  const showExecute = (needsConfirm || canResume) && onExecute;
   const total = tasks.length;
+  const partialProgress = doneCount > 0 && doneCount < total;
+  const canResume = Boolean(onExecute && partialProgress && !executing && !busy);
+  const showExecute = (needsConfirm || canResume) && onExecute;
   const progress = total ? Math.round((doneCount / total) * 100) : 0;
   const isExecuting = executing || Boolean(runningTask) || (busy && !needsConfirm);
-  const isAwaiting = needsConfirm && !isExecuting;
+  const isAwaiting = needsConfirm && !isExecuting && !partialProgress;
 
   let statusLabel = t("planStatusReady");
   if (errorTask) statusLabel = t("planStatusError");
@@ -67,7 +66,8 @@ export function PlanPanel({
     statusLabel = runningTask
       ? t("planStatusRunningTask").replace("{n}", String(doneCount + 1)).replace("{total}", String(total))
       : t("planStatusStarting");
-  } else if (isAwaiting) statusLabel = t("planStatusAwaiting");
+  } else if (partialProgress) statusLabel = t("planStatusInterrupted");
+  else if (isAwaiting) statusLabel = t("planStatusAwaiting");
   else if (doneCount === total && total > 0) statusLabel = t("planStatusDone");
 
   return (
@@ -113,6 +113,10 @@ export function PlanPanel({
 
       {isAwaiting ? (
         <p className="plan-await-hint">{t("planAwaitHint")}</p>
+      ) : null}
+
+      {partialProgress && !isExecuting && canResume ? (
+        <p className="plan-await-hint">{t("planResumeHint")}</p>
       ) : null}
 
       <ol className="plan-tasks">

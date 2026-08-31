@@ -100,8 +100,12 @@ def _task_prompt_block(task: dict[str, Any], *, idx: int, total: int) -> str:
             "typography, layout shell, navbar and hero BASE styles, and utilities. "
             "Do not invent parallel naming schemes later tasks cannot reuse."
         )
-    elif tid in ("home", "primary_sections", "flows", "sections") or (
-        "section" in tid or "home" in tid or "flow" in tid
+    elif tid != "styles_foundation" and tid != "architecture" and (
+        tid in ("home", "primary_sections", "flows", "sections")
+        or "section" in tid
+        or "home" in tid
+        or "flow" in tid
+        or (total >= 2 and idx > 0)
     ):
         lines.append(
             "CSS APPEND RULE (critical): When writing src/index.css you MUST preserve "
@@ -129,7 +133,6 @@ def _is_surgical_task(task: dict[str, Any], *, total_tasks: int) -> bool:
         "coherence",
         "edit",
         "styles",
-        "styles_foundation",
         "polish",
         "home",
         "primary_sections",
@@ -141,6 +144,102 @@ def _is_surgical_task(task: dict[str, Any], *, total_tasks: int) -> bool:
         # Multi-task plans after architecture: prefer minimal CSS/TSX diffs.
         return True
     return bool(total_tasks == 1 and ("edit" in tid or "modif" in title or "change" in title))
+
+
+async def _stream_verify_repair(
+    *,
+    project_id: str,
+    history: list[tuple[str, str]],
+    user_prompt: str,
+    findings: list[Any],
+    db,
+    user_id,
+    locale: Locale,
+    auth: RodiumGenerationAuth,
+    resolve_auth: Callable[[], Awaitable[RodiumGenerationAuth]] | None,
+    run_id: str | None,
+    tasks: list[dict[str, Any]],
+    applied: list[dict],
+    full: list[str],
+    thinking_parts: list[str],
+    step_id: str,
+    step_label: str,
+    snapshot_label: str,
+    format_findings_for_prompt,
+    push_step: Callable[[str, str, str], str],
+    focus_paths: list[str] | None = None,
+    extra_prompt: str = "",
+    surgical_edit: bool = True,
+) -> AsyncIterator[str]:
+    """One LLM verify-repair pass."""
+    from app.services.orchestration.cancel import is_cancelled
+    from app.services.orchestration.router import route_task
+
+    repair_route = route_task("verify.repair")
+    repair_prompt = (
+        f"User request (context):\n{user_prompt}\n\n"
+        f"{format_findings_for_prompt(findings)}\n\n"
+        f"{extra_prompt}\n\n"
+        "Fix ONLY these issues with forge-write tags. Prefer extending the Context "
+        "Provider with aliases over rewriting all consumers. Sync orphan CSS class "
+        "names. Fix scroll (no overflow:hidden on html/body). "
+        "Do not add new features."
+    ).strip()
+    repair_messages = await build_llm_messages(
+        project_id=project_id,
+        history=[*history, ("user", repair_prompt)],
+        user_query=repair_prompt,
+        db=db,
+        user_id=user_id,
+        locale=locale,
+        auth=auth,
+        model=repair_route.model,
+        surgical_edit=surgical_edit,
+        focus_paths=focus_paths,
+    )
+    current_auth = await resolve_auth() if resolve_auth else auth
+    repair_buf: list[str] = []
+    try:
+        async for chunk in stream_chat_completion(
+            auth=current_auth,
+            model=repair_route.model,
+            messages=repair_messages,
+            locale=locale,
+        ):
+            if run_id and is_cancelled(run_id):
+                yield push_step(step_id, step_label, "error")
+                yield _sse({"type": "error", "message": "cancelled", "plan": tasks})
+                return
+            if chunk.kind == "thinking":
+                thinking_parts.append(chunk.content)
+                yield _sse({"type": "thinking", "delta": chunk.content})
+            else:
+                repair_buf.append(chunk.content)
+                full.append(chunk.content)
+                yield _sse({"type": "token", "content": chunk.content})
+        writes, deletes = parse_forge_tags("".join(repair_buf))
+        written, violations = await apply_validated_writes_async(
+            project_id, writes, snapshot_label=snapshot_label
+        )
+        applied.extend(written)
+        for item in written:
+            yield _sse({"type": "file_write", "path": item["path"]})
+        for v in violations:
+            yield _sse(
+                {
+                    "type": "warning",
+                    "message": f"{v.get('code')}: {v.get('message')}",
+                    "violation": v,
+                }
+            )
+        for op in deletes:
+            delete_file(project_id, op.path)
+            applied.append({"op": "delete", "path": op.path})
+            yield _sse({"type": "file_delete", "path": op.path})
+        yield push_step(step_id, step_label, "done")
+    except Exception as exc:
+        yield push_step(step_id, step_label, "error")
+        yield _sse({"type": "warning", "message": f"verify repair failed: {str(exc)[:240]}"})
 
 
 async def run_plan_tasks(
@@ -331,9 +430,10 @@ async def run_plan_tasks(
 
         # Mid-plan CSS/build check — catch orphan classes before the next rewrite.
         if len(tasks) >= 2 and tid != "coherence":
-            from app.services.orchestration.router import route_task
             from app.services.orchestration.verify_build import (
+                format_css_second_pass_prompt,
                 format_findings_for_prompt,
+                repair_focus_paths,
                 verify_project_build,
             )
 
@@ -354,106 +454,98 @@ async def run_plan_tasks(
                 )
             if critical_mid:
                 yield push_step("verify_repair_mid", "Repairing mid-plan CSS/build", "running")
-                repair_route = route_task("verify.repair")
-                repair_prompt = (
-                    f"User request (context):\n{user_prompt}\n\n"
-                    f"{format_findings_for_prompt(critical_mid)}\n\n"
-                    "Fix ONLY these issues with forge-write tags. APPEND missing CSS "
-                    "rules for EVERY listed orphan className using the SAME spelling. "
-                    "Do not rename classes in TSX to dodge the check. "
-                    "Do not delete existing navbar/hero selectors. "
-                    "Do not add new features."
-                )
-                repair_messages = await build_llm_messages(
+                async for chunk in _stream_verify_repair(
                     project_id=project_id,
-                    history=[*history, ("user", repair_prompt)],
-                    user_query=repair_prompt,
+                    history=history,
+                    user_prompt=user_prompt,
+                    findings=critical_mid,
                     db=db,
                     user_id=user_id,
                     locale=locale,
                     auth=auth,
-                    model=repair_route.model,
-                    surgical_edit=True,
-                )
-                current_auth = await resolve_auth() if resolve_auth else auth
-                repair_buf: list[str] = []
-                try:
-                    async for chunk in stream_chat_completion(
-                        auth=current_auth,
-                        model=repair_route.model,
-                        messages=repair_messages,
+                    resolve_auth=resolve_auth,
+                    run_id=run_id,
+                    tasks=tasks,
+                    applied=applied,
+                    full=full,
+                    thinking_parts=thinking_parts,
+                    step_id="verify_repair_mid",
+                    step_label="Repairing mid-plan CSS/build",
+                    snapshot_label=f"before repair: {title}",
+                    format_findings_for_prompt=format_findings_for_prompt,
+                    push_step=push_step,
+                    focus_paths=repair_focus_paths(critical_mid),
+                ):
+                    yield chunk
+                recheck = [
+                    f
+                    for f in verify_project_build(project_id)
+                    if f.severity == "critical" and f.code == "css.orphan_classes"
+                ]
+                if recheck:
+                    yield push_step("verify_repair_mid2", "CSS repair pass 2", "running")
+                    css_extra = format_css_second_pass_prompt(recheck)
+                    async for chunk in _stream_verify_repair(
+                        project_id=project_id,
+                        history=history,
+                        user_prompt=user_prompt,
+                        findings=recheck,
+                        db=db,
+                        user_id=user_id,
                         locale=locale,
+                        auth=auth,
+                        resolve_auth=resolve_auth,
+                        run_id=run_id,
+                        tasks=tasks,
+                        applied=applied,
+                        full=full,
+                        thinking_parts=thinking_parts,
+                        step_id="verify_repair_mid2",
+                        step_label="CSS repair pass 2",
+                        snapshot_label=f"before css repair 2: {title}",
+                        format_findings_for_prompt=format_findings_for_prompt,
+                        push_step=push_step,
+                        focus_paths=["src/index.css", "src/App.tsx"],
+                        extra_prompt=css_extra,
                     ):
-                        if run_id and is_cancelled(run_id):
-                            yield push_step("verify_repair_mid", "Repairing mid-plan CSS/build", "error")
-                            yield _sse({"type": "error", "message": "cancelled", "plan": tasks})
-                            return
-                        if chunk.kind == "thinking":
-                            thinking_parts.append(chunk.content)
-                            yield _sse({"type": "thinking", "delta": chunk.content})
-                        else:
-                            repair_buf.append(chunk.content)
-                            full.append(chunk.content)
-                            yield _sse({"type": "token", "content": chunk.content})
-                    writes, deletes = parse_forge_tags("".join(repair_buf))
-                    written, violations = await apply_validated_writes_async(
-                        project_id, writes, snapshot_label=f"before repair: {title}"
-                    )
-                    applied.extend(written)
-                    for item in written:
-                        yield _sse({"type": "file_write", "path": item["path"]})
-                    for v in violations:
-                        yield _sse(
-                            {
-                                "type": "warning",
-                                "message": f"{v.get('code')}: {v.get('message')}",
-                                "violation": v,
-                            }
-                        )
-                    for op in deletes:
-                        delete_file(project_id, op.path)
-                        applied.append({"op": "delete", "path": op.path})
-                        yield _sse({"type": "file_delete", "path": op.path})
-                    # Re-verify — if still critical orphans, surface and keep repairing once more.
-                    recheck = [
+                        yield chunk
+                    still = [
                         f
                         for f in verify_project_build(project_id)
                         if f.severity == "critical" and f.code == "css.orphan_classes"
                     ]
-                    if recheck:
+                    if still:
                         yield _sse(
                             {
                                 "type": "warning",
                                 "message": (
-                                    "Warning: critical CSS orphans remain after mid-plan repair — "
-                                    + recheck[0].message[:240]
+                                    "Warning: critical CSS orphans remain after 2 repair passes — "
+                                    + still[0].message[:240]
                                 ),
-                                "finding": recheck[0].to_dict(),
+                                "finding": still[0].to_dict(),
                             }
                         )
-                    yield push_step("verify_repair_mid", "Repairing mid-plan CSS/build", "done")
-                except Exception as exc:
-                    yield push_step("verify_repair_mid", "Repairing mid-plan CSS/build", "error")
-                    yield _sse(
-                        {
-                            "type": "warning",
-                            "message": f"mid-plan verify repair failed: {str(exc)[:240]}",
-                        }
-                    )
 
     # Deterministic verify + optional repair (black-preview prevention)
-    from app.services.orchestration.router import route_task
+    from app.services.orchestration.page_visit_check import page_route_findings
     from app.services.orchestration.smoke_check import smoke_transform_findings
     from app.services.orchestration.verify_build import (
+        css_critical_findings,
         findings_have_critical,
+        format_css_second_pass_prompt,
         format_findings_for_prompt,
+        repair_focus_paths,
         verify_project_build,
     )
 
     yield push_step("verify_build", "Verifying build", "running")
-    # Static heuristics + a real compile of the exact bundle the runner mounts:
-    # the authoritative "will the preview be blank?" answer feeds the repair.
-    findings = verify_project_build(project_id) + await smoke_transform_findings(project_id)
+    yield push_step("verify_pages", t("step_verify_pages", locale), "running")
+    # Static heuristics + compile + named exports + route structure.
+    findings = (
+        verify_project_build(project_id)
+        + await smoke_transform_findings(project_id)
+        + page_route_findings(project_id)
+    )
     for finding in findings:
         yield _sse(
             {
@@ -463,74 +555,81 @@ async def run_plan_tasks(
             }
         )
 
+    route_critical = any(
+        f.severity == "critical" and f.code.startswith("route.") for f in findings
+    )
+    yield push_step(
+        "verify_pages",
+        t("step_verify_pages", locale),
+        "error" if route_critical else "done",
+    )
+
     if findings_have_critical(findings):
         yield push_step("verify_build", "Verifying build", "error")
         yield push_step("verify_repair", "Repairing verify findings", "running")
-        repair_route = route_task("verify.repair")
-        repair_prompt = (
-            f"User request (context):\n{user_prompt}\n\n"
-            f"{format_findings_for_prompt(findings)}\n\n"
-            "Fix ONLY these issues with forge-write tags. Prefer extending the Context "
-            "Provider with aliases over rewriting all consumers. Sync orphan CSS class "
-            "names. Fix scroll (no overflow:hidden on html/body). "
-            "Do not add new features."
-        )
-        repair_messages = await build_llm_messages(
+        async for chunk in _stream_verify_repair(
             project_id=project_id,
-            history=[*history, ("user", repair_prompt)],
-            user_query=repair_prompt,
+            history=history,
+            user_prompt=user_prompt,
+            findings=findings,
             db=db,
             user_id=user_id,
             locale=locale,
             auth=auth,
-            model=repair_route.model,
-            surgical_edit=True,
-        )
-        current_auth = await resolve_auth() if resolve_auth else auth
-        repair_buf: list[str] = []
-        try:
-            async for chunk in stream_chat_completion(
-                auth=current_auth,
-                model=repair_route.model,
-                messages=repair_messages,
-                locale=locale,
-            ):
-                if run_id and is_cancelled(run_id):
-                    yield push_step("verify_repair", "Repairing verify findings", "error")
-                    yield _sse({"type": "error", "message": "cancelled", "plan": tasks})
-                    return
-                if chunk.kind == "thinking":
-                    thinking_parts.append(chunk.content)
-                    yield _sse({"type": "thinking", "delta": chunk.content})
-                else:
-                    repair_buf.append(chunk.content)
-                    full.append(chunk.content)
-                    yield _sse({"type": "token", "content": chunk.content})
-            writes, deletes = parse_forge_tags("".join(repair_buf))
-            written, violations = await apply_validated_writes_async(
-                project_id, writes, snapshot_label="before final repair"
-            )
-            applied.extend(written)
-            for item in written:
-                yield _sse({"type": "file_write", "path": item["path"]})
-            for v in violations:
-                yield _sse(
-                    {
-                        "type": "warning",
-                        "message": f"{v.get('code')}: {v.get('message')}",
-                        "violation": v,
-                    }
-                )
-            for op in deletes:
-                delete_file(project_id, op.path)
-                applied.append({"op": "delete", "path": op.path})
-                yield _sse({"type": "file_delete", "path": op.path})
-            yield push_step("verify_repair", "Repairing verify findings", "done")
-        except Exception as exc:
-            yield push_step("verify_repair", "Repairing verify findings", "error")
-            yield _sse({"type": "warning", "message": f"verify repair failed: {str(exc)[:240]}"})
+            resolve_auth=resolve_auth,
+            run_id=run_id,
+            tasks=tasks,
+            applied=applied,
+            full=full,
+            thinking_parts=thinking_parts,
+            step_id="verify_repair",
+            step_label="Repairing verify findings",
+            snapshot_label="before final repair",
+            format_findings_for_prompt=format_findings_for_prompt,
+            push_step=push_step,
+            focus_paths=repair_focus_paths(findings),
+        ):
+            yield chunk
 
-        findings = verify_project_build(project_id) + await smoke_transform_findings(project_id)
+        findings = (
+            verify_project_build(project_id)
+            + await smoke_transform_findings(project_id)
+            + page_route_findings(project_id)
+        )
+        if findings_have_critical(findings) and css_critical_findings(findings):
+            yield push_step("verify_repair_css", "CSS repair pass 2", "running")
+            css_findings = css_critical_findings(findings)
+            css_extra = format_css_second_pass_prompt(findings)
+            async for chunk in _stream_verify_repair(
+                project_id=project_id,
+                history=history,
+                user_prompt=user_prompt,
+                findings=css_findings,
+                db=db,
+                user_id=user_id,
+                locale=locale,
+                auth=auth,
+                resolve_auth=resolve_auth,
+                run_id=run_id,
+                tasks=tasks,
+                applied=applied,
+                full=full,
+                thinking_parts=thinking_parts,
+                step_id="verify_repair_css",
+                step_label="CSS repair pass 2",
+                snapshot_label="before final css repair 2",
+                format_findings_for_prompt=format_findings_for_prompt,
+                push_step=push_step,
+                focus_paths=["src/index.css", "src/App.tsx"],
+                extra_prompt=css_extra,
+            ):
+                yield chunk
+            findings = (
+                verify_project_build(project_id)
+                + await smoke_transform_findings(project_id)
+                + page_route_findings(project_id)
+            )
+
         for finding in findings:
             yield _sse(
                 {
@@ -539,6 +638,14 @@ async def run_plan_tasks(
                     "finding": finding.to_dict(),
                 }
             )
+        route_critical = any(
+            f.severity == "critical" and f.code.startswith("route.") for f in findings
+        )
+        yield push_step(
+            "verify_pages",
+            t("step_verify_pages", locale),
+            "error" if route_critical else "done",
+        )
         if findings_have_critical(findings):
             yield _sse(
                 {

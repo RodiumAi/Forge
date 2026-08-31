@@ -34,7 +34,7 @@ shell: ## Shell Python dans l'API
 	$(COMPOSE) exec api python
 
 psql: ## Console PostgreSQL
-	$(COMPOSE) exec postgres psql -U forge -d forge_web
+	$(COMPOSE) exec postgres psql -U forge -d rodium_forge
 
 redis: ## Console Valkey
 	$(COMPOSE) exec valkey valkey-cli

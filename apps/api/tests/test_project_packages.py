@@ -98,6 +98,35 @@ class TestBatchDeclaration:
         assert deps == {}
 
 
+class TestCssShrinkGuard:
+    class _W:
+        def __init__(self, path, content):
+            self.path = path
+            self.content = content
+
+    def test_rejects_mid_plan_css_rewrite_that_drops_most_rules(self, project):
+        foundation = ".navbar { position: sticky; }\n.hero { min-height: 80vh; }\n" + (
+            ".section { padding: 2rem; }\n" * 200
+        )
+        write_file(project, "src/index.css", foundation)
+        writes = [self._W("src/index.css", ".new-section { color: red; }\n")]
+        applied, violations = apply_validated_writes(project, writes)
+        assert applied == []
+        assert violations and violations[0]["code"] == "CSS_SHRINK_REJECTED"
+
+    def test_allows_css_growth(self, project):
+        write_file(project, "src/index.css", ".navbar { position: sticky; }\n" * 100)
+        writes = [
+            self._W(
+                "src/index.css",
+                ".navbar { position: sticky; }\n" * 100 + ".gallery { display: grid; }\n",
+            )
+        ]
+        applied, violations = apply_validated_writes(project, writes)
+        assert violations == []
+        assert applied and applied[0]["path"] == "src/index.css"
+
+
 class TestRunnerShellPerProject:
     def test_shell_import_map_carries_the_project_deps(self, project, monkeypatch):
         # The /runner/?p= route resolves a UUID project id under PROJECTS_ROOT.

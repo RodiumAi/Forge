@@ -341,6 +341,11 @@ def get_active_run(
     if run is None:
         return None
 
+    def _plan_all_done(items: list) -> bool:
+        if not items:
+            return False
+        return all(isinstance(t, dict) and t.get("status") == "done" for t in items)
+
     plan: list[dict] = []
     clarify: list[dict] = []
     try:
@@ -355,6 +360,14 @@ def get_active_run(
             clarify = []
     except Exception:
         clarify = []
+
+    # Plan finished but worker never emitted the final done checkpoint — close the run
+    # so refresh shows the persisted assistant message instead of a stale live panel.
+    if _plan_all_done(plan):
+        run.status = "done"
+        run.plan_json = json.dumps(plan)
+        db.commit()
+        return None
 
     # A bare "running" stream without checkpointed plan cannot be resumed after refresh.
     # Plan-mode / checkpointed runs resurface for confirm or resume.

@@ -40,6 +40,9 @@ file contents here
    from the app root (e.g. `/ai/hero.png`).
 7. NEVER use emoji as UI icons. Always import from `lucide-react`
    (e.g. `import { ArrowRight, Menu } from "lucide-react"`).
+   Only use icon names that exist in lucide-react 0.468.0 — do NOT invent names
+   (e.g. `MessageSquareCheck` does not exist; use `MessageSquare`, `Check`, or
+   `MessageSquarePlus` instead).
    Bare package imports must be either in the base CDN import map (react,
    react-dom, lucide-react, react-router-dom, @tanstack/react-query, zod, clsx,
    date-fns, plus catalog packages) OR declared by you in the project's
