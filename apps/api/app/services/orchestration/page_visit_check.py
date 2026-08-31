@@ -32,7 +32,7 @@ def page_route_findings(project_id: str) -> list[VerifyFinding]:
             VerifyFinding(
                 code="route.component_missing",
                 severity="critical",
-                path=app_content and "src/App.tsx" or "src/",
+                path="src/App.tsx" if app_content else "src/",
                 message=(
                     f'Route "{route}" renders <{component} /> but no matching module exists '
                     f"(expected src/pages/{component}.tsx or similar). Create the page component "
