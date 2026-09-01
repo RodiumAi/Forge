@@ -35,6 +35,9 @@ async def transform_project_to_dir(project_id: str, out_dir: Path, *, title: str
             "files": source,
             "entry": "src/main.tsx",
             "title": title,
+            # SEO source of truth: the published head inherits title/metas/
+            # favicon from the project's index.html (written by the SEO editor).
+            "indexHtml": files.get("index.html", ""),
             # Project-declared dependencies ride into the published import map.
             "extraImports": extra_import_map(project_id),
         },

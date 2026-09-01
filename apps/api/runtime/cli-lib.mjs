@@ -10,6 +10,39 @@ import { toPublishJsPath } from "./resolve.mjs";
 import { DEFAULT_CDN_IMPORTS } from "./importmap.mjs";
 
 /**
+ * SEO head carried from the project's index.html into the published page.
+ *
+ * The publish HTML used to be generated from scratch: every published site
+ * shipped "<title>Forge app</title>" and the default favicon, silently
+ * discarding everything the SEO editor had written.
+ *
+ * @param {string} html project index.html
+ * @returns {{ title: string|null, tags: string[] }}
+ */
+export function extractSeoHead(html) {
+  const head = (String(html || "").match(/<head[^>]*>([\s\S]*?)<\/head>/i) || [])[1] || "";
+  const titleMatch = head.match(/<title>([\s\S]*?)<\/title>/i);
+  const title = titleMatch ? titleMatch[1].trim() : null;
+  const tags = [];
+  let m;
+  const metaRe = /<meta\b[^>]*\/?>/gi;
+  while ((m = metaRe.exec(head))) {
+    const tag = m[0];
+    // charset/viewport are owned by the publish shell.
+    if (/charset\s*=/i.test(tag) || /name=["']viewport["']/i.test(tag)) continue;
+    tags.push(tag);
+  }
+  const linkRe = /<link\b[^>]*\/?>/gi;
+  while ((m = linkRe.exec(head))) {
+    const tag = m[0];
+    if (/rel=["'][^"']*(icon|apple-touch-icon|canonical|manifest)[^"']*["']/i.test(tag)) {
+      tags.push(tag);
+    }
+  }
+  return { title: title || null, tags };
+}
+
+/**
  * @param {Record<string, string>} files
  * @param {string} entry
  * @param {"preview"|"publish"} mode
