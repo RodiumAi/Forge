@@ -264,7 +264,10 @@ export function reduceStreamEvent(
   if (type === "done") {
     const summary = typeof event.summary === "string" ? event.summary : "";
     const content = summary.trim() || next.streaming.trim() || opts.emptySummaryLabel;
-    const finalPlan = Array.isArray(event.plan) ? normalizeTasks(event.plan, "done") : [];
+    const paused = Boolean(event.paused);
+    const finalPlan = Array.isArray(event.plan)
+      ? normalizeTasks(event.plan, paused ? "pending" : "done")
+      : [];
     const appliedList = Array.isArray(event.applied) ? (event.applied as unknown[]) : [];
     const applied = next.applied || appliedList.length > 0;
 
@@ -280,6 +283,21 @@ export function reduceStreamEvent(
         applied,
       },
     });
+
+    if (paused) {
+      // Step-by-step mode: the run paused after one task. Keep the plan and
+      // run id alive so the panel can offer "next step" / "run all".
+      return {
+        state: {
+          ...initialStreamState(),
+          busy: false,
+          activeRunId: next.activeRunId,
+          planTasks: finalPlan,
+          planNeedsConfirm: true,
+        },
+        effects,
+      };
+    }
 
     return {
       state: { ...initialStreamState(), busy: false, activeRunId: null },

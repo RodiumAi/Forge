@@ -33,6 +33,7 @@ function CallbackInner() {
       .then((data) => {
         if (cancelled) return;
         setToken(data.access_token);
+        void import("@/lib/session-cache").then(({ ensureSession }) => ensureSession({ force: true }));
         router.replace("/dashboard");
       })
       .catch((err) => {
