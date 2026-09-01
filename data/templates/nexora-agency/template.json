@@ -1,0 +1,19 @@
+{
+  "id": "nexora-agency",
+  "title": { "en": "Nexora Agency", "fr": "Nexora Agency" },
+  "description": {
+    "en": "Dark, premium digital agency landing: stats hero, client strip, services grid, why-us, 4-step process, case studies, testimonials, CTA.",
+    "fr": "Landing d'agence digitale sombre et premium : hero avec stats, bandeau clients, grille de services, why-us, process en 4 etapes, etudes de cas, temoignages, CTA."
+  },
+  "tags": ["agency", "portfolio", "dark", "saas"],
+  "preview": "preview.html",
+  "bootHint": {
+    "en": "Adapt nexora-agency: agency name, services, case studies, testimonials.",
+    "fr": "Adapte nexora-agency : nom agence, services, etudes de cas, temoignages."
+  },
+  "accent": "#6366f1",
+  "bg": "#0b1020",
+  "fg": "#f1f5f9",
+  "muted": "#8b93a7",
+  "tone": "premium, assured, results-driven"
+}

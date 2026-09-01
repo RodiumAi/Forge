@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { width: 480px; background: #faf9f6; color: #1c1917; font-family: -apple-system, "Segoe UI", Arial, sans-serif; overflow: hidden; }
+  .nav { display: flex; justify-content: space-between; align-items: center; padding: 8px 18px; border-bottom: 1px solid rgba(28,25,23,.16); }
+  .logo { font-family: Georgia, serif; font-size: 11px; }
+  .logo b { color: #b45309; font-weight: normal; }
+  .links { font-size: 7px; letter-spacing: .08em; text-transform: uppercase; color: #78716c; }
+  .links span { margin-left: 10px; }
+  .links .cta { color: #b45309; }
+  .hero { padding: 18px 18px 0; }
+  .kicker { font-size: 6px; letter-spacing: .22em; text-transform: uppercase; color: #78716c; margin-bottom: 8px; }
+  h1 { font-family: Georgia, serif; font-weight: 400; font-size: 26px; line-height: 1.05; letter-spacing: -0.01em; }
+  h1 em { color: #b45309; }
+  .lede { display: flex; justify-content: space-between; align-items: flex-end; margin: 10px 0 12px; }
+  .lede p { font-size: 8px; color: #78716c; max-width: 260px; line-height: 1.5; }
+  .lede a { font-size: 7px; letter-spacing: .12em; text-transform: uppercase; border-bottom: 1px solid #1c1917; padding-bottom: 2px; color: #1c1917; text-decoration: none; }
+  .hero img { width: 100%; height: 92px; object-fit: cover; display: block; }
+  .cap { font-size: 6px; color: #78716c; padding: 4px 18px 0; }
+  .work { padding: 12px 18px; }
+  .whead { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+  .num { font-family: Georgia, serif; font-size: 8px; color: #b45309; }
+  .whead h2 { font-family: Georgia, serif; font-weight: 400; font-size: 14px; }
+  .whead span { margin-left: auto; font-size: 6px; letter-spacing: .1em; text-transform: uppercase; color: #78716c; }
+  .grid { display: grid; grid-template-columns: 7fr 5fr; gap: 10px; }
+  .card img { width: 100%; height: 58px; object-fit: cover; display: block; }
+  .meta { display: flex; gap: 6px; align-items: baseline; border-top: 1px solid rgba(28,25,23,.16); margin-top: 5px; padding-top: 4px; }
+  .meta h3 { font-family: Georgia, serif; font-weight: 400; font-size: 9px; }
+  .meta p { margin-left: auto; font-size: 6px; color: #78716c; }
+</style>
+</head>
+<body>
+  <div class="nav">
+    <div class="logo">Lumen<b>.</b>Atelier</div>
+    <div class="links"><span>Work</span><span>Philosophy</span><span>Studio</span><span class="cta">Start a project</span></div>
+  </div>
+  <div class="hero">
+    <p class="kicker">Architecture &amp; Interiors — London / Kyoto</p>
+    <h1>Buildings that hold<br /><em>light</em> the way a room<br />holds a conversation.</h1>
+    <div class="lede">
+      <p>Lumen Atelier is a fourteen-person practice working on residences, galleries and civic pavilions across three continents.</p>
+      <a href="#">Selected work →</a>
+    </div>
+    <img src="https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&w=1200&q=70" alt="White concrete building" />
+  </div>
+  <p class="cap">Meridian House — west elevation, 7:40 am</p>
+  <div class="work">
+    <div class="whead"><span class="num">01</span><h2>Selected work</h2><span>Four projects, 2023 — 2025</span></div>
+    <div class="grid">
+      <div class="card">
+        <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=70" alt="Meridian House" />
+        <div class="meta"><span class="num">01</span><h3>Meridian House</h3><p>Marfa, Texas · 2025</p></div>
+      </div>
+      <div class="card">
+        <img src="https://images.unsplash.com/photo-1518005020951-eccb494ad742?auto=format&fit=crop&w=1200&q=70" alt="Kiln Pavilion" />
+        <div class="meta"><span class="num">02</span><h3>Kiln Pavilion</h3><p>Kyoto · 2024</p></div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

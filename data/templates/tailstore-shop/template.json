@@ -1,0 +1,19 @@
+{
+  "id": "tailstore-shop",
+  "title": { "en": "Tailstore Shop", "fr": "Boutique Tailstore" },
+  "description": {
+    "en": "A clean fashion e-commerce storefront with hero promo, product grids and a newsletter banner.",
+    "fr": "Une vitrine e-commerce mode épurée avec héro promo, grilles de produits et bandeau newsletter."
+  },
+  "tags": ["ecommerce", "shop", "store"],
+  "preview": "preview.html",
+  "bootHint": {
+    "en": "Fashion storefront booting: nav, hero, product cards, promo banner.",
+    "fr": "Vitrine mode en démarrage : nav, héro, cartes produits, bandeau promo."
+  },
+  "accent": "#f59e0b",
+  "bg": "#ffffff",
+  "fg": "#111827",
+  "muted": "#6b7280",
+  "tone": "clean, commercial, confident"
+}

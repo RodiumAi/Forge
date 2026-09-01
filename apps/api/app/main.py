@@ -1,14 +1,52 @@
+import logging
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.config import get_settings
 from app.db import init_db
-from app.routers import auth, chats, comments, connectors, design, files, preview, projects, publish, sites, templates
+from app.routers import (
+    auth,
+    chats,
+    comments,
+    design,
+    files,
+    history,
+    internal_admin,
+    plugins,
+    preview,
+    projects,
+    publish,
+    seo,
+    templates,
+)
 from app.routers import settings as settings_router
+from app.services.preview_babel import render_runner_shell, runtime_public_dir
+
+logger = logging.getLogger(__name__)
 
 config = get_settings()
 
-app = FastAPI(title="Forge Web API", version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    config.projects_path.mkdir(parents=True, exist_ok=True)
+    config.templates_path.mkdir(parents=True, exist_ok=True)
+    init_db()
+    yield
+    # Shutdown: never leak child processes / thread pools across restarts.
+    try:
+        from app.services.cpu_pool import shutdown_cpu_pool
+
+        shutdown_cpu_pool()
+    except Exception:  # pragma: no cover - best effort
+        logger.warning("cpu pool shutdown failed", exc_info=True)
+
+
+app = FastAPI(title="Forge Web API", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -21,25 +59,53 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(settings_router.router)
-app.include_router(connectors.router)
+app.include_router(plugins.router)
 app.include_router(templates.router)
 app.include_router(projects.router)
 app.include_router(design.router)
+app.include_router(seo.router)
 app.include_router(chats.router)
 app.include_router(files.router)
+app.include_router(history.router)
 app.include_router(comments.router)
 app.include_router(publish.router)
 app.include_router(preview.router)
-app.include_router(sites.router)
+app.include_router(internal_admin.router)
 
 
-@app.on_event("startup")
-def on_startup() -> None:
-    config.projects_path.mkdir(parents=True, exist_ok=True)
-    config.templates_path.mkdir(parents=True, exist_ok=True)
-    init_db()
+@app.get("/runner/", include_in_schema=False)
+@app.get("/runner", include_in_schema=False)
+def runner_shell(p: str | None = None) -> HTMLResponse:
+    """Preview shell: import map + parent origins + visual-edit bridge.
+
+    `?p=<project uuid>` extends the import map with the project's declared
+    package.json dependencies (esm.sh). Unauthenticated by design — project
+    ids are unguessable UUIDs and the only disclosure is dependency names.
+    """
+    extra: dict[str, str] = {}
+    if p:
+        try:
+            import uuid as _uuid
+
+            from app.services.project_packages import extra_import_map
+
+            extra = extra_import_map(str(_uuid.UUID(p)))
+        except Exception:
+            extra = {}
+    return HTMLResponse(render_runner_shell(extra_imports=extra), headers={"Cache-Control": "no-store"})
+
+
+# Declared after the route above so `/runner/` resolves to the generated shell
+# and the mount only serves sibling assets (runner.js, bridge.js).
+_runner_dir = runtime_public_dir()
+if _runner_dir.is_dir():
+    app.mount("/runner", StaticFiles(directory=str(_runner_dir)), name="runner")
 
 
 @app.get("/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "service": "forge-web-api"}
+    return {
+        "status": "ok",
+        "service": "forge-web-api",
+        "runtime": "babel_esm",
+    }

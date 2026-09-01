@@ -1,8 +1,8 @@
+import asyncio
 import logging
 import os
 import re
-import shutil
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import UUID
 
@@ -24,8 +24,9 @@ from app.schemas import (
     ProjectStatsOut,
     ProjectUpdate,
 )
-from app.services import preview as preview_service
+from app.services import preview_babel
 from app.services.filesystem import list_files, project_dir
+from app.services.project_delete import delete_project_full
 from app.services.project_naming import suggest_project_name
 from app.services.scaffold import scaffold_vite_react
 from app.services.templates import fork_template, get_template, preview_path
@@ -70,12 +71,7 @@ def _owned_project(db: Session, user: User, project_id: UUID, locale: str = "fr"
 
 @router.get("", response_model=list[ProjectOut])
 def list_projects(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> list[ProjectOut]:
-    rows = (
-        db.query(Project)
-        .filter(Project.user_id == user.id)
-        .order_by(Project.updated_at.desc())
-        .all()
-    )
+    rows = db.query(Project).filter(Project.user_id == user.id).order_by(Project.updated_at.desc()).all()
     return [_project_out(row) for row in rows]
 
 
@@ -84,6 +80,7 @@ def _unique_slug(db: Session, base: str) -> str:
 
 
 def _unique_slug_excluding(db: Session, base: str, exclude_id: UUID | None) -> str:
+    """Pick a globally unique project slug (required for {slug}.lvh.me routing)."""
     base_slug = _slugify(base)
     slug = base_slug
     i = 2
@@ -106,6 +103,11 @@ async def create_project(
 ) -> ProjectOut:
     locale = resolve_locale(request)
     template_id = (body.template_id or "").strip() or None
+    prompt = (body.prompt or "").strip()
+    # Templates apply ONLY when the user explicitly picks one. The old keyword
+    # router silently forked a kit from prompt words ("portfolio", "shop"…),
+    # hijacking the user's intent — a bespoke design request landed on a
+    # prebuilt template nobody asked for.
     if template_id and get_template(template_id) is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -113,34 +115,32 @@ async def create_project(
         )
 
     fallback = t("new_project", locale)  # type: ignore[arg-type]
-    if template_id:
+    if prompt:
+        display_name = await suggest_project_name(
+            prompt,
+            locale=locale,  # type: ignore[arg-type]
+            db=db,
+            user=user,
+            fallback=(body.name or "").strip() or fallback,
+        )
+    elif template_id:
         display_name = (body.name or "").strip() or fallback
     else:
-        prompt = (body.prompt or "").strip()
-        if prompt:
+        display_name = (body.name or "").strip()
+        if not display_name:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=t("project_name_required", locale),  # type: ignore[arg-type]
+            )
+        # Still shorten a pasted long name when no prompt field was sent.
+        if len(display_name) > 40:
             display_name = await suggest_project_name(
-                prompt,
+                display_name,
                 locale=locale,  # type: ignore[arg-type]
                 db=db,
                 user=user,
-                fallback=(body.name or "").strip() or fallback,
+                fallback=fallback,
             )
-        else:
-            display_name = (body.name or "").strip()
-            if not display_name:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=t("project_name_required", locale),  # type: ignore[arg-type]
-                )
-            # Still shorten a pasted long name when no prompt field was sent.
-            if len(display_name) > 40:
-                display_name = await suggest_project_name(
-                    display_name,
-                    locale=locale,  # type: ignore[arg-type]
-                    db=db,
-                    user=user,
-                    fallback=fallback,
-                )
 
     slug = _unique_slug(db, display_name)
 
@@ -156,10 +156,20 @@ async def create_project(
     db.refresh(project)
 
     try:
+        # to_thread: forking copies files and runs a git snapshot subprocess;
+        # inline it would stall the event loop inside this async endpoint.
         if template_id:
-            fork_template(template_id, str(project.id), project.name)
+            await asyncio.to_thread(fork_template, template_id, str(project.id), project.name)
+            # The kit ships a DESIGN.md; seed the design brief from the template
+            # description so the charter panel never opens on an empty form.
+            meta = get_template(template_id)
+            if meta is not None:
+                desc = meta.description_fr if str(locale).startswith("fr") else meta.description_en
+                if desc:
+                    project.design_brief = desc
+                    db.commit()
         else:
-            scaffold_vite_react(str(project.id), project.name)
+            await asyncio.to_thread(scaffold_vite_react, str(project.id), project.name)
     except Exception as exc:
         db.delete(project)
         db.commit()
@@ -206,11 +216,7 @@ def update_project(
         next_slug = _slugify(body.slug)
         if not next_slug:
             raise HTTPException(status_code=400, detail=t("invalid_slug", locale))  # type: ignore[arg-type]
-        clash = (
-            db.query(Project)
-            .filter(Project.slug == next_slug, Project.id != project.id)
-            .first()
-        )
+        clash = db.query(Project).filter(Project.slug == next_slug, Project.id != project.id).first()
         if clash is not None:
             raise HTTPException(status_code=409, detail=t("slug_taken", locale))  # type: ignore[arg-type]
         project.slug = next_slug
@@ -238,17 +244,12 @@ def project_stats(
     chat_ids = [row.id for row in db.query(Chat.id).filter(Chat.project_id == project.id).all()]
     messages_count = 0
     if chat_ids:
-        messages_count = (
-            db.query(func.count(Message.id)).filter(Message.chat_id.in_(chat_ids)).scalar() or 0
-        )
+        messages_count = db.query(func.count(Message.id)).filter(Message.chat_id.in_(chat_ids)).scalar() or 0
     agent_runs_count = (
         db.query(func.count(AgentRun.id)).filter(AgentRun.project_id == project.id).scalar() or 0
     )
     comments_count = (
-        db.query(func.count(PreviewComment.id))
-        .filter(PreviewComment.project_id == project.id)
-        .scalar()
-        or 0
+        db.query(func.count(PreviewComment.id)).filter(PreviewComment.project_id == project.id).scalar() or 0
     )
 
     try:
@@ -270,24 +271,18 @@ def project_stats(
     except OSError:
         storage_bytes = 0
 
-    usage_rows = (
-        db.query(SiteUsageDay)
-        .filter(SiteUsageDay.project_id == project.id)
-        .all()
-    )
+    usage_rows = db.query(SiteUsageDay).filter(SiteUsageDay.project_id == project.id).all()
     visitors_total = sum(int(getattr(row, "page_views", 0) or 0) for row in usage_rows)
-    cutoff = (datetime.now(timezone.utc) - timedelta(days=7)).strftime("%Y-%m-%d")
+    cutoff = (datetime.now(UTC) - timedelta(days=7)).strftime("%Y-%m-%d")
     visitors_7d = sum(
-        int(getattr(row, "page_views", 0) or 0)
-        for row in usage_rows
-        if (row.day or "") >= cutoff
+        int(getattr(row, "page_views", 0) or 0) for row in usage_rows if (row.day or "") >= cutoff
     )
     published = getattr(project, "published_at", None) is not None
 
     return ProjectStatsOut(
         slug=project.slug,
         status=project.status,
-        preview_running=bool(preview_service.get_preview(str(project.id))),
+        preview_running=preview_babel.is_babel_preview_ready(str(project.id)),
         published=published,
         published_at=getattr(project, "published_at", None),
         sites_url=settings.sites_url_for_slug(project.slug) if published else None,
@@ -313,34 +308,7 @@ def delete_project(
 ) -> Response:
     locale = resolve_locale(request)
     project = _owned_project(db, user, project_id, locale)
-    pid = str(project.id)
-    slug = project.slug
-
-    try:
-        preview_service.stop_preview(pid)
-    except Exception:
-        logger.exception("Failed to stop preview before delete project=%s", pid)
-
-    try:
-        root = project_dir(pid)
-        if root.exists():
-            shutil.rmtree(root, ignore_errors=True)
-    except Exception:
-        logger.exception("Failed to remove project files project=%s", pid)
-
-    try:
-        settings = get_settings()
-        from app.providers.objects import get_object_store
-
-        store = get_object_store()
-        bucket = store.bucket_site_assets or settings.bucket_site_assets
-        if bucket and slug:
-            store.delete_prefix(bucket, f"{slug}/")
-    except Exception:
-        logger.exception("Failed to cleanup published assets slug=%s", slug)
-
-    db.delete(project)
-    db.commit()
+    delete_project_full(db, project)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -370,6 +338,30 @@ h1{margin:0;font-size:2rem} .a{color:#f2620a}
 </style></head><body><h1><span class="a">F</span>orge</h1></body></html>""",
         headers=headers,
     )
+
+
+@router.post("/{project_id}/security-review")
+async def security_review_project(
+    project_id: UUID,
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Optional Forge-style security review of generated site code (no auto-apply)."""
+    locale = resolve_locale(request)
+    _owned_project(db, user, project_id, locale)
+    from app.services.orchestration.security_review import run_security_review
+    from app.services.rodium_generation import resolve_generation_auth
+
+    auth = await resolve_generation_auth(db, user)
+    settings = get_settings()
+    report = await run_security_review(
+        project_id=str(project_id),
+        auth=auth,
+        model=settings.default_model or "google/gemini-3.7-flash",
+        locale=locale,  # type: ignore[arg-type]
+    )
+    return {"report": report}
 
 
 @router.get("/{project_id}/chats", response_model=list[ChatOut])

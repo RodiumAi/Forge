@@ -1,0 +1,19 @@
+{
+  "id": "quantum-consult",
+  "title": { "en": "Quantum Consult", "fr": "Quantum Consult" },
+  "description": {
+    "en": "Authoritative premium consulting firm site: midnight-blue swiss grid, massive key figures, pure-CSS donut and bar charts, case studies, leadership and contact form.",
+    "fr": "Site de cabinet de conseil premium et autoritaire : grille suisse bleu nuit, chiffres clés massifs, diagrammes en pur CSS, études de cas, direction et formulaire de contact."
+  },
+  "tags": ["consulting", "corporate", "finance", "b2b"],
+  "preview": "preview.html",
+  "bootHint": {
+    "en": "Adapt quantum-consult: firm name, key figures, practice areas, case studies.",
+    "fr": "Adapte quantum-consult : nom du cabinet, chiffres clés, expertises, études de cas."
+  },
+  "accent": "#d97757",
+  "bg": "#0b1c33",
+  "fg": "#eef2f7",
+  "muted": "#8ba0ba",
+  "tone": "serious, dense, authoritative"
+}

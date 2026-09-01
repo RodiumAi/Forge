@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Aurora AI — preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 480px; height: 300px; overflow: hidden;
+    background: #050208; color: #f4f1fa;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    position: relative;
+  }
+  .aurora { position: absolute; border-radius: 50%; filter: blur(40px); opacity: .55; }
+  .a1 { width: 280px; height: 280px; top: -120px; left: -80px;
+    background: conic-gradient(from 120deg, #7c3aed, #22d3ee 40%, transparent 70%, #7c3aed); }
+  .a2 { width: 220px; height: 220px; top: 60px; right: -90px;
+    background: radial-gradient(circle, #ec4899 0%, rgba(124,58,237,.6) 45%, transparent 72%); }
+  .nav { position: relative; display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 16px; border-bottom: 1px solid rgba(255,255,255,.1); }
+  .brand { font-weight: 800; font-size: 11px; display: flex; align-items: center; gap: 5px; }
+  .orb { width: 9px; height: 9px; border-radius: 50%;
+    background: conic-gradient(#7c3aed, #22d3ee, #ec4899, #7c3aed); }
+  .links { font-size: 8px; color: #8b84a3; display: flex; gap: 10px; }
+  .btn { background: linear-gradient(135deg,#7c3aed,#a855f7); color: #fff; font-size: 8px;
+    font-weight: 600; padding: 4px 10px; border-radius: 7px; }
+  .hero { position: relative; display: flex; gap: 16px; padding: 22px 16px 0; align-items: center; }
+  .pill { display: inline-block; font-size: 6.5px; font-weight: 600; color: #c4b5fd;
+    background: rgba(124,58,237,.14); border: 1px solid rgba(124,58,237,.35);
+    padding: 2px 8px; border-radius: 99px; margin-bottom: 8px; }
+  h1 { font-size: 19px; line-height: 1.1; letter-spacing: -.02em; font-weight: 800; }
+  .grad { background: linear-gradient(100deg,#a78bfa,#22d3ee 55%,#ec4899);
+    -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .lede { font-size: 8px; color: #8b84a3; margin: 8px 0 10px; max-width: 200px; }
+  .cta { display: flex; gap: 6px; }
+  .btn2 { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.12);
+    color: #f4f1fa; font-size: 8px; font-weight: 600; padding: 4px 10px; border-radius: 7px; }
+  .mock { flex-shrink: 0; width: 190px; transform: perspective(600px) rotateX(6deg) rotateY(-10deg);
+    background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.12);
+    border-radius: 10px; overflow: hidden;
+    box-shadow: 0 20px 45px rgba(0,0,0,.65), 0 0 30px rgba(124,58,237,.35); }
+  .bar { display: flex; gap: 3px; padding: 5px 7px; border-bottom: 1px solid rgba(255,255,255,.1); }
+  .dot { width: 4px; height: 4px; border-radius: 50%; }
+  .mock img { width: 100%; height: 96px; object-fit: cover; opacity: .92; display: block; }
+  .cards { position: relative; display: flex; gap: 8px; padding: 18px 16px 0; }
+  .card { flex: 1; background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.1);
+    border-radius: 9px; padding: 8px; }
+  .card .ic { font-size: 11px; }
+  .card h3 { font-size: 8px; margin: 4px 0 2px; }
+  .card p { font-size: 6.5px; color: #8b84a3; line-height: 1.4; }
+</style>
+</head>
+<body>
+  <div class="aurora a1"></div>
+  <div class="aurora a2"></div>
+  <div class="nav">
+    <span class="brand"><span class="orb"></span>Aurora<span style="font-weight:300;color:#8b84a3">AI</span></span>
+    <span class="links"><span>Product</span><span>Features</span><span>Pricing</span><span>Docs</span></span>
+    <span class="btn">Get started</span>
+  </div>
+  <div class="hero">
+    <div>
+      <span class="pill">✦ Series B — $48M raised</span>
+      <h1>Intelligence that works <span class="grad">while you sleep.</span></h1>
+      <p class="lede">Aurora turns frontier models into reliable coworkers. Build, evaluate and deploy AI workflows at scale.</p>
+      <div class="cta"><span class="btn">Start building free</span><span class="btn2">Watch demo ▸</span></div>
+    </div>
+    <div class="mock">
+      <div class="bar">
+        <span class="dot" style="background:#ff5f57"></span>
+        <span class="dot" style="background:#febc2e"></span>
+        <span class="dot" style="background:#28c840"></span>
+      </div>
+      <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&q=70" alt="dashboard" />
+    </div>
+  </div>
+  <div class="cards">
+    <div class="card"><span class="ic">🧠</span><h3>Autonomous agents</h3><p>Agents that triage, draft and reconcile across 40+ tools.</p></div>
+    <div class="card"><span class="ic">⚡</span><h3>Sub-second inference</h3><p>Median latency 380ms, p99 under 1.2s, globally.</p></div>
+    <div class="card"><span class="ic">🔐</span><h3>Private by design</h3><p>SOC 2, zero retention, optional VPC deployment.</p></div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,19 @@
+{
+  "id": "gallery-photos",
+  "title": { "en": "Photo Gallery", "fr": "Galerie Photo" },
+  "description": {
+    "en": "A bright, minimal photography gallery with category filters and a masonry-style grid of visual tiles.",
+    "fr": "Une galerie de photographie lumineuse et minimale avec filtres par categorie et grille facon masonry."
+  },
+  "tags": ["gallery", "photography", "portfolio"],
+  "preview": "preview.html",
+  "bootHint": {
+    "en": "Booting the studio lights...",
+    "fr": "Allumage des lumieres du studio..."
+  },
+  "accent": "#c77b3f",
+  "bg": "#faf8f5",
+  "fg": "#22201d",
+  "muted": "#8a8378",
+  "tone": "airy, warm, editorial"
+}

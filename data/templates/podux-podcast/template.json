@@ -1,26 +1,19 @@
 {
   "id": "podux-podcast",
-  "title": {
-    "en": "Podux Podcast",
-    "fr": "Podux Podcast"
-  },
+  "title": { "en": "Podux Podcast", "fr": "Podcast Podux" },
   "description": {
-    "en": "Podcast platform landing with episodes and listen CTAs.",
-    "fr": "Landing podcast avec épisodes et CTA d’écoute."
+    "en": "A modern podcast landing page with show hero, numbered episode list, hosts section and footer.",
+    "fr": "Une page podcast moderne avec héro d'émission, liste d'épisodes numérotés, section animateurs et pied de page."
   },
-  "tags": [
-    "podcast",
-    "media",
-    "audio"
-  ],
+  "tags": ["podcast", "audio", "media"],
   "preview": "preview.html",
   "bootHint": {
-    "en": "Adapt Podux: show name, episode titles and subscribe CTA.",
-    "fr": "Adapte Podux : nom du show, titres d’épisodes et CTA."
+    "en": "Podcast studio warming up: hero, episodes, hosts.",
+    "fr": "Studio podcast en chauffe : héro, épisodes, animateurs."
   },
-  "accent": "#8b5cf6",
-  "bg": "#0b1020",
-  "fg": "#f8fafc",
-  "muted": "#94a3b8",
-  "tone": "Tech community, energetic."
+  "accent": "#7c5cff",
+  "bg": "#f7f6fc",
+  "fg": "#181330",
+  "muted": "#6f6a86",
+  "tone": "modern, friendly, tech-savvy"
 }

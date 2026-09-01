@@ -1,8 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { BrandLogo } from "@/components/BrandLogo";
 import { setToken } from "@/lib/api";
 import { LocaleSwitch, useI18n } from "@/lib/i18n/I18nProvider";
 
@@ -39,7 +39,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           }}
         >
           <Link href="/" className="brand">
-            <Image src="/forge-rodiumai.png" alt={t("brandAlt")} width={140} height={40} priority />
+            <BrandLogo alt={t("brandAlt")} width={140} height={40} priority />
           </Link>
           <nav style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
             <div className="header-locale">

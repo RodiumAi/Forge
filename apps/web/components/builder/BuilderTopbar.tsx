@@ -8,6 +8,7 @@ import {
   ExternalLink,
   FolderOpen,
   Globe,
+  History,
   Monitor,
   Pencil,
   RefreshCw,
@@ -50,6 +51,7 @@ type Props = {
   previewBusy: boolean;
   onRefreshPreview: () => void;
   onOpenDesign: () => void;
+  onOpenHistory: () => void;
   /** Ensure draft preview is running, then open it in a new tab. */
   onOpenDraftExternal?: () => Promise<void> | void;
 };
@@ -74,6 +76,7 @@ export function BuilderTopbar({
   previewBusy,
   onRefreshPreview,
   onOpenDesign,
+  onOpenHistory,
   onOpenDraftExternal,
 }: Props) {
   const { t } = useI18n();
@@ -81,9 +84,11 @@ export function BuilderTopbar({
   const [draftName, setDraftName] = useState(projectName);
   const [savingName, setSavingName] = useState(false);
   const [openMenu, setOpenMenu] = useState(false);
+  const [pageMenuOpen, setPageMenuOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const skipBlurSave = useRef(false);
   const openMenuRef = useRef<HTMLDivElement>(null);
+  const pageMenuRef = useRef<HTMLDivElement>(null);
 
   const previewExternalUrl = `${apiBase()}/preview/${projectId}/`;
   const published = Boolean(publishedAt);
@@ -117,6 +122,23 @@ export function BuilderTopbar({
       document.removeEventListener("keydown", onKey);
     };
   }, [openMenu]);
+
+  useEffect(() => {
+    if (!pageMenuOpen) return;
+    function onDoc(e: MouseEvent) {
+      if (pageMenuRef.current?.contains(e.target as Node)) return;
+      setPageMenuOpen(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setPageMenuOpen(false);
+    }
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [pageMenuOpen]);
 
   const modes: { id: BuilderMode; label: string; icon: typeof Globe }[] = [
     { id: "preview", label: t("builderModePreview"), icon: Globe },
@@ -309,7 +331,10 @@ export function BuilderTopbar({
                 aria-haspopup="menu"
                 aria-expanded={openMenu}
                 disabled={openingDraft || previewBusy}
-                onClick={() => setOpenMenu((v) => !v)}
+                onClick={() => {
+                  setPageMenuOpen(false);
+                  setOpenMenu((v) => !v);
+                }}
               >
                 <Icon icon={ExternalLink} className="ui-icon-sm" />
                 <Icon icon={ChevronDown} className="ui-icon-sm builder-open-chevron" />
@@ -357,28 +382,57 @@ export function BuilderTopbar({
               )}
             </div>
 
-            <label className="builder-page-bar">
-              <span className="sr-only">{t("builderPage")}</span>
-              <select
-                value={previewPath}
-                onChange={(e) => onPreviewPathChange(e.target.value)}
+            <div className="builder-page-picker" ref={pageMenuRef}>
+              <button
+                type="button"
+                className="builder-page-picker-trigger"
+                aria-haspopup="listbox"
+                aria-expanded={pageMenuOpen}
                 aria-label={t("builderPage")}
+                onClick={() => {
+                  setOpenMenu(false);
+                  setPageMenuOpen((open) => !open);
+                }}
               >
-                {pages.map((p) => (
-                  <option key={p} value={p}>
-                    {p === "/" ? t("builderHomePage") : p}
-                  </option>
-                ))}
-              </select>
-            </label>
+                <span className="builder-page-picker-label">{previewPath || "/"}</span>
+                <Icon
+                  icon={ChevronDown}
+                  className={`builder-page-picker-chevron ui-icon-sm${pageMenuOpen ? " open" : ""}`}
+                />
+              </button>
+              {pageMenuOpen ? (
+                <div className="builder-page-menu" role="listbox" aria-label={t("builderPage")}>
+                  {(pages.length ? pages : ["/"]).map((p) => {
+                    const active = p === previewPath;
+                    return (
+                      <button
+                        key={p}
+                        type="button"
+                        role="option"
+                        aria-selected={active}
+                        className={active ? "active" : undefined}
+                        onClick={() => {
+                          onPreviewPathChange(p);
+                          setPageMenuOpen(false);
+                        }}
+                      >
+                        {p}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
             <button
               type="button"
-              className="builder-toolbar-btn builder-toolbar-btn-icon"
-              title={t("builderRefresh")}
+              className="builder-toolbar-btn builder-toolbar-btn-restart"
+              title={t("restartPreview")}
+              aria-label={t("restartPreview")}
               onClick={onRefreshPreview}
               disabled={previewBusy}
             >
-              <Icon icon={RefreshCw} className="ui-icon-md" />
+              <Icon icon={RefreshCw} className={`ui-icon-md${previewBusy ? " agent-spin" : ""}`} />
+              <span className="builder-toolbar-restart-label">{t("restartPreview")}</span>
             </button>
           </>
         )}
@@ -392,6 +446,15 @@ export function BuilderTopbar({
           title={t("designTitle")}
         >
           {t("designOpen")}
+        </button>
+        <button
+          type="button"
+          className="builder-toolbar-btn"
+          onClick={onOpenHistory}
+          title={t("historyTitle")}
+          aria-label={t("historyTitle")}
+        >
+          <Icon icon={History} className="ui-icon-sm" />
         </button>
         <PublishPopover
           projectId={projectId}

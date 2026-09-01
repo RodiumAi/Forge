@@ -3,9 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Upload, X } from "lucide-react";
 import { api, apiBase, getToken } from "@/lib/api";
+import { assetContentUrl, projectPublicUrl } from "@/lib/asset-url";
 import { Icon } from "@/components/ui/icon";
 import { useI18n } from "@/lib/i18n/I18nProvider";
-import { collectPublicImages, type FileNode, type ImageSelection } from "./types";
+import { fetchProjectAssets, type ProjectAsset } from "@/lib/prompt-upload";
+import type { ImageSelection } from "./types";
 
 type Props = {
   projectId: string;
@@ -16,15 +18,14 @@ type Props = {
 
 export function ImageEditPanel({ projectId, selection, onClose, onReplaced }: Props) {
   const { t } = useI18n();
-  const [images, setImages] = useState<string[]>([]);
+  const [assets, setAssets] = useState<ProjectAsset[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   async function load() {
     try {
-      const tree = await api<FileNode[]>(`/projects/${projectId}/files`);
-      setImages(collectPublicImages(tree));
+      setAssets(await fetchProjectAssets(projectId));
     } catch (err) {
       setError(err instanceof Error ? err.message : t("errorGeneric"));
     }
@@ -34,7 +35,7 @@ export function ImageEditPanel({ projectId, selection, onClose, onReplaced }: Pr
     void load();
   }, [projectId]);
 
-  async function applyPath(publicPath: string) {
+  async function applyUrl(publicUrl: string, objectId?: string) {
     if (!selection?.src) {
       setError(t("imagePickHint"));
       return;
@@ -46,7 +47,12 @@ export function ImageEditPanel({ projectId, selection, onClose, onReplaced }: Pr
         method: "POST",
         body: JSON.stringify({
           old_src: selection.src,
-          new_public_path: publicPath,
+          new_public_path: publicUrl,
+          // With the id, the API copies the bytes into the project's public/
+          // and writes a relative /images/... src. The raw object-store URL
+          // points at a private bucket: 403 in the preview, broken at
+          // publish/export.
+          object_id: objectId ?? null,
         }),
       });
       onReplaced();
@@ -79,10 +85,10 @@ export function ImageEditPanel({ projectId, selection, onClose, onReplaced }: Pr
         const data = await res.json().catch(() => ({}));
         throw new Error(typeof data.detail === "string" ? data.detail : res.statusText);
       }
-      const data = (await res.json()) as { path: string };
+      const data = (await res.json()) as { public_url?: string; object_id?: string };
       await load();
-      if (selection?.src && data.path) {
-        await applyPath(data.path);
+      if (selection?.src && data.public_url) {
+        await applyUrl(data.public_url, data.object_id);
       } else {
         setBusy(false);
       }
@@ -91,11 +97,6 @@ export function ImageEditPanel({ projectId, selection, onClose, onReplaced }: Pr
       setBusy(false);
     }
   }
-
-  const thumb = (path: string) => {
-    const rel = path.replace(/^public\//i, "");
-    return `${apiBase()}/preview/${projectId}/${rel}`;
-  };
 
   return (
     <aside className="preview-side-panel" aria-label={t("imagePanelTitle")}>
@@ -110,8 +111,20 @@ export function ImageEditPanel({ projectId, selection, onClose, onReplaced }: Pr
           <p className="comments-anchor">
             {t("imageSelected")} <code>{selection.selector || "img"}</code>
           </p>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={selection.src} alt={selection.alt || ""} className="image-panel-preview" />
+          <img
+            // Root-path srcs live in the project's public/ — unreachable from
+            // the builder origin without the authenticated endpoint. Never use
+            // raw forge-uploads URLs: that bucket is private (AccessDenied).
+            src={
+              selection.src.startsWith("/")
+                ? (projectPublicUrl(projectId, selection.src) ?? selection.src)
+                : selection.src.includes("/forge-uploads/")
+                  ? ""
+                  : selection.src
+            }
+            alt={selection.alt || ""}
+            className="image-panel-preview"
+          />
         </div>
       ) : (
         <p className="comments-anchor muted">{t("imagePickHint")}</p>
@@ -121,7 +134,7 @@ export function ImageEditPanel({ projectId, selection, onClose, onReplaced }: Pr
         <input
           ref={fileRef}
           type="file"
-          accept="image/*"
+          accept="image/*,.ico,image/x-icon,image/vnd.microsoft.icon"
           hidden
           onChange={(e) => {
             const f = e.target.files?.[0];
@@ -141,24 +154,27 @@ export function ImageEditPanel({ projectId, selection, onClose, onReplaced }: Pr
       </div>
       <p className="image-panel-section-label">{t("imageFromFiles")}</p>
       <ul className="image-panel-grid">
-        {images.length === 0 ? (
+        {assets.length === 0 ? (
           <li className="comments-empty">{t("filesEmpty")}</li>
         ) : (
-          images.map((path) => (
-            <li key={path}>
-              <button
-                type="button"
-                className="image-panel-thumb"
-                disabled={busy || !selection}
-                title={path}
-                onClick={() => void applyPath(path)}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={thumb(path)} alt={path} />
-                <span>{path.replace(/^public\//i, "")}</span>
-              </button>
-            </li>
-          ))
+          assets.map((asset) => {
+            // Prefer the authenticated proxy — public_url hits a private bucket.
+            const thumbUrl = assetContentUrl(projectId, asset.id);
+            return (
+              <li key={asset.id}>
+                <button
+                  type="button"
+                  className="image-panel-thumb"
+                  disabled={busy || !selection || !thumbUrl}
+                  title={asset.name}
+                  onClick={() => void applyUrl(asset.public_url, asset.id)}
+                >
+                  {thumbUrl ? <img src={thumbUrl} alt={asset.name} /> : null}
+                  <span>{asset.name}</span>
+                </button>
+              </li>
+            );
+          })
         )}
       </ul>
     </aside>

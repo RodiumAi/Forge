@@ -1,10 +1,11 @@
 "use client";
 
 import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowUp, Plus } from "lucide-react";
+import { BrandLogo } from "@/components/BrandLogo";
+import { LandingReveal } from "@/components/landing/LandingReveal";
 import { PromptFileChips } from "@/components/PromptFileChips";
 import { SiteThumb } from "@/components/SiteThumb";
 import { GalleryTemplate } from "@/components/TemplateGallery";
@@ -13,9 +14,10 @@ import { getToken } from "@/lib/api";
 import {
   PENDING_PROMPT_KEY,
   PENDING_TEMPLATE_KEY,
-  createProjectFromPrompt,
+  createProjectWithAttachments,
   ensureCanGenerate,
   forkProjectFromTemplate,
+  stashPendingFiles,
 } from "@/lib/create-project";
 import {
   ensureTemplates,
@@ -29,9 +31,10 @@ import { ThemeSwitch } from "@/components/ThemeSwitch";
 import {
   PROMPT_FILE_ACCEPT,
   PromptAttachment,
-  buildPromptWithAttachments,
+  LocalPromptAttachment,
   mergePromptAttachments,
   revokePromptAttachment,
+  type PromptLabels,
 } from "@/lib/prompt-attachments";
 
 type PromptBoxProps = {
@@ -83,7 +86,7 @@ function LandingPromptBox({
         <p className="lp-prompt-error" role="alert">
           {error}{" "}
           {error === t("createNeedsKey") ? (
-            <Link href="/connectors/rodiumai">{t("openSettings")}</Link>
+            <Link href="/settings?tab=generation">{t("openSettings")}</Link>
           ) : null}
         </p>
       )}
@@ -134,6 +137,7 @@ export default function LandingPage() {
   const [templates, setTemplates] = useState<GalleryTemplate[]>([]);
   const [forkingId, setForkingId] = useState<string | null>(null);
   const [authed, setAuthed] = useState(false);
+  const [navScrolled, setNavScrolled] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const ctaTextareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -141,6 +145,13 @@ export default function LandingPage() {
 
   useEffect(() => {
     setAuthed(Boolean(getToken()));
+  }, []);
+
+  useEffect(() => {
+    const onScroll = () => setNavScrolled(window.scrollY > 16);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   useEffect(() => {
@@ -173,15 +184,15 @@ export default function LandingPage() {
     })();
   }, [locale]);
 
-  async function composePrompt(value: string) {
-    return buildPromptWithAttachments(value, files, {
+  function promptLabels(): PromptLabels {
+    return {
       importFiles: t("importFiles"),
       imageAttached: t("promptImageAttached"),
       mdSection: t("promptMdSection"),
       txtSection: t("promptTxtSection"),
       pdfSection: t("promptPdfSection"),
       pdfEmpty: t("promptPdfEmpty"),
-    });
+    };
   }
 
   async function goWithPrompt(value: string) {
@@ -189,11 +200,15 @@ export default function LandingPage() {
     setSubmitting(true);
     setError(null);
     try {
-      const payload = await composePrompt(value);
-      if (!payload) return;
+      const trimmed = value.trim();
+      if (!trimmed && !files.length) return;
 
       if (!getToken()) {
-        sessionStorage.setItem(PENDING_PROMPT_KEY, payload);
+        sessionStorage.setItem(PENDING_PROMPT_KEY, trimmed);
+        const localFiles = files
+          .filter((item): item is LocalPromptAttachment => item.source === "local")
+          .map((item) => item.file);
+        if (localFiles.length) await stashPendingFiles(localFiles);
         router.push("/login");
         return;
       }
@@ -204,7 +219,13 @@ export default function LandingPage() {
         return;
       }
 
-      const project = await createProjectFromPrompt(payload, t("newProject"));
+      const project = await createProjectWithAttachments(
+        trimmed,
+        files,
+        t("newProject"),
+        promptLabels(),
+        locale,
+      );
       invalidateProjectsCache();
       prependProject(locale, project);
       files.forEach(revokePromptAttachment);
@@ -312,9 +333,9 @@ export default function LandingPage() {
 
   return (
     <div className="landing">
-      <header className="lp-nav">
+      <header className={`lp-nav${navScrolled ? " is-scrolled" : ""}`}>
         <Link href="/" className="lp-nav-brand" aria-label={t("brandAlt")}>
-          <Image src="/forge-rodiumai.png" alt="" width={132} height={38} priority />
+          <BrandLogo alt="" width={132} height={38} priority />
         </Link>
         <nav className="lp-nav-links" aria-label={t("homeNav")}>
           <a href="#templates">{t("landingNavTemplates")}</a>
@@ -333,8 +354,7 @@ export default function LandingPage() {
         <div className="lp-hero-wash" aria-hidden />
         <div className="lp-hero-inner">
           <h1 className="lp-hero-title">
-            {t("landingTitleBefore")}{" "}
-            <span>{t("landingTitleAccent")}</span>
+            <span className="lp-hero-claim">{t("landingTitleClaim")}</span>
           </h1>
           <p className="lp-hero-sub">{t("landingSub")}</p>
           <LandingPromptBox
@@ -345,6 +365,7 @@ export default function LandingPage() {
         </div>
       </section>
 
+      <LandingReveal>
       <section className="lp-proof" aria-label={t("landingProofLabel")}>
         <p className="lp-proof-label">{t("landingProofLabel")}</p>
         <ul className="lp-proof-row">
@@ -354,21 +375,38 @@ export default function LandingPage() {
           <li>{t("landingProof4")}</li>
         </ul>
       </section>
+      </LandingReveal>
 
+      <LandingReveal>
       <section className="lp-how" id="how">
         <h2 className="lp-section-title">{t("landingHowTitle")}</h2>
         <div className="lp-how-grid">
-          <div className="lp-how-visual" aria-hidden>
-            <div className="lp-how-visual-frame">
-              <span className="lp-how-visual-dot" />
-              <span className="lp-how-visual-dot" />
-              <span className="lp-how-visual-dot" />
-              <div className="lp-how-visual-body">
-                <div className="lp-how-visual-chat" />
-                <div className="lp-how-visual-preview" />
+          <div className="lp-how-visual">
+            <div className="lp-how-video-shell">
+              <div className="lp-how-video-glow" aria-hidden />
+              <div className="lp-how-video-frame">
+                <div className="lp-how-video-chrome" aria-hidden>
+                  <span className="lp-how-visual-dot" />
+                  <span className="lp-how-visual-dot" />
+                  <span className="lp-how-visual-dot" />
+                  <span className="lp-how-video-chrome-label">Forge preview</span>
+                </div>
+                <div className="lp-how-video-stage">
+                  <video
+                    className="lp-how-video"
+                    src="/video.mp4"
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    preload="metadata"
+                    controls={false}
+                    disablePictureInPicture
+                    aria-label={t("landingHowVisualAlt")}
+                  />
+                </div>
               </div>
             </div>
-            <span className="sr-only">{t("landingHowVisualAlt")}</span>
           </div>
           <ol className="lp-how-steps">
             <li>
@@ -386,7 +424,9 @@ export default function LandingPage() {
           </ol>
         </div>
       </section>
+      </LandingReveal>
 
+      <LandingReveal>
       <section className="lp-templates" id="templates">
         <div className="lp-templates-head">
           <h2 className="lp-section-title">{t("landingTemplatesTitle")}</h2>
@@ -413,6 +453,8 @@ export default function LandingPage() {
               >
                 <SiteThumb
                   src={tpl.preview_url || `/templates/${tpl.id}/preview`}
+                  viewportWidth={480}
+                  viewportHeight={300}
                   title={tpl.title}
                   className="lp-tpl-thumb"
                 />
@@ -429,7 +471,9 @@ export default function LandingPage() {
           <p className="lp-empty">{t("noTemplates")}</p>
         )}
       </section>
+      </LandingReveal>
 
+      <LandingReveal>
       <section className="lp-why">
         <h2 className="lp-section-title">{t("landingWhyTitle")}</h2>
         <div className="lp-why-grid">
@@ -447,7 +491,9 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+      </LandingReveal>
 
+      <LandingReveal>
       <section className="lp-cta">
         <div className="lp-cta-wash" aria-hidden />
         <div className="lp-cta-inner">
@@ -461,12 +507,13 @@ export default function LandingPage() {
           />
         </div>
       </section>
+      </LandingReveal>
 
       <footer className="lp-footer">
         <div className="lp-footer-wash" aria-hidden />
         <div className="lp-footer-panel">
           <div className="lp-footer-brand">
-            <Image src="/forge-rodiumai.png" alt={t("brandAlt")} width={120} height={34} />
+            <BrandLogo alt={t("brandAlt")} width={120} height={34} />
             <p>{t("landingFooterTagline")}</p>
           </div>
           <div className="lp-footer-cols">
@@ -478,7 +525,7 @@ export default function LandingPage() {
             </div>
             <div>
               <h3>{t("landingFooterResources")}</h3>
-              <Link href="/connectors">{t("connectors")}</Link>
+              <Link href="/settings?tab=generation">{t("settingsTabRodium")}</Link>
               <Link href="/dashboard">{t("projects")}</Link>
             </div>
             <div>

@@ -3,6 +3,7 @@
 import { FileText } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import { FileTypeIcon } from "@/components/builder/file-icons";
+import { assetContentUrl } from "@/lib/asset-url";
 import {
   parseUserMessageContent,
   type MessageAttachment,
@@ -13,33 +14,62 @@ type Props = {
   attachments?: MessageAttachment[] | null;
   /** Live preview origin — used to resolve public/ image thumbs. */
   previewBase?: string | null;
+  projectId?: string | null;
 };
 
 function resolveThumbSrc(
   file: MessageAttachment,
   previewBase?: string | null,
+  projectId?: string | null,
 ): string | null {
-  if (file.previewUrl) return file.previewUrl;
-  if (!file.publicPath) return null;
-  if (/^https?:\/\//i.test(file.publicPath) || file.publicPath.startsWith("blob:")) {
-    return file.publicPath;
+  if (file.objectId && projectId) {
+    const durable = assetContentUrl(projectId, file.objectId);
+    if (durable) return durable;
   }
-  if (previewBase) {
-    const base = previewBase.replace(/\/$/, "");
-    const path = file.publicPath.startsWith("/")
-      ? file.publicPath
-      : `/${file.publicPath}`;
-    return `${base}${path}`;
+  // Prefer durable HTTP URLs over ephemeral blob: after refresh blobs die.
+  const url = file.publicUrl || file.publicPath;
+  if (url && /^https?:\/\//i.test(url) && !url.includes("localhost:9000/forge-uploads")) {
+    return url;
+  }
+  if (file.previewUrl && !file.previewUrl.startsWith("blob:")) {
+    return file.previewUrl;
+  }
+  if (file.previewUrl?.startsWith("blob:")) {
+    return file.previewUrl;
+  }
+  if (url) {
+    if (/^https?:\/\//i.test(url) || url.startsWith("blob:")) {
+      // Private MinIO URL — only usable if somehow public; still try as last resort.
+      return url;
+    }
+    if (previewBase) {
+      const base = previewBase.replace(/\/$/, "");
+      const path = url.startsWith("/") ? url : `/${url}`;
+      return `${base}${path}`;
+    }
   }
   return null;
 }
 
-export function UserMessageBody({ content, attachments, previewBase }: Props) {
+export function UserMessageBody({ content, attachments, previewBase, projectId }: Props) {
   const parsed = parseUserMessageContent(content);
+  // Prefer parsed (durable object ids from content) over stale blob attachments.
   const files =
-    attachments && attachments.length
-      ? attachments
-      : parsed.attachments;
+    parsed.attachments.length > 0
+      ? parsed.attachments.map((parsedAtt) => {
+          const live = attachments?.find((a) => a.name === parsedAtt.name);
+          return {
+            ...parsedAtt,
+            previewUrl: live?.previewUrl && !live.previewUrl.startsWith("blob:")
+              ? live.previewUrl
+              : parsedAtt.previewUrl,
+            objectId: parsedAtt.objectId || live?.objectId || null,
+            publicUrl: parsedAtt.publicUrl || live?.publicUrl || null,
+          };
+        })
+      : attachments && attachments.length
+        ? attachments
+        : [];
 
   return (
     <div className="builder-msg-body builder-msg-user-body">
@@ -48,11 +78,11 @@ export function UserMessageBody({ content, attachments, previewBase }: Props) {
         <ul className="builder-msg-attachments">
           {files.map((file) => {
             const src =
-              file.kind === "image" ? resolveThumbSrc(file, previewBase) : null;
+              file.kind === "image" ? resolveThumbSrc(file, previewBase, projectId) : null;
             return (
-              <li key={`${file.kind}-${file.name}`} className="builder-msg-attachment">
+              <li key={`${file.kind}-${file.name}-${file.objectId || ""}`} className="builder-msg-attachment">
                 {src ? (
-                  // eslint-disable-next-line @next/next/no-img-element
+                   
                   <img src={src} alt={file.name} className="builder-msg-attach-thumb" />
                 ) : file.kind === "image" ? (
                   <span className="builder-msg-attach-fallback">

@@ -1,6 +1,14 @@
 "use client";
 
-import { BoxSelect, Image as ImageIcon, MessageSquare, Type } from "lucide-react";
+import { useState } from "react";
+import {
+  BoxSelect,
+  ChevronsRight,
+  Image as ImageIcon,
+  MessageSquare,
+  Type,
+  Wand2,
+} from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import type { PreviewTool } from "./types";
@@ -19,6 +27,24 @@ const TOOLS: { id: PreviewTool; icon: typeof BoxSelect; labelKey: string }[] = [
 
 export function PreviewToolbar({ tool, onToolChange }: Props) {
   const { t } = useI18n();
+  // Visible by default; collapsing parks it as a bottom-right pill so it stops
+  // covering the page being previewed.
+  const [collapsed, setCollapsed] = useState(false);
+
+  if (collapsed) {
+    return (
+      <button
+        type="button"
+        className="preview-toolbar-restore"
+        title={t("previewToolbarShow")}
+        aria-label={t("previewToolbarShow")}
+        aria-expanded={false}
+        onClick={() => setCollapsed(false)}
+      >
+        <Icon icon={Wand2} className="ui-icon-md" />
+      </button>
+    );
+  }
 
   return (
     <div className="preview-toolbar" role="toolbar" aria-label={t("previewToolbar")}>
@@ -38,6 +64,21 @@ export function PreviewToolbar({ tool, onToolChange }: Props) {
           </button>
         );
       })}
+      <span className="preview-toolbar-sep" aria-hidden />
+      <button
+        type="button"
+        className="preview-toolbar-btn preview-toolbar-collapse"
+        title={t("previewToolbarHide")}
+        aria-label={t("previewToolbarHide")}
+        aria-expanded
+        onClick={() => {
+          // Leave no active tool behind an invisible toolbar.
+          onToolChange(null);
+          setCollapsed(true);
+        }}
+      >
+        <Icon icon={ChevronsRight} className="ui-icon-md" />
+      </button>
     </div>
   );
 }

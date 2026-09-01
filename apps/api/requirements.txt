@@ -1,4 +1,4 @@
-fastapi>=0.115.0,<0.116
+﻿fastapi>=0.115.0,<0.116
 uvicorn[standard]>=0.34.0,<0.35
 sqlalchemy>=2.0.40,<2.1
 psycopg[binary]>=3.2.10,<4
@@ -12,5 +12,9 @@ cryptography>=44.0.0,<46
 httpx>=0.28.0,<0.29
 python-multipart>=0.0.20,<0.1
 boto3>=1.35.0,<2
-aiosmtplib>=3.0.0,<4
 redis>=5.0.0,<6
+pillow>=11.0.0,<12
+beautifulsoup4>=4.12.0,<5
+tree-sitter>=0.23.0,<0.25
+tree-sitter-typescript>=0.23.0,<0.24
+tree-sitter-javascript>=0.23.0,<0.24

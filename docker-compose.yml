@@ -10,12 +10,12 @@ services:
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-forge}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-forge}
-      POSTGRES_DB: ${POSTGRES_DB:-forge_web}
+      POSTGRES_DB: ${POSTGRES_DB:-rodium_forge}
       POSTGRES_INITDB_ARGS: "--locale=C --encoding=UTF8"
     volumes:
       - forge_web_pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-forge} -d ${POSTGRES_DB:-forge_web}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-forge} -d ${POSTGRES_DB:-rodium_forge}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -63,21 +63,10 @@ services:
       timeout: 3s
       retries: 12
 
-  mailpit:
-    image: axllent/mailpit:v1.22
-    container_name: forge-web-mailpit
-    environment:
-      MP_SMTP_AUTH_ACCEPT_ANY: "1"
-      MP_SMTP_AUTH_ALLOW_INSECURE: "1"
-      MP_MAX_MESSAGES: "5000"
-    ports:
-      - "${FORGE_WEB_MAILPIT_SMTP_PORT:-11025}:1025"
-      - "${FORGE_WEB_MAILPIT_UI_PORT:-18025}:8025"
-
   api:
     build:
-      context: ./apps/api
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: apps/api/Dockerfile
     container_name: forge-web-api
     restart: unless-stopped
     ports:
@@ -87,7 +76,7 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-forge}:${POSTGRES_PASSWORD:-forge}@postgres:5432/${POSTGRES_DB:-forge_web}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-forge}:${POSTGRES_PASSWORD:-forge}@postgres:5432/${POSTGRES_DB:-rodium_forge}
       PROJECTS_ROOT: /data/projects
       CORS_ORIGINS: http://localhost:3100,http://127.0.0.1:3100,http://localhost:8080
       OBJECT_STORE_ENDPOINT: http://minio:9000
@@ -95,11 +84,14 @@ services:
       OBJECT_STORE_ACCESS_KEY: ${MINIO_ROOT_USER:-rodiumdev}
       OBJECT_STORE_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-rodiumdev123}
       OBJECT_STORE_ADDRESSING: path
-      SMTP_HOST: mailpit
-      SMTP_PORT: "1025"
       REDIS_URL: redis://valkey:6379/0
       API_BASE_URL: http://localhost:8100
       TEMPLATES_ROOT: /data/templates
+      PREVIEW_MODE: ${PREVIEW_MODE:-babel_runner}
+      PUBLISH_MODE: ${PUBLISH_MODE:-esm}
+      RUNNER_PARENT_ORIGINS: http://localhost:3100,http://127.0.0.1:3100
+      SSE_HEARTBEAT_SECONDS: "15"
+      ALB_IDLE_TIMEOUT_SECONDS: "600"
     volumes:
       - ./data/projects:/data/projects
       - ./data/templates:/data/templates:ro
@@ -111,8 +103,6 @@ services:
         condition: service_healthy
       minio-init:
         condition: service_completed_successfully
-      mailpit:
-        condition: service_started
 
   web:
     build:
@@ -126,6 +116,8 @@ services:
       - "${FORGE_WEB_UI_PORT:-3100}:3000"
     environment:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8100}
+      DOCKER_BUILD: "1"
+      FORGE_FONT_MODE: fallback
     depends_on:
       - api
 

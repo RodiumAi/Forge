@@ -1,0 +1,19 @@
+{
+  "id": "synthwave-music",
+  "title": { "en": "Neon Nights", "fr": "Neon Nights" },
+  "description": {
+    "en": "Retro synthwave artist site: violet-pink gradient sky, striped CSS sun, perspective floor grid, 3D vinyl album cards, tracklist and tour dates in full neon.",
+    "fr": "Site d'artiste synthwave rétro : ciel dégradé violet-rose, soleil rayé en CSS, grille perspective au sol, cartes d'albums avec vinyle 3D, tracklist et dates de tournée en néon."
+  },
+  "tags": ["music", "artist", "synthwave", "retro"],
+  "preview": "preview.html",
+  "bootHint": {
+    "en": "Adapt synthwave-music: artist name, albums, tracklist, tour dates.",
+    "fr": "Adapte synthwave-music : nom d'artiste, albums, tracklist, dates de tournée."
+  },
+  "accent": "#ff2975",
+  "bg": "#16003b",
+  "fg": "#fdf3ff",
+  "muted": "#a78bca",
+  "tone": "nostalgic, electric, cinematic, cool"
+}

@@ -5,10 +5,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from urllib.parse import unquote, urlparse
 
-from app.services.filesystem import list_files, write_file
+from app.config import get_settings
+from app.services.filesystem import write_file
+from app.services.source_edit import SourceVariant, collect_matches, select_unique
 
 _SOURCE_EXTS = (".tsx", ".ts", ".jsx", ".js", ".css", ".html", ".svg")
-_SKIP_PARTS = {"node_modules", "dist", ".vite", ".git"}
 
 
 @dataclass
@@ -17,44 +18,85 @@ class VisualImageResult:
     occurrences: int
 
 
-def _normalize_src(src: str) -> list[str]:
+def _allowed_absolute_url(url: str) -> bool:
+    """Only accept absolute URLs we serve ourselves.
+
+    `new_public_path` comes from the client. Without this check any caller could
+    have an arbitrary third-party URL written verbatim into the project source.
+    """
+    settings = get_settings()
+    allowed_bases = [
+        settings.object_store_public_endpoint or "",
+        settings.object_store_endpoint or "",
+        settings.api_base_url or "",
+    ]
+    try:
+        host = urlparse(url).netloc
+    except ValueError:
+        return False
+    if not host:
+        return False
+    for base in allowed_bases:
+        if not base:
+            continue
+        try:
+            if urlparse(base).netloc == host:
+                return True
+        except ValueError:
+            continue
+    return False
+
+
+def _normalize_src(src: str) -> list[SourceVariant]:
+    """Literal forms under which `src` may appear in source.
+
+    Deliberately does NOT include the bare filename: using `logo.png` as a
+    needle matched comments, variable names and unrelated URLs, and combined
+    with a single-occurrence replace it could corrupt an arbitrary file.
+    """
     raw = (src or "").strip()
     if not raw:
         return []
-    variants: list[str] = [raw]
+
+    forms: list[str] = [raw]
     parsed = urlparse(raw)
     path = unquote(parsed.path or raw)
     if path and path != raw:
-        variants.append(path)
-    # Strip preview proxy prefix /preview/{uuid}/
-    if "/preview/" in path:
-        parts = path.split("/")
-        try:
-            idx = parts.index("preview")
-            if idx + 2 < len(parts):
-                rest = "/" + "/".join(parts[idx + 2 :])
-                variants.append(rest)
-                if rest.startswith("/"):
-                    variants.append(rest.lstrip("/"))
-                    variants.append("public/" + rest.lstrip("/"))
-        except ValueError:
-            pass
+        forms.append(path)
     if path.startswith("/"):
-        variants.append(path.lstrip("/"))
-        variants.append("public/" + path.lstrip("/"))
-        base = path.rsplit("/", 1)[-1]
-        if base:
-            variants.append(base)
-            variants.append(f"/{base}")
-            variants.append(f"public/{base}")
-    # Dedupe
+        forms.append(path.lstrip("/"))
+        forms.append("public/" + path.lstrip("/"))
+
     seen: set[str] = set()
-    out: list[str] = []
-    for v in variants:
-        if v and v not in seen:
-            seen.add(v)
-            out.append(v)
+    out: list[SourceVariant] = []
+    for form in forms:
+        if form and form not in seen:
+            seen.add(form)
+            out.append(SourceVariant(form, "raw"))
     return out
+
+
+def _resolve_target(new_public_path: str) -> tuple[str, str]:
+    """Return (source_path, web_path) for the replacement image."""
+    value = (new_public_path or "").strip().replace("\\", "/")
+    if not value:
+        raise ValueError("Missing new image path")
+
+    if value.startswith(("http://", "https://")):
+        # Private uploads bucket URLs must never be written into project source:
+        # browsers get AccessDenied, and publish/export would hardcode MinIO.
+        from app.services.asset_storage import is_private_upload_url
+
+        if is_private_upload_url(value):
+            raise ValueError("Private upload URL cannot be used as image src — pass object_id to materialize")
+        if not _allowed_absolute_url(value):
+            raise ValueError("Image URL is not served by this instance")
+        return value, value
+    if value.startswith("public/"):
+        return value, "/" + value[len("public/") :]
+    if value.startswith("/"):
+        return "public/" + value.lstrip("/"), value
+    return "public/" + value, "/" + value
 
 
 def apply_visual_image_replace(
@@ -62,65 +104,35 @@ def apply_visual_image_replace(
     old_src: str,
     new_public_path: str,
 ) -> VisualImageResult:
-    new_path = (new_public_path or "").strip().replace("\\", "/")
-    if not new_path:
-        raise ValueError("Missing new image path")
-    if new_path.startswith("public/"):
-        web_path = "/" + new_path[len("public/") :]
-    elif new_path.startswith("/"):
-        web_path = new_path
-        new_path = "public/" + new_path.lstrip("/")
-    else:
-        web_path = "/" + new_path.lstrip("/")
-        if not new_path.startswith("public/"):
-            # keep as given for source match; web uses leading slash
-            pass
+    source_path, web_path = _resolve_target(new_public_path)
 
     needles = _normalize_src(old_src)
     if not needles:
         raise ValueError("Missing old image src")
 
-    files = list_files(project_id)
-    matches: list[tuple[str, str, str, int]] = []
-
-    for path, content in files.items():
-        parts = path.split("/")
-        if any(p in _SKIP_PARTS for p in parts):
-            continue
-        if not path.endswith(_SOURCE_EXTS):
-            continue
-        for lit in needles:
-            count = content.count(lit)
-            if count > 0:
-                matches.append((path, content, lit, count))
-                break
-
+    matches = collect_matches(project_id, needles, _SOURCE_EXTS)
     if not matches:
         raise FileNotFoundError("image_src_not_found")
 
-    unique = [m for m in matches if m[3] == 1]
-    if len(unique) == 1:
-        path, content, lit, _ = unique[0]
-    elif len(unique) > 1:
-        src_unique = [m for m in unique if m[0].startswith("src/")]
-        if len(src_unique) == 1:
-            path, content, lit, _ = src_unique[0]
-        else:
-            raise LookupError("image_src_ambiguous")
-    else:
-        matches.sort(key=lambda m: (m[3], 0 if m[0].startswith("src/") else 1, m[0]))
-        best = matches[0]
-        peers = [m for m in matches if m[3] == best[3]]
-        if len(peers) > 1:
-            raise LookupError("image_src_ambiguous")
-        path, content, lit, _ = best
+    match = select_unique(matches, "This image")
 
-    # Prefer web path (/file.png) when replacing absolute-looking literals.
-    replacement = web_path if lit.startswith("/") or lit.startswith("http") else (
-        new_path if lit.startswith("public/") else web_path.lstrip("/")
-    )
-    updated = content.replace(lit, replacement, 1)
-    if updated == content:
+    literal = match.variant.literal
+    if source_path.startswith(("http://", "https://")):
+        replacement = source_path
+    elif literal.startswith(("/", "http")):
+        replacement = web_path
+    elif literal.startswith("public/"):
+        replacement = source_path
+    else:
+        replacement = web_path.lstrip("/")
+
+    updated = match.content.replace(literal, replacement, 1)
+    if updated == match.content:
         raise FileNotFoundError("image_src_not_found")
-    write_file(project_id, path, updated)
-    return VisualImageResult(path=path, occurrences=1)
+
+    write_file(project_id, match.path, updated)
+    return VisualImageResult(path=match.path, occurrences=1)
+
+
+# Kept for callers that still import the module-level helper.
+__all__ = ["VisualImageResult", "apply_visual_image_replace"]

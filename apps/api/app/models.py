@@ -37,30 +37,12 @@ class UserSettings(Base):
     rodium_wallet_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     rodium_api_keys_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     selected_rodium_api_key_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    default_model: Mapped[str] = mapped_column(
-        String(128), nullable=False, default="google/gemini-3.7-flash"
-    )
+    default_model: Mapped[str] = mapped_column(String(128), nullable=False, default="google/gemini-3.7-flash")
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
     user: Mapped[User] = relationship(back_populates="settings")
-
-
-class UserConnector(Base):
-    __tablename__ = "user_connectors"
-
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
-    )
-    connector_id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    credentials_encrypted: Mapped[str] = mapped_column(Text, nullable=False)
-    credentials_hint: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
-    )
-
-    user: Mapped[User] = relationship()
 
 
 class Project(Base):
@@ -83,7 +65,7 @@ class Project(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
-    __table_args__ = (UniqueConstraint("user_id", "slug", name="uq_projects_user_slug"),)
+    __table_args__ = (UniqueConstraint("slug", name="uq_projects_slug"),)
 
     user: Mapped[User] = relationship(back_populates="projects")
     chats: Mapped[list["Chat"]] = relationship(back_populates="project", cascade="all, delete-orphan")
@@ -117,6 +99,7 @@ class Message(Base):
     thinking_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     steps_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     file_ops_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    plan_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     task_class: Mapped[str | None] = mapped_column(String(64), nullable=True)
     model_slug: Mapped[str | None] = mapped_column(String(128), nullable=True)
     effort_label: Mapped[str | None] = mapped_column(String(32), nullable=True)

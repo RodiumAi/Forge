@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { HomeLayout } from "@/components/HomeLayout";
+import { RodiumGenerationPanel } from "@/components/RodiumGenerationPanel";
 import {
   SettingsBlock,
   SettingsPanel,
@@ -23,10 +24,10 @@ type Profile = {
   created_at: string;
 };
 
-const SECTIONS: SettingsSection[] = ["account", "appearance", "security"];
+const SECTIONS: SettingsSection[] = ["account", "appearance", "security", "generation"];
 
 function parseSection(raw: string | null): SettingsSection {
-  if (raw === "rodium") return "account";
+  if (raw === "rodium" || raw === "generation") return "generation";
   if (raw && SECTIONS.includes(raw as SettingsSection)) return raw as SettingsSection;
   return "account";
 }
@@ -110,12 +111,12 @@ export default function SettingsPageContent() {
           <SettingsPanel title={t("settingsAccountTitle")} subtitle={t("settingsAccountSub")}>
             <SettingsBlock title={t("settingsProfileSection")} subtitle={t("settingsProfileHelp")}>
               {profile?.avatar_url ? (
-                <SettingsRow title={t("settingsProfilePhoto")} hint={t("connectorManagedHelp")}>
+                <SettingsRow title={t("settingsProfilePhoto")} hint={t("rodiumManagedHelp")}>
                   <img className="settings-avatar" src={profile.avatar_url} alt="" />
                 </SettingsRow>
               ) : null}
               {profile?.name ? (
-                <SettingsRow title={t("connectorAccountTitle")} hint={t("connectorManagedHelp")}>
+                <SettingsRow title={t("rodiumAccountTitle")} hint={t("rodiumManagedHelp")}>
                   <span className="settings-value">{profile.name}</span>
                 </SettingsRow>
               ) : null}
@@ -123,8 +124,8 @@ export default function SettingsPageContent() {
                 <span className="settings-value">{profile?.email || "—"}</span>
               </SettingsRow>
               {profile?.rodium_linked ? (
-                <SettingsRow title={t("connectorManaged")} hint={t("loginRodiumHint")}>
-                  <span className="settings-value">{t("connectorConfigured")}</span>
+                <SettingsRow title={t("rodiumManaged")} hint={t("loginRodiumHint")}>
+                  <span className="settings-value">{t("rodiumConfigured")}</span>
                 </SettingsRow>
               ) : null}
               {joinedDate && (
@@ -133,6 +134,12 @@ export default function SettingsPageContent() {
                 </SettingsRow>
               )}
             </SettingsBlock>
+          </SettingsPanel>
+        )}
+
+        {!loading && section === "generation" && (
+          <SettingsPanel title={t("settingsGenerationTitle")} subtitle={t("settingsGenerationSub")}>
+            <RodiumGenerationPanel />
           </SettingsPanel>
         )}
 

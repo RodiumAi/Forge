@@ -5,7 +5,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from urllib.parse import urlencode
 
@@ -33,7 +33,7 @@ def generate_pkce() -> tuple[str, str]:
 
 def create_oauth_state(code_verifier: str) -> str:
     settings = get_settings()
-    expire = datetime.now(timezone.utc) + timedelta(minutes=10)
+    expire = datetime.now(UTC) + timedelta(minutes=10)
     return jwt.encode(
         {"v": code_verifier, "exp": expire, "n": secrets.token_urlsafe(8)},
         settings.secret_key,

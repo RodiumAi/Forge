@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { width: 480px; background: #0a0a0a; color: #f5f5f5; font-family: -apple-system, "Segoe UI", Arial, sans-serif; overflow: hidden; }
+  .cond { font-family: "Arial Narrow", Impact, Arial, sans-serif; font-weight: 900; font-style: italic; text-transform: uppercase; }
+  .nav { display: flex; align-items: center; gap: 12px; padding: 7px 16px; border-bottom: 1px solid rgba(245,245,245,.12); }
+  .logo { font-family: "Arial Narrow", Impact, Arial, sans-serif; font-weight: 900; font-style: italic; font-size: 11px; }
+  .logo span { color: #ccff00; }
+  .links { margin-left: auto; font-size: 7px; letter-spacing: .1em; text-transform: uppercase; color: #8a8a8a; }
+  .links span { margin-left: 9px; }
+  .join { background: #ccff00; color: #0a0a0a; font-size: 7px; font-weight: 800; font-style: italic; padding: 3px 8px; transform: skewX(-8deg); }
+  .hero { position: relative; height: 165px; overflow: hidden; display: flex; align-items: center; }
+  .hero img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: saturate(.7) contrast(1.1); }
+  .veil { position: absolute; inset: 0; background: linear-gradient(100deg, rgba(10,10,10,.94) 30%, rgba(10,10,10,.45) 75%, rgba(10,10,10,.85)); }
+  .content { position: relative; padding: 0 16px; }
+  .kicker { font-size: 6px; letter-spacing: .3em; color: #ccff00; font-style: italic; font-weight: 700; margin-bottom: 4px; }
+  h1 { font-family: "Arial Narrow", Impact, Arial, sans-serif; font-weight: 900; font-style: italic; font-size: 30px; line-height: .88; text-transform: uppercase; }
+  .stroke { color: transparent; -webkit-text-stroke: 1px #f5f5f5; }
+  .lime { color: #ccff00; }
+  .sub { font-size: 7px; color: rgba(245,245,245,.8); margin: 6px 0 7px; max-width: 220px; line-height: 1.5; }
+  .btn { display: inline-block; background: #ccff00; color: #0a0a0a; font-size: 7px; font-weight: 800; font-style: italic; padding: 4px 10px; transform: skewX(-8deg); }
+  .out { background: transparent; border: 1px solid #f5f5f5; color: #f5f5f5; margin-left: 6px; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1.5px solid #ccff00; border-bottom: 1.5px solid #ccff00; background: #131313; }
+  .stat { text-align: center; padding: 8px 4px; border-right: 1px solid rgba(245,245,245,.12); }
+  .stat:last-child { border-right: none; }
+  .sv { display: block; font-family: "Arial Narrow", Impact, Arial, sans-serif; font-weight: 900; font-style: italic; font-size: 16px; color: #ccff00; line-height: 1; }
+  .sl { font-size: 5.5px; letter-spacing: .14em; text-transform: uppercase; color: #8a8a8a; }
+  .bars { padding: 12px 16px; }
+  h2 { font-family: "Arial Narrow", Impact, Arial, sans-serif; font-weight: 900; font-style: italic; font-size: 15px; text-transform: uppercase; line-height: .95; margin-bottom: 8px; }
+  .row { margin-bottom: 8px; }
+  .bh { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 3px; }
+  .bl { font-size: 6.5px; letter-spacing: .06em; text-transform: uppercase; color: #8a8a8a; }
+  .bp { font-family: "Arial Narrow", Impact, Arial, sans-serif; font-weight: 900; font-style: italic; font-size: 11px; color: #ccff00; }
+  .track { height: 6px; background: #131313; border: 1px solid rgba(245,245,245,.12); transform: skewX(-16deg); overflow: hidden; }
+  .fill { height: 100%; background: linear-gradient(90deg, #9acc00, #ccff00); }
+</style>
+</head>
+<body>
+  <div class="nav">
+    <div class="logo">PULSE<span>/</span>CLUB</div>
+    <div class="links"><span>Programs</span><span>Results</span><span>Coaches</span><span>Plans</span></div>
+    <div class="join">JOIN NOW</div>
+  </div>
+  <div class="hero">
+    <img src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1200&q=70" alt="Dark gym interior" />
+    <div class="veil"></div>
+    <div class="content">
+      <p class="kicker">EAST DOCKLANDS · OPEN 24/7</p>
+      <h1>TRAIN <span class="stroke">LOUD.</span><br />LIVE <span class="lime">LOUDER.</span></h1>
+      <p class="sub">4,200 members. 310 classes a week. Where the city's most serious amateurs get measurably better.</p>
+      <span class="btn">START 7-DAY TRIAL →</span><span class="btn out">SEE PROGRAMS</span>
+    </div>
+  </div>
+  <div class="stats">
+    <div class="stat"><span class="sv">4,200</span><span class="sl">active members</span></div>
+    <div class="stat"><span class="sv">310</span><span class="sl">classes / week</span></div>
+    <div class="stat"><span class="sv">97%</span><span class="sl">retention</span></div>
+    <div class="stat"><span class="sv">24/7</span><span class="sl">never closes</span></div>
+  </div>
+  <div class="bars">
+    <h2>NUMBERS DON'T <span class="lime">FLINCH.</span></h2>
+    <div class="row"><div class="bh"><span class="bl">Members hitting a PR each month</span><span class="bp">82%</span></div><div class="track"><div class="fill" style="width:82%"></div></div></div>
+    <div class="row"><div class="bh"><span class="bl">Class attendance rate</span><span class="bp">91%</span></div><div class="track"><div class="fill" style="width:91%"></div></div></div>
+  </div>
+</body>
+</html>

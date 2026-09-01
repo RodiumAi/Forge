@@ -1,74 +1,82 @@
-# Forge Web
+> 🇫🇷 [Version française](README.fr.md)
 
-Produit web MVP inspiré de Forge (Electron) : **Next.js + FastAPI + PostgreSQL**, avec **RodiumAi** comme unique provider LLM (clé API utilisateur).
+# Forge
 
-## Liens locaux
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+Forge is an open-source, AI-powered website builder. Describe your site in a chat and the agent generates a frontend-only React app, previewed instantly in the browser — no node_modules, no Vite — and published as a static ESM site.
+
+## Architecture
+
+```
+forge-web/
+├── apps/
+│   ├── web/            # Next.js 15 + TypeScript — builder UI
+│   └── api/            # FastAPI + SQLAlchemy + Postgres — API, agent, orchestration
+│       └── runtime/    # In-browser Babel runner (pure JS) + packages.json manifest
+├── data/
+│   └── templates/      # 24 starter templates (see docs/TEMPLATES.md)
+└── infra/              # Local Docker + AWS prod (Amplify / EC2)
+```
+
+Supporting services: **MinIO** (S3 uploads), **Valkey** (run queue / cancellation), **Caddy** (published sites at `*.lvh.me:8080`), **Adminer** (DB console). LLM calls go through the **RodiumAI** gateway (API key supplied by the user in settings).
+
+## Key features
+
+- **Chat-to-site**: describe a site, the agent generates a frontend-only React app.
+- **Instant preview**: in-browser Babel/ESM runner — transforms code in the browser with a CDN import map (esm.sh). No node_modules, no Vite.
+- **Publishing**: static ESM site served by Caddy.
+- **Visual editing**: text and images, directly on the preview.
+- **History / rollback**: per-project git snapshots.
+- **ZIP export**: a real, runnable Vite project.
+- **24 templates**: see [docs/TEMPLATES.md](docs/TEMPLATES.md).
+- **Runtime manifest**: `packages.json` is the single source of truth for the import map, the AST allowlist, and Monaco types.
+
+## Quick start (Docker)
+
+```bash
+cp .env.example .env
+docker compose up -d --build   # or: make up
+```
 
 | Service | URL |
-|---------|-----|
-| UI Next.js (landing) | http://localhost:3100 |
-| Dashboard projets | http://localhost:3100/dashboard |
-| API FastAPI | http://localhost:8100 |
+| --- | --- |
+| Builder UI | http://localhost:3100 |
 | API docs | http://localhost:8100/docs |
-| Sites Gateway (Caddy) | http://`<slug>`.lvh.me:8080 |
-| MinIO console | http://localhost:9001 (`rodiumdev` / `rodiumdev123`) |
-| Mailpit | http://localhost:18025 (SMTP `:11025`) |
-| Valkey | `127.0.0.1:6380` |
+| Published sites | http://\<slug\>.lvh.me:8080 |
+| MinIO console | http://localhost:9001 |
 | Adminer | http://localhost:8089 |
-| Postgres | `127.0.0.1:5434` |
 
-## Démarrage rapide (Docker)
+## Hybrid development (Docker infra + local api/web)
 
-Un seul compose couvre Postgres, API, Web, **MinIO**, **Mailpit**, **Valkey** et **Caddy** — sans compte AWS ni Cloudinary plateforme.
+Run infra with Docker, then run the API and/or web app locally.
 
-```sh
-cd forge-web
-cp .env.example .env
-make up
-make seed
-```
+**API**
 
-Ou : `docker compose up -d --build`
-
-Voir aussi [infra/local/README.md](infra/local/README.md) (écarts de parité local / prod).
-
-## Démarrage local (dev hybride)
-
-```sh
-# 1) Infra Docker (DB + object store + mail + cache)
-docker compose up -d postgres adminer minio minio-init mailpit valkey
-
-# 2) API (hôte) — utilise apps/api/.env avec endpoints localhost
+```bash
 cd apps/api
-python -m venv .venv
-# Windows: .venv\Scripts\activate
+python -m venv .venv && .venv/Scripts/activate   # or source .venv/bin/activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8100
-
-# 3) Web
-cd apps/web
-npm install
-npm run dev
 ```
 
-## Flow MVP
+**Web**
 
-1. Sign in with RodiumAi
-2. Settings → clé / wallet RodiumAi
-3. Créer un projet (scaffold Vite/React)
-4. Chatter → stream SSE → écriture fichiers via tags `<forge-write>`
-5. Start preview → `{slug}.lvh.me:3100` (Vite) ; Sites Gateway → Caddy `:8080`
+```bash
+cd apps/web
+npm install
+npm run dev   # port 3100
+```
 
-## Stack
+## Environment variables
 
-- **Web** : Next.js 15 (App Router), branding orange `#F2620A`
-- **API** : FastAPI, SQLAlchemy, JWT, Fernet pour la clé
-- **DB** : PostgreSQL 17 (port **5434**)
-- **Object store local** : MinIO (S3-compatible) — prod : S3 / R2
-- **Email local** : Mailpit — prod : SES (fallback) ou Resend (connecteur)
-- **Cache / files** : Valkey (Redis Streams)
-- **Routage Sites** : Caddy (`*.lvh.me`)
-- **LLM** : roster Gemini (`google/gemini-3.7-flash` par défaut) via gateway RodiumAi ; images de test via `openai/gpt-image-2`
-- Thinking / étapes visibles dans le builder ; charte graphique `DESIGN.md` injectée à chaque appel
+Copy `.env.example` to `.env` and adjust as needed — it documents every essential variable (database, MinIO, Valkey, RodiumAI gateway key, etc.).
 
-Cloudinary / Resend / FedaPay / Supabase / Firebase restent des **connecteurs utilisateur** optionnels.
+## Documentation
+
+- [CONTRIBUTING.md](CONTRIBUTING.md) — dev setup, checks, PR guide
+- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — production deploy (Amplify + EC2, maintainers)
+- [docs/TEMPLATES.md](docs/TEMPLATES.md) — template authoring
+- [SECURITY.md](SECURITY.md) — vulnerability reporting
+- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+- [LICENSE](LICENSE) — MIT

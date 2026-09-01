@@ -1,27 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Image from "next/image";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { BrandLogo } from "@/components/BrandLogo";
+import { ProfileMenu } from "@/components/ProfileMenu";
+import { RodiumWalletBadge } from "@/components/RodiumWalletBadge";
+import { ThemeSwitch } from "@/components/ThemeSwitch";
+import { Icon } from "@/components/ui/icon";
+import { LocaleSwitch, useI18n } from "@/lib/i18n/I18nProvider";
 import {
   ChevronLeft,
   ChevronRight,
   Home,
   LayoutTemplate,
-  Plug,
   Search,
   Settings,
 } from "lucide-react";
-import { Icon } from "@/components/ui/icon";
-import { ProfileMenu } from "@/components/ProfileMenu";
-import { RodiumWalletBadge } from "@/components/RodiumWalletBadge";
-import { ThemeSwitch } from "@/components/ThemeSwitch";
-import { LocaleSwitch, useI18n } from "@/lib/i18n/I18nProvider";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export const SIDEBAR_KEY = "forge_home_sidebar";
 
-export type HomeNavItem = "projects" | "templates" | "connectors" | "settings";
+export type HomeNavItem = "projects" | "templates" | "settings";
 
 type HomeLayoutProps = {
   children: React.ReactNode;
@@ -63,7 +62,9 @@ export function HomeLayout({
   }
 
   return (
-    <div className={`home ${sidebarOpen ? "home-sidebar-open" : "home-sidebar-collapsed"}`}>
+    <div
+      className={`home ${sidebarOpen ? "home-sidebar-open" : "home-sidebar-collapsed"}`}
+    >
       <div className="home-glow home-glow-a" aria-hidden />
       <div className="home-glow home-glow-b" aria-hidden />
       <div className="home-glow home-glow-c" aria-hidden />
@@ -71,9 +72,12 @@ export function HomeLayout({
 
       <aside className="home-sidebar" aria-label={t("homeNav")}>
         <div className="home-sidebar-head">
-          <Link href="/dashboard" className="home-sidebar-logo" title={t("projects")}>
-            <Image src="/forge-rodiumai.png" alt={t("brandAlt")} width={36} height={36} priority />
-            <span className="home-sidebar-brand">{t("projects")}</span>
+          <Link
+            href="/dashboard"
+            className="home-sidebar-logo"
+            title={t("projects")}
+          >
+            <BrandLogo alt={t("brandAlt")} width={165} height={55} priority />
           </Link>
         </div>
         <nav className="home-sidebar-nav">
@@ -109,16 +113,6 @@ export function HomeLayout({
             <span className="home-sidebar-label">{t("searchProjects")}</span>
           </button>
           <Link
-            href="/connectors"
-            className={`home-sidebar-btn ${activeNav === "connectors" ? "active" : ""}`}
-            title={t("connectors")}
-          >
-            <span className="home-sidebar-icon" aria-hidden>
-              <Icon icon={Plug} />
-            </span>
-            <span className="home-sidebar-label">{t("connectors")}</span>
-          </Link>
-          <Link
             href="/settings"
             className={`home-sidebar-btn ${activeNav === "settings" ? "active" : ""}`}
             title={t("settings")}
@@ -136,7 +130,11 @@ export function HomeLayout({
           aria-label={sidebarOpen ? t("sidebarClose") : t("sidebarOpen")}
           aria-expanded={sidebarOpen}
         >
-          {sidebarOpen ? <Icon icon={ChevronLeft} /> : <Icon icon={ChevronRight} />}
+          {sidebarOpen ? (
+            <Icon icon={ChevronLeft} />
+          ) : (
+            <Icon icon={ChevronRight} />
+          )}
         </button>
       </aside>
 
@@ -151,7 +149,9 @@ export function HomeLayout({
           </div>
         </header>
 
-        <div className={`home-scroll ${fillMain ? "home-scroll-fill" : ""}`}>{children}</div>
+        <div className={`home-scroll ${fillMain ? "home-scroll-fill" : ""}`}>
+          {children}
+        </div>
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useRef, useState } from "react";
 import { apiBase, getToken } from "@/lib/api";
@@ -8,6 +8,20 @@ type Props = {
   src?: string | null;
   /** Authenticated API path (fetched as HTML for srcDoc) */
   authPath?: string | null;
+  /**
+   * Direct iframe URL for a live render (the project draft route). Unlike the
+   * srcDoc modes this executes scripts: it is the only way to show the real
+   * site of a generated project, which has no static preview.html.
+   */
+  frameSrc?: string | null;
+  /**
+   * Virtual viewport the page is laid out in before being scaled down to the
+   * card. Real sites want a desktop width (1280); template preview.html files
+   * are hand-made miniatures with 8-10px type — at 1280 they render as a
+   * whole squashed page, so they get a near-native 480px viewport instead.
+   */
+  viewportWidth?: number;
+  viewportHeight?: number;
   title?: string;
   className?: string;
 };
@@ -22,6 +36,16 @@ function cacheKey(src?: string | null, authPath?: string | null) {
   return authPath || src || "";
 }
 
+function suppressThumbScroll(html: string): string {
+  if (html.includes("data-forge-thumb")) return html;
+  const css =
+    "<style data-forge-thumb>html,body{overflow:hidden!important;scrollbar-width:none!important;-ms-overflow-style:none!important}html::-webkit-scrollbar,body::-webkit-scrollbar{display:none!important;width:0!important;height:0!important}</style>";
+  if (/<head[^>]*>/i.test(html)) {
+    return html.replace(/<head([^>]*)>/i, `<head$1>${css}`);
+  }
+  return css + html;
+}
+
 function readCache(key: string): string | null {
   const hit = HTML_CACHE.get(key);
   if (!hit) return null;
@@ -29,12 +53,11 @@ function readCache(key: string): string | null {
     HTML_CACHE.delete(key);
     return null;
   }
-  return hit.html;
+  return suppressThumbScroll(hit.html);
 }
 
 function writeCache(key: string, html: string) {
   HTML_CACHE.set(key, { html, at: Date.now() });
-  // Bound memory: drop oldest when large
   if (HTML_CACHE.size > 80) {
     const first = HTML_CACHE.keys().next().value;
     if (first) HTML_CACHE.delete(first);
@@ -90,36 +113,65 @@ async function fetchThumbHtml(src?: string | null, authPath?: string | null): Pr
 
   INFLIGHT.set(key, promise);
   try {
-    return await promise;
+    return suppressThumbScroll(await promise);
   } finally {
     INFLIGHT.delete(key);
   }
 }
 
 /**
- * Scaled homepage thumbnail via srcDoc (avoids cross-origin iframe blanks).
- * HTML is cached in-memory and only fetched when the card is visible.
+ * Scaled homepage thumbnail. Project cards use a live draft iframe (no snapshot
+ * / warm-frame cache — that froze the dashboard). Templates use cached srcDoc.
  */
-export function SiteThumb({ src, authPath, title, className }: Props) {
+export function SiteThumb({
+  src,
+  authPath,
+  frameSrc,
+  viewportWidth = 1280,
+  viewportHeight = 800,
+  title,
+  className,
+}: Props) {
   const shellRef = useRef<HTMLDivElement>(null);
+  const frameRef = useRef<HTMLIFrameElement>(null);
   const key = cacheKey(src, authPath);
   const [visible, setVisible] = useState(false);
   const [html, setHtml] = useState<string | null>(() => (key ? readCache(key) : null));
   const [failed, setFailed] = useState(false);
   const [scale, setScale] = useState(0.25);
+  const [frameReady, setFrameReady] = useState(false);
+
+  useEffect(() => {
+    if (!frameSrc || !visible) {
+      setFrameReady(false);
+      return;
+    }
+    setFrameReady(false);
+    function onMessage(e: MessageEvent) {
+      if (!frameRef.current || e.source !== frameRef.current.contentWindow) return;
+      const type = e.data && typeof e.data === "object" ? e.data.type : "";
+      if (type === "forge:mounted") setFrameReady(true);
+    }
+    window.addEventListener("message", onMessage);
+    const grace = window.setTimeout(() => setFrameReady(true), 12000);
+    return () => {
+      window.removeEventListener("message", onMessage);
+      window.clearTimeout(grace);
+    };
+  }, [frameSrc, visible]);
 
   useEffect(() => {
     const el = shellRef.current;
     if (!el) return;
     const update = () => {
       const w = el.clientWidth || 320;
-      setScale(Math.max(0.08, w / 1280));
+      setScale(Math.max(0.08, w / viewportWidth));
     };
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [viewportWidth]);
 
   useEffect(() => {
     const el = shellRef.current;
@@ -143,6 +195,7 @@ export function SiteThumb({ src, authPath, title, className }: Props) {
 
   useEffect(() => {
     let alive = true;
+    if (frameSrc) return;
     if (!key) {
       setHtml(null);
       setFailed(true);
@@ -174,21 +227,45 @@ export function SiteThumb({ src, authPath, title, className }: Props) {
     return () => {
       alive = false;
     };
-  }, [src, authPath, key, visible]);
+  }, [src, authPath, key, visible, frameSrc]);
 
   return (
     <div
       ref={shellRef}
       className={`site-thumb ${className || ""}`.trim()}
       aria-hidden
-      style={{ ["--thumb-scale" as string]: String(scale) }}
+      style={{
+        ["--thumb-scale" as string]: String(scale),
+        ["--thumb-vw" as string]: `${viewportWidth}px`,
+        ["--thumb-vh" as string]: `${viewportHeight}px`,
+      }}
     >
-      {html ? (
+      {frameSrc ? (
+        <>
+          {visible && (
+            <div
+              className="site-thumb-scaler"
+              style={frameReady ? undefined : { visibility: "hidden" }}
+            >
+              <iframe
+                ref={frameRef}
+                src={frameSrc}
+                title={title || "Preview"}
+                tabIndex={-1}
+                scrolling="no"
+                sandbox="allow-scripts allow-same-origin"
+              />
+            </div>
+          )}
+          {!frameReady && <div className="site-thumb-fallback is-loading" />}
+        </>
+      ) : html ? (
         <div className="site-thumb-scaler">
           <iframe
             srcDoc={html}
             title={title || "Preview"}
             tabIndex={-1}
+            scrolling="no"
             sandbox=""
             loading="lazy"
           />

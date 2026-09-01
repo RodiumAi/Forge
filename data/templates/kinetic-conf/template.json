@@ -1,0 +1,19 @@
+{
+  "id": "kinetic-conf",
+  "title": { "en": "Kinetic 2027 Conference", "fr": "Conférence Kinetic 2027" },
+  "description": {
+    "en": "Loud kinetic-typography site for a tech conference: opposing marquee hero, hard color blocks, duotone speakers grid, accordion schedule and ticket tiers.",
+    "fr": "Site de conférence tech à typographie cinétique : hero en marquees opposés, blocs de couleurs franches, grille speakers duotone, programme en accordéon et billetterie."
+  },
+  "tags": ["conference", "event", "kinetic", "bold"],
+  "preview": "preview.html",
+  "bootHint": {
+    "en": "Adapt kinetic-conf: event name, dates, speakers, schedule, ticket tiers.",
+    "fr": "Adapte kinetic-conf : nom de l'événement, dates, speakers, programme, billets."
+  },
+  "accent": "#ff5941",
+  "bg": "#ffffff",
+  "fg": "#111111",
+  "muted": "#6b6b6b",
+  "tone": "loud, kinetic, design-agency confident"
+}

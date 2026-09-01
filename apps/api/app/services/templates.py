@@ -159,4 +159,26 @@ def fork_template(template_id: str, project_id: str, app_name: str | None = None
             except OSError:
                 pass
 
+    # Default Forge favicon when the template has none.
+    from app.services.scaffold import ensure_favicon_link, install_default_favicon
+
+    install_default_favicon(project_id)
+    html_path = dest / "index.html"
+    if html_path.is_file():
+        try:
+            text = html_path.read_text(encoding="utf-8")
+            updated = ensure_favicon_link(text)
+            if updated != text:
+                html_path.write_text(updated, encoding="utf-8")
+        except OSError:
+            pass
+
+    # Baseline checkpoint: the user can always roll back to the pristine fork.
+    try:
+        from app.services import history
+
+        history.snapshot(project_id, f"forked template: {meta.id}")
+    except Exception:  # pragma: no cover - history is best effort
+        pass
+
     return meta

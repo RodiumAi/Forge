@@ -6,8 +6,7 @@ from app.config import get_settings
 
 
 class SecretProvider(Protocol):
-    def get(self, name: str) -> str | None:
-        ...
+    def get(self, name: str) -> str | None: ...
 
 
 class EnvSecretProvider:

@@ -1,0 +1,19 @@
+{
+  "id": "astroship-startup",
+  "title": { "en": "Astroship Startup", "fr": "Astroship Startup" },
+  "description": {
+    "en": "Clean light landing page for startups and SaaS: split hero, logo strip, 6-feature grid, dark CTA band, minimal footer.",
+    "fr": "Landing page claire pour startups et SaaS : hero split, bandeau logos, grille de 6 features, bande CTA sombre, footer minimal."
+  },
+  "tags": ["startup", "landing", "saas"],
+  "preview": "preview.html",
+  "bootHint": {
+    "en": "Adapt astroship-startup: product name, hero copy, features.",
+    "fr": "Adapte astroship-startup : nom produit, texte hero, features."
+  },
+  "accent": "#4f46e5",
+  "bg": "#ffffff",
+  "fg": "#0f172a",
+  "muted": "#64748b",
+  "tone": "friendly, crisp, confident"
+}
