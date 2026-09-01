@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Raw Works — preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 480px; height: 300px; overflow: hidden;
+    background: #f5f0e8; color: #111;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Arial Black", Arial, sans-serif;
+    position: relative;
+  }
+  .nav { display: flex; justify-content: space-between; align-items: center;
+    padding: 7px 14px; border-bottom: 3px solid #111; }
+  .brand { font-weight: 900; font-size: 11px; }
+  .links { display: flex; gap: 10px; font-size: 7.5px; font-weight: 700; text-transform: uppercase; }
+  .btn { background: #ff4911; color: #fff; font-weight: 900; font-size: 7.5px;
+    padding: 4px 9px; border: 2px solid #111; box-shadow: 3px 3px 0 #111; text-transform: uppercase; }
+  .hero { position: relative; padding: 20px 14px 12px; }
+  h1 { font-size: 30px; line-height: .95; font-weight: 900; letter-spacing: -.04em; text-transform: uppercase; }
+  .scribble { color: #ff4911; text-decoration: underline; text-decoration-thickness: 3px; text-underline-offset: 3px; }
+  .sub { font-size: 8px; font-weight: 500; color: #5c564d; max-width: 230px;
+    margin: 8px 0; border-left: 3px solid #ff4911; padding-left: 7px; }
+  .cta { display: flex; gap: 8px; }
+  .btn2 { background: #111; color: #ffe600; font-weight: 900; font-size: 7.5px;
+    padding: 4px 9px; border: 2px solid #111; box-shadow: 3px 3px 0 #111; text-transform: uppercase; }
+  .btn3 { background: #fff; color: #111; font-weight: 900; font-size: 7.5px;
+    padding: 4px 9px; border: 2px solid #111; box-shadow: 3px 3px 0 #111; }
+  .sticker { position: absolute; padding: 6px 8px; font-weight: 900; font-size: 6.5px;
+    text-align: center; line-height: 1.25; border: 2px solid #111; box-shadow: 3px 3px 0 #111; }
+  .s1 { background: #ffe600; top: 14px; right: 20px; transform: rotate(8deg); }
+  .s2 { background: #1a6dff; color: #fff; top: 62px; right: 62px; transform: rotate(-7deg); }
+  .marquee { background: #111; color: #ffe600; border-top: 3px solid #111; border-bottom: 3px solid #111;
+    padding: 4px 0; font-weight: 900; font-size: 9px; white-space: nowrap; overflow: hidden; }
+  .marquee span { padding: 0 8px; }
+  .star { color: #ff4911; }
+  .projects { display: flex; gap: 10px; padding: 12px 14px; }
+  .proj { flex: 1; }
+  .pm { position: relative; border: 2px solid #111; box-shadow: 4px 4px 0 #111; overflow: hidden; }
+  .pm img { width: 100%; height: 62px; object-fit: cover; display: block; filter: saturate(1.15); }
+  .stat { position: absolute; bottom: 4px; left: 4px; background: #ffe600; border: 2px solid #111;
+    padding: 1px 4px; font-weight: 900; font-size: 5.5px; transform: rotate(-2deg); }
+  .pt { display: flex; justify-content: space-between; align-items: center; margin-top: 5px; }
+  .pt h3 { font-size: 7.5px; font-weight: 900; }
+  .tag { border: 1.5px solid #111; padding: 1px 4px; font-size: 5px; font-weight: 800;
+    text-transform: uppercase; background: #f5f0e8; }
+</style>
+</head>
+<body>
+  <div class="nav">
+    <span class="brand">RAW★WORKS</span>
+    <span class="links"><span>Work</span><span>Services</span><span>Process</span><span>FAQ</span></span>
+    <span class="btn">Start a fight →</span>
+  </div>
+  <div class="hero">
+    <div class="sticker s1">EST. 2017<br />ROTTERDAM</div>
+    <div class="sticker s2">100% HUMAN<br />MADE ✷</div>
+    <h1>WE MAKE<br />BRANDS YOU<br />CAN'T <span class="scribble">IGNORE.</span></h1>
+    <p class="sub">Raw Works is a 14-person creative studio. Branding, websites and campaigns for companies bored of looking like everyone else.</p>
+    <div class="cta"><span class="btn2">See the work ↓</span><span class="btn3">hello@rawworks.studio</span></div>
+  </div>
+  <div class="marquee">
+    <span>BRANDING</span><span class="star">✦</span><span>WEB DESIGN</span><span class="star">✦</span><span>MOTION</span><span class="star">✦</span><span>PACKAGING</span><span class="star">✦</span><span>ART DIRECTION</span><span class="star">✦</span><span>STRATEGY</span>
+  </div>
+  <div class="projects">
+    <div class="proj">
+      <div class="pm"><img src="https://images.unsplash.com/photo-1561070791-2526d30994b5?auto=format&fit=crop&w=1200&q=70" alt="Moshpit" /><span class="stat">+312% SHELF PICKUP</span></div>
+      <div class="pt"><h3>MOSHPIT ENERGY</h3><span class="tag">Brand</span></div>
+    </div>
+    <div class="proj">
+      <div class="pm"><img src="https://images.unsplash.com/photo-1558655146-9f40138edfeb?auto=format&fit=crop&w=1200&q=70" alt="Tangerine" /><span class="stat">2.1M LAUNCH VIEWS</span></div>
+      <div class="pt"><h3>TANGERINE BANK</h3><span class="tag">Web</span></div>
+    </div>
+  </div>
+</body>
+</html>

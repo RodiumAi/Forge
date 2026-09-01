@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Aperture Field — Preview</title>
+<style>
+  :root { --bg:#faf8f5; --fg:#22201d; --muted:#8a8378; --accent:#c77b3f; --soft:#efe9e0; }
+  * { box-sizing:border-box; margin:0; }
+  body { background:var(--bg); color:var(--fg); font-family:"Segoe UI",system-ui,sans-serif; padding:16px; }
+  .topbar { display:flex; justify-content:space-between; align-items:center; padding-bottom:12px; border-bottom:1px solid var(--soft); font-size:11px; }
+  .brand { font-weight:600; letter-spacing:.12em; text-transform:uppercase; }
+  .nav { color:var(--muted); }
+  .hero { text-align:center; padding:22px 0 14px; }
+  .k { color:var(--accent); font-size:9px; letter-spacing:.2em; text-transform:uppercase; }
+  h1 { font-size:20px; font-weight:600; margin:4px 0; }
+  .lede { color:var(--muted); font-size:11px; }
+  .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:14px; }
+  .t { border-radius:8px; height:70px; overflow:hidden; }
+  .t img { width:100%; height:100%; object-fit:cover; display:block; }
+  .t1 { background:linear-gradient(160deg,#7a9471,#33402e); }
+  .t2 { background:linear-gradient(200deg,#d99a6c,#4a3550); }
+  .t3 { background:linear-gradient(180deg,#a8c3cf,#3d5a6b); }
+  .t4 { background:linear-gradient(145deg,#cfc8bd,#6d6459); }
+  .t5 { background:linear-gradient(210deg,#e0777d,#2a2140); }
+  .t6 { background:linear-gradient(150deg,#e8c48a,#96603a); }
+</style>
+</head>
+<body>
+  <div class="topbar"><span class="brand">Aperture Field</span><span class="nav">Nature · Urban · Travel · Architecture</span></div>
+  <div class="hero">
+    <div class="k">A visual field journal</div>
+    <h1>Quiet frames from loud places</h1>
+    <div class="lede">Forests, side streets and stairwells on one slow wall.</div>
+  </div>
+  <div class="grid">
+    <div class="t t1"><img src="https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=400&q=70" alt=""></div>
+    <div class="t t2"><img src="https://images.unsplash.com/photo-1449824913935-59a10b8d2000?auto=format&fit=crop&w=400&q=70" alt=""></div>
+    <div class="t t3"><img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=400&q=70" alt=""></div>
+    <div class="t t4"><img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=400&q=70" alt=""></div>
+    <div class="t t5"><img src="https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?auto=format&fit=crop&w=400&q=70" alt=""></div>
+    <div class="t t6"><img src="https://images.unsplash.com/photo-1444703686981-a3abbc4d4fe3?auto=format&fit=crop&w=400&q=70" alt=""></div>
+  </div>
+</body>
+</html>

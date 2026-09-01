@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mira Solano — Preview</title>
+<style>
+  :root { --bg:#0d1117; --fg:#e6edf3; --muted:#8b949e; --accent:#5eead4; --soft:#161b22; }
+  * { box-sizing:border-box; margin:0; }
+  body { background:var(--bg); color:var(--fg); font-family:"Segoe UI",system-ui,sans-serif; padding:16px; }
+  .topbar { display:flex; justify-content:space-between; font-size:11px; padding-bottom:12px; }
+  .brand { font-weight:700; } .brand span { color:var(--accent); }
+  .nav { color:var(--muted); }
+  .hero { text-align:center; padding:18px 0 16px; }
+  .avatar { width:44px; height:44px; border-radius:50%; margin:0 auto 10px; background:linear-gradient(140deg,var(--accent),#2563eb); overflow:hidden; }
+  .avatar img, .th img { width:100%; height:100%; object-fit:cover; display:block; }
+  h1 { font-size:18px; }
+  .sub { color:var(--muted); font-size:11px; margin-top:4px; }
+  .btns { margin-top:10px; }
+  .btn { display:inline-block; font-size:10px; padding:5px 12px; border-radius:6px; background:var(--accent); color:#06281f; font-weight:600; }
+  .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:14px; }
+  .c { background:var(--soft); border-radius:8px; overflow:hidden; }
+  .th { height:38px; }
+  .t1 { background:linear-gradient(150deg,#134e4a,#0f2942); }
+  .t2 { background:linear-gradient(160deg,#3b2f5e,#101726); }
+  .t3 { background:linear-gradient(140deg,#7c3f2d,#1a1420); }
+  .cb { padding:8px; font-size:10px; }
+  .cb b { display:block; font-size:11px; }
+  .cb i { color:var(--accent); font-style:normal; font-size:9px; }
+</style>
+</head>
+<body>
+  <div class="topbar"><span class="brand">mira.solano<span>()</span></span><span class="nav">Experience · Projects · Education · Blogs</span></div>
+  <div class="hero">
+    <div class="avatar"><img src="https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=200&q=70" alt=""></div>
+    <h1>Hi, I&apos;m Mira Solano</h1>
+    <div class="sub">Calm, dependable software for teams that ship weekly.</div>
+    <div class="btns"><span class="btn">See my work</span></div>
+  </div>
+  <div class="grid">
+    <div class="c"><div class="th t1"><img src="https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=400&q=70" alt=""></div><div class="cb"><b>Driftlog</b><i>TypeScript · React</i></div></div>
+    <div class="c"><div class="th t2"><img src="https://images.unsplash.com/photo-1461749280684-dccba630e2f6?auto=format&fit=crop&w=400&q=70" alt=""></div><div class="cb"><b>Quorum Board</b><i>Next.js · Postgres</i></div></div>
+    <div class="c"><div class="th t3"><img src="https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=400&q=70" alt=""></div><div class="cb"><b>Pinch Metrics</b><i>Node.js · D3</i></div></div>
+  </div>
+</body>
+</html>

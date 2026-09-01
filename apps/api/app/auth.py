@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 from uuid import UUID
 
@@ -27,9 +27,23 @@ def verify_password(password: str, password_hash: str) -> bool:
 
 
 def create_access_token(user_id: UUID) -> str:
-    expire = datetime.now(timezone.utc) + timedelta(minutes=settings.access_token_expire_minutes)
+    expire = datetime.now(UTC) + timedelta(minutes=settings.access_token_expire_minutes)
     payload = {"sub": str(user_id), "exp": expire}
     return jwt.encode(payload, settings.secret_key, algorithm="HS256")
+
+
+def _token_from_request(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None,
+) -> str | None:
+    if credentials and credentials.credentials:
+        return credentials.credentials
+    # Allow short-lived img/src loads that cannot send Authorization headers.
+    for key in ("access_token", "token"):
+        value = request.query_params.get(key)
+        if value:
+            return value.strip() or None
+    return None
 
 
 def get_current_user(
@@ -38,13 +52,14 @@ def get_current_user(
     db: Annotated[Session, Depends(get_db)],
 ) -> User:
     locale = resolve_locale(request)
-    if credentials is None:
+    token = _token_from_request(request, credentials)
+    if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=t("not_authenticated", locale),
         )
     try:
-        payload = jwt.decode(credentials.credentials, settings.secret_key, algorithms=["HS256"])
+        payload = jwt.decode(token, settings.secret_key, algorithms=["HS256"])
         user_id = payload.get("sub")
         if not user_id:
             raise HTTPException(

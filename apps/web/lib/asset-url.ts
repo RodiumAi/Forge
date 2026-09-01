@@ -1,0 +1,33 @@
+import { apiBase, getToken } from "@/lib/api";
+
+/** Durable authenticated URL for chat thumbs (<img src>). */
+export function assetContentUrl(projectId: string, objectId: string): string | null {
+  if (!projectId || !objectId) return null;
+  const token = getToken();
+  if (!token) return null;
+  const base = apiBase().replace(/\/$/, "");
+  return `${base}/projects/${projectId}/assets/${objectId}/content?access_token=${encodeURIComponent(token)}`;
+}
+
+/**
+ * Authenticated URL for a file in the project's `public/` folder.
+ *
+ * These were served through the Vite preview proxy (`/preview/{id}/<file>`);
+ * that proxy no longer exists, so favicon and SEO previews resolved to 404 and
+ * rendered as broken images.
+ */
+export function projectPublicUrl(
+  projectId: string,
+  path: string | null | undefined,
+  bust: number | string = "",
+): string | null {
+  if (!projectId || !path) return null;
+  if (path.startsWith("http://") || path.startsWith("https://")) return path;
+  const token = getToken();
+  if (!token) return null;
+  const rel = path.replace(/^public\//i, "").replace(/^\//, "");
+  if (!rel) return null;
+  const base = apiBase().replace(/\/$/, "");
+  const version = bust === "" ? "" : `&v=${encodeURIComponent(String(bust))}`;
+  return `${base}/projects/${projectId}/public/${rel}?access_token=${encodeURIComponent(token)}${version}`;
+}

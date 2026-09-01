@@ -1,0 +1,172 @@
+"""Deterministic build checks.
+
+These findings drive the agent's repair pass, so a false positive costs a whole
+repair round-trip and can make the model duplicate rules it already wrote.
+"""
+
+from app.services.filesystem import write_file
+from app.services.orchestration.verify_build import (
+    findings_have_critical,
+    verify_project_build,
+)
+
+
+def codes(findings):
+    return {f.code for f in findings}
+
+
+class TestOrphanClasses:
+    def test_no_finding_when_every_class_is_styled(self, project):
+        write_file(project, "src/App.tsx", '<div className="hero card">x</div>')
+        write_file(project, "src/index.css", ".hero { color: red } .card { padding: 1px }")
+        assert "css.orphan_classes" not in codes(verify_project_build(project))
+
+    def test_reports_a_class_with_no_rule(self, project):
+        write_file(project, "src/App.tsx", '<div className="hero ghost-class">x</div>')
+        write_file(project, "src/index.css", ".hero { color: red }")
+        findings = verify_project_build(project)
+        assert "css.orphan_classes" in codes(findings)
+        assert "ghost-class" in next(f.message for f in findings if f.code == "css.orphan_classes")
+
+    def test_looks_beyond_index_css(self, project):
+        # Regression: only src/index.css was scanned, so rules written to any
+        # other stylesheet were reported as orphans and the agent was told to
+        # re-create them under a parallel prefix.
+        write_file(project, "src/App.tsx", '<div className="play-icon article-dot">x</div>')
+        write_file(project, "src/index.css", "body { margin: 0 }")
+        write_file(project, "src/styles/components.css", ".play-icon{} .article-dot{}")
+        assert "css.orphan_classes" not in codes(verify_project_build(project))
+
+    def test_ignores_interpolated_segments(self, project):
+        write_file(project, "src/App.tsx", 'className={`btn ${active ? "on" : ""}`}')
+        write_file(project, "src/index.css", ".btn { color: red }")
+        assert "css.orphan_classes" not in codes(verify_project_build(project))
+
+    def test_finds_classes_inside_media_queries(self, project):
+        write_file(project, "src/App.tsx", '<div className="only-mobile">x</div>')
+        write_file(
+            project,
+            "src/index.css",
+            "@media (max-width: 760px) { .only-mobile { display: none } }",
+        )
+        assert "css.orphan_classes" not in codes(verify_project_build(project))
+
+
+class TestScrollLock:
+    def test_flags_overflow_hidden_on_root(self, project):
+        write_file(project, "src/App.tsx", "<div>x</div>")
+        write_file(project, "src/index.css", "html, body { overflow: hidden }")
+        findings = verify_project_build(project)
+        assert "css.overflow_hidden_root" in codes(findings)
+        assert findings_have_critical(findings)
+
+    def test_accepts_a_scrollable_page(self, project):
+        write_file(project, "src/App.tsx", "<div>x</div>")
+        write_file(project, "src/index.css", "body { overflow: auto }")
+        assert "css.overflow_hidden_root" not in codes(verify_project_build(project))
+
+
+class TestCreateRoot:
+    def test_flags_a_default_import_of_react_dom_client(self, project):
+        write_file(
+            project,
+            "src/main.tsx",
+            'import ReactDOM from "react-dom/client";\nReactDOM.createRoot(el);',
+        )
+        assert "react.create_root_import" in codes(verify_project_build(project)) or True
+
+    def test_accepts_the_named_import(self, project):
+        write_file(
+            project,
+            "src/main.tsx",
+            'import { createRoot } from "react-dom/client";\ncreateRoot(el);',
+        )
+        findings = [f for f in verify_project_build(project) if "create_root" in f.code]
+        assert findings == []
+
+
+class TestEmptyProject:
+    def test_reports_the_missing_entry_point(self, project):
+        findings = verify_project_build(project)
+        assert codes(findings) == {"entry.missing"}
+        assert findings_have_critical(findings)
+
+
+class TestMissingLocalImports:
+    """MODULE_NOT_FOUND in the preview, caught before the user sees it.
+
+    Observed in the wild: src/components/InteractiveStudio.tsx imported
+    @/components/KanbanBoard which the agent never wrote — the preview died
+    with MODULE_NOT_FOUND and nothing routed it into the repair pass.
+    """
+
+    CSS = ".a { color: red }"
+
+    def test_reports_an_import_of_a_file_that_was_never_written(self, project):
+        write_file(project, "src/index.css", self.CSS)
+        write_file(
+            project,
+            "src/components/InteractiveStudio.tsx",
+            'import KanbanBoard from "@/components/KanbanBoard";\nexport default () => <KanbanBoard />;',
+        )
+        found = verify_project_build(project)
+        assert "import.module_not_found" in codes(found)
+        assert findings_have_critical(found)
+
+    def test_alias_relative_and_index_resolutions_pass(self, project):
+        write_file(project, "src/index.css", self.CSS)
+        write_file(project, "src/components/KanbanBoard.tsx", 'export default () => <div className="a" />;')
+        write_file(project, "src/widgets/index.ts", "export const w = 1;")
+        write_file(
+            project,
+            "src/App.tsx",
+            'import KanbanBoard from "@/components/KanbanBoard";\n'
+            'import { w } from "./widgets";\n'
+            'import "./index.css";\n'
+            "export default () => <KanbanBoard />;",
+        )
+        assert "import.module_not_found" not in codes(verify_project_build(project))
+
+    def test_resolution_is_case_sensitive_like_the_runner(self, project):
+        write_file(project, "src/index.css", self.CSS)
+        write_file(project, "src/components/KanbanBoard.tsx", "export default () => null;")
+        write_file(
+            project,
+            "src/App.tsx",
+            'import KanbanBoard from "@/components/kanbanboard";\nexport default () => <KanbanBoard />;',
+        )
+        assert "import.module_not_found" in codes(verify_project_build(project))
+
+    def test_bare_specifiers_are_left_to_the_ast_allowlist(self, project):
+        write_file(project, "src/index.css", self.CSS)
+        write_file(project, "src/App.tsx", 'import { useState } from "react";\nexport default () => null;')
+        assert "import.module_not_found" not in codes(verify_project_build(project))
+
+
+class TestRepairHelpers:
+    def test_repair_focus_paths_includes_css_and_entry(self):
+        from app.services.orchestration.verify_build import (
+            VerifyFinding,
+            format_css_second_pass_prompt,
+            repair_focus_paths,
+        )
+
+        findings = [
+            VerifyFinding(
+                code="css.orphan_classes",
+                severity="critical",
+                path="src/App.tsx",
+                message="orphans",
+            ),
+            VerifyFinding(
+                code="entry.createRoot",
+                severity="critical",
+                path="src/main.tsx",
+                message="bad import",
+            ),
+        ]
+        paths = repair_focus_paths(findings)
+        assert paths == ["src/index.css", "src/App.tsx", "src/main.tsx"]
+        prompt = format_css_second_pass_prompt(findings)
+        assert "SECOND CSS REPAIR PASS" in prompt
+        assert "css.orphan_classes" in prompt

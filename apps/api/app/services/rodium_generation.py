@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Literal
 
+import httpx
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
@@ -65,27 +67,82 @@ def store_oauth_tokens(row: UserSettings, tokens: dict) -> None:
         row.rodium_access_token_encrypted = encrypt_secret(access)
     if refresh:
         row.rodium_refresh_token_encrypted = encrypt_secret(refresh)
-    row.rodium_token_expires_at = datetime.now(timezone.utc) + timedelta(
-        seconds=max(expires_in - 60, 60)
-    )
+    row.rodium_token_expires_at = datetime.now(UTC) + timedelta(seconds=max(expires_in - 60, 60))
+
+
+# One refresh at a time per user. Concurrent requests (chat + wallet + keys
+# fire together) used to race the token endpoint; with refresh-token rotation
+# the second call got invalid_grant, and the error handler wiped ALL tokens —
+# the user then saw "account is not linked" while still signed into Forge.
+_refresh_locks: dict[str, asyncio.Lock] = {}
+
+
+def _refresh_lock(user_id: str) -> asyncio.Lock:
+    lock = _refresh_locks.get(user_id)
+    if lock is None:
+        lock = _refresh_locks.setdefault(user_id, asyncio.Lock())
+    return lock
+
+
+def _token_expiry(row: UserSettings) -> datetime | None:
+    expires = row.rodium_token_expires_at
+    if expires is not None and expires.tzinfo is None:
+        expires = expires.replace(tzinfo=UTC)
+    return expires
 
 
 async def ensure_rodium_access_token(db: Session, user: User, row: UserSettings) -> str:
     if not row.rodium_access_token_encrypted:
-        raise HTTPException(status_code=400, detail="RodiumAi account is not linked")
-    access = decrypt_secret(row.rodium_access_token_encrypted)
-    expires = row.rodium_token_expires_at
-    if expires is not None and expires.tzinfo is None:
-        expires = expires.replace(tzinfo=timezone.utc)
-    if expires and expires > datetime.now(timezone.utc):
-        return access
-    if not row.rodium_refresh_token_encrypted:
-        return access
-    refresh = decrypt_secret(row.rodium_refresh_token_encrypted)
-    tokens = await refresh_access_token(refresh)
-    store_oauth_tokens(row, tokens)
-    db.commit()
-    return decrypt_secret(row.rodium_access_token_encrypted or "")
+        raise HTTPException(
+            status_code=403,
+            detail="RodiumAi account is not linked. Sign in with RodiumAi again.",
+        )
+    expires = _token_expiry(row)
+    now = datetime.now(UTC)
+    if expires and expires > now:
+        return decrypt_secret(row.rodium_access_token_encrypted)
+
+    async with _refresh_lock(str(user.id)):
+        # Another request may have refreshed while we waited for the lock.
+        db.refresh(row)
+        expires = _token_expiry(row)
+        if row.rodium_access_token_encrypted and expires and expires > datetime.now(UTC):
+            return decrypt_secret(row.rodium_access_token_encrypted)
+
+        if not row.rodium_refresh_token_encrypted:
+            raise HTTPException(
+                status_code=403,
+                detail="RodiumAi session expired. Sign in with RodiumAi again to continue generating.",
+            )
+        refresh = decrypt_secret(row.rodium_refresh_token_encrypted)
+        try:
+            tokens = await refresh_access_token(refresh)
+        except RodiumOidcError as exc:
+            if exc.status_code in (400, 401, 403):
+                # The gateway explicitly rejected the refresh token: clear so
+                # the UI can force a clean re-link.
+                row.rodium_access_token_encrypted = None
+                row.rodium_refresh_token_encrypted = None
+                row.rodium_token_expires_at = None
+                db.commit()
+                raise HTTPException(
+                    status_code=403,
+                    detail="RodiumAi session expired. Sign in with RodiumAi again to continue generating.",
+                ) from exc
+            # Gateway 5xx: transient — keep the tokens, ask the user to retry.
+            # Wiping here turned every gateway blip into a forced re-login.
+            raise HTTPException(
+                status_code=503,
+                detail="RodiumAi is temporarily unreachable. Retry in a moment.",
+            ) from exc
+        except httpx.HTTPError as exc:
+            raise HTTPException(
+                status_code=503,
+                detail="RodiumAi is temporarily unreachable. Retry in a moment.",
+            ) from exc
+        store_oauth_tokens(row, tokens)
+        db.commit()
+        return decrypt_secret(row.rodium_access_token_encrypted or "")
 
 
 def _keys_from_row(row: UserSettings) -> list:
@@ -129,7 +186,9 @@ async def select_api_key_id(
     access = await ensure_rodium_access_token(db, user, row)
     keys = await fetch_api_keys(access)
     if not any(
-        isinstance(k, dict) and str(k.get("id")) == key_id and bool(k.get("isActive", k.get("is_active", True)))
+        isinstance(k, dict)
+        and str(k.get("id")) == key_id
+        and bool(k.get("isActive", k.get("is_active", True)))
         for k in keys
     ):
         raise RodiumOidcError("API key not found or inactive")
@@ -142,16 +201,30 @@ async def select_api_key_id(
     return row.rodium_api_key_hint or hint or "API key"
 
 
+def _bound_user(db: Session, user: User) -> User:
+    """Re-bind User after commits / background sessions so attribute access is safe."""
+    user_id = getattr(user, "id", None)
+    if user_id is None:
+        return user
+    bound = db.get(User, user_id)
+    return bound or user
+
+
 async def resolve_generation_auth(db: Session, user: User) -> RodiumGenerationAuth:
+    user = _bound_user(db, user)
     row = db.get(UserSettings, user.id)
     if row is None:
         raise HTTPException(status_code=400, detail="RodiumAi API key is required")
-    if user.rodium_sub and row.selected_rodium_api_key_id:
+    rodium_sub = user.rodium_sub
+    selected_key = row.selected_rodium_api_key_id
+    if rodium_sub and selected_key:
         access = await ensure_rodium_access_token(db, user, row)
+        # Token refresh commits — re-read settings row in case the session moved.
+        row = db.get(UserSettings, user.id) or row
         return RodiumGenerationAuth(
             mode="playground",
             access_token=access,
-            api_key_id=row.selected_rodium_api_key_id,
+            api_key_id=row.selected_rodium_api_key_id or selected_key,
         )
     if row.rodium_api_key_encrypted:
         try:

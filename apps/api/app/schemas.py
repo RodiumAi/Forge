@@ -94,10 +94,22 @@ class LogoutResponse(BaseModel):
 class SettingsOut(BaseModel):
     has_rodium_key: bool
     rodium_key_hint: str | None = None
+    default_model: str | None = None
 
 
 class SettingsUpdate(BaseModel):
     rodium_api_key: str | None = None
+
+
+class RodiumKeyOut(BaseModel):
+    configured: bool
+    managed: bool = False
+    credentials_hint: str | None = None
+    supports_test: bool = True
+
+
+class RodiumKeyUpdate(BaseModel):
+    api_key: str | None = None
 
 
 class RodiumTestRequest(BaseModel):
@@ -109,45 +121,25 @@ class RodiumTestResponse(BaseModel):
     message: str
 
 
-class ConnectorFieldOut(BaseModel):
+class PluginOut(BaseModel):
     id: str
-    label: str
-    secret: bool = True
-    placeholder: str = ""
-    required: bool = True
+    family: str
+    package: str
+    version: str
+    when_to_use: str
+    import_example: str
+    forbidden_alternatives: list[str] = Field(default_factory=list)
+    installable: bool = True
 
 
-class ConnectorOut(BaseModel):
+class PluginFamilyOut(BaseModel):
     id: str
-    name: str
-    category: str
-    description: str
-    use_case: str
-    auth_type: str
-    configured: bool
-    supports_test: bool = False
-    managed: bool = False
-    removable: bool = True
-    credentials_hint: str | None = None
-    fields: list[ConnectorFieldOut] = []
-    fallback_provider: str | None = None
-    warning: str | None = None
-    quota_used: int | None = None
-    quota_limit: int | None = None
-    quota_unit: str | None = None
+    plugins: list[PluginOut] = Field(default_factory=list)
 
 
-class ConnectorTestRequest(BaseModel):
-    credentials: dict[str, str] = Field(default_factory=dict)
-
-
-class ConnectorTestResponse(BaseModel):
-    ok: bool
-    message: str
-
-
-class ConnectorUpdate(BaseModel):
-    credentials: dict[str, str] = Field(default_factory=dict)
+class PluginsCatalogOut(BaseModel):
+    families: list[PluginFamilyOut] = Field(default_factory=list)
+    plugins: list[PluginOut] = Field(default_factory=list)
 
 
 class ProjectCreate(BaseModel):
@@ -224,6 +216,7 @@ class MessageOut(BaseModel):
     thinking_text: str | None = None
     steps_json: str | None = None
     file_ops_json: str | None = None
+    plan_json: str | None = None
     task_class: str | None = None
     model_slug: str | None = None
     effort_label: str | None = None
@@ -275,6 +268,8 @@ class FileNode(BaseModel):
 class FileContent(BaseModel):
     path: str
     content: str
+    # Optimistic-concurrency token (short content hash).
+    version: str = ""
 
 
 class PreviewStatus(BaseModel):
@@ -282,3 +277,6 @@ class PreviewStatus(BaseModel):
     port: int | None = None
     url: str | None = None
     public_url: str | None = None
+    mode: str = "babel_runner"
+    runner_url: str | None = None
+    entry: str = "src/main.tsx"

@@ -14,8 +14,7 @@ class KeyProvider(Protocol):
         """Retourne (dek_plaintext, dek_encrypted_blob)."""
         ...
 
-    async def decrypt_data_key(self, blob: bytes, context: str) -> bytes:
-        ...
+    async def decrypt_data_key(self, blob: bytes, context: str) -> bytes: ...
 
 
 class LocalKeyProvider:

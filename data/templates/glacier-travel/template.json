@@ -1,0 +1,19 @@
+{
+  "id": "glacier-travel",
+  "title": { "en": "Glacier Expeditions", "fr": "Glacier Expeditions" },
+  "description": {
+    "en": "Immersive expedition travel site: full-screen mountain hero under a gradient veil, hover-zoom destination cards, vertical itinerary timeline, guide profiles and booking CTA.",
+    "fr": "Site de voyage d'expédition immersif : hero montagne plein écran sous voile dégradé, cartes destinations avec zoom au survol, itinéraire en timeline verticale, guides et CTA réservation."
+  },
+  "tags": ["travel", "adventure", "agency", "booking"],
+  "preview": "preview.html",
+  "bootHint": {
+    "en": "Adapt glacier-travel: destinations, itinerary days, guides, booking copy.",
+    "fr": "Adapte glacier-travel : destinations, jours d'itinéraire, guides, texte réservation."
+  },
+  "accent": "#0ea5e9",
+  "bg": "#061621",
+  "fg": "#e8f4fb",
+  "muted": "#7ba3b8",
+  "tone": "epic, calm, trustworthy"
+}

@@ -1,0 +1,54 @@
+import { describe, expect, it } from "vitest";
+import { parseCharterPalette, parseCharterTone } from "./design-charter";
+
+const KIT_MD = `# Design charter
+
+## Template
+- id: aurora-ai
+
+## Colors
+- --bg: #050208
+- --fg: #f4f1fa
+- --muted: #8b84a3
+- --accent: #7c3aed
+
+## Tone
+Visionary, sleek, quietly confident.
+
+## Do / Don't
+- Do keep the aurora gradients.
+`;
+
+describe("parseCharterPalette", () => {
+  it("extracts the kit palette in order", () => {
+    expect(parseCharterPalette(KIT_MD)).toEqual([
+      { name: "bg", hex: "#050208" },
+      { name: "fg", hex: "#f4f1fa" },
+      { name: "muted", hex: "#8b84a3" },
+      { name: "accent", hex: "#7c3aed" },
+    ]);
+  });
+
+  it("deduplicates repeated variables", () => {
+    expect(parseCharterPalette("--bg: #fff\n--bg: #000")).toHaveLength(1);
+  });
+
+  it("returns empty for missing or colorless markdown", () => {
+    expect(parseCharterPalette(null)).toEqual([]);
+    expect(parseCharterPalette("# No colors here")).toEqual([]);
+  });
+});
+
+describe("parseCharterTone", () => {
+  it("reads the paragraph under the Tone heading", () => {
+    expect(parseCharterTone(KIT_MD)).toBe("Visionary, sleek, quietly confident.");
+  });
+
+  it("accepts the french heading Ton", () => {
+    expect(parseCharterTone("## Ton\nChaleureux et direct.")).toBe("Chaleureux et direct.");
+  });
+
+  it("returns null when absent", () => {
+    expect(parseCharterTone("# Charter\n## Colors\n--bg: #fff")).toBeNull();
+  });
+});

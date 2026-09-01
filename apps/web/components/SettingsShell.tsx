@@ -6,6 +6,7 @@ import {
   Lock,
   Palette,
   Search,
+  Sparkles,
   User,
   type LucideIcon,
 } from "lucide-react";
@@ -13,7 +14,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import { Icon } from "@/components/ui/icon";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 
-export type SettingsSection = "account" | "appearance" | "security";
+export type SettingsSection = "account" | "appearance" | "security" | "generation";
 
 type NavItem = {
   id: SettingsSection;
@@ -36,6 +37,12 @@ export function SettingsShell({ active, onActiveChange, children }: SettingsShel
     () => [
       { id: "account", label: t("settingsTabAccount"), icon: User, group: t("settingsGroupAccount") },
       { id: "security", label: t("settingsTabSecurity"), icon: Lock, group: t("settingsGroupAccount") },
+      {
+        id: "generation",
+        label: t("settingsTabRodium"),
+        icon: Sparkles,
+        group: t("settingsGroupForge"),
+      },
       {
         id: "appearance",
         label: t("settingsTabAppearance"),

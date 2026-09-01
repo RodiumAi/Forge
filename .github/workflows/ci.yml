@@ -1,0 +1,201 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "refonte/**"]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    name: API (lint + tests)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+    env:
+      TEMPLATES_ROOT: ${{ github.workspace }}/data/templates
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: apps/api/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install ruff==0.16.4 pytest==8.3.4
+
+      - name: Install runtime CLI (smoke transform tests)
+        working-directory: apps/api/runtime
+        run: npm ci
+
+      - name: Ruff lint
+        run: ruff check app tests
+
+      - name: Ruff format check
+        run: ruff format --check app tests
+
+      - name: Import the app
+        env:
+          ENVIRONMENT: test
+        run: python -c "import app.main as m; print(f'{len(m.app.routes)} routes')"
+
+      - name: Unit tests
+        env:
+          ENVIRONMENT: test
+        run: pytest -q
+
+  web:
+    name: Web (lint + typecheck + tests + build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: TypeScript
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build
+        env:
+          DOCKER_BUILD: "1"
+          FORGE_FONT_MODE: fallback
+          NEXT_PUBLIC_API_URL: http://localhost:8100
+        run: npm run build
+
+  runtime:
+    name: Runtime manifest (Python/JS parity)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Runtime unit tests
+        working-directory: apps/api/runtime
+        run: |
+          npm ci
+          npm test --if-present
+
+      - name: Import map and AST allowlist must agree
+        run: python scripts/check_manifest_parity.py
+
+  compose:
+    name: Docker compose
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate local compose file
+        run: |
+          cp .env.example .env
+          docker compose config --quiet
+      - name: Validate production compose file
+        working-directory: infra/aws/ec2
+        env:
+          FORGE_API_IMAGE: 000000000000.dkr.ecr.eu-west-1.amazonaws.com/forge/api:latest
+        run: |
+          cp .env.example .env
+          docker compose -f docker-compose.prod.yml config --quiet
+
+  gitleaks:
+    name: Gitleaks
+    needs: [api, web, runtime, compose]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect secrets
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/repo" \
+            -w /repo \
+            ghcr.io/gitleaks/gitleaks:v8.24.2 \
+            detect --source /repo --config /repo/.gitleaks.toml --verbose
+
+  trivy:
+    name: Trivy
+    needs: gitleaks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Filesystem vulnerability scan
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/repo" \
+            -w /repo \
+            aquasec/trivy:0.69.3 \
+            fs \
+            --scanners vuln \
+            --severity CRITICAL,HIGH \
+            --ignore-unfixed \
+            --ignorefile .trivyignore \
+            --exit-code 1 \
+            --skip-dirs node_modules,dist,coverage,.git,.next,__pycache__,.venv,testForge \
+            .
+
+  semgrep:
+    name: Semgrep
+    needs: trivy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: SAST scan (web)
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/src" \
+            semgrep/semgrep:1.163.0 \
+            semgrep scan \
+              --config p/typescript \
+              --config p/javascript \
+              --config p/owasp-top-ten \
+              --config p/security-audit \
+              --config p/nodejs \
+              --config /src/.semgrep/rules/rodiumai-frontend.yml \
+              --metrics off \
+              --error \
+              /src/apps/web
+
+      - name: SAST scan (api)
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/src" \
+            semgrep/semgrep:1.163.0 \
+            semgrep scan \
+              --config p/python \
+              --config p/fastapi \
+              --metrics off \
+              --error \
+              /src/apps/api/app

@@ -30,7 +30,6 @@ from app.services.rodium_generation import (
     ensure_default_api_key_id,
     ensure_rodium_access_token,
     has_generation_key,
-    key_hint_from_list,
     pick_default_api_key_id,
     select_api_key_id,
     store_oauth_tokens,
@@ -104,7 +103,11 @@ def _wallet_out(raw: dict | None) -> RodiumWalletOut | None:
         credits = raw.get("providedCredits") or raw.get("provided_credits")
         if isinstance(credits, list):
             try:
-                total = sum(float(c.get("remainingRodi") or c.get("amountRodi") or c.get("balance") or 0) for c in credits if isinstance(c, dict))
+                total = sum(
+                    float(c.get("remainingRodi") or c.get("amountRodi") or c.get("balance") or 0)
+                    for c in credits
+                    if isinstance(c, dict)
+                )
                 provided_total = str(total)
             except Exception:
                 provided_total = None
@@ -168,7 +171,6 @@ async def rodium_oauth_callback(
     request: Request,
     db: Session = Depends(get_db),
 ) -> TokenResponse:
-    locale = resolve_locale(request)
     try:
         verifier = parse_oauth_state(body.state)
         tokens = await exchange_code(code=body.code, code_verifier=verifier)
@@ -376,6 +378,7 @@ def login(body: LoginRequest, request: Request, db: Session = Depends(get_db)) -
 
 @router.get("/me", response_model=UserOut)
 async def me(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> UserOut:
+    user_id = user.id
     if user.rodium_sub:
         try:
             async with asyncio.timeout(1.5):
@@ -383,18 +386,20 @@ async def me(user: User = Depends(get_current_user), db: Session = Depends(get_d
                 info = await fetch_userinfo(access)
                 name = info.get("name") if isinstance(info.get("name"), str) else None
                 picture = _picture_from_userinfo(info)
+                # Re-bind after token refresh commits (avoid DetachedInstanceError).
+                fresh = db.get(User, user_id) or user
                 dirty = False
-                if name and name != user.name:
-                    user.name = name
+                if name and name != fresh.name:
+                    fresh.name = name
                     dirty = True
-                if picture and picture != user.avatar_url:
-                    user.avatar_url = picture
+                if picture and picture != fresh.avatar_url:
+                    fresh.avatar_url = picture
                     dirty = True
                 if dirty:
                     db.commit()
-                    db.refresh(user)
+                user = db.get(User, user_id) or fresh
         except Exception:
-            pass
+            user = db.get(User, user_id) or user
     return _user_out(user)
 
 
@@ -431,7 +436,9 @@ def change_password(
     if not user.password_hash:
         raise HTTPException(status_code=400, detail=t("rodium_oauth_no_password", locale))
     if not verify_password(body.current_password, user.password_hash):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=t("invalid_current_password", locale))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=t("invalid_current_password", locale)
+        )
     user.password_hash = hash_password(body.new_password)
     db.commit()
     return PasswordChangeResponse()

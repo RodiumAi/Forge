@@ -1,0 +1,54 @@
+# Production API stack on EC2.
+# Postgres, Valkey and object storage are expected as managed AWS services (RDS,
+# ElastiCache, S3) — configure them via infra/aws/ec2/.env (see .env.example).
+#
+# Usage on the instance:
+#   cd /opt/forge
+#   docker compose -f infra/aws/ec2/docker-compose.prod.yml pull api
+#   docker compose -f infra/aws/ec2/docker-compose.prod.yml up -d
+
+name: forge-prod
+
+services:
+  api:
+    image: ${FORGE_API_IMAGE:?Set FORGE_API_IMAGE to your ECR image URI}
+    container_name: forge-api
+    restart: unless-stopped
+    ports:
+      - "${FORGE_API_BIND:-127.0.0.1:8000}:8000"
+    env_file:
+      - ${FORGE_ENV_FILE:-.env}
+    volumes:
+      - forge_projects:/data/projects
+      # Templates ship with the git checkout on the host (not baked into the ECR image).
+      - ${FORGE_HOST_ROOT:-/opt/forge}/data/templates:/app/data/templates:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8000/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  # Optional reverse proxy in front of the API (TLS termination on the instance).
+  # Uncomment if you terminate TLS on EC2 instead of an ALB.
+  # caddy:
+  #   image: caddy:2.9-alpine
+  #   restart: unless-stopped
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./Caddyfile:/etc/caddy/Caddyfile:ro
+  #     - caddy_data:/data
+  #   depends_on:
+  #     api:
+  #       condition: service_healthy
+
+volumes:
+  forge_projects:
+  # caddy_data:

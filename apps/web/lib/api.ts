@@ -42,6 +42,36 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Network-level failure (DNS, offline, timeout, connection reset).
+ *
+ * Modelled as an ApiError with status 0 so that every `catch (e) { e instanceof
+ * ApiError }` site handles it. Previously a dropped connection surfaced as a raw
+ * TypeError and slipped through those guards.
+ */
+export class NetworkError extends ApiError {
+  constructor(message: string) {
+    super(message, 0);
+    this.name = "NetworkError";
+  }
+}
+
+export type ApiOptions = RequestInit & {
+  /** Abort after N ms. Default 90 s; pass 0 to disable (SSE/streams). */
+  timeoutMs?: number;
+  /** Extra attempts on network errors / 502-504. Default 2. */
+  retries?: number;
+};
+
+// 90s, not 30s: during a generation the backend legitimately spends long spans
+// on LLM calls and file batches, and calls made alongside (preview restart,
+// file tree) must not be killed by an aggressive client-side deadline.
+const DEFAULT_TIMEOUT_MS = 90_000;
+const DEFAULT_RETRIES = 2;
+const RETRY_STATUSES = new Set([429, 502, 503, 504]);
+/** Retries only make sense for operations that are safe to repeat. */
+const IDEMPOTENT_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
 function localeHeader(explicit?: Locale): string {
   if (explicit) return explicit;
   if (typeof window === "undefined") return "fr";
@@ -63,39 +93,122 @@ function detailFromBody(data: unknown, fallback: string): string {
   }
 }
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Combine an external caller signal with our own timeout signal.
+ * `AbortSignal.any` is not available everywhere yet, so wire it manually.
+ */
+function withTimeout(
+  external: AbortSignal | null | undefined,
+  timeoutMs: number,
+): { signal: AbortSignal; cleanup: () => void; timedOut: () => boolean } {
+  const controller = new AbortController();
+  let didTimeout = false;
+
+  const onExternalAbort = () => controller.abort(external?.reason);
+  if (external) {
+    if (external.aborted) controller.abort(external.reason);
+    else external.addEventListener("abort", onExternalAbort);
+  }
+
+  const timer =
+    timeoutMs > 0
+      ? setTimeout(() => {
+          didTimeout = true;
+          controller.abort();
+        }, timeoutMs)
+      : null;
+
+  return {
+    signal: controller.signal,
+    cleanup: () => {
+      if (timer) clearTimeout(timer);
+      external?.removeEventListener("abort", onExternalAbort);
+    },
+    timedOut: () => didTimeout,
+  };
+}
+
 export async function api<T>(
   path: string,
-  options: RequestInit = {},
+  options: ApiOptions = {},
   locale?: Locale,
 ): Promise<T> {
-  const headers = new Headers(options.headers);
-  if (!headers.has("Content-Type") && options.body) {
+  const { timeoutMs = DEFAULT_TIMEOUT_MS, retries = DEFAULT_RETRIES, ...init } = options;
+
+  const headers = new Headers(init.headers);
+  if (!headers.has("Content-Type") && init.body) {
     headers.set("Content-Type", "application/json");
   }
   headers.set("Accept-Language", localeHeader(locale));
   const token = getToken();
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
-  const res = await fetch(`${apiBase()}${path}`, { ...options, headers });
-  if (!res.ok) {
-    let detail = res.statusText;
+  const method = (init.method || "GET").toUpperCase();
+  const maxAttempts = IDEMPOTENT_METHODS.has(method) ? retries + 1 : 1;
+
+  let lastError: ApiError | null = null;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const { signal, cleanup, timedOut } = withTimeout(init.signal, timeoutMs);
+    let res: Response;
+
     try {
-      const data = await res.json();
-      detail = detailFromBody(data, detail);
-    } catch {
-      /* ignore */
+      res = await fetch(`${apiBase()}${path}`, { ...init, headers, signal });
+    } catch (err) {
+      cleanup();
+      // Caller aborted on purpose: propagate untouched, never retry.
+      if (init.signal?.aborted) throw err;
+      lastError = new NetworkError(
+        timedOut() ? `Request timed out after ${timeoutMs}ms` : "Network request failed",
+      );
+      if (attempt < maxAttempts - 1) {
+        await sleep(2 ** attempt * 300);
+        continue;
+      }
+      throw lastError;
+    }
+    cleanup();
+
+    if (res.ok) {
+      if (res.status === 204) return undefined as T;
+      return res.json() as Promise<T>;
     }
 
+    let detail: string = res.statusText;
+    try {
+      detail = detailFromBody(await res.json(), detail);
+    } catch {
+      /* keep statusText */
+    }
+
+    // 401 means the session is really gone; do not bounce the user out of the
+    // builder for a transient blip — only after retries are exhausted.
     if (res.status === 401) {
       logoutToHome("expired");
-      throw new ApiError(typeof detail === "string" ? detail : "Unauthorized", 401);
+      throw new ApiError(detail || "Unauthorized", 401);
     }
 
-    throw new ApiError(
-      typeof detail === "string" ? detail : JSON.stringify(detail),
-      res.status,
-    );
+    // The RodiumAI link is definitively dead (refresh token rejected or tokens
+    // cleared): staying "signed in" to Forge while every generation fails with
+    // "account is not linked" is incoherent — sign out so the next login
+    // re-links the account in one step.
+    if (
+      res.status === 403 &&
+      /account is not linked|session expired.*sign in with rodiumai|sign in with rodiumai again/i.test(detail)
+    ) {
+      logoutToHome("expired");
+      throw new ApiError(detail, 403);
+    }
+
+    lastError = new ApiError(detail, res.status);
+    if (RETRY_STATUSES.has(res.status) && attempt < maxAttempts - 1) {
+      await sleep(2 ** attempt * 300);
+      continue;
+    }
+    throw lastError;
   }
-  if (res.status === 204) return undefined as T;
-  return res.json() as Promise<T>;
+
+  throw lastError ?? new NetworkError("Request failed");
 }

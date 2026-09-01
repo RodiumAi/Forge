@@ -1,0 +1,19 @@
+{
+  "id": "brutalist-studio",
+  "title": { "en": "Raw Works Studio", "fr": "Raw Works Studio" },
+  "description": {
+    "en": "Loud neo-brutalist creative studio site: cream canvas, 3px black borders, hard offset shadows, giant type, CSS marquee, rotated stickers and a punchy project grid.",
+    "fr": "Site de studio créatif néo-brutaliste : fond crème, bordures noires 3px, ombres dures décalées, typo géante, marquee CSS, stickers rotationnés et grille de projets percutante."
+  },
+  "tags": ["studio", "brutalist", "portfolio", "creative"],
+  "preview": "preview.html",
+  "bootHint": {
+    "en": "Adapt brutalist-studio: studio name, services, project grid.",
+    "fr": "Adapte brutalist-studio : nom du studio, services, grille de projets."
+  },
+  "accent": "#ff4911",
+  "bg": "#f5f0e8",
+  "fg": "#111111",
+  "muted": "#5c564d",
+  "tone": "irreverent, bold, playful, direct"
+}

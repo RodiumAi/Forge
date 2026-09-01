@@ -1,4 +1,8 @@
 import type { NextConfig } from "next";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const configDir = path.dirname(fileURLToPath(import.meta.url));
 
 function s3RemotePatterns(): NonNullable<
   NextConfig["images"]
@@ -41,6 +45,18 @@ const nextConfig: NextConfig = {
   ...(useStandaloneOutput ? { output: "standalone" as const } : {}),
   images: {
     remotePatterns: s3RemotePatterns(),
+  },
+  webpack: (config) => {
+    if (useStandaloneOutput) {
+      const fallbackFonts = path.join(configDir, "lib/fonts.fallback.ts");
+      config.resolve ??= {};
+      config.resolve.alias ??= {};
+      // Redirect every `@/lib/fonts` resolution path so Docker never hits Google Fonts.
+      config.resolve.alias["@/lib/fonts"] = fallbackFonts;
+      config.resolve.alias[path.join(configDir, "lib/fonts.ts")] = fallbackFonts;
+      config.resolve.alias[path.join(configDir, "lib/fonts")] = fallbackFonts;
+    }
+    return config;
   },
 };
 

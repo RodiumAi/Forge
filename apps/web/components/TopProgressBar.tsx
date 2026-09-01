@@ -23,8 +23,30 @@ function isInternalHref(href: string): boolean {
   return href.startsWith("/");
 }
 
+/** True when the history URL only changes search/hash (builder sync), not the path. */
+function isSamePathNavigation(urlArg: unknown): boolean {
+  if (typeof urlArg !== "string" || !urlArg) return false;
+  try {
+    const next = new URL(urlArg, window.location.href);
+    return next.pathname === window.location.pathname;
+  } catch {
+    return false;
+  }
+}
+
 /**
- * Fixed top loading bar for route changes and explicit loads (preview, etc.).
+ * Schedule outside React's commit/insertion phase.
+ * Calling setState synchronously from a history.pushState monkey-patch
+ * trips "useInsertionEffect must not schedule updates" (Next useSearchParams).
+ */
+function startRouteProgressDeferred() {
+  queueMicrotask(() => topProgressStart(ROUTE_KEY));
+}
+
+/**
+ * Global activity indicator for route changes and explicit loads (preview,
+ * publish, generation…). Renders as a discreet top-right spinner pill: the old
+ * full-width top bar suggested a whole-page load on every background action.
  */
 export function TopProgressBar() {
   const pathname = usePathname();
@@ -58,22 +80,26 @@ export function TopProgressBar() {
       ) {
         return;
       }
-      topProgressStart(ROUTE_KEY);
+      // Path-only navigations show progress; query-only builder sync does not.
+      if (url.pathname === window.location.pathname) return;
+      startRouteProgressDeferred();
     };
 
     // Catch Next.js client navigations (router.push / replace).
     const origPush = history.pushState.bind(history);
     const origReplace = history.replaceState.bind(history);
     history.pushState = function (...args: Parameters<History["pushState"]>) {
-      topProgressStart(ROUTE_KEY);
+      // Builder URL sync (page=, viewport=, pane=) must not flash the loader
+      // or setState during Next's useSearchParams insertion phase.
+      if (!isSamePathNavigation(args[2])) startRouteProgressDeferred();
       return origPush(...args);
     };
     history.replaceState = function (...args: Parameters<History["replaceState"]>) {
-      topProgressStart(ROUTE_KEY);
+      if (!isSamePathNavigation(args[2])) startRouteProgressDeferred();
       return origReplace(...args);
     };
 
-    const onPop = () => topProgressStart(ROUTE_KEY);
+    const onPop = () => startRouteProgressDeferred();
 
     document.addEventListener("click", onClick, true);
     window.addEventListener("popstate", onPop);
@@ -90,17 +116,12 @@ export function TopProgressBar() {
 
   return (
     <div
-      className={`forge-top-progress${state.value >= 1 ? " is-done" : ""}`}
-      role="progressbar"
-      aria-valuemin={0}
-      aria-valuemax={100}
-      aria-valuenow={Math.round(state.value * 100)}
-      aria-hidden={!visible}
+      className={`forge-top-loader${state.value >= 1 ? " is-done" : ""}`}
+      role="status"
+      aria-live="polite"
+      aria-label="Loading"
     >
-      <div
-        className="forge-top-progress-bar"
-        style={{ transform: `scaleX(${Math.max(0.02, state.value)})` }}
-      />
+      <span className="forge-top-loader-spinner" />
     </div>
   );
 }

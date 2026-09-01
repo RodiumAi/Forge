@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import hashlib
+import os
+import tempfile
 from pathlib import Path
 
 from app.config import get_settings
@@ -20,10 +23,30 @@ def safe_resolve(project_id: str, relative: str) -> Path:
     return target
 
 
+def _atomic_write(path: Path, data: bytes) -> None:
+    """Write via a temp file in the same directory + os.replace.
+
+    A crash or a full disk can no longer leave a half-written source file that
+    breaks the preview: either the old content or the new one is visible, never
+    a truncated mix.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_name = tempfile.mkstemp(dir=str(path.parent), prefix=".forge-tmp-")
+    tmp = Path(tmp_name)
+    try:
+        with os.fdopen(fd, "wb") as handle:
+            handle.write(data)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(tmp, path)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
+
+
 def write_file(project_id: str, relative: str, content: str) -> None:
     path = safe_resolve(project_id, relative)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content, encoding="utf-8")
+    _atomic_write(path, content.encode("utf-8"))
     # Agent often rewrites package.json; force a deps re-check on next preview/install.
     if path.name == "package.json":
         stamp = project_dir(project_id) / "node_modules" / ".forge-deps-stamp"
@@ -33,12 +56,18 @@ def write_file(project_id: str, relative: str, content: str) -> None:
 
 def write_bytes(project_id: str, relative: str, content: bytes) -> None:
     path = safe_resolve(project_id, relative)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(content)
+    _atomic_write(path, content)
 
 
 def delete_file(project_id: str, relative: str) -> None:
     path = safe_resolve(project_id, relative)
+    base = project_dir(project_id).resolve()
+    # Refuse to nuke the workspace root or the private history repo. The agent
+    # emits <forge-delete> tags freely and a stray "." would wipe the project.
+    if path == base:
+        raise ValueError("Refusing to delete the project root")
+    if ".git" in path.relative_to(base).parts:
+        raise ValueError("Refusing to delete project history")
     if path.is_file():
         path.unlink()
     elif path.is_dir():
@@ -50,23 +79,69 @@ def delete_file(project_id: str, relative: str) -> None:
         path.rmdir()
 
 
+def rename_path(project_id: str, src: str, dst: str) -> None:
+    """Move/rename a file or directory inside the project."""
+    base = project_dir(project_id).resolve()
+    source = safe_resolve(project_id, src)
+    target = safe_resolve(project_id, dst)
+
+    if source == base or target == base:
+        raise ValueError("Refusing to rename the project root")
+    if ".git" in source.relative_to(base).parts or ".git" in target.relative_to(base).parts:
+        raise ValueError("Refusing to touch project history")
+    if not source.exists():
+        raise FileNotFoundError(src)
+    if target.exists():
+        raise FileExistsError(dst)
+    if source in target.parents:
+        raise ValueError("Cannot move a directory inside itself")
+
+    target.parent.mkdir(parents=True, exist_ok=True)
+    os.replace(source, target)
+
+
+class BinaryFileError(ValueError):
+    """The file exists but is not UTF-8 text (image, font, archive...)."""
+
+
 def read_file(project_id: str, relative: str) -> str:
     path = safe_resolve(project_id, relative)
     if not path.is_file():
         raise FileNotFoundError(relative)
-    return path.read_text(encoding="utf-8")
+    try:
+        return path.read_text(encoding="utf-8")
+    except UnicodeDecodeError as exc:
+        # Opening a PNG from the file tree used to bubble up as a raw 500.
+        raise BinaryFileError(relative) from exc
+
+
+def content_version(project_id: str, relative: str) -> str:
+    """Short content hash, used as an optimistic-concurrency token.
+
+    The editor sends back the version it loaded; a mismatch means the agent (or
+    another tab) rewrote the file meanwhile, and the save is refused instead of
+    silently discarding that work.
+    """
+    path = safe_resolve(project_id, relative)
+    if not path.is_file():
+        return ""
+    return hashlib.sha256(path.read_bytes()).hexdigest()[:16]
 
 
 def list_files(project_id: str) -> dict[str, str]:
     base = project_dir(project_id)
     files: dict[str, str] = {}
     skip = {"node_modules", ".git", "dist", ".vite"}
+    # .gitignore belongs to the private history repo, not to the user project.
+    hidden_files = {".gitignore"}
     for path in base.rglob("*"):
         if not path.is_file():
             continue
         if any(part in skip for part in path.parts):
             continue
         rel = path.relative_to(base).as_posix()
+        if rel in hidden_files:
+            continue
         try:
             files[rel] = path.read_text(encoding="utf-8")
         except UnicodeDecodeError:
@@ -77,6 +152,8 @@ def list_files(project_id: str) -> dict[str, str]:
 def file_tree(project_id: str) -> list[FileNode]:
     base = project_dir(project_id)
     skip = {"node_modules", ".git", "dist", ".vite"}
+    # .gitignore belongs to the private history repo, not to the user project.
+    hidden_files = {".gitignore"}
 
     def walk(dir_path: Path) -> list[FileNode]:
         nodes: list[FileNode] = []
@@ -88,6 +165,8 @@ def file_tree(project_id: str) -> list[FileNode]:
             if entry.name in skip:
                 continue
             rel = entry.relative_to(base).as_posix()
+            if rel in hidden_files:
+                continue
             if entry.is_dir():
                 nodes.append(FileNode(path=rel, type="dir", children=walk(entry)))
             else:

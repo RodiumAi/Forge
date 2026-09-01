@@ -1,44 +1,127 @@
-export default function App() {
-  const eps = [
-    { img: "/02-podCast.webp", title: "How to ship secure websites", time: "23min" },
-    { img: "/01-sidebiew.webp", title: "5 principles for clear code", time: "1h22" },
-    { img: "/03-concentrated-young-african-american.webp", title: "Desktop development basics", time: "50min" },
-    { img: "/02-podCast.webp", title: "Start your journey in SEO", time: "24min" },
-  ];
+import { useState } from "react";
+
+const U = (id: string, w: number) =>
+  `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${w}&q=70`;
+
+const micCover = U("photo-1590602847861-f357a9332bbc", 800);
+const headphonesCover = U("photo-1505740420928-5e560c06d30e", 800);
+
+const episodes = [
+  { n: 1, title: "Why your side project deserves a launch day", dur: "38 min", g: "linear-gradient(135deg,#7c5cff,#4b32c3)", img: micCover, alt: "Studio microphone against a dark background" },
+  { n: 2, title: "Debugging in production without losing sleep", dur: "52 min", g: "linear-gradient(135deg,#ff7ab8,#b83280)", img: "", alt: "" },
+  { n: 3, title: "The art of the tiny pull request", dur: "27 min", g: "linear-gradient(135deg,#5ccfff,#2a7fb8)", img: headphonesCover, alt: "Black over-ear headphones on a dark surface" },
+  { n: 4, title: "From bootcamp to burnout and back again", dur: "61 min", g: "linear-gradient(135deg,#ffb85c,#c37a1f)", img: "", alt: "" },
+  { n: 5, title: "Databases explained with kitchen metaphors", dur: "44 min", g: "linear-gradient(135deg,#6dd98a,#2f8a4a)", img: micCover, alt: "Studio microphone against a dark background" },
+  { n: 6, title: "What we got wrong about remote work", dur: "35 min", g: "linear-gradient(135deg,#a08cff,#5c48c3)", img: "", alt: "" },
+];
+
+const hosts = [
+  { name: "Mara Delacroix", role: "Producer and host", init: "MD", g: "linear-gradient(135deg,#7c5cff,#ff7ab8)", img: U("photo-1494790108377-be9c29b29330", 400), alt: "Portrait of Mara Delacroix smiling" },
+  { name: "Theo Andersen", role: "Engineer and co-host", init: "TA", g: "linear-gradient(135deg,#5ccfff,#7c5cff)", img: U("photo-1507003211169-0a1dd7228f2d", 400), alt: "Portrait of Theo Andersen" },
+  { name: "Iris Okafor", role: "Sound designer", init: "IO", g: "linear-gradient(135deg,#ffb85c,#ff7ab8)", img: U("photo-1438761681033-6461ffad8d80", 400), alt: "Portrait of Iris Okafor smiling" },
+];
+
+function PlayButton({ active, onClick }: { active: boolean; onClick: () => void }) {
   return (
-    <div>
-      <header className="top"><strong className="brand">Podux</strong><div style={{display:"flex",gap:".75rem"}}><button type="button" style={{background:"transparent",border:"1px solid #334155",color:"#fff",borderRadius:".7rem",padding:".65rem 1rem"}}>Sign in</button><button className="btn" type="button">Join Us</button></div></header>
+    <button className={active ? "play playing" : "play"} onClick={onClick} aria-label="Play episode">
+      {active ? "\u275A\u275A" : "\u25B6"}
+    </button>
+  );
+}
+
+export default function App() {
+  const [playing, setPlaying] = useState<number | null>(null);
+
+  return (
+    <div className="page">
+      <header className="header">
+        <span className="logo">Signal&amp;Noise</span>
+        <nav>
+          <a href="#episodes">Episodes</a>
+          <a href="#hosts">Hosts</a>
+          <a href="#subscribe">Subscribe</a>
+        </nav>
+        <a className="btn btn-accent" href="#subscribe">Follow the show</a>
+      </header>
+
       <section className="hero">
-        <div>
-          <p className="muted">New season available</p>
-          <h1>Find and listen to your favorite podcast</h1>
-          <p>Curated tech conversations for builders, designers and founders worldwide.</p>
-          <div style={{display:"flex",gap:".75rem",marginTop:"1.25rem",flexWrap:"wrap"}}>
-            <button className="btn" type="button">Join us</button>
-            <button type="button" style={{background:"#1e293b",border:0,color:"#fff",borderRadius:".7rem",padding:".7rem 1.1rem"}}>Listening Episode</button>
+        <div className="hero-copy">
+          <span className="chip">Season 4 now streaming</span>
+          <h1>Signal&amp;Noise, a podcast about building software that people actually use</h1>
+          <p className="lead">
+            Two engineers and a sound designer unpack the messy, funny, human side
+            of shipping code. New episode every other Tuesday.
+          </p>
+          <div className="hero-actions">
+            <a className="btn btn-accent" href="#episodes">Start listening</a>
+            <a className="btn btn-ghost" href="#hosts">Meet the crew</a>
           </div>
-          <div className="stats"><div><strong>300+</strong><div className="muted">Listeners</div></div><div><strong>45+</strong><div className="muted">Episodes</div></div></div>
+          <p className="stat"><strong>1,200+</strong> listeners tune in weekly</p>
         </div>
-        <img src="/03-concentrated-young-african-american.webp" alt="Studio" />
+        <div className="hero-art">
+          <img
+            className="hero-img"
+            src={U("photo-1478737270239-2f02b77fc618", 1200)}
+            alt="Condenser microphone in a recording studio with warm lighting"
+          />
+          <span className="hero-play">&#9654;</span>
+        </div>
       </section>
-      <section className="section">
-        <h2>Latest Podcast</h2>
-        <div className="grid2" style={{marginTop:"1rem"}}>
-          {eps.map((e) => (
-            <article className="card" key={e.title + e.time}>
-              <img src={e.img} alt="" />
-              <div>
-                <div className="muted" style={{fontSize:".8rem"}}>{e.time}</div>
-                <h3 style={{margin:".25rem 0"}}>{e.title}</h3>
-                <button className="btn" type="button" style={{padding:".45rem .8rem",fontSize:".85rem"}}>Play now</button>
+
+      <section className="episodes" id="episodes">
+        <div className="section-head">
+          <h2>Latest episodes</h2>
+          <a href="#episodes" className="more">Browse all &rarr;</a>
+        </div>
+        <ol className="ep-list">
+          {episodes.map((ep) => (
+            <li key={ep.n} className="ep">
+              <span className="ep-num">{String(ep.n).padStart(2, "0")}</span>
+              <div className="ep-cover" style={{ background: ep.g }}>
+                {ep.img ? <img src={ep.img} alt={ep.alt} loading="lazy" /> : null}
               </div>
+              <div className="ep-info">
+                <h3>{ep.title}</h3>
+                <span className="dur">{ep.dur}</span>
+              </div>
+              <PlayButton active={playing === ep.n} onClick={() => setPlaying(playing === ep.n ? null : ep.n)} />
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section className="hosts" id="hosts">
+        <h2>Behind the microphones</h2>
+        <div className="host-grid">
+          {hosts.map((h) => (
+            <article key={h.init} className="host">
+              <div className="avatar" style={{ background: h.g }}>
+                <img src={h.img} alt={h.alt} loading="lazy" />
+              </div>
+              <h3>{h.name}</h3>
+              <p>{h.role}</p>
             </article>
           ))}
         </div>
       </section>
-      <footer className="section" style={{paddingBottom:"3rem"}}>
-        <h2>Subscribe for new episodes</h2>
-        <p className="muted">Fresh drops every week for the tech community.</p>
+
+      <section className="subscribe" id="subscribe">
+        <h2>Never miss an episode</h2>
+        <p>Drop your email, we&apos;ll ping you when a new one lands. No spam, ever.</p>
+        <form onSubmit={(e) => e.preventDefault()}>
+          <input type="email" placeholder="you@example.com" aria-label="Email" />
+          <button className="btn btn-accent" type="submit">Subscribe</button>
+        </form>
+      </section>
+
+      <footer className="footer">
+        <span className="logo">Signal&amp;Noise</span>
+        <nav>
+          <a href="#episodes">Episodes</a>
+          <a href="#hosts">Hosts</a>
+          <a href="#subscribe">Contact</a>
+        </nav>
+        <p>&copy; 2026 Signal&amp;Noise. A fictional demo podcast.</p>
       </footer>
     </div>
   );

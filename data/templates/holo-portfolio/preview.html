@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Holo Portfolio preview</title>
+<style>
+  :root{--bg:#050507;--fg:#f4f4f5;--muted:#8b8b96;--accent:#22d3ee;
+    --holo:linear-gradient(115deg,#22d3ee,#a855f7,#ec4899,#22d3ee)}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--fg);font-family:"Segoe UI",sans-serif;padding:16px}
+  .nav{display:flex;justify-content:space-between;align-items:center;padding-bottom:10px;
+    border-bottom:1px solid rgba(244,244,245,.1);margin-bottom:14px}
+  .logo{font-weight:800;letter-spacing:.12em;font-size:10px}
+  .logo span{background:var(--holo);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .links{display:flex;gap:10px;font-size:8px;color:var(--muted)}
+  .pillbtn{border:1px solid var(--accent);color:var(--accent);font-size:8px;padding:3px 10px;border-radius:999px}
+  .tagline{font-size:7px;letter-spacing:.28em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+  h1{font-size:26px;font-weight:900;line-height:.95;letter-spacing:-.02em;margin-bottom:8px}
+  .grad{background:var(--holo);background-size:300% 300%;-webkit-background-clip:text;
+    background-clip:text;color:transparent;animation:g 6s ease-in-out infinite}
+  @keyframes g{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+  .sub{font-size:8px;color:var(--muted);max-width:230px;margin-bottom:10px}
+  .pills{display:flex;gap:6px;margin-bottom:14px}
+  .pill{border:1px solid rgba(34,211,238,.5);color:var(--accent);font-size:7px;letter-spacing:.08em;
+    text-transform:uppercase;padding:3px 9px;border-radius:999px}
+  .card{display:flex;border:1px solid rgba(244,244,245,.12);border-radius:10px;overflow:hidden;
+    background:#0a0a0f;position:relative}
+  .sheen{position:absolute;inset:0;background:linear-gradient(115deg,rgba(34,211,238,.14),
+    rgba(168,85,247,.1) 35%,rgba(236,72,153,.12) 60%,rgba(34,211,238,.14));background-size:300% 300%;
+    animation:h 6s linear infinite;mix-blend-mode:screen;pointer-events:none}
+  @keyframes h{0%{background-position:0% 0%}100%{background-position:300% 300%}}
+  .card img{width:45%;object-fit:cover;display:block}
+  .cb{padding:12px;flex:1}
+  .idx{font-size:7px;letter-spacing:.28em;color:var(--accent)}
+  .cb h3{font-size:14px;font-weight:800;margin:4px 0}
+  .cb p{font-size:7.5px;color:var(--muted);margin-bottom:8px}
+  .tags{display:flex;gap:5px}
+  .tag{border:1px solid rgba(34,211,238,.5);color:var(--accent);font-size:6.5px;padding:2px 7px;border-radius:999px}
+</style>
+</head>
+<body>
+  <div class="nav">
+    <span class="logo">META<span>MORPH</span></span>
+    <span class="links"><span>Work</span><span>Services</span><span>About</span></span>
+    <span class="pillbtn">Let's talk</span>
+  </div>
+  <div class="tagline">Creative technologist — Berlin / remote</div>
+  <h1>I BUILD<br><span class="grad">IMPOSSIBLE</span><br>INTERFACES</h1>
+  <p class="sub">WebGL experiences, live visuals, and brands that refuse to sit still.</p>
+  <div class="pills"><span class="pill">Available Q3 2026</span></div>
+  <div class="card">
+    <div class="sheen"></div>
+    <img src="https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=400&q=70" alt="">
+    <div class="cb">
+      <div class="idx">01</div>
+      <h3>SYNTH/WAVE</h3>
+      <p>Generative audio-reactive visuals for a synthwave label's world tour.</p>
+      <div class="tags"><span class="tag">WebGL</span><span class="tag">GLSL</span><span class="tag">Audio API</span></div>
+    </div>
+  </div>
+</body>
+</html>

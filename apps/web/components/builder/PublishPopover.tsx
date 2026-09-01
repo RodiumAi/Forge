@@ -6,13 +6,16 @@ import {
   Check,
   CheckCircle2,
   Copy,
+  Download,
   ExternalLink,
   Globe,
   Loader2,
   Pencil,
   Upload,
 } from "lucide-react";
-import { api } from "@/lib/api";
+import { api, apiBase, getToken } from "@/lib/api";
+import { projectPublicUrl } from "@/lib/asset-url";
+import QRCode from "qrcode";
 import { Icon } from "@/components/ui/icon";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { topProgressDone, topProgressStart } from "@/lib/top-progress";
@@ -82,9 +85,11 @@ export function PublishPopover({
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<PopoverPos>({ top: 0, right: 0 });
   const [busy, setBusy] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [savingSlug, setSavingSlug] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [exportNotice, setExportNotice] = useState<string | null>(null);
   const [slug, setSlug] = useState(slugProp || "");
   const [url, setUrl] = useState(sitesUrl || "");
   const [lastPublished, setLastPublished] = useState(publishedAt || null);
@@ -92,10 +97,32 @@ export function PublishPopover({
   const [editing, setEditing] = useState(false);
   const [draftSlug, setDraftSlug] = useState(slugProp || "");
   const [mounted, setMounted] = useState(false);
+  const [faviconUrl, setFaviconUrl] = useState<string | null>(null);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Resolve the project's own favicon when the popover opens.
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const seo = await api<{ favicon_path?: string | null }>(`/projects/${projectId}/seo`);
+        if (cancelled) return;
+        setFaviconUrl(
+          projectPublicUrl(projectId, seo.favicon_path || "/favicon.png", Date.now()),
+        );
+      } catch {
+        if (!cancelled) setFaviconUrl(projectPublicUrl(projectId, "/favicon.png", Date.now()));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, projectId]);
 
   useEffect(() => {
     if (slugProp) setSlug(slugProp);
@@ -133,7 +160,7 @@ export function PublishPopover({
   useEffect(() => {
     if (!open) return;
     function onDoc(e: MouseEvent) {
-      if (busy) return;
+      if (busy || exporting) return;
       const target = e.target as Node;
       if (wrapRef.current?.contains(target)) return;
       if (popoverRef.current?.contains(target)) return;
@@ -141,7 +168,7 @@ export function PublishPopover({
     }
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") {
-        if (busy) return;
+        if (busy || exporting) return;
         setEditing(false);
         setOpen(false);
       }
@@ -159,7 +186,7 @@ export function PublishPopover({
       window.removeEventListener("resize", onReposition);
       window.removeEventListener("scroll", onReposition, true);
     };
-  }, [open, busy]);
+  }, [open, busy, exporting]);
 
   async function publish() {
     abortRef.current?.abort();
@@ -169,6 +196,7 @@ export function PublishPopover({
 
     setBusy(true);
     setError(null);
+    setExportNotice(null);
     setOpen(true);
     topProgressStart();
     try {
@@ -195,6 +223,50 @@ export function PublishPopover({
       if (abortRef.current === controller) abortRef.current = null;
       setBusy(false);
       topProgressDone();
+    }
+  }
+
+  async function exportZip() {
+    setExporting(true);
+    setError(null);
+    setExportNotice(null);
+    try {
+      const headers = new Headers();
+      const token = getToken();
+      if (token) headers.set("Authorization", `Bearer ${token}`);
+      headers.set("Accept-Language", locale === "en" ? "en" : "fr");
+      const res = await fetch(`${apiBase()}/projects/${projectId}/export`, {
+        method: "GET",
+        headers,
+      });
+      if (!res.ok) {
+        let detail = res.statusText;
+        try {
+          const data = await res.json();
+          if (typeof data.detail === "string") detail = data.detail;
+        } catch {
+          /* ignore */
+        }
+        throw new Error(detail);
+      }
+      const blob = await res.blob();
+      const cd = res.headers.get("Content-Disposition") || "";
+      const match = /filename="([^"]+)"/i.exec(cd);
+      const filename =
+        match?.[1] || `${(slug || "project").replace(/[^a-z0-9-_]/gi, "-")}-export.zip`;
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(objectUrl);
+      setExportNotice(t("optionsExportDone"));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("errorGeneric"));
+    } finally {
+      setExporting(false);
     }
   }
 
@@ -245,12 +317,35 @@ export function PublishPopover({
   }
 
   const hasPublished = Boolean(lastPublished);
+
+  // QR of the live URL: scan from the popover to open the published site on a
+  // phone. Regenerated when the panel opens or the slug changes.
+  useEffect(() => {
+    if (!open || !hasPublished || !url) {
+      setQrDataUrl(null);
+      return;
+    }
+    let alive = true;
+    QRCode.toDataURL(url, { margin: 1, width: 264, errorCorrectionLevel: "M" })
+      .then((data) => {
+        if (alive) setQrDataUrl(data);
+      })
+      .catch(() => {
+        if (alive) setQrDataUrl(null);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [open, hasPublished, url]);
+
   const hostLabel = hasPublished && url
     ? displayHost(url)
     : slug
       ? `${slug}.lvh.me:8080`
       : t("publishEmpty");
 
+  // Publish is a single synchronous POST: phase labels are estimated from
+  // elapsed time (the granular Firestore phases went away with the mirror).
   const phaseLabel =
     elapsed < 8
       ? t("publishPhaseDeps")
@@ -262,6 +357,19 @@ export function PublishPopover({
 
   const panel = open && mounted
     ? createPortal(
+        <>
+          {/* Real backdrop: a document-level mousedown listener never fires
+              when the click lands on the preview iframe (iframe events don't
+              bubble to the parent document), so the popover looked stuck. */}
+          <button
+            type="button"
+            className="publish-popover-backdrop"
+            aria-label={t("close")}
+            tabIndex={-1}
+            onClick={() => {
+              if (!busy && !exporting) setOpen(false);
+            }}
+          />
         <div
           ref={popoverRef}
           className={`publish-popover publish-popover-portal${busy ? " is-busy" : ""}`}
@@ -324,7 +432,19 @@ export function PublishPopover({
               <>
                 <div className="publish-url-main">
                   <span className="publish-favicon" aria-hidden>
-                    F
+                    {/* The site's own favicon, not Forge's app icon. Falls back
+                        to a neutral globe when the project has none yet. */}
+                    {faviconUrl ? (
+                      <img
+                        src={faviconUrl}
+                        alt=""
+                        width={16}
+                        height={16}
+                        onError={() => setFaviconUrl(null)}
+                      />
+                    ) : (
+                      <Icon icon={Globe} className="ui-icon-sm" />
+                    )}
                   </span>
                   {hasPublished && url ? (
                     <a href={url} target="_blank" rel="noreferrer" className="publish-url-link">
@@ -387,6 +507,14 @@ export function PublishPopover({
             <p className="publish-live-hint">{t("publishLiveLockedHint")}</p>
           )}
 
+          {hasPublished && url && qrDataUrl ? (
+            <div className="publish-qr">
+              { }
+              <img src={qrDataUrl} alt={t("publishQrAlt")} width={132} height={132} />
+              <span>{t("publishQrHint")}</span>
+            </div>
+          ) : null}
+
           <div className="publish-visibility">
             <Icon icon={Globe} className="ui-icon-sm" />
             <span>{t("publishVisibilityPublic")}</span>
@@ -397,10 +525,32 @@ export function PublishPopover({
             <span>{t("publishSecurityOk")}</span>
           </div>
 
+          <div className="publish-export-block">
+            <p className="publish-export-help">{t("optionsExportHelp")}</p>
+            <button
+              type="button"
+              className="publish-export-btn"
+              disabled={busy || exporting}
+              onClick={() => void exportZip()}
+            >
+              <Icon
+                icon={exporting ? Loader2 : Download}
+                className={`ui-icon-sm ${exporting ? "agent-spin" : ""}`}
+              />
+              {exporting ? t("optionsExporting") : t("optionsExport")}
+            </button>
+            {exportNotice ? <p className="publish-export-ok">{exportNotice}</p> : null}
+          </div>
+
           {error && <p className="publish-error">{error}</p>}
 
           <div className="publish-footer">
-            <button type="button" className="publish-run" disabled={busy} onClick={() => void publish()}>
+            <button
+              type="button"
+              className="publish-run"
+              disabled={busy || exporting}
+              onClick={() => void publish()}
+            >
               {busy ? (
                 <>
                   <Icon icon={Loader2} className="ui-icon-sm agent-spin" />
@@ -413,7 +563,8 @@ export function PublishPopover({
               )}
             </button>
           </div>
-        </div>,
+        </div>
+        </>,
         document.body,
       )
     : null;

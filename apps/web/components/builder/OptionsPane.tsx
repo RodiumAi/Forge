@@ -5,21 +5,25 @@ import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
   BarChart3,
+  Download,
   ExternalLink,
   Globe2,
   KeyRound,
+  Loader2,
   Palette,
   Save,
+  Search,
   Settings2,
   Trash2,
   type LucideIcon,
 } from "lucide-react";
-import { api } from "@/lib/api";
+import { api, apiBase, getToken } from "@/lib/api";
 import { removeProject } from "@/lib/lists-cache";
 import { Icon } from "@/components/ui/icon";
 import { useI18n } from "@/lib/i18n/I18nProvider";
+import { SeoOptionsSection } from "@/components/builder/SeoOptionsSection";
 
-type OptionsSection = "general" | "environment" | "brand" | "publishing" | "stats" | "danger";
+type OptionsSection = "general" | "environment" | "brand" | "seo" | "publishing" | "stats" | "danger";
 
 type ProjectStats = {
   slug: string;
@@ -46,6 +50,8 @@ type Props = {
   projectSlug?: string;
   sitesUrl?: string | null;
   publishedAt?: string | null;
+  section?: OptionsSection;
+  onSectionChange?: (section: OptionsSection) => void;
   onNameSaved?: (meta: { name: string; slug?: string; sites_url?: string | null }) => void;
   onOpenDesign: () => void;
 };
@@ -75,12 +81,19 @@ export function OptionsPane({
   projectSlug = "",
   sitesUrl = null,
   publishedAt = null,
+  section: sectionProp,
+  onSectionChange,
   onNameSaved,
   onOpenDesign,
 }: Props) {
   const { t, locale } = useI18n();
   const router = useRouter();
-  const [section, setSection] = useState<OptionsSection>("general");
+  const [internalSection, setInternalSection] = useState<OptionsSection>("general");
+  const section = sectionProp ?? internalSection;
+  const selectSection = (next: OptionsSection) => {
+    onSectionChange?.(next);
+    if (sectionProp === undefined) setInternalSection(next);
+  };
   const [name, setName] = useState(projectName);
   const [slug, setSlug] = useState(projectSlug);
   const [envContent, setEnvContent] = useState("");
@@ -92,6 +105,11 @@ export function OptionsPane({
   const [statsLoading, setStatsLoading] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  useEffect(() => {
+    if (sectionProp !== undefined) setInternalSection(sectionProp);
+  }, [sectionProp]);
 
   useEffect(() => {
     setName(projectName);
@@ -164,6 +182,7 @@ export function OptionsPane({
         {
           group: t("optionsGroupSite"),
           items: [
+            { id: "seo" as const, label: t("optionsNavSeo"), icon: Search },
             { id: "publishing" as const, label: t("optionsNavPublish"), icon: Globe2 },
             { id: "stats" as const, label: t("optionsNavStats"), icon: BarChart3 },
           ],
@@ -252,10 +271,54 @@ export function OptionsPane({
     }
   }
 
+  async function exportProject() {
+    setExporting(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const headers = new Headers();
+      const token = getToken();
+      if (token) headers.set("Authorization", `Bearer ${token}`);
+      headers.set("Accept-Language", locale === "en" ? "en" : "fr");
+      const res = await fetch(`${apiBase()}/projects/${projectId}/export`, {
+        method: "GET",
+        headers,
+      });
+      if (!res.ok) {
+        let detail = res.statusText;
+        try {
+          const data = await res.json();
+          if (typeof data.detail === "string") detail = data.detail;
+        } catch {
+          /* ignore */
+        }
+        throw new Error(detail);
+      }
+      const blob = await res.blob();
+      const cd = res.headers.get("Content-Disposition") || "";
+      const match = /filename="([^"]+)"/i.exec(cd);
+      const filename = match?.[1] || `${(projectSlug || projectName || "project").replace(/[^a-z0-9-_]/gi, "-")}-export.zip`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      flashOk(t("optionsExportDone"));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("errorGeneric"));
+    } finally {
+      setExporting(false);
+    }
+  }
+
   const sectionMeta: Record<OptionsSection, { title: string; subtitle: string }> = {
     general: { title: t("optionsNavGeneral"), subtitle: t("optionsGeneralSub") },
     environment: { title: t("optionsNavEnv"), subtitle: t("optionsEnvSub") },
     brand: { title: t("optionsNavBrand"), subtitle: t("optionsBrandSub") },
+    seo: { title: t("optionsNavSeo"), subtitle: t("optionsSeoSub") },
     publishing: { title: t("optionsNavPublish"), subtitle: t("optionsPublishSub") },
     stats: { title: t("optionsNavStats"), subtitle: t("optionsStatsSub") },
     danger: { title: t("optionsNavDanger"), subtitle: t("optionsDangerSub") },
@@ -280,7 +343,7 @@ export function OptionsPane({
                     item.id === "danger" ? "danger" : ""
                   }`}
                   onClick={() => {
-                    setSection(item.id);
+                    selectSection(item.id);
                     setMessage(null);
                     setError(null);
                   }}
@@ -381,6 +444,17 @@ export function OptionsPane({
           </div>
         )}
 
+        {section === "seo" && (
+          <SeoOptionsSection
+            projectId={projectId}
+            onOk={flashOk}
+            onError={(msg) => {
+              setError(msg);
+              setMessage(null);
+            }}
+          />
+        )}
+
         {section === "publishing" && (
           <div className="options-card options-stack">
             <div className="options-stat-row">
@@ -408,6 +482,25 @@ export function OptionsPane({
                 </a>
               </div>
             )}
+
+            <div className="options-seo-block">
+              <h4>{t("optionsExportTitle")}</h4>
+              <p className="options-help">{t("optionsExportHelp")}</p>
+              <div className="options-actions">
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={exporting}
+                  onClick={() => void exportProject()}
+                >
+                  <Icon
+                    icon={exporting ? Loader2 : Download}
+                    className={`ui-icon-sm ${exporting ? "agent-spin" : ""}`}
+                  />
+                  {exporting ? t("optionsExporting") : t("optionsExport")}
+                </button>
+              </div>
+            </div>
           </div>
         )}
 

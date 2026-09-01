@@ -19,8 +19,10 @@ class Settings(BaseSettings):
     api_base_url: str = "http://localhost:8100"
     sites_base_domain: str = "lvh.me:8080"
 
-    database_url: str = "postgresql+psycopg://forge:forge@127.0.0.1:5434/forge_web"
+    database_url: str = "postgresql+psycopg://forge:forge@127.0.0.1:5434/rodium_forge"
     secret_key: str = "dev-secret-change-me"
+    # Shared secret for RodiumAi Nest admin → Forge internal routes (X-Forge-Admin-Secret).
+    admin_secret: str = ""
     encryption_key: str = ""
     # Local RodiumAi FastAPI gateway (LLM). Override for prod.
     rodium_base_url: str = "http://127.0.0.1:8001/v1"
@@ -40,17 +42,24 @@ class Settings(BaseSettings):
     # Forkable starter kits (Vite/React snapshots). Docker: /data/templates
     templates_root: str = "./data/templates"
     cors_origins: str = "http://localhost:3100,http://127.0.0.1:3100,http://localhost:8080"
-    # Text/code default (Gemini). Images use default_image_model for tests.
+    # LLM models (override via .env — no slugs in router.py)
+    # LITE_MODEL: small edits, classify, coherence
+    # DEFAULT_MODEL: scaffold, plan, medium/large edits, verify.repair
+    # DEFAULT_IMAGE_MODEL: image generation
+    lite_model: str = "google/gemini-3.1-flash-lite"
     default_model: str = "google/gemini-3.7-flash"
     default_image_model: str = "openai/gpt-image-2"
     enable_pro_escalation: bool = False
+    # Optional heavier model when enable_pro_escalation is true (future use).
+    escalation_model: str = "google/gemini-3.7-flash"
     access_token_expire_minutes: int = 60 * 24 * 7
     preview_port_start: int = 5200
     preview_port_end: int = 5299
-    # Vite live preview (Next middleware). Sites Gateway routing uses sites_base_domain + Caddy.
     preview_public_host: str = "lvh.me"
     preview_public_port: int = 3100
     preview_public_scheme: str = "http"
+    # Parent origins allowed to talk to the preview runner (comma-separated)
+    runner_parent_origins: str = "http://localhost:3100,http://127.0.0.1:3100"
 
     # Object store (MinIO local / S3 or R2 in production)
     object_store_provider: Literal["s3_compatible"] = "s3_compatible"
@@ -84,28 +93,16 @@ class Settings(BaseSettings):
     site_jwt_master_secret: str | None = "ZGV2LWp3dC1tYXN0ZXItc2VjcmV0LWNoYW5nZS1tZQ=="
     site_jwt_master_secret_previous: str | None = None
 
-    # Email (Mailpit local / SES or Resend in production)
-    mail_provider: Literal["smtp", "ses", "resend"] = "smtp"
-    smtp_host: str | None = "127.0.0.1"
-    smtp_port: int = 11025
-    smtp_user: str | None = None
-    smtp_password: str | None = None
-    smtp_tls: bool = False
-    mail_from: str = "no-reply@sites.rodiumai.local"
-    mail_transport: str = "smtp"
-    ses_region: str = "eu-west-1"
-    ses_from_email: str = "forge@rodiumai.io"
-    ses_from_name: str = "Forge"
-    resend_api_key: str = ""
-
     # Queue (Valkey / Redis Streams — same impl local and prod)
     queue_provider: Literal["redis"] = "redis"
     redis_url: str = "redis://127.0.0.1:6380/0"
     usage_stream: str = "sites:usage"
     usage_consumer_group: str = "billing"
-    build_queue: str = "sites:builds"
+    # SSE comment heartbeats so ALB/proxies with long idle timeouts stay open.
+    sse_heartbeat_seconds: float = 15.0
+    # Target ALB idle timeout (seconds) — document & IaC must match before streaming runs.
+    alb_idle_timeout_seconds: int = 600
 
-    managed_email_daily_limit: int = 25
     managed_storage_bytes_limit: int = 500 * 1024 * 1024
 
     @property
@@ -127,7 +124,8 @@ class Settings(BaseSettings):
         return f"{self.preview_public_scheme}://{slug}.{self.preview_public_host}{port}"
 
     def sites_url_for_slug(self, slug: str) -> str:
-        return f"http://{slug}.{self.sites_base_domain}"
+        scheme = "https" if self.environment in ("staging", "production") else "http"
+        return f"{scheme}://{slug}.{self.sites_base_domain}"
 
     @property
     def object_store_enabled(self) -> bool:
@@ -181,6 +179,9 @@ class Settings(BaseSettings):
         return self._rodium_oidc_server_base + "/api/v1/oauth/revoke"
 
 
+_DEV_SECRET_KEYS = {"dev-secret-change-me", "dev-secret-forge-web", "", None}
+
+
 @lru_cache
 def get_settings() -> Settings:
     s = Settings()
@@ -188,11 +189,17 @@ def get_settings() -> Settings:
     if s.environment == "production":
         assert s.key_provider == "kms", "KEY_PROVIDER doit être kms en production"
         assert s.secret_provider == "aws_secrets_manager", "SECRET_PROVIDER invalide en production"
-        assert s.mail_provider != "smtp", "SMTP interdit en production"
         assert s.dev_master_key is None, "DEV_MASTER_KEY doit être absente en production"
         assert not s.object_store_endpoint or "minio" not in (s.object_store_endpoint or ""), (
             "OBJECT_STORE_ENDPOINT MinIO interdit en production"
         )
+        # Le JWT de session ne doit jamais être signé avec une clé de développement.
+        assert s.secret_key not in _DEV_SECRET_KEYS, "SECRET_KEY de développement interdite en production"
+        assert len(s.secret_key) >= 32, "SECRET_KEY doit faire au moins 32 caractères en production"
+        # ENCRYPTION_KEY doit être distincte : sinon compromettre le JWT compromet
+        # aussi les clés API RodiumAi et les refresh tokens chiffrés au repos.
+        assert s.encryption_key, "ENCRYPTION_KEY est obligatoire en production"
+        assert s.encryption_key != s.secret_key, "ENCRYPTION_KEY doit différer de SECRET_KEY"
     return s
 
 

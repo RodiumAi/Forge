@@ -12,7 +12,7 @@ import {
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Plus, Search } from "lucide-react";
-import { getToken } from "@/lib/api";
+import { apiBase, getToken } from "@/lib/api";
 import { HomeLayout } from "@/components/HomeLayout";
 import { PromptFileChips } from "@/components/PromptFileChips";
 import { SiteThumb, invalidateThumbCache } from "@/components/SiteThumb";
@@ -21,9 +21,10 @@ import { Icon } from "@/components/ui/icon";
 import {
   PENDING_PROMPT_KEY,
   PENDING_TEMPLATE_KEY,
-  createProjectFromPrompt,
+  createProjectWithAttachments,
   ensureCanGenerate,
   forkProjectFromTemplate,
+  restorePendingFilesAsAttachments,
 } from "@/lib/create-project";
 import {
   ensureProjects,
@@ -40,9 +41,10 @@ import { useI18n } from "@/lib/i18n/I18nProvider";
 import {
   PROMPT_FILE_ACCEPT,
   PromptAttachment,
-  buildPromptWithAttachments,
+  createPromptAttachment,
   mergePromptAttachments,
   revokePromptAttachment,
+  type PromptLabels,
 } from "@/lib/prompt-attachments";
 
 type Project = {
@@ -51,6 +53,7 @@ type Project = {
   slug: string;
   status: string;
   created_at: string;
+  updated_at?: string;
   template_id?: string | null;
   preview_running?: boolean;
   public_url?: string | null;
@@ -132,7 +135,11 @@ function DashboardInner() {
         const pending = sessionStorage.getItem(PENDING_PROMPT_KEY);
         if (pending?.trim()) {
           sessionStorage.removeItem(PENDING_PROMPT_KEY);
-          await createFromPrompt(pending.trim());
+          const restored = await restorePendingFilesAsAttachments();
+          const restoredAttachments = restored
+            .map((file) => createPromptAttachment(file))
+            .filter((item): item is NonNullable<ReturnType<typeof createPromptAttachment>> => item !== null);
+          await createFromPrompt(pending.trim(), restoredAttachments);
           return;
         }
 
@@ -187,20 +194,20 @@ function DashboardInner() {
     }
   }
 
-  async function composePrompt(value: string) {
-    return buildPromptWithAttachments(value, files, {
+  function promptLabels(): PromptLabels {
+    return {
       importFiles: t("importFiles"),
       imageAttached: t("promptImageAttached"),
       mdSection: t("promptMdSection"),
       txtSection: t("promptTxtSection"),
       pdfSection: t("promptPdfSection"),
       pdfEmpty: t("promptPdfEmpty"),
-    });
+    };
   }
 
-  async function createFromPrompt(raw: string) {
-    const payload = raw.trim();
-    if (!payload) return;
+  async function createFromPrompt(raw: string, attachmentList: PromptAttachment[] = files) {
+    const trimmed = raw.trim();
+    if (!trimmed && !attachmentList.length) return;
     setCreating(true);
     setError(null);
     try {
@@ -210,10 +217,18 @@ function DashboardInner() {
         setCreating(false);
         return;
       }
-      const project = await createProjectFromPrompt(payload, t("newProject"));
+      const project = await createProjectWithAttachments(
+        trimmed,
+        attachmentList,
+        t("newProject"),
+        promptLabels(),
+        locale,
+      );
       invalidateProjectsCache();
       prependProject(locale, project);
       invalidateThumbCache(project.id);
+      attachmentList.forEach(revokePromptAttachment);
+      setFiles([]);
       router.replace(`/projects/${project.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("errorGeneric"));
@@ -245,9 +260,8 @@ function DashboardInner() {
 
   async function submitPrompt() {
     if (creating) return;
-    const payload = await composePrompt(prompt);
-    if (!payload) return;
-    await createFromPrompt(payload);
+    if (!prompt.trim() && !files.length) return;
+    await createFromPrompt(prompt);
   }
 
   async function onPromptSubmit(e: FormEvent) {
@@ -295,7 +309,7 @@ function DashboardInner() {
   }
 
   const filteredProjects = useMemo(() => {
-    let list = [...projects];
+    const list = [...projects];
     if (tab === "recent") {
       list.sort(
         (a, b) =>
@@ -325,12 +339,24 @@ function DashboardInner() {
   const showTemplates = tab === "templates";
 
   function projectThumb(p: Project) {
-    // Prefer static HTML thumbs (template preview / card-preview) — never the live Vite
-    // preview URL, which is slow and often cross-origin for gallery cards.
-    if (p.template_id) {
-      return { src: `/templates/${p.template_id}/preview`, authPath: null as string | null };
+    // Live render of the actual site via the standalone draft route. The old
+    // card-preview served a static "Forge" placeholder for every generated
+    // project (nothing writes a preview.html for them), and the template
+    // preview showed the kit's mockup — not what the user built on top of it.
+    const token = getToken();
+    if (token) {
+      const base = apiBase().replace(/\/$/, "");
+      const parent = encodeURIComponent(window.location.origin);
+      return {
+        frameSrc: `${base}/projects/${p.id}/draft?access_token=${encodeURIComponent(token)}&parent_origin=${parent}&thumb=1`,
+        src: null as string | null,
+        authPath: null as string | null,
+      };
     }
-    return { src: null, authPath: `/projects/${p.id}/card-preview` };
+    if (p.template_id) {
+      return { frameSrc: null, src: `/templates/${p.template_id}/preview`, authPath: null as string | null };
+    }
+    return { frameSrc: null, src: null, authPath: `/projects/${p.id}/card-preview` };
   }
 
   return (
@@ -351,7 +377,7 @@ function DashboardInner() {
           {fileError && <p className="landing-file-error">{fileError}</p>}
           {error && error === t("createNeedsKey") && (
             <p className="landing-file-error" role="alert">
-              {error} <Link href="/connectors/rodiumai">{t("openSettings")}</Link>
+              {error} <Link href="/settings?tab=generation">{t("openSettings")}</Link>
             </p>
           )}
           <textarea
@@ -435,9 +461,20 @@ function DashboardInner() {
         {error && error !== t("createNeedsKey") && (
           <p className="error home-panel-error">{error}</p>
         )}
-        {loading && <p className="home-panel-empty">{t("loading")}</p>}
 
-        {showTemplates ? (
+        {loading ? (
+          <div className="home-grid home-grid-3" aria-busy="true" aria-label={t("loading")}>
+            {Array.from({ length: 6 }, (_, i) => (
+              <div key={i} className="home-card home-card-skel" aria-hidden>
+                <div className="home-skel home-card-skel-thumb" />
+                <div className="home-card-body">
+                  <div className="home-skel home-card-skel-title" />
+                  <div className="home-skel home-card-skel-meta" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : showTemplates ? (
           <>
             <div className="home-grid home-grid-3">
               {filteredTemplates.map((tpl) => (
@@ -450,6 +487,8 @@ function DashboardInner() {
                 >
                   <SiteThumb
                     src={tpl.preview_url || `/templates/${tpl.id}/preview`}
+                    viewportWidth={480}
+                    viewportHeight={300}
                     title={tpl.title}
                     className="home-card-thumb"
                   />
@@ -462,7 +501,7 @@ function DashboardInner() {
                 </button>
               ))}
             </div>
-            {!loading && filteredTemplates.length === 0 && (
+            {filteredTemplates.length === 0 && (
               <p className="home-panel-empty">{t("noTemplates")}</p>
             )}
           </>
@@ -479,6 +518,7 @@ function DashboardInner() {
                     onClick={() => router.push(`/projects/${p.id}`)}
                   >
                     <SiteThumb
+                      frameSrc={thumb.frameSrc}
                       src={thumb.src}
                       authPath={thumb.authPath}
                       title={p.name}
@@ -497,7 +537,7 @@ function DashboardInner() {
                 );
               })}
             </div>
-            {!loading && filteredProjects.length === 0 && (
+            {filteredProjects.length === 0 && (
               <p className="home-panel-empty">{t("noProjects")}</p>
             )}
           </>
@@ -507,9 +547,25 @@ function DashboardInner() {
   );
 }
 
+function DashboardSuspenseFallback() {
+  return (
+    <div className="home-grid home-grid-3" style={{ padding: "1.5rem" }} aria-busy="true">
+      {Array.from({ length: 6 }, (_, i) => (
+        <div key={i} className="home-card home-card-skel" aria-hidden>
+          <div className="home-skel home-card-skel-thumb" />
+          <div className="home-card-body">
+            <div className="home-skel home-card-skel-title" />
+            <div className="home-skel home-card-skel-meta" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<DashboardSuspenseFallback />}>
       <DashboardInner />
     </Suspense>
   );
