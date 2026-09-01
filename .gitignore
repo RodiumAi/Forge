@@ -1,5 +1,11 @@
 .env
 .env.local
+infra/aws/ecs/.env.ecs
+infra/aws/ecs/bootstrap-state.json
+infra/aws/ecs/task-definition.generated.json
+infra/aws/ecs/.tmp-*.json
+infra/aws/sites-gateway/bootstrap-state.json
+infra/aws/sites-gateway/task-definition.generated.json
 docker-compose.override.yml
 data/projects/*
 !data/projects/.gitkeep

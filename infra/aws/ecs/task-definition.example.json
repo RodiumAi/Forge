@@ -1,0 +1,81 @@
+{
+  "family": "forge-api",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "1024",
+  "memory": "2048",
+  "executionRoleArn": "arn:aws:iam::330990434320:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::330990434320:role/forge-ecs-task-role",
+  "containerDefinitions": [
+    {
+      "name": "api",
+      "image": "330990434320.dkr.ecr.eu-west-1.amazonaws.com/forge/api:REPLACE_ME",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 8000,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        { "name": "ENVIRONMENT", "value": "production" },
+        { "name": "API_BASE_URL", "value": "https://api.forge.rodiumai.io" },
+        { "name": "CORS_ORIGINS", "value": "https://forge.rodiumai.io" },
+        { "name": "RUNNER_PARENT_ORIGINS", "value": "https://forge.rodiumai.io" },
+        { "name": "PROJECTS_ROOT", "value": "/data/projects" },
+        { "name": "TEMPLATES_ROOT", "value": "/app/data/templates" },
+        { "name": "SSE_HEARTBEAT_SECONDS", "value": "15" },
+        { "name": "ALB_IDLE_TIMEOUT_SECONDS", "value": "600" }
+      ],
+      "secrets": [
+        {
+          "name": "DATABASE_URL",
+          "valueFrom": "arn:aws:secretsmanager:eu-west-1:330990434320:secret:forge/api/DATABASE_URL"
+        },
+        {
+          "name": "SECRET_KEY",
+          "valueFrom": "arn:aws:secretsmanager:eu-west-1:330990434320:secret:forge/api/SECRET_KEY"
+        },
+        {
+          "name": "REDIS_URL",
+          "valueFrom": "arn:aws:secretsmanager:eu-west-1:330990434320:secret:forge/api/REDIS_URL"
+        }
+      ],
+      "mountPoints": [
+        {
+          "sourceVolume": "forge-projects",
+          "containerPath": "/data/projects",
+          "readOnly": false
+        }
+      ],
+      "healthCheck": {
+        "command": ["CMD-SHELL", "curl -fsS http://127.0.0.1:8000/health || exit 1"],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 60
+      },
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/forge-api",
+          "awslogs-region": "eu-west-1",
+          "awslogs-stream-prefix": "api"
+        }
+      }
+    }
+  ],
+  "volumes": [
+    {
+      "name": "forge-projects",
+      "efsVolumeConfiguration": {
+        "fileSystemId": "fs-REPLACE_ME",
+        "transitEncryption": "ENABLED",
+        "authorizationConfig": {
+          "accessPointId": "fsap-REPLACE_ME",
+          "iam": "ENABLED"
+        }
+      }
+    }
+  ]
+}

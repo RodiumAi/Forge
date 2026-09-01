@@ -21,6 +21,8 @@ class Settings(BaseSettings):
 
     database_url: str = "postgresql+psycopg://forge:forge@127.0.0.1:5434/rodium_forge"
     secret_key: str = "dev-secret-change-me"
+    # Shared secret for RodiumAi Nest admin → Forge internal routes (X-Forge-Admin-Secret).
+    admin_secret: str = ""
     encryption_key: str = ""
     # Local RodiumAi FastAPI gateway (LLM). Override for prod.
     rodium_base_url: str = "http://127.0.0.1:8001/v1"
@@ -122,7 +124,8 @@ class Settings(BaseSettings):
         return f"{self.preview_public_scheme}://{slug}.{self.preview_public_host}{port}"
 
     def sites_url_for_slug(self, slug: str) -> str:
-        return f"http://{slug}.{self.sites_base_domain}"
+        scheme = "https" if self.environment in ("staging", "production") else "http"
+        return f"{scheme}://{slug}.{self.sites_base_domain}"
 
     @property
     def object_store_enabled(self) -> bool:

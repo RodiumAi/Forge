@@ -1,5 +1,5 @@
-# Deploy Forge API to EC2 after merge on main.
-# Frontend: Amplify auto-deploys apps/web when main is updated (see docs/DEPLOYMENT.md).
+# Deploy Forge API to ECS Fargate (ECR forge/api).
+# Frontend: Amplify auto-deploys apps/web (see infra/aws/ecs/README.md).
 
 name: Deploy API
 
@@ -8,7 +8,8 @@ on:
     branches: [main]
     paths:
       - "apps/api/**"
-      - "infra/aws/ec2/**"
+      - "data/templates/**"
+      - "infra/aws/ecs/**"
       - ".github/workflows/deploy-api.yml"
   workflow_dispatch:
     inputs:
@@ -24,6 +25,14 @@ concurrency:
 permissions:
   id-token: write
   contents: read
+
+env:
+  AWS_REGION: eu-west-1
+  ECR_REPOSITORY: forge/api
+  ECS_CLUSTER: rodiumai-cluster
+  ECS_SERVICE: forge-api
+  ECS_TASK_DEFINITION: forge-api
+  CONTAINER_NAME: api
 
 jobs:
   verify:
@@ -62,6 +71,7 @@ jobs:
     environment: production
     outputs:
       image_tag: ${{ steps.meta.outputs.image_tag }}
+      image: ${{ steps.build-image.outputs.image }}
     steps:
       - uses: actions/checkout@v4
 
@@ -74,71 +84,66 @@ jobs:
             echo "image_tag=${{ github.sha }}" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Configure AWS credentials
+      - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_REGION }}
+          aws-region: ${{ vars.AWS_REGION || env.AWS_REGION }}
 
       - name: Login to Amazon ECR
         id: ecr
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build and push API image
+        id: build-image
         env:
           ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
-          ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+          ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY || env.ECR_REPOSITORY }}
           IMAGE_TAG: ${{ steps.meta.outputs.image_tag }}
         run: |
           IMAGE="${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
-          docker build -t "${IMAGE}" -t "${ECR_REGISTRY}/${ECR_REPOSITORY}:latest" apps/api
+          docker build --platform linux/amd64 \
+            -f apps/api/Dockerfile \
+            -t "${IMAGE}" \
+            .
           docker push "${IMAGE}"
-          docker push "${ECR_REGISTRY}/${ECR_REPOSITORY}:latest"
+          echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
 
   deploy:
-    name: Roll out on EC2
+    name: Deploy to ECS
     needs: build-and-push
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - name: Configure AWS credentials
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_REGION }}
+          aws-region: ${{ vars.AWS_REGION || env.AWS_REGION }}
 
-      - name: Deploy via SSM
+      - name: Download ECS task definition
         env:
-          INSTANCE_ID: ${{ secrets.EC2_INSTANCE_ID }}
-          IMAGE_TAG: ${{ needs.build-and-push.outputs.image_tag }}
-          ECR_REGISTRY: ${{ vars.ECR_REGISTRY }}
-          ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
-          AWS_REGION: ${{ vars.AWS_REGION }}
-          FORGE_ROOT: ${{ vars.FORGE_ROOT }}
+          ECS_TASK_DEFINITION: ${{ vars.ECS_TASK_DEFINITION || env.ECS_TASK_DEFINITION }}
         run: |
-          jq -n \
-            --arg region "${AWS_REGION}" \
-            --arg registry "${ECR_REGISTRY}" \
-            --arg repo "${ECR_REPOSITORY}" \
-            --arg root "${FORGE_ROOT}" \
-            --arg tag "${IMAGE_TAG}" \
-            --arg id "${INSTANCE_ID}" \
-            '{
-              InstanceIds: [$id],
-              DocumentName: "AWS-RunShellScript",
-              Comment: ("Forge API deploy " + $tag),
-              Parameters: {
-                commands: [
-                  ("export AWS_REGION=" + $region),
-                  ("export ECR_REGISTRY=" + $registry),
-                  ("export ECR_REPOSITORY=" + $repo),
-                  ("export FORGE_ROOT=" + $root),
-                  ("cd " + $root + " && git fetch origin main && git reset --hard origin/main"),
-                  ("chmod +x " + $root + "/infra/aws/ec2/deploy.sh"),
-                  ("cd " + $root + " && ./infra/aws/ec2/deploy.sh " + $tag)
-                ]
-              }
-            }' > /tmp/ssm-input.json
-          COMMAND_ID=$(aws ssm send-command --cli-input-json file:///tmp/ssm-input.json --query Command.CommandId --output text)
-          echo "SSM CommandId: ${COMMAND_ID}"
-          echo "Monitor in AWS Console → Systems Manager → Run Command"
+          aws ecs describe-task-definition \
+            --task-definition "${ECS_TASK_DEFINITION}" \
+            --query taskDefinition \
+            > task-definition.json
+
+      - name: Update task definition image only
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-definition.json
+          container-name: ${{ vars.CONTAINER_NAME || env.CONTAINER_NAME }}
+          image: ${{ needs.build-and-push.outputs.image }}
+
+      - name: Deploy to ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: ${{ vars.ECS_SERVICE || env.ECS_SERVICE }}
+          cluster: ${{ vars.ECS_CLUSTER || env.ECS_CLUSTER }}
+          wait-for-service-stability: true

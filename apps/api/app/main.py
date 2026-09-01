@@ -15,6 +15,7 @@ from app.routers import (
     design,
     files,
     history,
+    internal_admin,
     plugins,
     preview,
     projects,
@@ -69,6 +70,7 @@ app.include_router(history.router)
 app.include_router(comments.router)
 app.include_router(publish.router)
 app.include_router(preview.router)
+app.include_router(internal_admin.router)
 
 
 @app.get("/runner/", include_in_schema=False)

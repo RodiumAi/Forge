@@ -2,7 +2,6 @@ import asyncio
 import logging
 import os
 import re
-import shutil
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import UUID
@@ -27,6 +26,7 @@ from app.schemas import (
 )
 from app.services import preview_babel
 from app.services.filesystem import list_files, project_dir
+from app.services.project_delete import delete_project_full
 from app.services.project_naming import suggest_project_name
 from app.services.scaffold import scaffold_vite_react
 from app.services.templates import fork_template, get_template, preview_path
@@ -308,34 +308,7 @@ def delete_project(
 ) -> Response:
     locale = resolve_locale(request)
     project = _owned_project(db, user, project_id, locale)
-    pid = str(project.id)
-    slug = project.slug
-
-    try:
-        preview_babel.stop_babel_preview(pid)
-    except Exception:
-        logger.exception("Failed to stop preview before delete project=%s", pid)
-
-    try:
-        root = project_dir(pid)
-        if root.exists():
-            shutil.rmtree(root, ignore_errors=True)
-    except Exception:
-        logger.exception("Failed to remove project files project=%s", pid)
-
-    try:
-        settings = get_settings()
-        from app.providers.objects import get_object_store
-
-        store = get_object_store()
-        bucket = store.bucket_site_assets or settings.bucket_site_assets
-        if bucket and slug:
-            store.delete_prefix(bucket, f"{slug}/")
-    except Exception:
-        logger.exception("Failed to cleanup published assets slug=%s", slug)
-
-    db.delete(project)
-    db.commit()
+    delete_project_full(db, project)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
