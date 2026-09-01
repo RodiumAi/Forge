@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { AuthCallbackScreen } from "@/components/auth/AuthCallbackScreen";
 import { api, setToken } from "@/lib/api";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 
@@ -45,28 +46,17 @@ function CallbackInner() {
   }, [params, router, t]);
 
   return (
-    <div className="card" style={{ width: "min(420px, 100%)", textAlign: "center" }}>
-      {error ? (
-        <>
-          <p className="error">{error}</p>
-          <button className="btn" type="button" style={{ marginTop: "1rem" }} onClick={() => router.push("/login")}>
-            {t("loginTitle")}
-          </button>
-        </>
-      ) : (
-        <p className="muted">{t("loginRodiumCompleting")}</p>
-      )}
-    </div>
+    <AuthCallbackScreen
+      error={error}
+      onRetry={error ? () => router.push("/login") : undefined}
+    />
   );
 }
 
 export default function AuthCallbackPage() {
-  const { t } = useI18n();
   return (
-    <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: "2rem" }}>
-      <Suspense fallback={<p className="muted">{t("loginRodiumCompleting")}</p>}>
-        <CallbackInner />
-      </Suspense>
-    </div>
+    <Suspense fallback={<AuthCallbackScreen />}>
+      <CallbackInner />
+    </Suspense>
   );
 }

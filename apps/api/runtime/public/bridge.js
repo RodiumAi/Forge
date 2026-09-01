@@ -510,6 +510,18 @@
       if (slugMatch) return "/" + slugMatch[1].toLowerCase();
     }
 
+    // Active nav item whose label matches a route the builder declared —
+    // covers state-based navigation with no detectable page container.
+    var activeNav = document.querySelectorAll(
+      "nav [aria-current='page'], header [aria-current='page'], " +
+        "nav .active, header .active, nav [class*='active'], header [class*='active']",
+    );
+    for (var n = 0; n < activeNav.length; n++) {
+      var slug = slugify(activeNav[n].textContent);
+      if (slug && KNOWN_ROUTES[slug]) return "/" + slug;
+      if (slug === "home" || slug === "accueil") return "/";
+    }
+
     return null;
   }
 
@@ -613,6 +625,23 @@
       }
     }
 
+    // The #1 generated pattern: a nav control labeled exactly like the page
+    // ("Contact", "À propos"). Buttons drive setPage() state; anchors drive a
+    // router — safeClick blocks the native navigation that would leave
+    // /runner/ while letting SPA handlers run.
+    var navScopes = document.querySelectorAll("nav, header, [class*='nav']");
+    for (var s = 0; s < navScopes.length; s++) {
+      var controls = navScopes[s].querySelectorAll("a, button, [role='button']");
+      for (var c = 0; c < controls.length; c++) {
+        var ctl = controls[c];
+        if (slugify(ctl.textContent) === keyLower) {
+          safeClick(ctl);
+          reportPreviewPath(normalized);
+          return true;
+        }
+      }
+    }
+
     var clickables = document.querySelectorAll("button, [role='button']");
     for (var j = 0; j < clickables.length; j++) {
       var btn = clickables[j];
@@ -628,6 +657,40 @@
       }
     }
     return false;
+  }
+
+  // Routes declared by the builder (detected server-side from the sources).
+  // Label matching against a KNOWN set is what makes both sync directions
+  // reliable; without it, "Contact" in a navbar is just a word.
+  var KNOWN_ROUTES = {};
+
+  /** "À propos " -> "a-propos" ; "Contact" -> "contact". */
+  function slugify(text) {
+    var s = String(text || "").replace(/\s+/g, " ").trim().toLowerCase();
+    try {
+      s = s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    } catch (e) {
+      /* older engines */
+    }
+    return s.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  }
+
+  /**
+   * Click that never lets a plain anchor perform a real navigation (which
+   * would leave /runner/ and kill the preview). Default actions run after
+   * bubbling: a one-shot document-level listener calls preventDefault at the
+   * end of the chain, AFTER any SPA router handler already did its job.
+   */
+  function safeClick(el) {
+    var guard = function (ev) {
+      ev.preventDefault();
+    };
+    document.addEventListener("click", guard, false);
+    try {
+      el.click();
+    } finally {
+      document.removeEventListener("click", guard, false);
+    }
   }
 
   function wrapHistoryMethod(method) {
@@ -659,6 +722,14 @@
     } else if (data.type === "forge-tool-ping") {
       notifyReady();
       ackTool(TOOL);
+      reportPreviewLocation();
+    } else if (data.type === "forge-preview-routes") {
+      KNOWN_ROUTES = {};
+      var paths = Array.isArray(data.paths) ? data.paths : [];
+      for (var r = 0; r < paths.length; r++) {
+        var key = String(paths[r] || "").replace(/^\//, "").replace(/\/+$/, "").toLowerCase();
+        if (key) KNOWN_ROUTES[key] = true;
+      }
       reportPreviewLocation();
     } else if (data.type === "forge-preview-navigate") {
       navigatingFromParent = true;
@@ -740,16 +811,22 @@
         /* ignore */
       }
 
-      // 5) In-page section anchors — skip when a standalone page control exists.
+      // 5) Anchors — section hashes, and router links to the exact page
+      //    (safeClick keeps a plain anchor from really leaving /runner/).
       var anchors = document.querySelectorAll("a[href]");
       for (var a = 0; a < anchors.length; a++) {
         var link = anchors[a];
         var href = link.getAttribute("href") || "";
         if (!href || href.startsWith("mailto:") || href.startsWith("http")) continue;
+        var h = href.replace(/\/+$/, "");
+        if (pageKey && (h === "/" + pageKey || h.toLowerCase() === "/" + pageKey)) {
+          safeClick(link);
+          reportPreviewPath(normalized);
+          return;
+        }
         if (href.startsWith("/") && !href.startsWith("/#") && !/^\/runner\/?/i.test(href)) {
           continue;
         }
-        var h = href.replace(/\/+$/, "");
         var match =
           (pageKey && (h === targetHash || h === "/#" + pageKey)) ||
           (!pageKey && (h === "#" || h === "#top" || h === "/#top"));
