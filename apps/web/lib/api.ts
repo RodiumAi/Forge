@@ -1,5 +1,5 @@
 import type { Locale } from "@/lib/i18n/dictionaries";
-import { identifyPosthogUser, resetPosthogUser } from "@/lib/posthog/client";
+import { resetPosthogUser } from "@/lib/posthog/client";
 
 export function apiBase(): string {
   return process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "http://localhost:8100";
