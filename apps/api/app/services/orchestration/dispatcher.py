@@ -261,6 +261,7 @@ async def run_plan_tasks(
     run_id: str | None = None,
     user_id=None,
     db=None,
+    step_mode: bool = False,
 ) -> AsyncIterator[str]:
     """Yield SSE chunks while executing each plan task sequentially."""
     from app.services.orchestration.cancel import is_cancelled
@@ -529,6 +530,31 @@ async def run_plan_tasks(
                                 "finding": still[0].to_dict(),
                             }
                         )
+
+        # Step-by-step mode: pause after each task so the user can review the
+        # result and explicitly launch the next step from the plan panel.
+        if step_mode:
+            remaining = [t2 for t2 in tasks if str(t2.get("status") or "") != "done"]
+            if remaining:
+                if applied:
+                    yield _sse({"type": "preview_refresh"})
+                summary = to_plain_text(
+                    build_run_summary(tasks=tasks, applied=applied, locale=locale)
+                )
+                yield _sse(
+                    {
+                        "type": "done",
+                        "paused": True,
+                        "applied": applied,
+                        "summary": summary,
+                        "assistant_content": "".join(full),
+                        "thinking_text": "".join(thinking_parts) or None,
+                        "steps": steps,
+                        "plan": tasks,
+                        "verify_findings": [],
+                    }
+                )
+                return
 
     # Deterministic verify + optional repair (black-preview prevention)
     from app.services.orchestration.page_visit_check import page_route_findings

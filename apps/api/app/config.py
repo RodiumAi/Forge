@@ -17,6 +17,9 @@ class Settings(BaseSettings):
 
     environment: Literal["local", "test", "staging", "production"] = "local"
     log_level: str = "info"
+    posthog_enabled: bool = False
+    posthog_api_key: str = ""
+    posthog_host: str = "https://eu.i.posthog.com"
     api_base_url: str = "http://localhost:8100"
     sites_base_domain: str = "lvh.me:8080"
 
@@ -141,11 +144,7 @@ class Settings(BaseSettings):
         """Explicit S3 keys, or empty to use the default AWS credential chain (ECS task role)."""
         access = (self.object_store_access_key or self.aws_access_key_id or "").strip()
         secret = (self.object_store_secret_key or self.aws_secret_access_key or "").strip()
-        if (
-            not self.is_local
-            and access == "rodiumdev"
-            and secret == "rodiumdev123"
-        ):
+        if not self.is_local and access == "rodiumdev" and secret == "rodiumdev123":
             return "", ""
         return access, secret
 

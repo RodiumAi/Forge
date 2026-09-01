@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Circle, CircleAlert, FileCode2, Loader2, ListTodo, Play, Trash2 } from "lucide-react";
+import { Check, Circle, CircleAlert, FileCode2, Loader2, ListTodo, Play, StepForward, Trash2 } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import type { FileOp } from "@/components/AgentActivityPanel";
@@ -19,6 +19,8 @@ type Props = {
   /** File operations of the run; grouped under their task when tagged. */
   ops?: FileOp[];
   onExecute?: () => void;
+  /** Execute only the next pending task, then pause (step-by-step mode). */
+  onExecuteStep?: () => void;
   onDismiss?: () => void;
   onOpenFile?: (path: string) => void;
 };
@@ -43,6 +45,7 @@ export function PlanPanel({
   executing = false,
   ops = [],
   onExecute,
+  onExecuteStep,
   onDismiss,
   onOpenFile,
 }: Props) {
@@ -178,6 +181,17 @@ export function PlanPanel({
               </>
             )}
           </button>
+          {onExecuteStep ? (
+            <button
+              type="button"
+              className="btn plan-execute plan-execute-step"
+              disabled={busy}
+              onClick={onExecuteStep}
+            >
+              <Icon icon={StepForward} className="ui-icon-sm" />
+              {partialProgress ? t("planNextStep") : t("planExecuteStep")}
+            </button>
+          ) : null}
           {needsConfirm && onDismiss ? (
             <button type="button" className="btn plan-dismiss" disabled={busy} onClick={onDismiss}>
               {t("planDismiss")}

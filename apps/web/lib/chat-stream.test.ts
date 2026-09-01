@@ -286,6 +286,28 @@ describe("done", () => {
     });
   });
 
+  it("keeps the plan and run alive on a paused done (step-by-step mode)", () => {
+    const { state, effects } = run([
+      { type: "user_message", run_id: "run-9" },
+      {
+        type: "done",
+        paused: true,
+        summary: "step 1 ok",
+        plan: [{ id: "t1", status: "done" }, { id: "t2" }],
+      },
+    ]);
+    expect(effects.find((e) => e.kind === "finalize")).toMatchObject({
+      payload: { content: "step 1 ok" },
+    });
+    expect(state.activeRunId).toBe("run-9");
+    expect(state.planNeedsConfirm).toBe(true);
+    expect(state.planTasks).toEqual([
+      { id: "t1", status: "done" },
+      { id: "t2", status: "pending" },
+    ]);
+    expect(state.busy).toBe(false);
+  });
+
   it("resets the stream state so the next run starts clean", () => {
     const { state } = run([
       { type: "token", content: "x" },

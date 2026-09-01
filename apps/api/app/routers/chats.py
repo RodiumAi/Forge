@@ -131,6 +131,16 @@ def _should_single_pass(task_class: str, user_content: str, mode: str) -> bool:
     return bool(task_class == "code.edit.medium" and len(clean) < 180)
 
 
+def _plan_requires_confirm(mode: str, task_class: str, plan: list) -> bool:
+    """Big builds pause after planning so the user can pick run-all vs
+    step-by-step; small agent-mode edits (1-3 task plans) run immediately."""
+    if mode == "plan":
+        return True
+    if str(task_class or "").startswith(("code.scaffold", "plan.scaffold")):
+        return True
+    return len(plan) >= 4
+
+
 async def _iter_single_pass(
     *,
     db: Session,
@@ -770,7 +780,9 @@ async def send_message(
                 yield _sse({"type": "error", "message": t("run_invalid_state", locale)})
                 return
             live.plan_json = json.dumps(plan)
-            needs_confirm = mode == "plan"
+            # Multi-step plans always pause after planning: the user chooses
+            # between running the whole pipeline or step-by-step execution.
+            needs_confirm = _plan_requires_confirm(mode, route.task_class, plan)
             live.status = "awaiting_plan_confirm" if needs_confirm else "running"
             db.commit()
             yield _sse(
@@ -881,7 +893,9 @@ async def submit_clarify(
                 yield _sse({"type": "error", "message": t("run_invalid_state", locale)})
                 return
             run_row.plan_json = json.dumps(plan)
-            needs_confirm = not auto_exec
+            needs_confirm = _plan_requires_confirm(
+                "agent" if auto_exec else "plan", run_task_class, plan
+            )
             run_row.status = "awaiting_plan_confirm" if needs_confirm else "running"
             db.commit()
             yield _sse(
@@ -981,6 +995,7 @@ async def confirm_plan(
         tasks=plan,
         model=model,
         locale=locale,  # type: ignore[arg-type]
+        step_mode=bool(body.step_mode),
     )
 
     async def stream():
@@ -1187,7 +1202,7 @@ async def branch_messages(
                 yield _sse({"type": "error", "message": t("run_invalid_state", locale)})
                 return
             live.plan_json = json.dumps(plan)
-            needs_confirm = mode == "plan"
+            needs_confirm = _plan_requires_confirm(mode, route.task_class, plan)
             live.status = "awaiting_plan_confirm" if needs_confirm else "running"
             db.commit()
             yield _sse(

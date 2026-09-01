@@ -29,7 +29,15 @@ async function main() {
   const files = payload.files || {};
   const entry = payload.entry || "src/main.tsx";
   const extraImports = payload.extraImports || {};
-  const css = files["src/index.css"] || files["index.css"] || "";
+  // All stylesheets, foundation first — mirrors the runner's injection.
+  const cssPaths = Object.keys(files)
+    .filter((p) => /\.css$/i.test(p))
+    .sort((a, b) => {
+      if (a === "src/index.css" || a === "index.css") return -1;
+      if (b === "src/index.css" || b === "index.css") return 1;
+      return a < b ? -1 : 1;
+    });
+  const css = cssPaths.map((p) => files[p]).join("\n\n");
   const result = buildGraph(files, entry, "publish", extraImports);
 
   // --check: smoke-transform + named export resolution (post-plan self-verification).

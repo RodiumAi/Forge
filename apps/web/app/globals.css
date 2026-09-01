@@ -995,6 +995,18 @@ html:has(.builder) body {
   /* inherits .btn Publish style — no blue override */
 }
 
+.plan-execute-step {
+  margin-top: 0.4rem;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--fg);
+}
+
+.plan-execute-step:hover:not(:disabled) {
+  filter: none;
+  background: rgba(255, 255, 255, 0.04);
+}
+
 .plan-tasks {
   list-style: none;
   margin: 0;

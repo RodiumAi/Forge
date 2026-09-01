@@ -1,4 +1,5 @@
 import { api, getToken } from "@/lib/api";
+import { identifyPosthogUser } from "@/lib/posthog/client";
 
 const STORAGE_KEY = "forge_session_v1";
 /** Soft TTL: still show cache, but refresh in background when older. */
@@ -138,7 +139,7 @@ export async function ensureSession(options?: { force?: boolean }): Promise<Sess
   refreshPromise = (async () => {
     try {
       const [meResult, accountResult] = await Promise.allSettled([
-        api<SessionProfile & { id?: string }>("/auth/me"),
+        api<SessionProfile & { id?: string; rodium_sub?: string | null }>("/auth/me"),
         api<{
           linked: boolean;
           wallet?: SessionWallet | null;
@@ -157,6 +158,14 @@ export async function ensureSession(options?: { force?: boolean }): Promise<Sess
           avatar_url: me.avatar_url,
           rodium_linked: me.rodium_linked,
         };
+        const distinctId = me.rodium_sub ?? (me.id ? String(me.id) : null);
+        if (distinctId) {
+          identifyPosthogUser(distinctId, {
+            email: me.email,
+            forge_user_id: me.id ? String(me.id) : null,
+            rodium_linked: Boolean(me.rodium_linked),
+          });
+        }
       }
 
       if (accountResult.status === "fulfilled") {
