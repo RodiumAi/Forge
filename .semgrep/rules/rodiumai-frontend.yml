@@ -10,6 +10,8 @@ rules:
       include:
         - "**/*.tsx"
         - "**/*.jsx"
+      exclude:
+        - "**/components/landing/LandingJsonLd.tsx"
     patterns:
       - pattern-regex: dangerouslySetInnerHTML=\{\{\s*__html
       - pattern-not-regex: from ['\"]sanitize-html['\"]

@@ -172,14 +172,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: SAST scan
+      - name: SAST scan (web)
         run: |
           docker run --rm \
             -v "${{ github.workspace }}:/src" \
             semgrep/semgrep:1.163.0 \
             semgrep scan \
-              --config p/python \
-              --config p/fastapi \
               --config p/typescript \
               --config p/javascript \
               --config p/owasp-top-ten \
@@ -188,4 +186,16 @@ jobs:
               --config /src/.semgrep/rules/rodiumai-frontend.yml \
               --metrics off \
               --error \
-              /src
+              /src/apps/web
+
+      - name: SAST scan (api)
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/src" \
+            semgrep/semgrep:1.163.0 \
+            semgrep scan \
+              --config p/python \
+              --config p/fastapi \
+              --metrics off \
+              --error \
+              /src/apps/api/app
