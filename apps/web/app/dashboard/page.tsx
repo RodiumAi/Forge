@@ -159,6 +159,11 @@ function DashboardInner() {
         setTemplates(tpls as GalleryTemplate[]);
         setProjects(list as Project[]);
 
+        if ((list as Project[]).length === 0 && searchParams.get("tab") !== "templates") {
+          setTab("templates");
+          router.replace("/dashboard?tab=templates");
+        }
+
         // Soft-stale: finish background refresh when it completes.
         void Promise.all([
           refreshProjectsIfStale(locale),

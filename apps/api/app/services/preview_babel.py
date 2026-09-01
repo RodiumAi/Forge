@@ -90,8 +90,8 @@ def render_runner_shell(
 </head>
 <body>
   <div id="root"></div>
-  <script src="/runner/bridge.js?v=nav3"></script>
-  <script type="module" src="/runner/runner.js?v=nav3"></script>
+  <script src="/runner/bridge.js?v=nav4"></script>
+  <script type="module" src="/runner/runner.js?v=nav4"></script>
 </body>
 </html>
 """
