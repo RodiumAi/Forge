@@ -21,8 +21,8 @@ SURGICAL_EDIT_HINT = (
     "Surgical edit mode: prefer the smallest correct change. Edit only the "
     "targeted lines/sections. Do not rewrite whole files unless necessary for "
     "correctness. Preserve unrelated imports, JSX, and CSS. "
-    "For src/index.css: preserve all existing selectors verbatim; only APPEND "
-    "new rules — never drop navbar/hero/layout rules."
+    "NEVER rewrite src/index.css (foundation is locked); page styles belong in "
+    "the page's own src/styles/<page>.css."
 )
 _SELECTION_RE = re.compile(
     r"\[(?:Selection|Sélection):\s*[^|\]]*\|[^|\]]*\|?\s*text:\"([^\"]*)\"",
