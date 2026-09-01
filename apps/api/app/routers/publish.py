@@ -64,6 +64,8 @@ async def publish_now(
             str(project.id),
             project.slug,
             owner_user_id=str(user.id),
+            # Fallback title when the project index.html has no <title>.
+            title=project.name or "Forge app",
         )
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)[:2000]) from exc
