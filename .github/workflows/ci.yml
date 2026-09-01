@@ -148,7 +148,7 @@ jobs:
           docker run --rm \
             -v "${{ github.workspace }}:/repo" \
             -w /repo \
-            aquasec/trivy:0.69.3 \
+            aquasec/trivy:0.74.0 \
             fs \
             --scanners vuln \
             --severity CRITICAL,HIGH \
