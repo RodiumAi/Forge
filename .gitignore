@@ -1,21 +1,23 @@
-.env
-.env.local
-infra/aws/ecs/.env.ecs
-infra/aws/ecs/bootstrap-state.json
-infra/aws/ecs/task-definition.generated.json
-infra/aws/ecs/.tmp-*.json
-infra/aws/sites-gateway/bootstrap-state.json
-infra/aws/sites-gateway/task-definition.generated.json
-docker-compose.override.yml
-data/projects/*
-!data/projects/.gitkeep
-**/__pycache__/
-**/.venv/
-**/node_modules/
-**/.next/
-**/dist/
-*.pyc
-.DS_Store
-
-# Local test exports
-testForge/
+.env
+.env.local
+docker-compose.override.yml
+data/projects/*
+!data/projects/.gitkeep
+**/__pycache__/
+**/.venv/
+**/node_modules/
+**/.next/
+**/dist/
+*.pyc
+.DS_Store
+
+# Local test exports
+testForge/
+
+# Maintainer-only (ops / internal — not published on the public repo)
+/docs/DEPLOYMENT.md
+/docs/DEPLOYMENT.fr.md
+/infra/aws/
+/infra/alb-idle-timeout.md
+/scripts/
+

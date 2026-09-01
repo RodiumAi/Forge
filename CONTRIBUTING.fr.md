@@ -20,6 +20,7 @@ Vous **pouvez** :
 - Proposer des parcours, textes, mises en page et corrections d'accessibilité.
 - Joindre des assets design (PNG, SVG, courtes vidéos d'écran) directement dans l'issue ou la PR.
 - **Coder côté frontend** dans `apps/web` lorsque vous implémentez ou affinez l'interface (composants, styles, landing, builder).
+- **Proposer ou co-créer des kits templates** dans `data/templates/` (starters de la galerie) — voir [Contribuer des kits templates](#contribuer-des-kits-templates) ci-dessous.
 
 Vous **ne devez pas** :
 
@@ -47,6 +48,7 @@ Vous **pouvez** :
 - Implémenter des fonctionnalités, corriger des bugs, améliorer les prompts, l'orchestration, les templates et le runtime.
 - Proposer des changements d'architecture via une issue **avant** les gros refactors.
 - Toucher `apps/web`, `apps/api`, `apps/api/runtime` et `data/templates` selon le périmètre du changement.
+- **Ajouter ou améliorer des kits templates** — voir [Contribuer des kits templates](#contribuer-des-kits-templates).
 
 Vous **devez** :
 
@@ -74,7 +76,7 @@ git rebase origin/main   # ou : git merge origin/main
 ### 2. Branche & commits
 
 1. Forkez le dépôt (contributeurs externes) ou créez une branche depuis `main` (membres de l'org).
-2. Nom de branche explicite : `feat/…`, `fix/…`, `design/…`, `security/…`.
+2. Nom de branche explicite : `feat/…`, `fix/…`, `design/…`, `security/…`, `template/…`.
 3. Messages de commit au format `type(scope): résumé` (français ou anglais).
 
 ### 3. Exigences pull request (strict)
@@ -167,7 +169,60 @@ node --test tests/
 
 ### Templates (`data/templates`)
 
-Voir [docs/TEMPLATES.md](docs/TEMPLATES.md).
+Voir [Contribuer des kits templates](#contribuer-des-kits-templates).
+
+---
+
+## Contribuer des kits templates
+
+Les kits templates sont des starters React forkables affichés dans la galerie Forge. **Designers et développeurs** peuvent en proposer de nouveaux ou améliorer les existants.
+
+### Arborescence d'un kit
+
+Chaque kit vit dans `data/templates/<id>/` où `<id>` respecte `^[a-z0-9][a-z0-9-]{1,62}$` (exemple : `aurora-ai`).
+
+```
+data/templates/<id>/
+├── template.json        # catalogue : titre/description i18n, tags, palette hex, bootHint
+├── DESIGN.md            # charte design (couleurs, ton, do/don't, URLs images)
+├── preview.html         # vignette galerie statique — pas de balise <script>
+├── index.html
+├── package.json         # "name" doit valoir <id>
+├── vite.config.ts
+├── tsconfig.json
+├── tsconfig.node.json
+├── README.md
+└── src/
+    ├── main.tsx
+    ├── App.tsx          # page unique — imports depuis "react" uniquement
+    └── index.css        # CSS pur, pas de @import, variables :root palette
+```
+
+Vue d'ensemble : [data/templates/README.md](data/templates/README.md) · Contrat complet : [docs/TEMPLATES.fr.md](docs/TEMPLATES.fr.md) (🇬🇧 [TEMPLATES.md](docs/TEMPLATES.md))
+
+### Règles clés (vérifiées en CI)
+
+| Règle | Pourquoi |
+| --- | --- |
+| `src/App.tsx` n'importe que `"react"` | Les kits tournent dans le runner Babel navigateur sans install |
+| `preview.html` sans `<script>` | Vignette galerie en HTML/CSS pur |
+| `src/index.css` sans `@import` | Pas de polices/CSS externes au runtime |
+| Palette `template.json` en hex `#rrggbb` | Tokens cohérents pour l'agent et la galerie |
+| `title`, `description`, `bootHint` en **en** + **fr** | Produit bilingue |
+
+### Workflow de soumission
+
+1. Fork / branche depuis le dernier `main`.
+2. Ajouter ou modifier `data/templates/<id>/` selon l'arborescence ci-dessus.
+3. Enregistrer le nouvel `<id>` dans `EXPECTED_IDS` (`apps/api/tests/test_templates.py`).
+4. Mettre à jour le routage par mots-clés dans `apps/api/app/services/templates.py` si le kit cible de nouveaux thèmes.
+5. Lancer `cd apps/api && pytest tests/test_templates.py -q`.
+6. Ouvrir une PR avec :
+   - **Capture** de la carte galerie (rendu de `preview.html`)
+   - **Capture ou vidéo** d'une preview live après fork dans le builder
+   - Branche `template/<id>` pour un nouveau kit
+
+Utilisez le modèle d'issue [template_proposal.yml](.github/ISSUE_TEMPLATE/template_proposal.yml) pour discuter d'un kit **avant** un gros travail design.
 
 ---
 
@@ -186,19 +241,6 @@ Voir [docs/TEMPLATES.md](docs/TEMPLATES.md).
 | **Semgrep** | Analyse statique (`apps/web`, `apps/api/app`) |
 
 Corrigez les échecs CI sur votre branche avant de demander une review.
-
----
-
-## Déploiement production (maintainers)
-
-Après merge sur `main` :
-
-| Composant | Déclencheur |
-| --- | --- |
-| **Frontend** (`forge.rodiumai.io`) | AWS Amplify — `apps/web/amplify.yml` |
-| **API** (`api-forge.rodiumai.io`) | GitHub Actions `deploy-api.yml` → ECR → ECS Fargate |
-
-Voir [docs/DEPLOYMENT.fr.md](docs/DEPLOYMENT.fr.md) et [infra/aws/github/README.md](infra/aws/github/README.md).
 
 ---
 

@@ -1,5 +1,5 @@
 # AWS Amplify Hosting — monorepo (app root: apps/web)
-# See apps/web/amplify.yml and infra/aws/amplify/env.example
+# Set AMPLIFY_MONOREPO_APP_ROOT=apps/web in the Amplify console (branch main).
 
 version: 1
 applications:

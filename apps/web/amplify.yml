@@ -1,3 +1,2 @@
 # AWS Amplify Hosting — monorepo app root: apps/web
-# Canonical build spec: ../../amplify.yml (repo root).
-# Console: set AMPLIFY_MONOREPO_APP_ROOT=apps/web on branch main.
+# See ../../amplify.yml (repo root) for Amplify monorepo build settings.

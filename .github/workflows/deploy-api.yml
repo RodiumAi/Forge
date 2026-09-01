@@ -1,5 +1,4 @@
-# Deploy Forge API to ECS Fargate (ECR forge/api).
-# Frontend: Amplify auto-deploys apps/web (see infra/aws/ecs/README.md).
+# Deploy Forge API (maintainers). Frontend: Amplify auto-deploys apps/web.
 
 name: Deploy API
 
@@ -9,7 +8,6 @@ on:
     paths:
       - "apps/api/**"
       - "data/templates/**"
-      - "infra/aws/ecs/**"
       - ".github/workflows/deploy-api.yml"
   workflow_dispatch:
     inputs:
