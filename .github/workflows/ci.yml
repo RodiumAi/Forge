@@ -6,7 +6,6 @@ on:
   pull_request:
     branches: [main]
 
-# A new push on the same branch cancels the previous run.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -40,8 +39,6 @@ jobs:
         run: ruff format --check app tests
 
       - name: Import the app
-        # Catches broken imports and router wiring without needing a database:
-        # FastAPI builds the whole route table at import time.
         env:
           ENVIRONMENT: test
         run: python -c "import app.main as m; print(f'{len(m.app.routes)} routes')"
@@ -106,9 +103,6 @@ jobs:
           npm test --if-present
 
       - name: Import map and AST allowlist must agree
-        # These two derive from runtime/packages.json. If they ever drift again,
-        # a package can pass validation at write time and still fail to resolve
-        # in the browser (IMPORT_NOT_IN_MANIFEST on valid code).
         run: python scripts/check_manifest_parity.py
 
   compose:
@@ -127,3 +121,61 @@ jobs:
         run: |
           cp .env.example .env
           docker compose -f docker-compose.prod.yml config --quiet
+
+  gitleaks:
+    name: Gitleaks
+    needs: [api, web, runtime, compose]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect secrets
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/repo" \
+            -w /repo \
+            ghcr.io/gitleaks/gitleaks:v8.24.2 \
+            detect --source /repo --config /repo/.gitleaks.toml --verbose
+
+  trivy:
+    name: Trivy
+    needs: gitleaks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aquasecurity/trivy-action@0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
+          skip-dirs: node_modules,dist,coverage,.git,.next,__pycache__,.venv,testForge
+          trivyignores: .trivyignore
+
+  semgrep:
+    name: Semgrep
+    needs: trivy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: SAST scan
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/src" \
+            semgrep/semgrep:1.163.0 \
+            semgrep scan \
+              --config p/python \
+              --config p/fastapi \
+              --config p/typescript \
+              --config p/javascript \
+              --config p/owasp-top-ten \
+              --config p/security-audit \
+              --config p/nodejs \
+              --config /src/.semgrep/rules/rodiumai-frontend.yml \
+              --metrics off \
+              --error \
+              /src

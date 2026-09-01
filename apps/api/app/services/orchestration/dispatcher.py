@@ -100,12 +100,16 @@ def _task_prompt_block(task: dict[str, Any], *, idx: int, total: int) -> str:
             "typography, layout shell, navbar and hero BASE styles, and utilities. "
             "Do not invent parallel naming schemes later tasks cannot reuse."
         )
-    elif tid != "styles_foundation" and tid != "architecture" and (
-        tid in ("home", "primary_sections", "flows", "sections")
-        or "section" in tid
-        or "home" in tid
-        or "flow" in tid
-        or (total >= 2 and idx > 0)
+    elif (
+        tid != "styles_foundation"
+        and tid != "architecture"
+        and (
+            tid in ("home", "primary_sections", "flows", "sections")
+            or "section" in tid
+            or "home" in tid
+            or "flow" in tid
+            or (total >= 2 and idx > 0)
+        )
     ):
         lines.append(
             "CSS APPEND RULE (critical): When writing src/index.css you MUST preserve "
@@ -555,9 +559,7 @@ async def run_plan_tasks(
             }
         )
 
-    route_critical = any(
-        f.severity == "critical" and f.code.startswith("route.") for f in findings
-    )
+    route_critical = any(f.severity == "critical" and f.code.startswith("route.") for f in findings)
     yield push_step(
         "verify_pages",
         t("step_verify_pages", locale),
@@ -638,9 +640,7 @@ async def run_plan_tasks(
                     "finding": finding.to_dict(),
                 }
             )
-        route_critical = any(
-            f.severity == "critical" and f.code.startswith("route.") for f in findings
-        )
+        route_critical = any(f.severity == "critical" and f.code.startswith("route.") for f in findings)
         yield push_step(
             "verify_pages",
             t("step_verify_pages", locale),
