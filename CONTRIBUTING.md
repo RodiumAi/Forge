@@ -20,6 +20,7 @@ You **may**:
 - Propose flows, copy, layout, and accessibility fixes.
 - Upload design assets (PNG, SVG, short screen recordings) directly in the issue or PR.
 - **Contribute frontend code** in `apps/web` when you implement or refine UI (components, styles, landing, builder).
+- **Propose or co-author template kits** in `data/templates/` (gallery starters) — see [Contributing template kits](#contributing-template-kits) below.
 
 You **must not**:
 
@@ -47,6 +48,7 @@ You **may**:
 - Implement features, fix bugs, and improve prompts, orchestration, templates, and runtime behavior.
 - Propose architectural changes via an issue **before** large refactors.
 - Touch `apps/web`, `apps/api`, `apps/api/runtime`, and `data/templates` according to the change.
+- **Add or improve template kits** — see [Contributing template kits](#contributing-template-kits).
 
 You **must**:
 
@@ -74,7 +76,7 @@ git rebase origin/main   # or: git merge origin/main
 ### 2. Branch & commits
 
 1. Fork the repository (external contributors) or branch from `main` (org members).
-2. Use a clear branch name: `feat/…`, `fix/…`, `design/…`, `security/…`.
+2. Use a clear branch name: `feat/…`, `fix/…`, `design/…`, `security/…`, `template/…`.
 3. Write commit messages in the form `type(scope): summary` (English or French).
 
 ### 3. Pull request requirements (strict)
@@ -167,7 +169,60 @@ node --test tests/
 
 ### Templates (`data/templates`)
 
-See [docs/TEMPLATES.md](docs/TEMPLATES.md).
+See [Contributing template kits](#contributing-template-kits).
+
+---
+
+## Contributing template kits
+
+Template kits are forkable React starters shown in the Forge gallery. **Designers and developers** can contribute new kits or improve existing ones.
+
+### Folder layout
+
+Each kit lives at `data/templates/<id>/` where `<id>` matches `^[a-z0-9][a-z0-9-]{1,62}$` (example: `aurora-ai`).
+
+```
+data/templates/<id>/
+├── template.json        # catalog: i18n title/description, tags, hex palette, bootHint
+├── DESIGN.md            # design charter (colors, tone, do/don't, image URLs)
+├── preview.html         # static gallery thumbnail — no <script> tags
+├── index.html
+├── package.json         # "name" must equal <id>
+├── vite.config.ts
+├── tsconfig.json
+├── tsconfig.node.json
+├── README.md
+└── src/
+    ├── main.tsx
+    ├── App.tsx          # single page — imports from "react" only
+    └── index.css        # plain CSS, no @import, uses :root palette vars
+```
+
+Overview: [data/templates/README.md](data/templates/README.md) · Full contract: [docs/TEMPLATES.md](docs/TEMPLATES.md) (🇫🇷 [TEMPLATES.fr.md](docs/TEMPLATES.fr.md))
+
+### Key rules (enforced by CI)
+
+| Rule | Why |
+| --- | --- |
+| `src/App.tsx` imports **only** `"react"` | Kits run in the zero-install Babel browser runner |
+| `preview.html` has **no** `<script>` | Gallery thumbnail is pure HTML/CSS |
+| `src/index.css` has **no** `@import` | No external fonts/CSS at runtime |
+| `template.json` palette uses `#rrggbb` hex | Agent and gallery read consistent tokens |
+| `title`, `description`, `bootHint` in **en** + **fr** | Bilingual product |
+
+### Submission workflow
+
+1. Fork / branch from latest `main`.
+2. Add or edit `data/templates/<id>/` following the layout above.
+3. Register the new `<id>` in `EXPECTED_IDS` (`apps/api/tests/test_templates.py`).
+4. Update keyword routing in `apps/api/app/services/templates.py` if the kit targets new topics.
+5. Run `cd apps/api && pytest tests/test_templates.py -q`.
+6. Open a PR with:
+   - **Screenshot** of the gallery card (`preview.html` rendering)
+   - **Screenshot or video** of a forked live preview in the builder
+   - Branch name `template/<id>` when adding a kit
+
+Use issue template [template_proposal.yml](.github/ISSUE_TEMPLATE/template_proposal.yml) to discuss a kit **before** large design work.
 
 ---
 
@@ -186,19 +241,6 @@ See [docs/TEMPLATES.md](docs/TEMPLATES.md).
 | **Semgrep** | Static analysis (`apps/web`, `apps/api/app`) |
 
 Fix CI failures on your branch before requesting review.
-
----
-
-## Production deployment (maintainers)
-
-After merge to `main`:
-
-| Component | Trigger |
-| --- | --- |
-| **Frontend** (`forge.rodiumai.io`) | AWS Amplify — `apps/web/amplify.yml` |
-| **API** (`api-forge.rodiumai.io`) | GitHub Actions `deploy-api.yml` → ECR → ECS Fargate |
-
-See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) and [infra/aws/github/README.md](infra/aws/github/README.md).
 
 ---
 

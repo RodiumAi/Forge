@@ -11,6 +11,7 @@
 ## Contributor role
 
 - [ ] Designer (UI/UX)
+- [ ] Template kit author (`data/templates/`)
 - [ ] Frontend developer
 - [ ] Backend developer
 - [ ] Cybersecurity / hardening
