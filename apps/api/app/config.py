@@ -1,3 +1,4 @@
+import re
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
@@ -180,6 +181,14 @@ class Settings(BaseSettings):
 
 
 _DEV_SECRET_KEYS = {"dev-secret-change-me", "dev-secret-forge-web", "", None}
+# The .env.example placeholders are 32+ chars and slipped through the length
+# check: a production API signing JWTs with a PUBLIC string from the repo lets
+# anyone mint a valid token for any user id.
+_PLACEHOLDER_SECRET_RE = re.compile(r"(?i)(change[-_ ]?me|placeholder|example|replace[-_ ]?with)")
+
+
+def _is_placeholder_secret(value: str | None) -> bool:
+    return bool(value) and bool(_PLACEHOLDER_SECRET_RE.search(value or ""))
 
 
 @lru_cache
@@ -196,10 +205,16 @@ def get_settings() -> Settings:
         # Le JWT de session ne doit jamais être signé avec une clé de développement.
         assert s.secret_key not in _DEV_SECRET_KEYS, "SECRET_KEY de développement interdite en production"
         assert len(s.secret_key) >= 32, "SECRET_KEY doit faire au moins 32 caractères en production"
+        assert not _is_placeholder_secret(s.secret_key), (
+            "SECRET_KEY ressemble à un placeholder de .env.example — générez une vraie clé aléatoire"
+        )
         # ENCRYPTION_KEY doit être distincte : sinon compromettre le JWT compromet
         # aussi les clés API RodiumAi et les refresh tokens chiffrés au repos.
         assert s.encryption_key, "ENCRYPTION_KEY est obligatoire en production"
         assert s.encryption_key != s.secret_key, "ENCRYPTION_KEY doit différer de SECRET_KEY"
+        assert not _is_placeholder_secret(s.encryption_key), (
+            "ENCRYPTION_KEY ressemble à un placeholder — générez une vraie clé aléatoire"
+        )
     return s
 
 
