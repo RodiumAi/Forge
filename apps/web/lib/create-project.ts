@@ -108,11 +108,12 @@ export async function stashPendingFiles(files: File[]): Promise<void> {
 export async function forkProjectFromTemplate(
   tpl: ForkableTemplate,
 ): Promise<CreatedProject> {
-  const project = await api<CreatedProject>("/projects", {
+  // No boot prompt on purpose: the kit is a complete, working site. The boot
+  // mechanism exists for prompt-created projects (it carries the USER's own
+  // request); auto-firing the template's adaptation hint started a generation
+  // nobody asked for the moment the project opened.
+  return api<CreatedProject>("/projects", {
     method: "POST",
     body: JSON.stringify({ name: tpl.title, template_id: tpl.id }),
   });
-  const hint = tpl.boot_hint?.trim();
-  if (hint) setBootPrompt(project.id, hint);
-  return project;
 }
