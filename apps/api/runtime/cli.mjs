@@ -5,7 +5,7 @@
  */
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { buildGraph } from "./cli-lib.mjs";
+import { buildGraph, extractSeoHead } from "./cli-lib.mjs";
 import { checkNamedExports } from "./export_check.mjs";
 import { importMapScriptTag } from "./importmap.mjs";
 
@@ -56,14 +56,21 @@ async function main() {
     process.exit(2);
   }
 
+  // The published head inherits the project's SEO (title, description, og/
+  // twitter metas, favicon, canonical) written by the SEO editor into the
+  // project index.html — instead of a hardcoded "Forge app" shell.
+  const seo = extractSeoHead(payload.indexHtml || files["index.html"] || "");
+  const title = seo.title || payload.title || "Forge app";
+  const seoTags = seo.tags.join("\n");
+  const hasIcon = /rel=["'][^"']*icon/i.test(seoTags);
+
   const indexHtml = `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>${escapeHtml(payload.title || "Forge app")}</title>
-<link rel="icon" type="image/png" href="/favicon.png" />
-${importMapScriptTag(extraImports)}
+<title>${escapeHtml(title)}</title>
+${hasIcon ? "" : '<link rel="icon" type="image/png" href="/favicon.png" />\n'}${seoTags ? seoTags + "\n" : ""}${importMapScriptTag(extraImports)}
 <style>${css}</style>
 </head>
 <body>
