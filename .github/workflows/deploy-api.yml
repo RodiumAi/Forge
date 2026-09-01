@@ -58,6 +58,10 @@ jobs:
           pip install -r requirements.txt
           pip install ruff==0.16.4 pytest==8.3.4
 
+      - name: Install runtime CLI (smoke transform tests)
+        working-directory: apps/api/runtime
+        run: npm ci
+
       - name: Ruff lint
         run: ruff check app tests
 
