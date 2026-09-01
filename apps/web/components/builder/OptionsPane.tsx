@@ -22,6 +22,7 @@ import { removeProject } from "@/lib/lists-cache";
 import { Icon } from "@/components/ui/icon";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { SeoOptionsSection } from "@/components/builder/SeoOptionsSection";
+import { sitesBaseDomain, sitesScheme, sitesUrlForSlug } from "@/lib/sites-url";
 
 type OptionsSection = "general" | "environment" | "brand" | "seo" | "publishing" | "stats" | "danger";
 
@@ -384,14 +385,14 @@ export function OptionsPane({
               <label htmlFor="options-slug">{t("optionsProjectSlug")}</label>
               <p className="options-help">{t("optionsProjectSlugHelp")}</p>
               <div className="options-slug-row">
-                <span className="options-slug-prefix">https://</span>
+                <span className="options-slug-prefix">{sitesScheme()}://</span>
                 <input
                   id="options-slug"
                   value={slug}
                   onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))}
                   autoComplete="off"
                 />
-                <span className="options-slug-suffix">.lvh.me:8080</span>
+                <span className="options-slug-suffix">.{sitesBaseDomain()}</span>
               </div>
             </div>
             <div className="options-actions">
@@ -470,7 +471,7 @@ export function OptionsPane({
             <div className="options-stat-row">
               <span>{t("publishWebsiteUrl")}</span>
               <strong className="options-url">
-                {sitesUrl || (slug ? `http://${slug}.lvh.me:8080` : "—")}
+                {sitesUrl || (slug ? sitesUrlForSlug(slug) : "—")}
               </strong>
             </div>
             <p className="options-help">{t("optionsPublishHelp")}</p>

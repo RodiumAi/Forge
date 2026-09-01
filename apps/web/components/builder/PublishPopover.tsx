@@ -19,6 +19,7 @@ import QRCode from "qrcode";
 import { Icon } from "@/components/ui/icon";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { topProgressDone, topProgressStart } from "@/lib/top-progress";
+import { sitesBaseDomain, sitesHostLabel, sitesUrlForSlug } from "@/lib/sites-url";
 
 type Props = {
   projectId: string;
@@ -338,10 +339,11 @@ export function PublishPopover({
     };
   }, [open, hasPublished, url]);
 
-  const hostLabel = hasPublished && url
-    ? displayHost(url)
+  const effectiveUrl = url || sitesUrl || (slug ? sitesUrlForSlug(slug) : "");
+  const hostLabel = effectiveUrl
+    ? displayHost(effectiveUrl)
     : slug
-      ? `${slug}.lvh.me:8080`
+      ? sitesHostLabel(slug)
       : t("publishEmpty");
 
   // Publish is a single synchronous POST: phase labels are estimated from
@@ -400,7 +402,7 @@ export function PublishPopover({
 
           <div className="publish-section-label">
             <span>{t("publishWebsiteUrl")}</span>
-            <span className="publish-add-domain-muted">{t("publishDomainHint")}</span>
+            <span className="publish-add-domain-muted">{sitesBaseDomain()}</span>
           </div>
 
           <div className="publish-url-card">
