@@ -160,9 +160,9 @@ jobs:
             --scanners vuln \
             --severity CRITICAL,HIGH \
             --ignore-unfixed \
+            --ignorefile .trivyignore \
             --exit-code 1 \
             --skip-dirs node_modules,dist,coverage,.git,.next,__pycache__,.venv,testForge \
-            --trivyignore .trivyignore \
             .
 
   semgrep:
