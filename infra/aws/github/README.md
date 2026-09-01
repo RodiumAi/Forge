@@ -40,14 +40,32 @@ aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
 Required IAM permissions : ECR push + `ecs:DescribeTaskDefinition`, `ecs:RegisterTaskDefinition`, `ecs:UpdateService`, `ecs:DescribeServices`, `iam:PassRole`.
 
-## IAM (OIDC) sketch
+## IAM (OIDC)
 
-1. GitHub OIDC provider in AWS IAM.
-2. Role trust policy scoped to `repo:Rodium-AI/Forge:ref:refs/heads/main`.
-3. Role permissions:
-   - ECR : `GetAuthorizationToken`, `BatchCheckLayerAvailability`, `PutImage`, `InitiateLayerUpload`, `UploadLayerPart`, `CompleteLayerUpload`
-   - ECS : `DescribeTaskDefinition`, `RegisterTaskDefinition`, `UpdateService`, `DescribeServices`, `DescribeClusters`
-   - IAM : `PassRole` (execution + task roles)
+Bootstrap script (idempotent) :
+
+```powershell
+./infra/aws/github/bootstrap-github-oidc.ps1
+```
+
+Then set the GitHub secret (environment `production`) :
+
+```bash
+gh secret set AWS_DEPLOY_ROLE_ARN --env production --repo Rodium-AI/Forge \
+  --body "arn:aws:iam::330990434320:role/github-actions-forge-api-deploy"
+```
+
+### Trust policy (classic + immutable `sub`)
+
+Repos created after 2026-07-15 use immutable subject claims, e.g.
+`repo:Rodium-AI@282585446/Forge@1344172064:environment:production`.
+The role trust policy in `trust-policy.json` allows **both** name-based and ID-based subjects.
+
+Manual sketch :
+
+1. GitHub OIDC provider `token.actions.githubusercontent.com` (audience `sts.amazonaws.com`).
+2. Role `github-actions-forge-api-deploy` scoped to `repo:Rodium-AI/Forge:*` **and** `repo:Rodium-AI@282585446/Forge@1344172064:*`.
+3. Inline policy `deploy-policy.json` : ECR push `forge/api`, ECS deploy `forge-api`, `iam:PassRole` on task roles.
 
 ## ECR bootstrap
 
