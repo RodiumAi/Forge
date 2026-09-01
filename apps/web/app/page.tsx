@@ -1,16 +1,22 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { ArrowUp, Plus } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
 import { LandingReveal } from "@/components/landing/LandingReveal";
+import {
+  GithubMark,
+  LandingSocialLinks,
+} from "@/components/landing/LandingSocialLinks";
 import { PromptFileChips } from "@/components/PromptFileChips";
 import { SiteThumb } from "@/components/SiteThumb";
 import { GalleryTemplate } from "@/components/TemplateGallery";
+import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { Icon } from "@/components/ui/icon";
 import { getToken } from "@/lib/api";
+import {
+  FORGE_CONTRIBUTE,
+  RODIUM_LEGAL,
+  RODIUM_SITE,
+} from "@/lib/constants/rodium-links";
 import {
   PENDING_PROMPT_KEY,
   PENDING_TEMPLATE_KEY,
@@ -19,6 +25,7 @@ import {
   forkProjectFromTemplate,
   stashPendingFiles,
 } from "@/lib/create-project";
+import { LocaleSwitch, useI18n } from "@/lib/i18n/I18nProvider";
 import {
   ensureTemplates,
   getCachedTemplates,
@@ -26,16 +33,18 @@ import {
   prependProject,
   refreshTemplatesIfStale,
 } from "@/lib/lists-cache";
-import { LocaleSwitch, useI18n } from "@/lib/i18n/I18nProvider";
-import { ThemeSwitch } from "@/components/ThemeSwitch";
 import {
+  LocalPromptAttachment,
   PROMPT_FILE_ACCEPT,
   PromptAttachment,
-  LocalPromptAttachment,
   mergePromptAttachments,
   revokePromptAttachment,
   type PromptLabels,
 } from "@/lib/prompt-attachments";
+import { ArrowUp, Plus } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
 
 type PromptBoxProps = {
   compact?: boolean;
@@ -118,7 +127,12 @@ function LandingPromptBox({
         >
           <Icon icon={Plus} />
         </button>
-        <button type="submit" className="lp-send" disabled={!canSubmit} aria-label={t("create")}>
+        <button
+          type="submit"
+          className="lp-send"
+          disabled={!canSubmit}
+          aria-label={t("create")}
+        >
           {submitting ? t("loading") : <Icon icon={ArrowUp} />}
         </button>
       </div>
@@ -206,7 +220,9 @@ export default function LandingPage() {
       if (!getToken()) {
         sessionStorage.setItem(PENDING_PROMPT_KEY, trimmed);
         const localFiles = files
-          .filter((item): item is LocalPromptAttachment => item.source === "local")
+          .filter(
+            (item): item is LocalPromptAttachment => item.source === "local",
+          )
           .map((item) => item.file);
         if (localFiles.length) await stashPendingFiles(localFiles);
         router.push("/login");
@@ -293,7 +309,10 @@ export default function LandingPage() {
     if (submitting) return;
     if (e.dataTransfer.files?.length) {
       setFiles((prev) => {
-        const { next, rejected } = mergePromptAttachments(prev, e.dataTransfer.files);
+        const { next, rejected } = mergePromptAttachments(
+          prev,
+          e.dataTransfer.files,
+        );
         setFileError(rejected.length ? t("promptFileTypeError") : null);
         return next;
       });
@@ -340,10 +359,20 @@ export default function LandingPage() {
         <nav className="lp-nav-links" aria-label={t("homeNav")}>
           <a href="#templates">{t("landingNavTemplates")}</a>
           <a href="#how">{t("landingNavHow")}</a>
+          <a href="#contribute">{t("landingNavContribute")}</a>
         </nav>
         <div className="lp-nav-right">
           <ThemeSwitch />
           <LocaleSwitch />
+          <a
+            href={FORGE_CONTRIBUTE}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="lp-nav-contribute"
+          >
+            <GithubMark />
+            {t("landingNavContribute")}
+          </a>
           <button type="button" className="lp-nav-cta" onClick={goAuth}>
             {t("openForge")}
           </button>
@@ -366,147 +395,170 @@ export default function LandingPage() {
       </section>
 
       <LandingReveal>
-      <section className="lp-proof" aria-label={t("landingProofLabel")}>
-        <p className="lp-proof-label">{t("landingProofLabel")}</p>
-        <ul className="lp-proof-row">
-          <li>{t("landingProof1")}</li>
-          <li>{t("landingProof2")}</li>
-          <li>{t("landingProof3")}</li>
-          <li>{t("landingProof4")}</li>
-        </ul>
-      </section>
+        <section className="lp-proof" aria-label={t("landingProofLabel")}>
+          <p className="lp-proof-label">{t("landingProofLabel")}</p>
+          <ul className="lp-proof-row">
+            <li>{t("landingProof1")}</li>
+            <li>{t("landingProof2")}</li>
+            <li>{t("landingProof3")}</li>
+            <li>{t("landingProof4")}</li>
+          </ul>
+        </section>
       </LandingReveal>
 
       <LandingReveal>
-      <section className="lp-how" id="how">
-        <h2 className="lp-section-title">{t("landingHowTitle")}</h2>
-        <div className="lp-how-grid">
-          <div className="lp-how-visual">
-            <div className="lp-how-video-shell">
-              <div className="lp-how-video-glow" aria-hidden />
-              <div className="lp-how-video-frame">
-                <div className="lp-how-video-chrome" aria-hidden>
-                  <span className="lp-how-visual-dot" />
-                  <span className="lp-how-visual-dot" />
-                  <span className="lp-how-visual-dot" />
-                  <span className="lp-how-video-chrome-label">Forge preview</span>
-                </div>
-                <div className="lp-how-video-stage">
-                  <video
-                    className="lp-how-video"
-                    src="/video.mp4"
-                    autoPlay
-                    muted
-                    loop
-                    playsInline
-                    preload="metadata"
-                    controls={false}
-                    disablePictureInPicture
-                    aria-label={t("landingHowVisualAlt")}
-                  />
+        <section className="lp-how" id="how">
+          <h2 className="lp-section-title">{t("landingHowTitle")}</h2>
+          <div className="lp-how-grid">
+            <div className="lp-how-visual">
+              <div className="lp-how-video-shell">
+                <div className="lp-how-video-glow" aria-hidden />
+                <div className="lp-how-video-frame">
+                  <div className="lp-how-video-chrome" aria-hidden>
+                    <span className="lp-how-visual-dot" />
+                    <span className="lp-how-visual-dot" />
+                    <span className="lp-how-visual-dot" />
+                    <span className="lp-how-video-chrome-label">
+                      Forge preview
+                    </span>
+                  </div>
+                  <div className="lp-how-video-stage">
+                    <video
+                      className="lp-how-video"
+                      src="/video.mp4"
+                      autoPlay
+                      muted
+                      loop
+                      playsInline
+                      preload="metadata"
+                      controls={false}
+                      disablePictureInPicture
+                      aria-label={t("landingHowVisualAlt")}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
+            <ol className="lp-how-steps">
+              <li>
+                <strong>{t("landingHow1Title")}</strong>
+                <p>{t("landingHow1Body")}</p>
+              </li>
+              <li>
+                <strong>{t("landingHow2Title")}</strong>
+                <p>{t("landingHow2Body")}</p>
+              </li>
+              <li>
+                <strong>{t("landingHow3Title")}</strong>
+                <p>{t("landingHow3Body")}</p>
+              </li>
+            </ol>
           </div>
-          <ol className="lp-how-steps">
-            <li>
-              <strong>{t("landingHow1Title")}</strong>
-              <p>{t("landingHow1Body")}</p>
-            </li>
-            <li>
-              <strong>{t("landingHow2Title")}</strong>
-              <p>{t("landingHow2Body")}</p>
-            </li>
-            <li>
-              <strong>{t("landingHow3Title")}</strong>
-              <p>{t("landingHow3Body")}</p>
-            </li>
-          </ol>
-        </div>
-      </section>
+        </section>
       </LandingReveal>
 
       <LandingReveal>
-      <section className="lp-templates" id="templates">
-        <div className="lp-templates-head">
-          <h2 className="lp-section-title">{t("landingTemplatesTitle")}</h2>
-          <button
-            type="button"
-            className="lp-templates-all"
-            onClick={() => {
-              if (authed) router.push("/dashboard?tab=templates");
-              else router.push("/login");
-            }}
-          >
-            {t("landingTemplatesAll")}
-          </button>
-        </div>
-        {templates.length > 0 ? (
-          <div className="lp-templates-grid">
-            {templates.slice(0, 8).map((tpl) => (
-              <button
-                key={tpl.id}
-                type="button"
-                className="lp-tpl-card"
-                disabled={Boolean(forkingId) || submitting}
-                onClick={() => void onSelectTemplate(tpl)}
-              >
-                <SiteThumb
-                  src={tpl.preview_url || `/templates/${tpl.id}/preview`}
-                  viewportWidth={480}
-                  viewportHeight={300}
-                  title={tpl.title}
-                  className="lp-tpl-thumb"
-                />
-                <div className="lp-tpl-meta">
-                  <strong>{tpl.title}</strong>
-                  <span>
-                    {forkingId === tpl.id ? t("forkingTemplate") : tpl.description}
-                  </span>
-                </div>
-              </button>
-            ))}
+        <section className="lp-templates" id="templates">
+          <div className="lp-templates-head">
+            <h2 className="lp-section-title">{t("landingTemplatesTitle")}</h2>
+            <button
+              type="button"
+              className="lp-templates-all"
+              onClick={() => {
+                if (authed) router.push("/dashboard?tab=templates");
+                else router.push("/login");
+              }}
+            >
+              {t("landingTemplatesAll")}
+            </button>
           </div>
-        ) : (
-          <p className="lp-empty">{t("noTemplates")}</p>
-        )}
-      </section>
+          {templates.length > 0 ? (
+            <div className="lp-templates-grid">
+              {templates.slice(0, 8).map((tpl) => (
+                <button
+                  key={tpl.id}
+                  type="button"
+                  className="lp-tpl-card"
+                  disabled={Boolean(forkingId) || submitting}
+                  onClick={() => void onSelectTemplate(tpl)}
+                >
+                  <SiteThumb
+                    src={tpl.preview_url || `/templates/${tpl.id}/preview`}
+                    viewportWidth={480}
+                    viewportHeight={300}
+                    title={tpl.title}
+                    className="lp-tpl-thumb"
+                  />
+                  <div className="lp-tpl-meta">
+                    <strong>{tpl.title}</strong>
+                    <span>
+                      {forkingId === tpl.id
+                        ? t("forkingTemplate")
+                        : tpl.description}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="lp-empty">{t("noTemplates")}</p>
+          )}
+        </section>
       </LandingReveal>
 
       <LandingReveal>
-      <section className="lp-why">
-        <h2 className="lp-section-title">{t("landingWhyTitle")}</h2>
-        <div className="lp-why-grid">
-          <div className="lp-why-item">
-            <strong>{t("landingWhy1Value")}</strong>
-            <span>{t("landingWhy1Label")}</span>
+        <section className="lp-why">
+          <h2 className="lp-section-title">{t("landingWhyTitle")}</h2>
+          <div className="lp-why-grid">
+            <div className="lp-why-item">
+              <strong>{t("landingWhy1Value")}</strong>
+              <span>{t("landingWhy1Label")}</span>
+            </div>
+            <div className="lp-why-item">
+              <strong>{t("landingWhy2Value")}</strong>
+              <span>{t("landingWhy2Label")}</span>
+            </div>
+            <div className="lp-why-item">
+              <strong>{t("landingWhy3Value")}</strong>
+              <span>{t("landingWhy3Label")}</span>
+            </div>
           </div>
-          <div className="lp-why-item">
-            <strong>{t("landingWhy2Value")}</strong>
-            <span>{t("landingWhy2Label")}</span>
-          </div>
-          <div className="lp-why-item">
-            <strong>{t("landingWhy3Value")}</strong>
-            <span>{t("landingWhy3Label")}</span>
-          </div>
-        </div>
-      </section>
+        </section>
       </LandingReveal>
 
       <LandingReveal>
-      <section className="lp-cta">
-        <div className="lp-cta-wash" aria-hidden />
-        <div className="lp-cta-inner">
-          <h2 className="lp-cta-title">{t("landingCtaTitle")}</h2>
-          <p className="lp-cta-sub">{t("landingCtaSub")}</p>
-          <LandingPromptBox
-            {...promptProps}
-            compact
-            textareaRef={ctaTextareaRef}
-            fileInputRef={ctaFileInputRef}
-          />
-        </div>
-      </section>
+        <section className="lp-contribute" id="contribute">
+          <div className="lp-contribute-inner">
+            <h2 className="lp-section-title">{t("landingContributeTitle")}</h2>
+            <p className="lp-contribute-lead">{t("landingContributeLead")}</p>
+            <p className="lp-contribute-body">{t("landingContributeBody")}</p>
+            <a
+              href={FORGE_CONTRIBUTE}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="lp-contribute-cta"
+            >
+              <GithubMark />
+              {t("landingContributeCta")}
+            </a>
+          </div>
+        </section>
+      </LandingReveal>
+
+      <LandingReveal>
+        <section className="lp-cta">
+          <div className="lp-cta-wash" aria-hidden />
+          <div className="lp-cta-inner">
+            <h2 className="lp-cta-title">{t("landingCtaTitle")}</h2>
+            <p className="lp-cta-sub">{t("landingCtaSub")}</p>
+            <LandingPromptBox
+              {...promptProps}
+              compact
+              textareaRef={ctaTextareaRef}
+              fileInputRef={ctaFileInputRef}
+            />
+          </div>
+        </section>
       </LandingReveal>
 
       <footer className="lp-footer">
@@ -514,22 +566,80 @@ export default function LandingPage() {
         <div className="lp-footer-panel">
           <div className="lp-footer-brand">
             <BrandLogo alt={t("brandAlt")} width={120} height={34} />
-            <p>{t("landingFooterTagline")}</p>
+            <p>
+              {t("landingFooterTaglineLead")}{" "}
+              <a href={RODIUM_SITE} target="_blank" rel="noopener noreferrer">
+                RodiumAi
+              </a>{" "}
+              {t("landingFooterTaglineTail")}
+            </p>
+            <LandingSocialLinks
+              discordLabel={t("socialDiscord")}
+              linkedinLabel={t("socialLinkedin")}
+              githubLabel={t("socialGithub")}
+              youtubeLabel={t("socialYoutube")}
+              xLabel={t("socialX")}
+            />
           </div>
           <div className="lp-footer-cols">
             <div>
               <h3>{t("landingFooterProduct")}</h3>
               <a href="#templates">{t("landingNavTemplates")}</a>
               <a href="#how">{t("landingNavHow")}</a>
+              <a href="#contribute">{t("landingNavContribute")}</a>
               <Link href="/login">{t("landingStart")}</Link>
             </div>
             <div>
               <h3>{t("landingFooterResources")}</h3>
-              <Link href="/settings?tab=generation">{t("settingsTabRodium")}</Link>
+              <a
+                href={FORGE_CONTRIBUTE}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {t("landingFooterContribute")}
+              </a>
+              <Link href="/settings?tab=generation">
+                {t("settingsTabRodium")}
+              </Link>
               <Link href="/dashboard">{t("projects")}</Link>
             </div>
             <div>
               <h3>{t("landingFooterLegal")}</h3>
+              <a
+                href={RODIUM_LEGAL.help}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {t("landingFooterHelp")}
+              </a>
+              <a
+                href={RODIUM_LEGAL.privacy}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {t("landingFooterPrivacy")}
+              </a>
+              <a
+                href={RODIUM_LEGAL.terms}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {t("landingFooterTerms")}
+              </a>
+              <a
+                href={RODIUM_LEGAL.trust}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {t("landingFooterTrust")}
+              </a>
+              <a
+                href={RODIUM_LEGAL.cookies}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {t("landingFooterCookies")}
+              </a>
               <span>{t("landingFooterRights")}</span>
               <span>© {year} RodiumAi</span>
             </div>

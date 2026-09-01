@@ -4331,6 +4331,7 @@ html:has(.builder) body {
 }
 
 .lp-nav-ghost,
+.lp-nav-contribute,
 .lp-nav-cta {
   appearance: none;
   border: 0;
@@ -4340,6 +4341,22 @@ html:has(.builder) body {
   font-weight: 650;
   border-radius: 999px;
   padding: 0.55rem 0.95rem;
+  text-decoration: none;
+}
+
+.lp-nav-contribute {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: transparent;
+  color: var(--lp-ink);
+  border: 1px solid var(--lp-line);
+}
+
+.lp-nav-contribute:hover {
+  border-color: color-mix(in srgb, var(--lp-ember) 45%, var(--lp-line));
+  color: var(--lp-ember);
+  background: color-mix(in srgb, var(--lp-ember) 8%, transparent);
 }
 
 .lp-nav-ghost {
@@ -5003,6 +5020,54 @@ html:has(.builder) body {
   line-height: 1.4;
 }
 
+.lp-contribute {
+  padding: 3.5rem 1rem;
+}
+
+.lp-contribute-inner {
+  width: min(720px, 100%);
+  margin: 0 auto;
+  text-align: center;
+  display: grid;
+  gap: 0.85rem;
+  justify-items: center;
+}
+
+.lp-contribute-lead {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--lp-ink);
+  line-height: 1.5;
+  max-width: 52ch;
+}
+
+.lp-contribute-body {
+  margin: 0;
+  color: var(--lp-muted);
+  font-size: 0.95rem;
+  line-height: 1.55;
+  max-width: 58ch;
+}
+
+.lp-contribute-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.35rem;
+  padding: 0.65rem 1.1rem;
+  border-radius: 999px;
+  background: var(--lp-cta);
+  color: var(--lp-cta-ink);
+  font-size: 0.92rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: filter 0.15s ease;
+}
+
+.lp-contribute-cta:hover {
+  filter: brightness(1.08);
+}
+
 .lp-cta {
   position: relative;
   isolation: isolate;
@@ -5069,6 +5134,49 @@ html:has(.builder) body {
   color: var(--lp-muted);
   font-size: 0.9rem;
   line-height: 1.45;
+}
+
+.lp-footer-brand p a {
+  color: var(--lp-ink);
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.lp-footer-brand p a:hover {
+  color: var(--lp-ember);
+}
+
+.lp-social {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.35rem;
+}
+
+.lp-social-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.15rem;
+  height: 2.15rem;
+  border-radius: 10px;
+  border: 1px solid var(--lp-line);
+  background: color-mix(in srgb, var(--lp-panel) 88%, var(--lp-bg));
+  color: var(--lp-muted);
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.lp-social-link:hover {
+  border-color: color-mix(in srgb, var(--lp-ember) 40%, var(--lp-line));
+  color: var(--lp-ember);
+  background: color-mix(in srgb, var(--lp-ember) 10%, var(--lp-panel));
+}
+
+.lp-social-icon {
+  width: 1rem;
+  height: 1rem;
 }
 
 .lp-footer-cols {
