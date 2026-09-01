@@ -22,6 +22,7 @@ import { Icon } from "@/components/ui/icon";
 import { LocaleSwitch, useI18n } from "@/lib/i18n/I18nProvider";
 import type { BuilderMode, ViewportMode } from "./types";
 import { PublishPopover } from "./PublishPopover";
+import { sitesUrlForSlug } from "@/lib/sites-url";
 
 type Props = {
   projectName: string;
@@ -92,7 +93,9 @@ export function BuilderTopbar({
 
   const previewExternalUrl = `${apiBase()}/preview/${projectId}/`;
   const published = Boolean(publishedAt);
-  const liveSiteUrl = published ? sitesUrl || (slug ? `http://${slug}.lvh.me:8080` : null) : null;
+  const liveSiteUrl = published
+    ? sitesUrl || (slug ? sitesUrlForSlug(slug) : null)
+    : null;
   const [openingDraft, setOpeningDraft] = useState(false);
 
   useEffect(() => {
