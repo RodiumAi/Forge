@@ -153,9 +153,7 @@ export default function LandingPage() {
   const [authed, setAuthed] = useState(false);
   const [navScrolled, setNavScrolled] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const ctaTextareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const ctaFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setAuthed(Boolean(getToken()));
@@ -541,22 +539,6 @@ export default function LandingPage() {
               <GithubMark />
               {t("landingContributeCta")}
             </a>
-          </div>
-        </section>
-      </LandingReveal>
-
-      <LandingReveal>
-        <section className="lp-cta">
-          <div className="lp-cta-wash" aria-hidden />
-          <div className="lp-cta-inner">
-            <h2 className="lp-cta-title">{t("landingCtaTitle")}</h2>
-            <p className="lp-cta-sub">{t("landingCtaSub")}</p>
-            <LandingPromptBox
-              {...promptProps}
-              compact
-              textareaRef={ctaTextareaRef}
-              fileInputRef={ctaFileInputRef}
-            />
           </div>
         </section>
       </LandingReveal>
