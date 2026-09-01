@@ -13,6 +13,7 @@ httpx>=0.28.0,<0.29
 python-multipart>=0.0.20,<0.1
 boto3>=1.35.0,<2
 redis>=5.0.0,<6
+posthog>=3.0.0,<4
 pillow>=11.0.0,<12
 beautifulsoup4>=4.12.0,<5
 tree-sitter>=0.23.0,<0.25

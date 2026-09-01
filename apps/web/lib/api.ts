@@ -1,4 +1,5 @@
 import type { Locale } from "@/lib/i18n/dictionaries";
+import { identifyPosthogUser, resetPosthogUser } from "@/lib/posthog/client";
 
 export function apiBase(): string {
   return process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "http://localhost:8100";
@@ -25,6 +26,7 @@ export function setToken(token: string | null) {
 /** Clear session and send the user to the landing page. */
 export function logoutToHome(reason?: string) {
   if (typeof window === "undefined") return;
+  resetPosthogUser();
   setToken(null);
   const path = window.location.pathname;
   if (path === "/" || path === "/login" || path.startsWith("/auth")) return;

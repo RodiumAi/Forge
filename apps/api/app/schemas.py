@@ -25,6 +25,7 @@ class UserOut(BaseModel):
     name: str | None = None
     avatar_url: str | None = None
     rodium_linked: bool = False
+    rodium_sub: str | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -240,6 +241,8 @@ class ClarifyAnswersRequest(BaseModel):
 
 class ConfirmPlanRequest(BaseModel):
     plan: list[dict] | None = None
+    # True = execute only the next pending task, then pause for confirmation.
+    step_mode: bool = False
 
 
 class BranchMessagesRequest(BaseModel):

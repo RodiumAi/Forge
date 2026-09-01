@@ -1408,7 +1408,7 @@ export default function ProjectPage() {
     [activeRunId, chatId, handleStreamEvent, locale, projectId, pushChatError, seedStreamState, t],
   );
 
-  const executePlan = useCallback(async () => {
+  const executePlan = useCallback(async (stepMode = false) => {
     if (!chatId || !activeRunId) return;
     setBusy(true);
     setPlanNeedsConfirm(false);
@@ -1442,7 +1442,7 @@ export default function ProjectPage() {
             Authorization: `Bearer ${getToken()}`,
             "Accept-Language": locale,
           },
-          body: JSON.stringify({ plan: planTasks }),
+          body: JSON.stringify({ plan: planTasks, step_mode: stepMode }),
         },
       );
       if (!res.ok || !res.body) {
@@ -1861,6 +1861,7 @@ export default function ProjectPage() {
                       planTasks.some((task) => task.status === "running" || task.status === "pending")
                     }
                     onExecute={() => void executePlan()}
+                    onExecuteStep={() => void executePlan(true)}
                     onDismiss={() => void dismissPlan()}
                   />
                 )}

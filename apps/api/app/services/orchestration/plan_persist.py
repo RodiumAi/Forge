@@ -7,7 +7,8 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from app.models import AgentRun, Message
+from app.models import AgentRun, Message, User
+from app.services.posthog_client import capture_event, distinct_id_for_user
 from app.services.text_plain import build_run_summary, to_plain_text
 
 
@@ -104,9 +105,28 @@ def handle_plan_stream_payload(
         row = db.get(AgentRun, run_pk)
         if row is not None:
             persist_assistant(db, row, payload, locale)
+            if payload.get("paused"):
+                # Step-by-step mode: task finished but the plan is not over.
+                # Re-arm the run so POST /confirm-plan can launch the next step.
+                row.status = "awaiting_plan_confirm"
+                row.plan_json = json.dumps(payload.get("plan") or plan)
+                db.commit()
+                return
             row.status = "done"
             row.plan_json = json.dumps(payload.get("plan") or plan)
             db.commit()
+            user = db.get(User, row.user_id)
+            if user is not None:
+                capture_event(
+                    distinct_id_for_user(user),
+                    "forge_generation_completed",
+                    {
+                        "run_id": str(run_pk),
+                        "project_id": str(row.project_id),
+                        "task_class": row.task_class,
+                        "model_slug": row.model_slug,
+                    },
+                )
     elif payload.get("type") == "error":
         persist_plan_error(db, run_pk, payload, locale)
 

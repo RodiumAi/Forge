@@ -25,8 +25,7 @@ _LOCKED_BRAND_RE = re.compile(
     r"^(DESIGN\.md|public/logo(?:\.(?:png|jpe?g|webp|gif|svg))?)$",
     re.IGNORECASE,
 )
-_CSS_SHRINK_MIN_EXISTING = 800
-_CSS_SHRINK_RATIO = 0.75
+_CSS_MERGE_MIN_EXISTING = 400
 
 
 def is_locked_brand_path(path: str) -> bool:
@@ -34,29 +33,42 @@ def is_locked_brand_path(path: str) -> bool:
     return bool(_LOCKED_BRAND_RE.match(rel))
 
 
-def _css_shrink_violation(project_id: str, path: str, content: str) -> dict | None:
-    """Reject mid-plan rewrites that drop most of index.css (append-only rule)."""
+def _css_preserving_content(project_id: str, path: str, content: str) -> tuple[str, dict | None]:
+    """Merge stylesheet rewrites with disk so dropped selectors survive.
+
+    Mid-plan tasks re-emit src/index.css as a full file from a truncated view
+    of it, silently deleting earlier rules (navbar/hero/pages). Instead of
+    rejecting the write, keep the new rules and re-append every top-level
+    block whose selector disappeared. Returns (final_content, info_violation).
+    """
     rel = (path or "").strip().lstrip("/").replace("\\", "/")
-    if rel != "src/index.css":
-        return None
+    if not rel.endswith(".css") or not rel.startswith("src/"):
+        return content, None
     from app.services.filesystem import read_file
 
     try:
         existing = read_file(project_id, path)
     except FileNotFoundError:
-        return None
-    if len(existing) < _CSS_SHRINK_MIN_EXISTING:
-        return None
-    if len(content) >= int(len(existing) * _CSS_SHRINK_RATIO):
-        return None
-    return {
-        "code": "CSS_SHRINK_REJECTED",
+        return content, None
+    if len(existing) < _CSS_MERGE_MIN_EXISTING:
+        return content, None
+    try:
+        from app.services.css_merge import merge_css_preserving
+
+        merged, preserved = merge_css_preserving(existing, content)
+    except Exception:
+        logger.warning("css merge failed for %s/%s", project_id, path, exc_info=True)
+        return content, None
+    if not preserved:
+        return content, None
+    return merged, {
+        "code": "CSS_MERGE_PRESERVED",
         "path": path,
         "specifier": "",
         "message": (
-            f"Rejected rewrite of src/index.css ({len(content)} chars vs {len(existing)} on disk). "
-            "Mid-plan CSS must APPEND — preserve every existing selector (navbar/hero/layout) "
-            "and add only this task's rules."
+            f"Rewrite of {rel} dropped {len(preserved)} existing selector(s); "
+            "they were auto-appended back (append-only CSS rule). "
+            "Examples: " + ", ".join(preserved[:8])
         ),
     }
 
@@ -124,10 +136,9 @@ def apply_validated_writes(
         if found:
             violations.extend(v.as_dict() for v in found)
             continue
-        shrink = _css_shrink_violation(project_id, path, content)
-        if shrink:
-            violations.append(shrink)
-            continue
+        content, merge_info = _css_preserving_content(project_id, path, content)
+        if merge_info:
+            violations.append(merge_info)
         accepted.append((path, content))
 
     if not accepted:

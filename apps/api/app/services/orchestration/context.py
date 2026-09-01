@@ -12,8 +12,8 @@ from app.services.filesystem import list_files, project_dir, read_file
 from app.services.prototype_mode import format_prototype_plugins_layer
 
 DESIGN_MAX_CHARS = 12_000
-SELECTED_FILE_MAX_CHARS = 44_000
-CSS_RESERVED_CHARS = 14_000
+SELECTED_FILE_MAX_CHARS = 56_000
+CSS_RESERVED_CHARS = 26_000
 RECENT_DISK_PATHS = 3
 FORCED_PATHS = ("src/index.css", "src/App.tsx", "DESIGN.md", "AI_RULES.md")
 SCAFFOLD_EXTRA_K = 8
