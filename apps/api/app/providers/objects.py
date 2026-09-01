@@ -7,16 +7,17 @@ from app.config import get_settings
 from app.errors import provider_not_configured
 
 
+def _resolve_static_credentials() -> tuple[str, str]:
+    return get_settings().resolved_object_store_credentials()
+
+
 def _client(endpoint: str | None):
     s = get_settings()
-    access = s.object_store_access_key or s.aws_access_key_id
-    secret = s.object_store_secret_key or s.aws_secret_access_key
-    if not access or not secret:
+    access, secret = _resolve_static_credentials()
+    if s.is_local and (not access or not secret):
         raise provider_not_configured("Object store (S3-compatible)")
     kwargs: dict = {
         "service_name": "s3",
-        "aws_access_key_id": access,
-        "aws_secret_access_key": secret,
         "region_name": s.object_store_region or s.aws_s3_region,
         "config": Config(
             signature_version="s3v4",
@@ -26,10 +27,12 @@ def _client(endpoint: str | None):
             read_timeout=10,
         ),
     }
+    if access and secret:
+        kwargs["aws_access_key_id"] = access
+        kwargs["aws_secret_access_key"] = secret
     if endpoint:
         kwargs["endpoint_url"] = endpoint
     return boto3.client(**kwargs)
-
 
 class ObjectStore:
     """

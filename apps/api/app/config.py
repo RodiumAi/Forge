@@ -130,10 +130,24 @@ class Settings(BaseSettings):
 
     @property
     def object_store_enabled(self) -> bool:
-        access = self.object_store_access_key or self.aws_access_key_id
-        secret = self.object_store_secret_key or self.aws_secret_access_key
-        bucket = self.bucket_uploads or self.aws_s3_bucket
-        return bool(access and secret and bucket)
+        access, secret = self.resolved_object_store_credentials()
+        bucket = self.bucket_uploads or self.aws_s3_bucket or self.bucket_site_assets
+        if access and secret and bucket:
+            return True
+        # ECS/Fargate: IAM task role when static keys are unset in staging/production.
+        return bool(not self.is_local and bucket)
+
+    def resolved_object_store_credentials(self) -> tuple[str, str]:
+        """Explicit S3 keys, or empty to use the default AWS credential chain (ECS task role)."""
+        access = (self.object_store_access_key or self.aws_access_key_id or "").strip()
+        secret = (self.object_store_secret_key or self.aws_secret_access_key or "").strip()
+        if (
+            not self.is_local
+            and access == "rodiumdev"
+            and secret == "rodiumdev123"
+        ):
+            return "", ""
+        return access, secret
 
     @property
     def s3_enabled(self) -> bool:
