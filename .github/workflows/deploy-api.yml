@@ -38,6 +38,8 @@ jobs:
   verify:
     name: Pre-deploy checks (API)
     runs-on: ubuntu-latest
+    env:
+      TEMPLATES_ROOT: ${{ github.workspace }}/data/templates
     defaults:
       run:
         working-directory: apps/api
