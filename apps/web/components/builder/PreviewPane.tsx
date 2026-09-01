@@ -21,6 +21,11 @@ type Props = {
    * visual edit) — no iframe reload, no shell/Babel refetch, no blank flash.
    */
   renderNonce?: number;
+  /**
+   * Detected project routes. Forwarded to the bridge, which uses them to match
+   * nav labels for two-way page-picker/preview synchronization.
+   */
+  pages?: string[];
   previewBusy: boolean;
   previewLiveStatus?: string | null;
   previewTool: PreviewTool | null;
@@ -71,6 +76,7 @@ export function PreviewPane({
   viewport,
   previewUpdating,
   renderNonce = 0,
+  pages,
   previewBusy,
   previewLiveStatus = null,
   previewTool,
@@ -227,6 +233,20 @@ export function PreviewPane({
     if (!previewSrc || !bridgeSynced) return;
     postPreviewNavigate(previewPath);
   }, [bridgeSynced, previewPath, previewSrc]);
+
+  // Declare the detected routes to the bridge: label-matching against a known
+  // set is what makes picker->preview and preview->picker sync reliable.
+  useEffect(() => {
+    if (!previewSrc || !bridgeSynced || !pages?.length) return;
+    const win = frameRef.current?.contentWindow;
+    const target = previewOrigin(previewSrc);
+    if (!win || !target) return;
+    try {
+      win.postMessage({ type: "forge-preview-routes", paths: pages }, target);
+    } catch {
+      /* iframe reloading */
+    }
+  }, [bridgeSynced, pages, previewSrc]);
 
   function clearToolRetries() {
     for (const id of toolRetryTimers.current) clearTimeout(id);

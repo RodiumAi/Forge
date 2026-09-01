@@ -2056,6 +2056,7 @@ export default function ProjectPage() {
           <PreviewPane
             previewSrc={previewSrc}
             previewPath={previewPath}
+            pages={pages}
             previewLiveStatus={previewLiveStatus}
             viewport={viewport}
             previewUpdating={previewUpdating}
