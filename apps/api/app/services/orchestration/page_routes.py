@@ -67,9 +67,7 @@ def detect_routes(files: dict[str, str]) -> list[str]:
     routes: set[str] = {"/"}
     for path, _content in files.items():
         norm = path.replace("\\", "/")
-        if re.match(r"^src/pages/", norm, re.I) and re.search(
-            r"\.(tsx|jsx|ts|js)$", norm, re.I
-        ):
+        if re.match(r"^src/pages/", norm, re.I) and re.search(r"\.(tsx|jsx|ts|js)$", norm, re.I):
             route = re.sub(r"^src/pages", "", norm, flags=re.I)
             route = re.sub(r"\.(tsx|jsx|ts|js)$", "", route, flags=re.I)
             route = re.sub(r"/index$", "", route, flags=re.I)

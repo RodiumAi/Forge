@@ -419,6 +419,5 @@ def format_css_second_pass_prompt(findings: list[VerifyFinding]) -> str:
         "The first repair did not fix all CSS issues. Read src/index.css from disk "
         "in full. APPEND missing rules for EVERY orphan className below — use the "
         "EXACT same spelling as in TSX. Never replace index.css with a shorter file. "
-        "Never drop navbar/hero/layout selectors.\n\n"
-        + format_findings_for_prompt(css)
+        "Never drop navbar/hero/layout selectors.\n\n" + format_findings_for_prompt(css)
     )

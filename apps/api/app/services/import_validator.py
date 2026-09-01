@@ -24,9 +24,7 @@ _LUCIDE_NAMED_IMPORT_RE = re.compile(
     re.M,
 )
 _LUCIDE_BRACE_RE = re.compile(r"\{([^}]+)\}")
-_LUCIDE_EXPORTS_PATH = (
-    Path(__file__).resolve().parent.parent.parent / "runtime" / "lucide_exports.json"
-)
+_LUCIDE_EXPORTS_PATH = Path(__file__).resolve().parent.parent.parent / "runtime" / "lucide_exports.json"
 
 
 @dataclass(frozen=True)

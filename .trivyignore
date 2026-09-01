@@ -1,0 +1,9 @@
+# Local env and backups — never scan for secrets in CI (rotate if ever committed).
+.env
+.env.*
+!.env.example
+*.bak
+
+# Reports may contain redacted secret excerpts from past scans.
+trivy-report.json
+trivy-rescan.json

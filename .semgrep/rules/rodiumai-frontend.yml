@@ -1,0 +1,17 @@
+# Next.js custom rules (Forge web app).
+rules:
+  - id: rodiumai-dangerous-innerhtml-without-sanitize-import
+    languages: [typescript]
+    severity: WARNING
+    message: >
+      dangerouslySetInnerHTML without a visible sanitize-html import in the same file.
+      Ensure published HTML is sanitized.
+    paths:
+      include:
+        - "**/*.tsx"
+        - "**/*.jsx"
+    patterns:
+      - pattern-regex: dangerouslySetInnerHTML=\{\{\s*__html
+      - pattern-not-regex: from ['\"]sanitize-html['\"]
+      - pattern-not-regex: sanitize-body-html
+      - pattern-not-regex: sanitize-preview-html

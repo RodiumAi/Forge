@@ -1,0 +1,17 @@
+title = "RodiumAI Gitleaks — Forge"
+
+[allowlist]
+description = "Documented dev fixtures, CI placeholders, and env examples — not production secrets"
+paths = [
+  '''(?i)\.env\.example$''',
+  '''(?i)\.env\.ecs\.example$''',
+  '''(?i)\.env\.production\.example$''',
+  '''(?i)\.github/workflows/.*\.yml$''',
+  '''(?i)infra/aws/ecs/task-definition\.example\.json$''',
+]
+regexes = [
+  '''change-me-to-a-long-random-string-in-production''',
+  '''change-me-change-me-change-me-change-me''',
+  '''rodiumdev123''',
+  '''SFyCEKXp4zIrhIu6Lh9Vbh/RiVLjWbNVsik7dw\+uBvg=''',
+]

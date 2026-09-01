@@ -1,0 +1,32 @@
+# Dependencies and build output
+node_modules/
+.next/
+dist/
+build/
+coverage/
+.turbo/
+
+# Generated / vendor
+**/*.min.js
+
+# Tests
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/__tests__/**
+**/tests/**
+**/test/**
+
+# Python
+.venv/
+__pycache__/
+.pytest_cache/
+htmlcov/
+
+# Reports and tooling
+semgrep-reports/
+trivy-report.json
+trivy-rescan.json
+
+# Local test exports
+testForge/
