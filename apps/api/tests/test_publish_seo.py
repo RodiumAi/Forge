@@ -56,3 +56,17 @@ class TestPublishedSeo:
         assert "<title>Portfolio de Sarah</title>" in html
         # No project icon declared -> default favicon kept.
         assert 'href="/favicon.png"' in html
+
+
+@needs_node
+class TestMultiStylesheetPublish:
+    def test_every_css_file_ships_foundation_first(self, project, tmp_path):
+        import asyncio
+
+        scaffold_vite_react(project, "Demo")
+        write_file(project, "src/styles/products.css", ".products-grid { display: grid }")
+        out = tmp_path / "dist"
+        asyncio.run(transform_project_to_dir(project, out, title="Demo"))
+        html = (out / "index.html").read_text(encoding="utf-8")
+        assert ".products-grid" in html, "per-page stylesheets must reach the published site"
+        assert html.index(":root") < html.index(".products-grid"), "foundation tokens come first"

@@ -33,8 +33,15 @@ file contents here
 3. Keep the stack: React 18, TypeScript, plain CSS. Preview/publish use Babel + ESM
    import maps — there is NO Vite build and NO node_modules at runtime.
 4. The entry is `src/App.tsx` and `src/main.tsx`. `index.html` and `forge.json` exist
-   at root. Prefer a single `src/index.css` (append section styles; do not invent a
-   parallel stylesheet mid-plan).
+   at root. CSS is split by ownership:
+   - `src/index.css` = FOUNDATION ONLY (design tokens, reset, layout shell,
+     navbar/footer). Written once by the styles_foundation task, then treated as
+     locked — later tasks never rewrite it.
+   - Each page/feature ships its OWN stylesheet `src/styles/<page>.css`, created in
+     the same turn as the component and imported at its top
+     (`import "../styles/products.css";`). Every stylesheet is loaded automatically
+     in preview, publish and export. Use the foundation tokens (var(--accent) etc.);
+     never redeclare them.
 5. Do not wrap forge-write content in markdown code fences.
 6. Put generated static assets under `public/` and reference them with absolute paths
    from the app root (e.g. `/ai/hero.png`).
@@ -100,13 +107,12 @@ file contents here
     NEVER invent a parallel prefix mid-plan (e.g. do not switch `footer-*` ↔
     `portfolio-footer-*`). Pick one scheme in styles_foundation and keep it.
 24. When creating or rewriting a section, ship BOTH the component AND its CSS together.
-25. Prefer writing complete file contents for touched TSX. For `src/index.css`:
-    - On the styles_foundation task: write the full foundation stylesheet using
-      DESIGN.md tokens when present (do not invent a new brand palette).
-    - On later tasks: if the current `index.css` is present in context, APPEND new
-      rules only — never drop existing navbar/hero/layout selectors. Full rewrite
-      only when the entire CSS file is visible in context and you are preserving
-      every prior rule.
+25. Prefer writing complete file contents for touched TSX. CSS discipline:
+    - styles_foundation task: write the full `src/index.css` foundation (tokens,
+      reset, layout, navbar) using DESIGN.md tokens when present.
+    - Every later task: NEVER rewrite `src/index.css`. Put the page's styles in
+      its own `src/styles/<page>.css` (full file, same turn as the component,
+      imported at its top). This is what keeps the design intact across the plan.
 26. Keep spacing, hierarchy, grids/cards, and responsive behavior consistent.
 
 ## Current file state (critical — never revert user edits)

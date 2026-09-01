@@ -345,7 +345,19 @@ async function waitForFirstPaint(timeoutMs = 8000) {
 async function mount(files, entry, tokensCss, assets) {
   if (assets && typeof assets.base === "string" && assets.base) ASSETS = assets;
   const cssEl = document.getElementById("forge-app-css");
-  if (cssEl) cssEl.textContent = files["src/index.css"] || files["index.css"] || "";
+  if (cssEl) {
+    // Every stylesheet ships, index.css (tokens/layout) first: per-page CSS
+    // files let plan tasks style their own page without rewriting — and
+    // breaking — the shared foundation.
+    const cssPaths = Object.keys(files)
+      .filter((p) => /\.css$/i.test(p))
+      .sort((a, b) => {
+        if (a === "src/index.css" || a === "index.css") return -1;
+        if (b === "src/index.css" || b === "index.css") return 1;
+        return a < b ? -1 : 1;
+      });
+    cssEl.textContent = cssPaths.map((p) => files[p]).join("\n\n");
+  }
   const tokensEl = document.getElementById("forge-tokens");
   if (tokensEl && tokensCss) tokensEl.textContent = tokensCss;
 

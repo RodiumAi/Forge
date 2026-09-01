@@ -31,7 +31,16 @@ class TemplateMeta:
 def templates_root() -> Path:
     settings = get_settings()
     # Avoid mkdir on list/preview — Docker mounts are often read-only.
-    return Path(settings.templates_root).resolve()
+    root = Path(settings.templates_root)
+    if root.is_absolute():
+        return root.resolve()
+    resolved = root.resolve()
+    if resolved.is_dir():
+        return resolved
+    # Relative path against the repo root (uvicorn/pytest run from apps/api,
+    # Docker from /; the default "data/templates" lives at the repo root).
+    repo_root = Path(__file__).resolve().parents[4]
+    return (repo_root / root).resolve()
 
 
 _templates_cache: list[TemplateMeta] | None = None

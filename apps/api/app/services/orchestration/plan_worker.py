@@ -46,6 +46,7 @@ async def _execute_plan_job(
     tasks: list[dict[str, Any]],
     model: str,
     locale: Locale,
+    step_mode: bool = False,
 ) -> None:
     rid = str(run_id)
     run_queue.clear_run_events(rid)
@@ -81,6 +82,7 @@ async def _execute_plan_job(
             run_id=rid,
             user_id=user_id,
             db=db,
+            step_mode=step_mode,
         ):
             payload = _parse_sse_chunk(chunk)
             if payload:
@@ -123,6 +125,7 @@ def spawn_plan_job(
     tasks: list[dict[str, Any]],
     model: str,
     locale: Locale,
+    step_mode: bool = False,
 ) -> None:
     rid = str(run_id)
     existing = _running_tasks.get(rid)
@@ -140,6 +143,7 @@ def spawn_plan_job(
             tasks=tasks,
             model=model,
             locale=locale,
+            step_mode=step_mode,
         )
 
     task = asyncio.create_task(_runner(), name=f"forge-plan-{rid}")

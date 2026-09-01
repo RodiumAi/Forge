@@ -34,6 +34,7 @@ def _client(endpoint: str | None):
         kwargs["endpoint_url"] = endpoint
     return boto3.client(**kwargs)
 
+
 class ObjectStore:
     """
     Deux clients volontairement distincts.

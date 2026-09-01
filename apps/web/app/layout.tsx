@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { TopProgressHost } from "@/components/TopProgressHost";
 import { LandingJsonLd } from "@/components/landing/LandingJsonLd";
+import { PostHogPageView } from "@/components/posthog/PostHogPageView";
+import { PostHogProvider } from "@/components/posthog/PostHogProvider";
 import { appFonts } from "@/lib/fonts";
 import { I18nProvider } from "@/lib/i18n/I18nProvider";
 import { ThemeProvider } from "@/lib/theme/ThemeProvider";
@@ -110,8 +113,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <ThemeProvider>
           <I18nProvider>
-            <TopProgressHost />
-            {children}
+            <PostHogProvider>
+              <Suspense fallback={null}>
+                <PostHogPageView />
+              </Suspense>
+              <TopProgressHost />
+              {children}
+            </PostHogProvider>
           </I18nProvider>
         </ThemeProvider>
       </body>

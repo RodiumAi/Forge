@@ -26,6 +26,7 @@ from app.schemas import (
 )
 from app.services import preview_babel
 from app.services.filesystem import list_files, project_dir
+from app.services.posthog_client import capture_for_user
 from app.services.project_delete import delete_project_full
 from app.services.project_naming import suggest_project_name
 from app.services.scaffold import scaffold_vite_react
@@ -181,6 +182,15 @@ async def create_project(
     chat = Chat(project_id=project.id, title=t("main_chat", locale))
     db.add(chat)
     db.commit()
+    capture_for_user(
+        user,
+        "forge_project_created",
+        {
+            "project_id": str(project.id),
+            "template_id": template_id,
+            "has_prompt": bool(prompt),
+        },
+    )
     return _project_out(project)
 
 

@@ -72,6 +72,7 @@ def _user_out(user: User) -> UserOut:
         name=user.name,
         avatar_url=user.avatar_url,
         rodium_linked=bool(user.rodium_sub),
+        rodium_sub=user.rodium_sub,
         created_at=user.created_at,
     )
 

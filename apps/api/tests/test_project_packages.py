@@ -104,15 +104,20 @@ class TestCssShrinkGuard:
             self.path = path
             self.content = content
 
-    def test_rejects_mid_plan_css_rewrite_that_drops_most_rules(self, project):
+    def test_merges_mid_plan_css_rewrite_that_drops_rules(self, project):
         foundation = ".navbar { position: sticky; }\n.hero { min-height: 80vh; }\n" + (
             ".section { padding: 2rem; }\n" * 200
         )
         write_file(project, "src/index.css", foundation)
         writes = [self._W("src/index.css", ".new-section { color: red; }\n")]
         applied, violations = apply_validated_writes(project, writes)
-        assert applied == []
-        assert violations and violations[0]["code"] == "CSS_SHRINK_REJECTED"
+        assert applied and applied[0]["path"] == "src/index.css"
+        assert violations and violations[0]["code"] == "CSS_MERGE_PRESERVED"
+        from app.services.filesystem import read_file
+
+        merged = read_file(project, "src/index.css")
+        assert ".new-section" in merged
+        assert ".navbar" in merged and ".hero" in merged and ".section" in merged
 
     def test_allows_css_growth(self, project):
         write_file(project, "src/index.css", ".navbar { position: sticky; }\n" * 100)

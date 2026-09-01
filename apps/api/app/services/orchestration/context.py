@@ -12,8 +12,8 @@ from app.services.filesystem import list_files, project_dir, read_file
 from app.services.prototype_mode import format_prototype_plugins_layer
 
 DESIGN_MAX_CHARS = 12_000
-SELECTED_FILE_MAX_CHARS = 44_000
-CSS_RESERVED_CHARS = 14_000
+SELECTED_FILE_MAX_CHARS = 56_000
+CSS_RESERVED_CHARS = 26_000
 RECENT_DISK_PATHS = 3
 FORCED_PATHS = ("src/index.css", "src/App.tsx", "DESIGN.md", "AI_RULES.md")
 SCAFFOLD_EXTRA_K = 8
@@ -21,8 +21,8 @@ SURGICAL_EDIT_HINT = (
     "Surgical edit mode: prefer the smallest correct change. Edit only the "
     "targeted lines/sections. Do not rewrite whole files unless necessary for "
     "correctness. Preserve unrelated imports, JSX, and CSS. "
-    "For src/index.css: preserve all existing selectors verbatim; only APPEND "
-    "new rules — never drop navbar/hero/layout rules."
+    "NEVER rewrite src/index.css (foundation is locked); page styles belong in "
+    "the page's own src/styles/<page>.css."
 )
 _SELECTION_RE = re.compile(
     r"\[(?:Selection|Sélection):\s*[^|\]]*\|[^|\]]*\|?\s*text:\"([^\"]*)\"",
