@@ -48,6 +48,23 @@
     }
   })();
 
+  /** /runner or /projects/{uuid}/draft — keeps BrowserRouter inside the shell. */
+  function getPreviewShellBase() {
+    if (typeof window.__FORGE_PREVIEW_SHELL_BASE__ === "string" && window.__FORGE_PREVIEW_SHELL_BASE__) {
+      return window.__FORGE_PREVIEW_SHELL_BASE__;
+    }
+    var pathname = window.location.pathname || "";
+    var draft = pathname.match(/^(\/projects\/[0-9a-f-]{36}\/draft)\/?/i);
+    if (draft) return draft[1];
+    if (/^\/runner\/?/i.test(pathname)) return "/runner";
+    return "";
+  }
+
+  function shellBasePrefix() {
+    var base = getPreviewShellBase();
+    return base ? base.replace(/\/+$/, "") : "";
+  }
+
   function post(payload) {
     if (!PARENT_ORIGIN) return;
     try {
@@ -542,6 +559,12 @@
       if (rest) return "/" + rest.toLowerCase();
       return "/";
     }
+    var draft = pathname.match(/^\/projects\/[0-9a-f-]{36}\/draft\/?(.*)$/i);
+    if (draft) {
+      var draftRest = (draft[1] || "").replace(/\/+$/, "").split("/")[0];
+      if (draftRest) return "/" + draftRest.toLowerCase();
+      return "/";
+    }
     var seg = pathname.replace(/\/+$/, "") || "/";
     if (seg === "/" || /^\/runner$/i.test(seg)) return "/";
     return seg.toLowerCase();
@@ -759,7 +782,8 @@
     var pageKey = normalized === "/" ? "" : normalized.replace(/^\//, "");
     var targetHash = pageKey ? "#" + pageKey : "";
     var pathname = window.location.pathname || "/";
-    var onRunner = /^\/runner\/?/i.test(pathname);
+    var shellBase = getPreviewShellBase();
+    var onPreviewShell = Boolean(shellBase);
 
     function setPreviewHash(nextKey) {
       var current = (window.location.hash || "").replace(/^#/, "");
@@ -771,7 +795,7 @@
         window.location.hash = nextKey;
         return;
       }
-      var keep = (onRunner ? pathname : "/runner/") + (window.location.search || "");
+      var keep = (onPreviewShell ? pathname : "/runner/") + (window.location.search || "");
       window.history.pushState({}, "", keep);
       window.dispatchEvent(new HashChangeEvent("hashchange"));
     }
@@ -838,16 +862,11 @@
       }
     }
 
-    // 6) BrowserRouter fallback — stay under /runner/ when hosted there.
+    // 6) BrowserRouter fallback — stay under the preview shell (/runner/ or /projects/.../draft).
     try {
-      if (!onRunner) return;
-      var runnerBase = pathname.match(/^(\/runner\/?)/i);
-      var base = runnerBase
-        ? runnerBase[1].endsWith("/")
-          ? runnerBase[1]
-          : runnerBase[1] + "/"
-        : "/runner/";
-      var nextPath = pageKey ? base + pageKey : base;
+      if (!onPreviewShell) return;
+      var prefix = shellBasePrefix();
+      var nextPath = pageKey ? prefix + "/" + pageKey : prefix + "/";
       var currentPath = pathname.replace(/\/+$/, "") || "/";
       var wantPath = nextPath.replace(/\/+$/, "") || "/";
       if (currentPath !== wantPath) {
@@ -862,6 +881,27 @@
 
   ensureStyle();
   notifyReady();
+
+  // Block plain anchors from escaping the preview shell to the API root (/).
+  document.addEventListener(
+    "click",
+    function (ev) {
+      var prefix = shellBasePrefix();
+      if (!prefix) return;
+      var link = ev.target && ev.target.closest ? ev.target.closest("a[href]") : null;
+      if (!link) return;
+      var href = (link.getAttribute("href") || "").trim();
+      if (!href || href.startsWith("#") || href.startsWith("mailto:") || /^https?:/i.test(href)) return;
+      if (!href.startsWith("/")) return;
+      var normalizedHref = href.replace(/\/+$/, "") || "/";
+      var normalizedPrefix = prefix.replace(/\/+$/, "") || "/";
+      if (normalizedHref === normalizedPrefix || normalizedHref.indexOf(normalizedPrefix + "/") === 0) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      navigatePreviewPath(normalizedHref === "/" ? "/" : normalizedHref);
+    },
+    true,
+  );
 
   var previewSyncTimer = null;
   function schedulePreviewSync() {
