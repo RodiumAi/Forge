@@ -893,9 +893,7 @@ async def submit_clarify(
                 yield _sse({"type": "error", "message": t("run_invalid_state", locale)})
                 return
             run_row.plan_json = json.dumps(plan)
-            needs_confirm = _plan_requires_confirm(
-                "agent" if auto_exec else "plan", run_task_class, plan
-            )
+            needs_confirm = _plan_requires_confirm("agent" if auto_exec else "plan", run_task_class, plan)
             run_row.status = "awaiting_plan_confirm" if needs_confirm else "running"
             db.commit()
             yield _sse(

@@ -11,9 +11,7 @@ from app.models import ForgePlatformSettings, ModelCatalog
 
 logger = logging.getLogger(__name__)
 
-PlatformModelKey = Literal[
-    "default_model", "default_image_model", "lite_model", "escalation_model"
-]
+PlatformModelKey = Literal["default_model", "default_image_model", "lite_model", "escalation_model"]
 
 PLATFORM_MODEL_KEYS: tuple[PlatformModelKey, ...] = (
     "default_model",
