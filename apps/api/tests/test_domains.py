@@ -91,7 +91,7 @@ class TestNormalizeHostname:
 
 class TestDnsRecords:
     def test_routing_only_without_acm(self):
-        records = dns_records_for(_domain())
+        records = dns_records_for(_domain(), zone="client.com")
         assert [r["purpose"] for r in records] == ["routing"]
         assert records[0]["name"] == "www"
         assert records[0]["value"] == "sites.forge.rodiumai.io"
@@ -101,10 +101,35 @@ class TestDnsRecords:
             acm_validation_name="_a1b2.www.client.com.",
             acm_validation_value="_x9y8.acm-validations.aws.",
         )
-        records = dns_records_for(d)
+        records = dns_records_for(d, zone="client.com")
         assert [r["purpose"] for r in records] == ["routing", "acm_validation"]
         assert records[1]["name"] == "_a1b2.www"
         assert records[1]["full_name"] == "_a1b2.www.client.com"
+
+    def test_multi_label_subdomain_relative_to_zone(self):
+        # Connecting www.tokui.ptoke.me on a ptoke.me zone: the registrar
+        # expects Name `www.tokui` (and `_t.www.tokui` for ACM), not `www`.
+        d = _domain(
+            hostname="www.tokui.ptoke.me",
+            acm_validation_name="_t.www.tokui.ptoke.me.",
+            acm_validation_value="_v.acm-validations.aws.",
+        )
+        records = dns_records_for(d, zone="ptoke.me")
+        assert records[0]["name"] == "www.tokui"
+        assert records[0]["full_name"] == "www.tokui.ptoke.me"
+        assert records[1]["name"] == "_t.www.tokui"
+
+    def test_single_label_subdomain_on_zone(self):
+        d = _domain(hostname="tokui.ptoke.me")
+        records = dns_records_for(d, zone="ptoke.me")
+        assert records[0]["name"] == "tokui"
+
+    def test_relative_to_zone_helper(self):
+        from app.services.domains import relative_to_zone
+
+        assert relative_to_zone("ptoke.me", "ptoke.me") == "@"
+        assert relative_to_zone("_t.www.tokui.ptoke.me.", "ptoke.me") == "_t.www.tokui"
+        assert relative_to_zone("other.example.com", "ptoke.me") == "other.example.com"
 
 
 class TestStateMachine:
