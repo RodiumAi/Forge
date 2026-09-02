@@ -625,6 +625,13 @@ html:has(.builder) body {
   isolation: isolate;
 }
 
+/* Small laptops / tablets landscape: keep the preview breathing room. */
+@media (max-width: 1200px) and (min-width: 901px) {
+  .builder-sidebar {
+    width: min(360px, 34vw);
+  }
+}
+
 .builder-messages {
   flex: 1 1 auto;
   min-height: 0;
@@ -4048,6 +4055,62 @@ html:has(.builder) body {
   .builder-composer {
     padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
   }
+
+  /* Preview toolbar: compact, never overflows — extra controls scroll. */
+  .builder-preview-toolbar {
+    gap: 0.45rem;
+    padding: 0 0.6rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .builder-preview-toolbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .builder-preview-toolbar > * {
+    flex-shrink: 0;
+  }
+
+  .builder-preview-url {
+    flex-shrink: 1;
+    min-width: 0;
+    max-width: 40vw;
+  }
+
+  /* Midbar (viewport switch + page picker): scrolls instead of wrapping. */
+  .builder-midbar {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    max-width: 100%;
+  }
+
+  .builder-midbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Code editor chrome: tabs + pane head scroll horizontally. */
+  .code-tabs,
+  .builder-pane-head {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .code-tabs::-webkit-scrollbar,
+  .builder-pane-head::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Popovers/menus must stay inside the viewport on phones. */
+  .builder-open-menu,
+  .builder-page-menu {
+    max-width: calc(100vw - 1.25rem);
+    max-height: min(60vh, 420px);
+    overflow-y: auto;
+  }
 }
 
 @media (max-width: 480px) {
@@ -4066,6 +4129,20 @@ html:has(.builder) body {
 
   .builder-composer-box textarea {
     font-size: 0.9rem;
+  }
+
+  /* Full-bleed slideovers on small phones. */
+  .design-slideover {
+    width: 100vw;
+    border-left: 0;
+  }
+
+  .builder-preview-url {
+    display: none;
+  }
+
+  .builder-project-name-row {
+    max-width: 44vw;
   }
 }
 
@@ -5529,6 +5606,38 @@ html:has(.builder) body {
     display: none;
   }
 
+  /* Mobile nav: Contribute collapses to the GitHub mark only. */
+  .lp-nav {
+    gap: 0.5rem;
+  }
+
+  .lp-nav-right {
+    gap: 0.4rem;
+  }
+
+  .lp-nav-brand svg,
+  .lp-nav-brand img {
+    width: 104px;
+    height: auto;
+  }
+
+  .lp-nav-contribute {
+    padding: 0.5rem;
+    border-radius: 50%;
+    aspect-ratio: 1;
+    justify-content: center;
+  }
+
+  .lp-nav-contribute-label {
+    display: none;
+  }
+
+  .lp-nav-cta {
+    padding: 0.5rem 0.8rem;
+    font-size: 0.85rem;
+    white-space: nowrap;
+  }
+
   .lp-why-grid,
   .lp-footer-cols,
   .lp-how-visual-body,
@@ -5539,6 +5648,19 @@ html:has(.builder) body {
   .landing-prompt,
   .lp-prompt {
     border-radius: 18px;
+  }
+}
+
+@media (max-width: 400px) {
+  /* Very narrow phones: brand + theme/locale + icons must never overflow. */
+  .lp-nav-brand svg,
+  .lp-nav-brand img {
+    width: 88px;
+  }
+
+  .lp-nav-cta {
+    padding: 0.45rem 0.65rem;
+    font-size: 0.8rem;
   }
 }
 
@@ -6356,6 +6478,56 @@ html:has(.builder) body {
   .home-connector-detail {
     padding-left: 1rem;
     padding-right: 1rem;
+  }
+}
+
+@media (max-width: 640px) {
+  /* Phones: search takes the row, tabs scroll horizontally, tighter panel. */
+  .home-sidebar-collapsed .home-sidebar {
+    width: 56px;
+  }
+
+  .home-hero {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .home-greeting {
+    margin-bottom: 0.9rem;
+  }
+
+  .home-panel {
+    padding: 0.9rem 0.85rem 1.5rem;
+  }
+
+  .home-panel-toolbar {
+    gap: 0.6rem;
+  }
+
+  .home-search {
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
+
+  .home-tabs {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .home-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .home-tabs button {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .home-topbar {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
   }
 }
 
