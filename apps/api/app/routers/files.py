@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.auth import get_current_user
 from app.config import get_settings
 from app.db import get_db
-from app.errors import provider_not_configured
+from app.errors import SitesError
 from app.i18n import resolve_locale, t
 from app.models import Project, User
 from app.providers.objects import get_object_store
@@ -399,10 +399,10 @@ async def upload_project_image(
             filename=safe,
             content_type=content_type or "application/octet-stream",
         )
-    except provider_not_configured as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except SitesError:
+        raise
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc)[:300]) from exc
+        raise HTTPException(status_code=500, detail=str(exc)[:500]) from exc
     name = asset_display_name(row.object_key)
     return FileUploadResponse(
         object_id=str(row.id),

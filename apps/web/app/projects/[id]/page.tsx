@@ -6,7 +6,6 @@ import {
   FormEvent,
   useCallback,
   useEffect,
-  useId,
   useRef,
   useState,
 } from "react";
@@ -302,7 +301,6 @@ export default function ProjectPage() {
   const streamingRunIdRef = useRef<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const fileInputId = useId();
   const bootSentRef = useRef(false);
   const bootPromptRef = useRef<string | null>(initialBoot);
   const chatRetryRef = useRef<ChatRetryAction | null>(null);
@@ -793,11 +791,19 @@ export default function ProjectPage() {
   }
 
   function onFilesSelected(e: ChangeEvent<HTMLInputElement>) {
-    const list = e.target.files;
-    // Always clear so selecting the same file again still fires onChange.
+    // Snapshot before clearing — FileList is live; resetting the input first
+    // empties it in Chromium (picker works, drag & drop unaffected).
+    const list = Array.from(e.target.files || []);
     e.target.value = "";
-    if (!list?.length) return;
+    if (!list.length) return;
     addFiles(list);
+  }
+
+  function openFilePicker() {
+    const input = fileInputRef.current;
+    if (!input || composerInputLocked) return;
+    input.value = "";
+    input.click();
   }
 
   function removeAttachment(id: string) {
@@ -1173,12 +1179,7 @@ export default function ProjectPage() {
         const raw = err instanceof Error ? err.message : String(err || "");
         const isBrowserNetworkFailure =
           /failed to fetch|network request failed|networkerror|load failed/i.test(raw) || !raw.trim();
-        pushChatError(
-          isBrowserNetworkFailure
-            ? t("attachmentUploadFailed")
-            : friendlyStreamError(err, raw, t("rodiumSessionExpired")),
-          null,
-        );
+        pushChatError(isBrowserNetworkFailure ? t("attachmentUploadFailed") : raw.slice(0, 500), null);
         return;
       }
 
@@ -2024,7 +2025,6 @@ export default function ProjectPage() {
                       files never arrived — drag & drop worked fine). */}
                   <input
                     ref={fileInputRef}
-                    id={fileInputId}
                     type="file"
                     className="landing-import-input"
                     multiple
@@ -2032,14 +2032,14 @@ export default function ProjectPage() {
                     onChange={onFilesSelected}
                     tabIndex={-1}
                     aria-hidden
-                    disabled={composerInputLocked}
                   />
-                  <label
-                    htmlFor={composerInputLocked ? undefined : fileInputId}
-                    className={`builder-plus-label${composerInputLocked ? " is-disabled" : ""}`}
+                  <button
+                    type="button"
+                    className="builder-plus-label"
                     title={t("importHint")}
                     aria-label={t("importAria")}
-                    aria-disabled={composerInputLocked}
+                    disabled={composerInputLocked}
+                    onClick={openFilePicker}
                   >
                     <span className="builder-plus">
                       <Icon icon={Plus} className="ui-icon-md" />
@@ -2049,7 +2049,7 @@ export default function ProjectPage() {
                         </span>
                       ) : null}
                     </span>
-                  </label>
+                  </button>
                   {working ? (
                     <button
                       type="button"
