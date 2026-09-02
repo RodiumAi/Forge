@@ -90,18 +90,64 @@ def get_project_asset_by_public_url(db: Session, project_id: UUID, public_url: s
     )
 
 
+_KNOWN_UPLOAD_BUCKETS = (
+    "forge-uploads",
+    "forge-uploads-prod",
+    "rodiumai-forge-uploads-prod",
+)
+
+
 def is_private_upload_url(url: str) -> bool:
     """True when `url` points at our private uploads bucket (never usable as img src)."""
     value = (url or "").strip()
     if not value.startswith(("http://", "https://")):
         return False
     settings = get_settings()
-    bucket = (settings.bucket_uploads or settings.aws_s3_bucket or "").strip()
-    if not bucket:
-        return False
-    # Path-style: http://host:9000/forge-uploads/key
-    # Virtual-style: http://forge-uploads.host/key
-    return f"/{bucket}/" in value or value.startswith((f"http://{bucket}.", f"https://{bucket}."))
+    buckets = {
+        *(b.strip() for b in _KNOWN_UPLOAD_BUCKETS),
+        (settings.bucket_uploads or "").strip(),
+        (settings.aws_s3_bucket or "").strip(),
+    }
+    buckets = {b for b in buckets if b}
+    for bucket in buckets:
+        # Path-style: http://host:9000/forge-uploads/key
+        # Virtual-style: https://rodiumai-forge-uploads-prod.s3.region.amazonaws.com/key
+        if f"/{bucket}/" in value or value.startswith((f"http://{bucket}.", f"https://{bucket}.")):
+            return True
+    return False
+
+
+def repair_private_upload_urls_in_project(db: Session, project_id: UUID) -> int:
+    """Rewrite private object-store URLs in project sources to `/images/...` paths."""
+    import re
+
+    from app.services.filesystem import list_files, read_file, write_file
+
+    replacements = 0
+    for path in list_files(str(project_id)):
+        if not path.endswith((".tsx", ".ts", ".jsx", ".js", ".html", ".css", ".md", ".vue")):
+            continue
+        try:
+            content = read_file(str(project_id), path)
+        except Exception:
+            continue
+        new_content = content
+        for url in set(re.findall(r"https?://[^\s\"'`)<>]+", content)):
+            if not is_private_upload_url(url):
+                continue
+            row = get_project_asset_by_public_url(db, project_id, url)
+            if row is None:
+                continue
+            try:
+                web_path = materialize_asset_to_public(db, project_id, row.id)
+            except Exception:
+                continue
+            if url in new_content:
+                new_content = new_content.replace(url, web_path)
+                replacements += 1
+        if new_content != content:
+            write_file(str(project_id), path, new_content)
+    return replacements
 
 
 def materialize_asset_to_public(db: Session, project_id: UUID, object_id: UUID) -> str:

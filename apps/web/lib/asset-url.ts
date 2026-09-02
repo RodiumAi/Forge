@@ -1,5 +1,17 @@
 import { apiBase, getToken } from "@/lib/api";
 
+/** Private uploads bucket URLs (S3/MinIO) — never usable as <img src>. */
+export function isPrivateUploadUrl(url: string | null | undefined): boolean {
+  const value = (url || "").trim();
+  if (!value.startsWith("http://") && !value.startsWith("https://")) return false;
+  return (
+    /localhost:9000\/forge-uploads\//i.test(value) ||
+    /https?:\/\/(?:forge-uploads(?:-prod)?|rodiumai-forge-uploads-prod)\./i.test(value) ||
+    /\/forge-uploads(?:-prod)?\//i.test(value) ||
+    /\/rodiumai-forge-uploads-prod\//i.test(value)
+  );
+}
+
 /** Durable authenticated URL for chat thumbs (<img src>). */
 export function assetContentUrl(projectId: string, objectId: string): string | null {
   if (!projectId || !objectId) return null;

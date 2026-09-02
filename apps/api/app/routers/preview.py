@@ -6,6 +6,7 @@ orphan reaper was a no-op on Windows. The runner needs no process at all: the
 browser receives the source bundle over postMessage and transforms it in-page.
 """
 
+import contextlib
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -20,6 +21,7 @@ from app.i18n import resolve_locale, t
 from app.models import Project, User
 from app.schemas import PreviewStatus
 from app.services import preview_babel
+from app.services.asset_storage import repair_private_upload_urls_in_project
 
 router = APIRouter(tags=["preview"])
 
@@ -48,6 +50,11 @@ def _project_extra_imports(project_id: str) -> dict[str, str]:
         return extra_import_map(project_id)
     except Exception:
         return {}
+
+
+def _repair_private_upload_urls(db: Session, project_id: UUID) -> None:
+    with contextlib.suppress(Exception):
+        repair_private_upload_urls_in_project(db, project_id)
 
 
 def _status(project: Project, *, running: bool) -> PreviewStatus:
@@ -84,6 +91,7 @@ def source_bundle(
     db: Session = Depends(get_db),
 ) -> SourceBundle:
     _owned(db, user, project_id, resolve_locale(request))
+    _repair_private_upload_urls(db, project_id)
     files = preview_babel.collect_project_source_files(str(project_id))
     return SourceBundle(
         entry="src/main.tsx",
@@ -107,6 +115,7 @@ def draft_page(
     a new tab" target; auth rides the `?access_token=` query support.
     """
     project = _owned(db, user, project_id, resolve_locale(request))
+    _repair_private_upload_urls(db, project_id)
     files = preview_babel.collect_project_source_files(str(project_id))
     # Root-path images (/images/x.png) resolve through the authenticated
     # project-public endpoint; same-origin here, so a relative base works.
@@ -131,6 +140,7 @@ def preview_start(
 ) -> PreviewStatus:
     project = _owned(db, user, project_id, resolve_locale(request))
     preview_babel.ensure_babel_project_layout(str(project_id))
+    _repair_private_upload_urls(db, project_id)
     preview_babel.mark_babel_preview_ready(str(project_id))
     project.preview_running = True
     project.preview_port = 0

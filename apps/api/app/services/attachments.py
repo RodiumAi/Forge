@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import contextlib
 import re
 from dataclasses import dataclass
 from typing import Any
@@ -12,7 +13,12 @@ import httpx
 from sqlalchemy.orm import Session
 
 from app.models import StoredObject
-from app.services.asset_storage import asset_display_name
+from app.services.asset_storage import (
+    asset_display_name,
+    is_private_upload_url,
+    materialize_asset_to_public,
+    repair_private_upload_urls_in_project,
+)
 from app.services.filesystem import project_dir
 
 _IMAGE_MARKER_RE = re.compile(
@@ -43,8 +49,9 @@ REFERENCE_VISION_INSTRUCTION = (
 
 ASSET_VISION_INSTRUCTION = (
     "This is an uploaded site asset (logo/icon/image). "
-    "Use the exact CDN url: from the markers in generated code "
-    '(<img src="..."> or CSS background-image). '
+    "Use the relative path from the markers (e.g. /images/...) in generated code "
+    '(<img src="/images/..."> or CSS url(/images/...)). '
+    "Never use raw S3 or object-store URLs — they are private and return AccessDenied. "
     "Do NOT generate a new image. Do NOT use a placeholder path."
 )
 
@@ -244,6 +251,53 @@ def _marker_intents(user_text: str) -> list[str]:
     return [m.group(1).lower() for m in _INTENT_IN_MARKER_RE.finditer(user_text or "")]
 
 
+def _intent_for_marker(marker: str) -> str:
+    intent_m = _INTENT_IN_MARKER_RE.search(marker)
+    return intent_m.group(1).lower() if intent_m else "reference"
+
+
+def materialize_asset_markers(db: Session, project_id: str, user_text: str) -> str:
+    """For asset-intent uploads, copy bytes into public/images/ and rewrite marker URLs."""
+    text = user_text or ""
+    if not db or not _IMAGE_MARKER_RE.search(text):
+        return text
+
+    try:
+        pid = UUID(project_id)
+    except ValueError:
+        return text
+
+    def replacer(match: re.Match[str]) -> str:
+        marker = match.group(0)
+        if _intent_for_marker(marker) != "asset":
+            return marker
+        obj_m = _OBJECT_IN_MARKER_RE.search(marker)
+        if not obj_m:
+            return marker
+        try:
+            oid = UUID(obj_m.group(1).strip())
+        except ValueError:
+            return marker
+        try:
+            web_path = materialize_asset_to_public(db, pid, oid)
+        except Exception:
+            return marker
+
+        updated = marker
+        replaced = False
+        for pat in (_URL_IN_MARKER_RE, _PUBLIC_IN_MARKER_RE):
+            m = pat.search(updated)
+            if m and is_private_upload_url(m.group(1).strip()):
+                updated = pat.sub(f"| url:{web_path}", updated, count=1)
+                replaced = True
+                break
+        if not replaced:
+            updated = updated[:-1] + f" | url:{web_path}]"
+        return updated
+
+    return _IMAGE_MARKER_RE.sub(replacer, text)
+
+
 def vision_instruction_for_message(user_text: str) -> str | None:
     """Background-only instructions for attached images (never shown in chat UI)."""
     if not _IMAGE_MARKER_RE.search(user_text or ""):
@@ -279,6 +333,11 @@ async def enrich_user_message_with_vision(
 
     Vision/asset instructions are injected here (LLM-only), not stored in chat UI text.
     """
+    if db is not None:
+        with contextlib.suppress(Exception):
+            repair_private_upload_urls_in_project(db, UUID(project_id))
+        user_text = materialize_asset_markers(db, project_id, user_text)
+
     instruction = vision_instruction_for_message(user_text)
     text_for_llm = user_text
     if instruction and instruction not in (user_text or ""):
