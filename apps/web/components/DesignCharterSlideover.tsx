@@ -160,11 +160,9 @@ export function DesignCharterSlideover({ projectId, open, onClose }: Props) {
     setSaved(false);
     try {
       let logo_object_id: string | null = null;
-      let logo_url: string | null = null;
       if (logoFile) {
         const uploaded = await uploadLogo(logoFile);
         logo_object_id = uploaded.object_id;
-        logo_url = uploaded.public_url;
       }
       const res = await api<{ markdown: string; brief: string; logo_path?: string | null }>(
         `/projects/${projectId}/design-charter`,
@@ -173,7 +171,6 @@ export function DesignCharterSlideover({ projectId, open, onClose }: Props) {
           body: JSON.stringify({
             brief: brief.trim() || "Generate a complete graphic charter from the brand logo.",
             logo_object_id,
-            logo_url,
             logo_path: existingLogoPath,
           }),
         },

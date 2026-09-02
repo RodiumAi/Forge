@@ -1,0 +1,50 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject",
+        "s3:ListBucket"
+      ],
+      "Resource": [
+        "arn:aws:s3:::rodiumai-media-prod",
+        "arn:aws:s3:::rodiumai-media-prod/*"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject",
+        "s3:ListBucket"
+      ],
+      "Resource": [
+        "arn:aws:s3:::forge-assets-prod",
+        "arn:aws:s3:::forge-assets-prod/*",
+        "arn:aws:s3:::forge-runtime-prod",
+        "arn:aws:s3:::forge-runtime-prod/*",
+        "arn:aws:s3:::rodiumai-forge-uploads-prod",
+        "arn:aws:s3:::rodiumai-forge-uploads-prod/*"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ses:SendEmail",
+        "ses:SendRawEmail"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:GetSecretValue"
+      ],
+      "Resource": "arn:aws:secretsmanager:eu-west-1:330990434320:secret:rodiumai/*"
+    }
+  ]
+}

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { FileText, X } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
-import { assetContentUrl } from "@/lib/asset-url";
+import { assetContentUrl, isPrivateUploadUrl } from "@/lib/asset-url";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import {
   attachmentName,
@@ -29,7 +29,7 @@ function resolveChipThumb(
     if (durable) return durable;
   }
   const preview = attachmentPreviewUrl(item);
-  if (preview && !preview.includes("localhost:9000/forge-uploads")) {
+  if (preview && !isPrivateUploadUrl(preview)) {
     return preview;
   }
   // Local blob previews still OK.
