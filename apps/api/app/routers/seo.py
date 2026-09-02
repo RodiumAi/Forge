@@ -203,7 +203,7 @@ async def generate_seo_copy(
     try:
         raw = await complete_chat(
             auth=gen_auth,
-            model=settings.default_model,
+            model=settings.effective_default_model,
             messages=[
                 {"role": "system", "content": COPY_SYSTEM},
                 {
@@ -267,7 +267,7 @@ async def generate_seo_image(
             auth=gen_auth,
             project_id=str(project.id),
             prompt=brief,
-            model=settings.default_image_model,
+            model=settings.effective_default_image_model,
             locale=locale,
         )
     except RodiumError as exc:

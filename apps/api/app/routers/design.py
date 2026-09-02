@@ -272,7 +272,7 @@ async def generate_design_charter(
     try:
         markdown = await complete_chat(
             auth=gen_auth,
-            model=settings.default_model,
+            model=settings.effective_default_model,
             messages=[
                 {"role": "system", "content": CHARTER_SYSTEM},
                 {"role": "user", "content": user_content},

@@ -147,6 +147,17 @@ def init_db() -> None:
         )
         """,
         "UPDATE user_settings SET default_model = 'google/gemini-3.7-flash' WHERE default_model = 'openai/gpt-4o'",
+        """
+        CREATE TABLE IF NOT EXISTS forge_platform_settings (
+            id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+            default_model VARCHAR(128),
+            default_image_model VARCHAR(128),
+            lite_model VARCHAR(128),
+            escalation_model VARCHAR(128),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+        """,
+        "INSERT INTO forge_platform_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING",
     ]
     with engine.begin() as conn:
         for sql in statements:

@@ -368,7 +368,7 @@ async def security_review_project(
     report = await run_security_review(
         project_id=str(project_id),
         auth=auth,
-        model=settings.default_model or "google/gemini-3.7-flash",
+        model=settings.effective_default_model or "google/gemini-3.7-flash",
         locale=locale,  # type: ignore[arg-type]
     )
     return {"report": report}
