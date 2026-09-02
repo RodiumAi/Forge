@@ -3,7 +3,7 @@
 import { FileText } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import { FileTypeIcon } from "@/components/builder/file-icons";
-import { assetContentUrl } from "@/lib/asset-url";
+import { assetContentUrl, isPrivateUploadUrl } from "@/lib/asset-url";
 import {
   parseUserMessageContent,
   type MessageAttachment,
@@ -28,7 +28,7 @@ function resolveThumbSrc(
   }
   // Prefer durable HTTP URLs over ephemeral blob: after refresh blobs die.
   const url = file.publicUrl || file.publicPath;
-  if (url && /^https?:\/\//i.test(url) && !url.includes("localhost:9000/forge-uploads")) {
+  if (url && /^https?:\/\//i.test(url) && !isPrivateUploadUrl(url)) {
     return url;
   }
   if (file.previewUrl && !file.previewUrl.startsWith("blob:")) {
