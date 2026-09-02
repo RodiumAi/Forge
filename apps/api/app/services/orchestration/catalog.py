@@ -42,6 +42,17 @@ CATALOG_SEED: list[dict] = [
         "price_out_per_m": 12.0,
     },
     {
+        "slug": "anthropic/claude-sonnet-4-6",
+        "provider": "anthropic",
+        "tier": "escalation",
+        "role": "text",
+        "status": "active",
+        "context_tokens": 200_000,
+        "max_output_tokens": 64_000,
+        "price_in_per_m": 3.0,
+        "price_out_per_m": 15.0,
+    },
+    {
         "slug": "openai/gpt-image-2",
         "provider": "openai",
         "tier": "primary",
