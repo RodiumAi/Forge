@@ -76,26 +76,63 @@ def relative_label(hostname: str) -> str:
     return hostname.split(".")[0]
 
 
-def dns_records_for(domain: ProjectDomain) -> list[dict]:
+_zone_cache: dict[str, str] = {}
+
+
+def zone_for(hostname: str) -> str:
+    """DNS zone (registrable domain) that holds `hostname`'s records.
+
+    Registrars expect the Name column *relative to the zone*, not to the
+    hostname: connecting `www.tokui.ptoke.me` on a `ptoke.me` zone needs
+    Name `www.tokui`, not `www`. We ask the DNS for the real zone cut
+    (handles ptoke.me as well as co.uk-style suffixes), falling back to the
+    last two labels when resolution is unavailable.
+    """
+    cached = _zone_cache.get(hostname)
+    if cached:
+        return cached
+    zone = ""
+    try:
+        import dns.resolver  # dnspython
+
+        zone = str(dns.resolver.zone_for_name(hostname)).rstrip(".").lower()
+    except Exception:
+        zone = ""
+    if not zone or zone == "." or not hostname.endswith(zone) or zone == hostname:
+        zone = ".".join(hostname.split(".")[-2:])
+    _zone_cache[hostname] = zone
+    return zone
+
+
+def relative_to_zone(fqdn: str, zone: str) -> str:
+    """`_t.www.tokui.ptoke.me` relative to zone `ptoke.me` → `_t.www.tokui`."""
+    name = fqdn.rstrip(".").lower()
+    zone = zone.rstrip(".").lower()
+    if name == zone:
+        return "@"
+    if zone and name.endswith("." + zone):
+        return name[: -(len(zone) + 1)]
+    return name
+
+
+def dns_records_for(domain: ProjectDomain, *, zone: str | None = None) -> list[dict]:
+    zone = zone or zone_for(domain.hostname)
     records = [
         {
             "purpose": "routing",
             "type": "CNAME",
-            "name": relative_label(domain.hostname),
+            "name": relative_to_zone(domain.hostname, zone),
             "full_name": domain.hostname,
             "value": domain.cname_target,
         }
     ]
     if domain.acm_validation_name and domain.acm_validation_value:
-        # ACM name is a FQDN like `_token.www.client.com.` — display relative.
         full = domain.acm_validation_name.rstrip(".")
-        zone_suffix = "." + ".".join(domain.hostname.split(".")[1:])
-        rel = full[: -len(zone_suffix)] if full.endswith(zone_suffix) else full
         records.append(
             {
                 "purpose": "acm_validation",
                 "type": "CNAME",
-                "name": rel,
+                "name": relative_to_zone(full, zone),
                 "full_name": full,
                 "value": domain.acm_validation_value,
             }
