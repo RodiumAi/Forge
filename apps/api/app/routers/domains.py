@@ -14,6 +14,7 @@ from app.config import get_settings
 from app.db import get_db
 from app.i18n import resolve_locale, t
 from app.models import Project, ProjectDomain, User
+from app.routers.sites_v1 import clear_resolve_cache
 from app.services.domains import (
     STATUS_PENDING_DNS,
     STATUS_VALIDATED,
@@ -27,7 +28,6 @@ from app.services.domains import (
     request_certificate,
     verify_rate_limited,
 )
-from app.routers.sites_v1 import clear_resolve_cache
 
 router = APIRouter(prefix="/projects", tags=["domains"])
 
