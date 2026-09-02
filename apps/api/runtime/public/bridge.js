@@ -587,7 +587,7 @@
       var page = (forgePages[i].getAttribute("data-forge-page") || "").toLowerCase();
       if (page === keyLower || page === "/" + keyLower) return true;
     }
-    if (document.querySelector("." + keyLower + "-page-container")) return true;
+    if (findPageContainer(pageKey)) return true;
     var clickables = document.querySelectorAll("button, [role='button']");
     for (var j = 0; j < clickables.length; j++) {
       var label = (clickables[j].textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
@@ -648,6 +648,15 @@
       }
     }
 
+    var container = findPageContainer(pageKey);
+    if (container) {
+      var clickable = container.querySelector("a, button, [role='button']");
+      if (clickable) safeClick(clickable);
+      else container.click();
+      reportPreviewPath(normalized);
+      return true;
+    }
+
     // The #1 generated pattern: a nav control labeled exactly like the page
     // ("Contact", "À propos"). Buttons drive setPage() state; anchors drive a
     // router — safeClick blocks the native navigation that would leave
@@ -657,7 +666,7 @@
       var controls = navScopes[s].querySelectorAll("a, button, [role='button']");
       for (var c = 0; c < controls.length; c++) {
         var ctl = controls[c];
-        if (slugify(ctl.textContent) === keyLower) {
+        if (slugify(ctl.textContent) === pageKeySlug(pageKey)) {
           safeClick(ctl);
           reportPreviewPath(normalized);
           return true;
@@ -696,6 +705,43 @@
       /* older engines */
     }
     return s.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  }
+
+  /** Route segment safe for CSS class lookups (`produits/hw-air-pulse` -> `produits-hw-air-pulse`). */
+  function pageKeySlug(pageKey) {
+    return slugify(String(pageKey || "").replace(/\//g, " "));
+  }
+
+  function cssEscapeIdent(value) {
+    if (typeof CSS !== "undefined" && CSS.escape) return CSS.escape(value);
+    return String(value).replace(/[^a-zA-Z0-9_-]/g, "\\$&");
+  }
+
+  function findPageContainer(pageKey) {
+    var slugs = [];
+    var full = pageKeySlug(pageKey);
+    if (full) slugs.push(full);
+    var parts = String(pageKey || "").split("/").filter(Boolean);
+    if (parts.length) {
+      var last = pageKeySlug(parts[parts.length - 1]);
+      if (last && slugs.indexOf(last) === -1) slugs.push(last);
+    }
+    for (var i = 0; i < slugs.length; i++) {
+      try {
+        var el = document.querySelector("." + cssEscapeIdent(slugs[i]) + "-page-container");
+        if (el) return el;
+      } catch (e) {
+        /* invalid selector — never crash the preview */
+      }
+    }
+    var containers = document.querySelectorAll("[class*='-page-container']");
+    for (var k = 0; k < containers.length; k++) {
+      var cls = " " + (containers[k].className || "") + " ";
+      for (var j = 0; j < slugs.length; j++) {
+        if (cls.indexOf(" " + slugs[j] + "-page-container") >= 0) return containers[k];
+      }
+    }
+    return null;
   }
 
   /**
