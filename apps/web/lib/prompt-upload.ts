@@ -45,7 +45,17 @@ export async function uploadPromptAttachments(
     }
     if (!res.ok) {
       const detail = await res.text().catch(() => res.statusText);
-      throw new Error(detail || "Upload failed");
+      let message = detail || "Upload failed";
+      try {
+        const parsed = JSON.parse(detail) as { detail?: string | { msg?: string }[] };
+        if (typeof parsed.detail === "string") message = parsed.detail;
+        else if (Array.isArray(parsed.detail) && parsed.detail[0]?.msg) {
+          message = parsed.detail.map((d) => d.msg).filter(Boolean).join("; ");
+        }
+      } catch {
+        /* keep raw body */
+      }
+      throw new Error(message);
     }
     const data = (await res.json()) as UploadResponse;
     const durablePreview =

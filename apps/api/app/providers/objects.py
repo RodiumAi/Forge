@@ -1,14 +1,36 @@
 from __future__ import annotations
 
+import re
+
 import boto3
 from botocore.config import Config
 
 from app.config import get_settings
 from app.errors import provider_not_configured
 
+_GENERIC_AWS_S3_ENDPOINT = re.compile(
+    r"^https?://s3(?:[.-][a-z0-9-]+)?\.amazonaws\.com/?$",
+    re.IGNORECASE,
+)
+
 
 def _resolve_static_credentials() -> tuple[str, str]:
     return get_settings().resolved_object_store_credentials()
+
+
+def _normalize_endpoint(endpoint: str | None) -> str | None:
+    """Drop generic regional S3 endpoints when using virtual-hosted buckets.
+
+    With ``addressing_style=virtual``, boto3 must resolve ``{bucket}.s3.{region}.amazonaws.com``
+    per bucket. Pinning ``endpoint_url`` to ``https://s3.eu-west-1.amazonaws.com`` triggers
+    ``PermanentRedirect`` on PutObject — the exact prod upload failure we saw in CloudWatch.
+    """
+    if not endpoint:
+        return None
+    s = get_settings()
+    if s.object_store_addressing == "virtual" and _GENERIC_AWS_S3_ENDPOINT.match(endpoint.rstrip("/")):
+        return None
+    return endpoint
 
 
 def _client(endpoint: str | None):
@@ -30,6 +52,7 @@ def _client(endpoint: str | None):
     if access and secret:
         kwargs["aws_access_key_id"] = access
         kwargs["aws_secret_access_key"] = secret
+    endpoint = _normalize_endpoint(endpoint)
     if endpoint:
         kwargs["endpoint_url"] = endpoint
     return boto3.client(**kwargs)
