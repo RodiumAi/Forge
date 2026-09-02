@@ -114,9 +114,7 @@ class TestStateMachine:
         assert d.last_error == "routing_cname_missing"
 
     def test_degraded_mode_validates_on_routing_cname(self):
-        d = advance_verification(
-            _domain(), _settings(), resolver=lambda h: "sites.forge.rodiumai.io"
-        )
+        d = advance_verification(_domain(), _settings(), resolver=lambda h: "sites.forge.rodiumai.io")
         assert d.status == STATUS_VALIDATED
         assert d.last_error is None
         assert d.verified_at is not None and d.verified_at.tzinfo == UTC

@@ -149,10 +149,7 @@ class Settings(BaseSettings):
 
     @property
     def custom_domain_aws_enabled(self) -> bool:
-        return bool(
-            self.custom_domain_alb_listener_arn.strip()
-            and self.custom_domain_gateway_tg_arn.strip()
-        )
+        return bool(self.custom_domain_alb_listener_arn.strip() and self.custom_domain_gateway_tg_arn.strip())
 
     @property
     def object_store_enabled(self) -> bool:
