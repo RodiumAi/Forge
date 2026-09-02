@@ -6,7 +6,7 @@ orphan reaper was a no-op on Windows. The runner needs no process at all: the
 browser receives the source bundle over postMessage and transforms it in-page.
 """
 
-import contextlib
+import time
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -21,9 +21,14 @@ from app.i18n import resolve_locale, t
 from app.models import Project, User
 from app.schemas import PreviewStatus
 from app.services import preview_babel
-from app.services.asset_storage import repair_private_upload_urls_in_project
 
 router = APIRouter(tags=["preview"])
+
+# Dashboard thumbs hit /draft?thumb=1 for every project card — cache the heavy
+# HTML bundle briefly so scrolling the grid does not re-read 40+ files each time.
+_DRAFT_THUMB_CACHE: dict[str, tuple[float, str]] = {}
+_DRAFT_THUMB_TTL_S = 90.0
+_DRAFT_THUMB_CACHE_MAX = 40
 
 
 class SourceBundle(BaseModel):
@@ -52,9 +57,20 @@ def _project_extra_imports(project_id: str) -> dict[str, str]:
         return {}
 
 
-def _repair_private_upload_urls(db: Session, project_id: UUID) -> None:
-    with contextlib.suppress(Exception):
-        repair_private_upload_urls_in_project(db, project_id)
+def _draft_thumb_cache_get(project_id: str) -> str | None:
+    row = _DRAFT_THUMB_CACHE.get(project_id)
+    if not row:
+        return None
+    if time.time() - row[0] > _DRAFT_THUMB_TTL_S:
+        _DRAFT_THUMB_CACHE.pop(project_id, None)
+        return None
+    return row[1]
+
+
+def _draft_thumb_cache_set(project_id: str, html: str) -> None:
+    if len(_DRAFT_THUMB_CACHE) >= _DRAFT_THUMB_CACHE_MAX:
+        _DRAFT_THUMB_CACHE.pop(next(iter(_DRAFT_THUMB_CACHE)), None)
+    _DRAFT_THUMB_CACHE[project_id] = (time.time(), html)
 
 
 def _status(project: Project, *, running: bool) -> PreviewStatus:
@@ -91,7 +107,6 @@ def source_bundle(
     db: Session = Depends(get_db),
 ) -> SourceBundle:
     _owned(db, user, project_id, resolve_locale(request))
-    _repair_private_upload_urls(db, project_id)
     files = preview_babel.collect_project_source_files(str(project_id))
     return SourceBundle(
         entry="src/main.tsx",
@@ -115,8 +130,13 @@ def draft_page(
     a new tab" target; auth rides the `?access_token=` query support.
     """
     project = _owned(db, user, project_id, resolve_locale(request))
-    _repair_private_upload_urls(db, project_id)
-    files = preview_babel.collect_project_source_files(str(project_id))
+    is_thumb = request.query_params.get("thumb") in {"1", "true", "yes"}
+    pid = str(project_id)
+    if is_thumb:
+        cached = _draft_thumb_cache_get(pid)
+        if cached:
+            return HTMLResponse(cached, headers={"Cache-Control": "private, max-age=60"})
+    files = preview_babel.collect_project_source_files(pid)
     # Root-path images (/images/x.png) resolve through the authenticated
     # project-public endpoint; same-origin here, so a relative base works.
     assets: dict[str, str] = {
@@ -128,10 +148,12 @@ def draft_page(
         assets["token"] = token
     html = preview_babel.render_runner_shell(
         bundle={"files": files, "entry": "src/main.tsx", "title": project.name, "assets": assets},
-        extra_imports=_project_extra_imports(str(project_id)),
-        thumb=request.query_params.get("thumb") in {"1", "true", "yes"},
+        extra_imports=_project_extra_imports(pid),
+        thumb=is_thumb,
     )
-    return HTMLResponse(html, headers={"Cache-Control": "no-store"})
+    if is_thumb:
+        _draft_thumb_cache_set(pid, html)
+    return HTMLResponse(html, headers={"Cache-Control": "no-store" if not is_thumb else "private, max-age=60"})
 
 
 @router.post("/projects/{project_id}/preview/start", response_model=PreviewStatus)
@@ -143,7 +165,6 @@ def preview_start(
 ) -> PreviewStatus:
     project = _owned(db, user, project_id, resolve_locale(request))
     preview_babel.ensure_babel_project_layout(str(project_id))
-    _repair_private_upload_urls(db, project_id)
     preview_babel.mark_babel_preview_ready(str(project_id))
     project.preview_running = True
     project.preview_port = 0
