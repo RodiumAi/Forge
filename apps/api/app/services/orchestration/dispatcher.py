@@ -538,9 +538,7 @@ async def run_plan_tasks(
             if remaining:
                 if applied:
                     yield _sse({"type": "preview_refresh"})
-                summary = to_plain_text(
-                    build_run_summary(tasks=tasks, applied=applied, locale=locale)
-                )
+                summary = to_plain_text(build_run_summary(tasks=tasks, applied=applied, locale=locale))
                 yield _sse(
                     {
                         "type": "done",

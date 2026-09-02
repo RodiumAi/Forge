@@ -367,9 +367,10 @@ export default function LandingPage() {
             target="_blank"
             rel="noopener noreferrer"
             className="lp-nav-contribute"
+            aria-label={t("landingNavContribute")}
           >
             <GithubMark />
-            {t("landingNavContribute")}
+            <span className="lp-nav-contribute-label">{t("landingNavContribute")}</span>
           </a>
           <button type="button" className="lp-nav-cta" onClick={goAuth}>
             {t("openForge")}
