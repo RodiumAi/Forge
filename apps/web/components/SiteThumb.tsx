@@ -32,6 +32,30 @@ const HTML_CACHE = new Map<string, CacheEntry>();
 const HTML_TTL_MS = 10 * 60 * 1000;
 const INFLIGHT = new Map<string, Promise<string>>();
 
+/** Dashboard cards: one live draft iframe at a time — Babel in parallel freezes the tab. */
+const DRAFT_FRAME_QUEUE: Array<() => void> = [];
+let draftFramesActive = 0;
+const DRAFT_FRAME_MAX = 1;
+
+function acquireDraftFrameSlot(): Promise<void> {
+  if (draftFramesActive < DRAFT_FRAME_MAX) {
+    draftFramesActive += 1;
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => {
+    DRAFT_FRAME_QUEUE.push(() => {
+      draftFramesActive += 1;
+      resolve();
+    });
+  });
+}
+
+function releaseDraftFrameSlot() {
+  draftFramesActive = Math.max(0, draftFramesActive - 1);
+  const next = DRAFT_FRAME_QUEUE.shift();
+  if (next) next();
+}
+
 function cacheKey(src?: string | null, authPath?: string | null) {
   return authPath || src || "";
 }
@@ -120,8 +144,9 @@ async function fetchThumbHtml(src?: string | null, authPath?: string | null): Pr
 }
 
 /**
- * Scaled homepage thumbnail. Project cards use a live draft iframe (no snapshot
- * / warm-frame cache — that froze the dashboard). Templates use cached srcDoc.
+ * Scaled homepage thumbnail. Project cards use a live draft iframe (queued: one
+ * at a time so the dashboard does not run N Babel compiles in parallel).
+ * Templates use cached srcDoc.
  */
 export function SiteThumb({
   src,
@@ -140,9 +165,39 @@ export function SiteThumb({
   const [failed, setFailed] = useState(false);
   const [scale, setScale] = useState(0.25);
   const [frameReady, setFrameReady] = useState(false);
+  const [frameAllowed, setFrameAllowed] = useState(false);
+  const slotHeldRef = useRef(false);
 
   useEffect(() => {
     if (!frameSrc || !visible) {
+      if (slotHeldRef.current) {
+        releaseDraftFrameSlot();
+        slotHeldRef.current = false;
+      }
+      setFrameAllowed(false);
+      return;
+    }
+    let alive = true;
+    void acquireDraftFrameSlot().then(() => {
+      if (!alive) {
+        releaseDraftFrameSlot();
+        return;
+      }
+      slotHeldRef.current = true;
+      setFrameAllowed(true);
+    });
+    return () => {
+      alive = false;
+      if (slotHeldRef.current) {
+        releaseDraftFrameSlot();
+        slotHeldRef.current = false;
+      }
+      setFrameAllowed(false);
+    };
+  }, [frameSrc, visible]);
+
+  useEffect(() => {
+    if (!frameSrc || !visible || !frameAllowed) {
       setFrameReady(false);
       return;
     }
@@ -158,7 +213,7 @@ export function SiteThumb({
       window.removeEventListener("message", onMessage);
       window.clearTimeout(grace);
     };
-  }, [frameSrc, visible]);
+  }, [frameSrc, visible, frameAllowed]);
 
   useEffect(() => {
     const el = shellRef.current;
@@ -242,7 +297,7 @@ export function SiteThumb({
     >
       {frameSrc ? (
         <>
-          {visible && (
+          {visible && frameAllowed && (
             <div
               className="site-thumb-scaler"
               style={frameReady ? undefined : { visibility: "hidden" }}
@@ -257,7 +312,9 @@ export function SiteThumb({
               />
             </div>
           )}
-          {!frameReady && <div className="site-thumb-fallback is-loading" />}
+          {visible && (!frameAllowed || !frameReady) && (
+            <div className="site-thumb-fallback is-loading" />
+          )}
         </>
       ) : html ? (
         <div className="site-thumb-scaler">
