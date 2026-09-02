@@ -13,6 +13,7 @@ from app.routers import (
     chats,
     comments,
     design,
+    domains,
     files,
     history,
     internal_admin,
@@ -21,6 +22,7 @@ from app.routers import (
     projects,
     publish,
     seo,
+    sites_v1,
     templates,
 )
 from app.routers import settings as settings_router
@@ -69,6 +71,8 @@ app.include_router(files.router)
 app.include_router(history.router)
 app.include_router(comments.router)
 app.include_router(publish.router)
+app.include_router(domains.router)
+app.include_router(sites_v1.router)
 app.include_router(preview.router)
 app.include_router(internal_admin.router)
 

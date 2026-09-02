@@ -1,0 +1,119 @@
+# Production Sites Gateway — serves published Forge sites from S3.
+#
+# Host routing:
+#   1) {slug}.forge.rodiumai.io  → slug from Host suffix (map)
+#   2) custom domains            → forward_auth /v1/authorize-host → X-Site-Slug
+#
+# Env (ECS task):
+#   SITES_HOST_SUFFIX=forge.rodiumai.io
+#   S3_ASSETS_BUCKET=forge-assets-prod
+#   S3_REGION=eu-west-1
+#   FORGE_API_UPSTREAM=api-forge.rodiumai.io
+
+{
+	admin off
+	auto_https off
+}
+
+:80 {
+	log {
+		output stdout
+		format console
+	}
+
+	handle /health {
+		respond "ok" 200
+	}
+
+	handle /_rodium/* {
+		uri strip_prefix /_rodium
+		reverse_proxy https://{$FORGE_API_UPSTREAM} {
+			header_up Host {$FORGE_API_UPSTREAM}
+			header_up X-Rodium-Forwarded-Host {http.request.host}
+			header_up X-Forwarded-Proto https
+			header_up X-Forwarded-Host {http.request.host}
+		}
+	}
+
+	@forge_subdomain host *.{$SITES_HOST_SUFFIX}
+	handle @forge_subdomain {
+		map {http.request.host} {site_slug} {
+			~^([^.]+)\.{$SITES_HOST_SUFFIX}$ ${1}
+			default _
+		}
+
+		@site_root path /
+		handle @site_root {
+			rewrite * /{site_slug}/index.html
+			reverse_proxy https://{$S3_ASSETS_BUCKET}.s3.{$S3_REGION}.amazonaws.com {
+				header_up Host {$S3_ASSETS_BUCKET}.s3.{$S3_REGION}.amazonaws.com
+				@missing status 404
+				handle_response @missing {
+					header Content-Type "text/html; charset=utf-8"
+					respond "Site not published" 404
+				}
+			}
+		}
+
+		handle /* {
+			rewrite * /{site_slug}{uri}
+			reverse_proxy https://{$S3_ASSETS_BUCKET}.s3.{$S3_REGION}.amazonaws.com {
+				header_up Host {$S3_ASSETS_BUCKET}.s3.{$S3_REGION}.amazonaws.com
+				@missing status 404
+				handle_response @missing {
+					rewrite * /{site_slug}/index.html
+					reverse_proxy https://{$S3_ASSETS_BUCKET}.s3.{$S3_REGION}.amazonaws.com {
+						header_up Host {$S3_ASSETS_BUCKET}.s3.{$S3_REGION}.amazonaws.com
+						@still_missing status 404
+						handle_response @still_missing {
+							header Content-Type "text/html; charset=utf-8"
+							respond "Site not published" 404
+						}
+					}
+				}
+			}
+		}
+	}
+
+	# Custom domains (www.client.com, blog.client.com, …)
+	handle {
+		forward_auth https://{$FORGE_API_UPSTREAM} {
+			uri /v1/authorize-host
+			header_up Host {$FORGE_API_UPSTREAM}
+			header_up X-Rodium-Forwarded-Host {http.request.host}
+			copy_headers X-Site-Slug
+		}
+
+		@site_root path /
+		handle @site_root {
+			rewrite * /{http.request.header.X-Site-Slug}/index.html
+			reverse_proxy https://{$S3_ASSETS_BUCKET}.s3.{$S3_REGION}.amazonaws.com {
+				header_up Host {$S3_ASSETS_BUCKET}.s3.{$S3_REGION}.amazonaws.com
+				@missing status 404
+				handle_response @missing {
+					header Content-Type "text/html; charset=utf-8"
+					respond "Site not published" 404
+				}
+			}
+		}
+
+		handle /* {
+			rewrite * /{http.request.header.X-Site-Slug}{uri}
+			reverse_proxy https://{$S3_ASSETS_BUCKET}.s3.{$S3_REGION}.amazonaws.com {
+				header_up Host {$S3_ASSETS_BUCKET}.s3.{$S3_REGION}.amazonaws.com
+				@missing status 404
+				handle_response @missing {
+					rewrite * /{http.request.header.X-Site-Slug}/index.html
+					reverse_proxy https://{$S3_ASSETS_BUCKET}.s3.{$S3_REGION}.amazonaws.com {
+						header_up Host {$S3_ASSETS_BUCKET}.s3.{$S3_REGION}.amazonaws.com
+						@still_missing status 404
+						handle_response @still_missing {
+							header Content-Type "text/html; charset=utf-8"
+							respond "Site not published" 404
+						}
+					}
+				}
+			}
+		}
+	}
+}

@@ -208,6 +208,17 @@ function friendlyStreamError(err: unknown, fallback: string, rodiumExpired: stri
   return raw || fallback;
 }
 
+/** Human label for the selection chip — never the raw CSS selector path.
+ *  Prefers #id, then tag + a short text excerpt (e.g. `nav · “PromptVault”`). */
+function selectionChipLabel(sel: ElementSelection): string {
+  if (sel.id) return `#${sel.id}`;
+  const tag = (sel.tag || "element").toLowerCase();
+  const text = (sel.text || "").trim().replace(/\s+/g, " ");
+  if (!text) return tag;
+  const excerpt = text.length > 28 ? `${text.slice(0, 28)}…` : text;
+  return `${tag} · “${excerpt}”`;
+}
+
 export default function ProjectPage() {
   const params = useParams<{ id: string }>();
   const projectId = params.id;
@@ -1150,7 +1161,6 @@ export default function ProjectPage() {
           uploaded = await uploadPromptAttachments(projectId, attached, locale);
         }
       } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
         // Drop failed local images so the composer + picker stay usable.
         setAttachments((prev) => {
           for (const item of prev) {
@@ -1161,7 +1171,10 @@ export default function ProjectPage() {
           return prev.filter((a) => !(a.source === "local" && a.kind === "image"));
         });
         if (fileInputRef.current) fileInputRef.current.value = "";
-        pushChatError(msg, null);
+        pushChatError(
+          friendlyStreamError(err, t("attachmentUploadFailed"), t("rodiumSessionExpired")),
+          null,
+        );
         return;
       }
 
@@ -1941,16 +1954,12 @@ export default function ProjectPage() {
                     type="button"
                     className="landing-file-chip selection-chip"
                     onClick={() => setElementSelection(null)}
-                    title={t("selectionClear")}
+                    title={`${t("selectionClear")}${elementSelection.selector ? ` — ${elementSelection.selector}` : ""}`}
                   >
                     <span className="selection-chip-count">1</span>
                     <span>
                       {t("selectionBadge")}
-                      {elementSelection.selector
-                        ? ` · ${elementSelection.selector}`
-                        : elementSelection.tag
-                          ? ` · ${elementSelection.tag}`
-                          : ""}
+                      {` · ${selectionChipLabel(elementSelection)}`}
                     </span>
                     <span aria-hidden>×</span>
                   </button>
@@ -2005,6 +2014,20 @@ export default function ProjectPage() {
                   {t("planMode")}
                 </button>
                 <div className="builder-composer-actions-end">
+                  {/* The file input must NOT live inside the button: nested
+                      interactive controls are invalid HTML and the change
+                      event gets swallowed in some browsers (picker opened but
+                      files never arrived — drag & drop worked fine). */}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    className="landing-import-input"
+                    multiple
+                    accept={PROMPT_FILE_ACCEPT}
+                    onChange={onFilesSelected}
+                    tabIndex={-1}
+                    aria-hidden
+                  />
                   <button
                     type="button"
                     className="builder-plus-label"
@@ -2013,16 +2036,6 @@ export default function ProjectPage() {
                     disabled={composerInputLocked}
                     onClick={openFilePicker}
                   >
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      className="landing-import-input"
-                      multiple
-                      accept={PROMPT_FILE_ACCEPT}
-                      onChange={onFilesSelected}
-                      tabIndex={-1}
-                      aria-hidden
-                    />
                     <span className="builder-plus">
                       <Icon icon={Plus} className="ui-icon-md" />
                       {attachments.length > 0 ? (

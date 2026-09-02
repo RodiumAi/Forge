@@ -158,6 +158,8 @@ class ProjectOut(BaseModel):
     preview_running: bool
     public_url: str | None = None
     sites_url: str | None = None
+    custom_domain: str | None = None
+    custom_domain_status: str | None = None
     template_id: str | None = None
     published_at: datetime | None = None
     created_at: datetime

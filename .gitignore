@@ -36,7 +36,13 @@ testForge/
 
 /docs/DEPLOYMENT.fr.md
 
-/infra/aws/
+/infra/aws/*
+!/infra/aws/sites-gateway/
+!/infra/aws/sites-gateway/**
+!/infra/aws/iam/
+!/infra/aws/iam/**
+
+task-definition-deploy.json
 
 /infra/alb-idle-timeout.md
 

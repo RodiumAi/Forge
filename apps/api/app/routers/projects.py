@@ -39,6 +39,14 @@ router = APIRouter(prefix="/projects", tags=["projects"])
 
 def _project_out(project: Project) -> ProjectOut:
     settings = get_settings()
+    domain = None
+    session = Session.object_session(project)
+    if session is not None:
+        from app.services.domains import get_project_domain
+
+        domain = get_project_domain(session, project.id)
+    from app.services.domains import sites_url_for_project
+
     return ProjectOut(
         id=project.id,
         name=project.name,
@@ -47,7 +55,9 @@ def _project_out(project: Project) -> ProjectOut:
         preview_port=project.preview_port,
         preview_running=project.preview_running,
         public_url=settings.preview_url_for_slug(project.slug),
-        sites_url=settings.sites_url_for_slug(project.slug),
+        sites_url=sites_url_for_project(settings, project, domain),
+        custom_domain=domain.hostname if domain else None,
+        custom_domain_status=domain.status if domain else None,
         template_id=project.template_id,
         published_at=getattr(project, "published_at", None),
         created_at=project.created_at,
@@ -288,6 +298,9 @@ def project_stats(
         int(getattr(row, "page_views", 0) or 0) for row in usage_rows if (row.day or "") >= cutoff
     )
     published = getattr(project, "published_at", None) is not None
+    from app.services.domains import get_project_domain, sites_url_for_project
+
+    stats_domain = get_project_domain(db, project.id)
 
     return ProjectStatsOut(
         slug=project.slug,
@@ -295,7 +308,7 @@ def project_stats(
         preview_running=preview_babel.is_babel_preview_ready(str(project.id)),
         published=published,
         published_at=getattr(project, "published_at", None),
-        sites_url=settings.sites_url_for_slug(project.slug) if published else None,
+        sites_url=sites_url_for_project(settings, project, stats_domain) if published else None,
         created_at=project.created_at,
         updated_at=project.updated_at,
         visitors_total=visitors_total,

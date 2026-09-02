@@ -34,6 +34,7 @@ COPY_SYSTEM = """You write SEO metadata for a website.
 Output ONLY a valid JSON object (no markdown fences, no preamble) with these string keys:
 title, description, keywords, og_title, og_description, twitter_title, twitter_description, robots.
 Rules:
+- EVERY key MUST be present with a non-empty string value — never omit a field, never return ""
 - title: 50-60 characters ideal
 - description: 140-160 characters ideal
 - keywords: comma-separated, 5-12 phrases
@@ -234,6 +235,31 @@ async def generate_seo_copy(
         val = parsed.get(key)
         if isinstance(val, str) and val.strip():
             current[key] = val.strip()
+
+    # Never leave core fields empty after an AI fill — deterministic fallbacks.
+    is_fr = lang_label == "French"
+    title = (current.get("title") or "").strip() or (project.name or "").strip() or "Site"
+    current["title"] = title
+    desc = (current.get("description") or "").strip()
+    if not desc:
+        desc = (current.get("og_description") or current.get("twitter_description") or "").strip()
+    if not desc:
+        desc = (
+            f"Découvrez {title} : fonctionnalités, contenus et informations essentielles, le tout au même endroit."
+            if is_fr
+            else f"Discover {title}: features, content and key information, all in one place."
+        )
+    current["description"] = desc
+    for src, dst in (
+        ("title", "og_title"),
+        ("title", "twitter_title"),
+        ("description", "og_description"),
+        ("description", "twitter_description"),
+    ):
+        if not (current.get(dst) or "").strip():
+            current[dst] = current[src]
+    if not (current.get("robots") or "").strip():
+        current["robots"] = "index, follow"
 
     return _to_out(current)
 

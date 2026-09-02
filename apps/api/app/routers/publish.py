@@ -12,6 +12,7 @@ from app.db import get_db
 from app.i18n import resolve_locale, t
 from app.models import Project, User
 from app.services.export_project import build_export_zip
+from app.services.domains import get_project_domain, sites_url_for_project
 from app.services.publish_esm import publish_project_esm
 
 router = APIRouter(prefix="/projects", tags=["publish"])
@@ -42,8 +43,9 @@ def publish_status(
     locale = resolve_locale(request)
     project = _owned(db, user, project_id, locale)
     settings = get_settings()
+    domain = get_project_domain(db, project.id)
     return PublishResponse(
-        public_url=settings.sites_url_for_slug(project.slug),
+        public_url=sites_url_for_project(settings, project, domain),
         files_uploaded=0,
         slug=project.slug,
         published_at=getattr(project, "published_at", None),
@@ -77,8 +79,9 @@ async def publish_now(
     db.commit()
     db.refresh(project)
 
+    domain = get_project_domain(db, project.id)
     return PublishResponse(
-        public_url=result["public_url"],
+        public_url=sites_url_for_project(get_settings(), project, domain),
         files_uploaded=int(result.get("files_uploaded") or 0),
         slug=project.slug,
         published_at=project.published_at,
