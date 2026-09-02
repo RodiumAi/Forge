@@ -1657,9 +1657,11 @@ html:has(.builder) body {
   color: inherit;
 }
 
-.builder-plus-label:disabled {
+.builder-plus-label:disabled,
+.builder-plus-label.is-disabled {
   opacity: 0.55;
   cursor: not-allowed;
+  pointer-events: none;
 }
 
 .builder-connector-picker {
