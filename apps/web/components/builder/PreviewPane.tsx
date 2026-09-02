@@ -146,6 +146,7 @@ export function PreviewPane({
             assets: {
               base: `${apiBase().replace(/\/$/, "")}/projects/${projectId}/public`,
               token: getToken() ?? "",
+              routerBase: "/runner",
             },
           },
           target,

@@ -119,7 +119,10 @@ def draft_page(
     files = preview_babel.collect_project_source_files(str(project_id))
     # Root-path images (/images/x.png) resolve through the authenticated
     # project-public endpoint; same-origin here, so a relative base works.
-    assets: dict[str, str] = {"base": f"/projects/{project_id}/public"}
+    assets: dict[str, str] = {
+        "base": f"/projects/{project_id}/public",
+        "routerBase": f"/projects/{project_id}/draft",
+    }
     token = request.query_params.get("access_token")
     if token:
         assets["token"] = token

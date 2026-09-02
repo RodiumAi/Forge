@@ -71,7 +71,26 @@ window.addEventListener("unhandledrejection", (e) => {
 // project-public endpoint; every root-path <img> is rewritten to it, with the
 // original kept in data-forge-src so the visual-image bridge still reports
 // the literal that actually lives in the source.
-let ASSETS = null; // { base: string, token?: string }
+let ASSETS = null; // { base: string, token?: string, routerBase?: string }
+
+/** Preview shell prefix: /runner or /projects/{uuid}/draft — never bare API /. */
+function getPreviewShellBase() {
+  if (typeof window.__FORGE_PREVIEW_SHELL_BASE__ === "string" && window.__FORGE_PREVIEW_SHELL_BASE__) {
+    return window.__FORGE_PREVIEW_SHELL_BASE__;
+  }
+  const p = window.location.pathname || "";
+  const draft = p.match(/^(\/projects\/[0-9a-f-]{36}\/draft)\/?/i);
+  if (draft) return draft[1];
+  if (/^\/runner\/?/i.test(p)) return "/runner";
+  return "";
+}
+
+function injectRouterBasename(code) {
+  const base = getPreviewShellBase();
+  if (!base || !code.includes("BrowserRouter")) return code;
+  if (/\bbasename\s*[=:]/.test(code)) return code;
+  return code.replace(/<BrowserRouter(?![^>]*\bbasename\b)(\s|>)/g, `<BrowserRouter basename="${base}"$1`);
+}
 
 function resolveAssetUrl(src, assets) {
   if (!assets || !assets.base || typeof src !== "string") return null;
@@ -193,7 +212,8 @@ function transform(code, path) {
       babelrc: false,
     });
     const js = out.code || "";
-    return { code: js, imports: collectImports(js), error: null };
+    const patched = injectRouterBasename(js);
+    return { code: patched, imports: collectImports(patched), error: null };
   } catch (e) {
     return {
       code: "",
@@ -344,6 +364,9 @@ async function waitForFirstPaint(timeoutMs = 8000) {
 
 async function mount(files, entry, tokensCss, assets) {
   if (assets && typeof assets.base === "string" && assets.base) ASSETS = assets;
+  if (assets && typeof assets.routerBase === "string" && assets.routerBase) {
+    window.__FORGE_PREVIEW_SHELL_BASE__ = assets.routerBase;
+  }
   const cssEl = document.getElementById("forge-app-css");
   if (cssEl) {
     // Every stylesheet ships, index.css (tokens/layout) first: per-page CSS
@@ -502,6 +525,9 @@ window.addEventListener("message", (e) => {
 // shell (GET /projects/{id}/draft), so the page renders without a builder
 // parent to postMessage it. In that mode there is no peer to notify.
 const DRAFT = window.__FORGE_DRAFT__;
+if (DRAFT && DRAFT.assets && typeof DRAFT.assets.routerBase === "string") {
+  window.__FORGE_PREVIEW_SHELL_BASE__ = DRAFT.assets.routerBase;
+}
 if (DRAFT && DRAFT.files) {
   void mount(DRAFT.files, DRAFT.entry || "src/main.tsx", DRAFT.tokens || "", DRAFT.assets || null);
 } else {
