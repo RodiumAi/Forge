@@ -9,11 +9,6 @@
 		format console
 	}
 
-	map {http.request.host} {site_slug} {
-		~^([^.]+)\.lvh\.me(?::\d+)?$ ${1}
-		default _
-	}
-
 	handle /_rodium/* {
 		uri strip_prefix /_rodium
 		reverse_proxy api:8000 {
@@ -23,58 +18,80 @@
 		}
 	}
 
-	# MinIO has no directory index — map site root to index.html.
-	@site_root {
-		path /
-	}
-	handle @site_root {
-		rewrite * /forge-assets/{site_slug}/index.html
-		reverse_proxy minio:9000 {
-			header_up Host minio:9000
-			@missing status 404
-			handle_response @missing {
-				header Content-Type "text/html; charset=utf-8"
-				respond `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Site not published — Forge</title>
-<style>
-:root{color-scheme:dark}body{margin:0;min-height:100vh;display:grid;place-items:center;font-family:ui-sans-serif,system-ui,sans-serif;background:#0a0a0c;color:#f5f5f5}
-main{max-width:34rem;padding:2rem;text-align:center}h1{margin:0 0 .6rem;font-size:1.6rem;letter-spacing:-.02em}
-p{margin:0 0 .85rem;color:#a3a3a3;line-height:1.5}code{color:#f2620a}.hint{font-size:.9rem}
-</style></head><body><main>
-<h1>Site not published yet</h1>
-<p>Nothing is live at <code>{http.request.host}</code>.</p>
-<p class="hint">Open the project in Forge and click <strong>Publish</strong>, then refresh this page.</p>
-</main></body></html>` 404
+	@lvh host *.lvh.me
+	handle @lvh {
+		map {http.request.host} {site_slug} {
+			~^([^.]+)\.lvh\.me(?::\d+)?$ ${1}
+			default _
+		}
+
+		@site_root path /
+		handle @site_root {
+			rewrite * /forge-assets/{site_slug}/index.html
+			reverse_proxy minio:9000 {
+				header_up Host minio:9000
+				@missing status 404
+				handle_response @missing {
+					header Content-Type "text/html; charset=utf-8"
+					respond "Site not published" 404
+				}
+			}
+		}
+
+		handle /* {
+			rewrite * /forge-assets/{site_slug}{uri}
+			reverse_proxy minio:9000 {
+				header_up Host minio:9000
+				@missing status 404
+				handle_response @missing {
+					rewrite * /forge-assets/{site_slug}/index.html
+					reverse_proxy minio:9000 {
+						header_up Host minio:9000
+						@still_missing status 404
+						handle_response @still_missing {
+							header Content-Type "text/html; charset=utf-8"
+							respond "Site not published" 404
+						}
+					}
+				}
 			}
 		}
 	}
 
-	handle /* {
-		rewrite * /forge-assets/{site_slug}{uri}
-		reverse_proxy minio:9000 {
-			header_up Host minio:9000
-			@missing status 404
-			handle_response @missing {
-				# Client-side routes: fall back to SPA index when the asset key is missing.
-				rewrite * /forge-assets/{site_slug}/index.html
-				reverse_proxy minio:9000 {
-					header_up Host minio:9000
-					@still_missing status 404
-					handle_response @still_missing {
-						header Content-Type "text/html; charset=utf-8"
-						respond `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Site not published — Forge</title>
-<style>
-:root{color-scheme:dark}body{margin:0;min-height:100vh;display:grid;place-items:center;font-family:ui-sans-serif,system-ui,sans-serif;background:#0a0a0c;color:#f5f5f5}
-main{max-width:34rem;padding:2rem;text-align:center}h1{margin:0 0 .6rem;font-size:1.6rem;letter-spacing:-.02em}
-p{margin:0 0 .85rem;color:#a3a3a3;line-height:1.5}code{color:#f2620a}.hint{font-size:.9rem}
-</style></head><body><main>
-<h1>Site not published yet</h1>
-<p>Nothing is live at <code>{http.request.host}</code>.</p>
-<p class="hint">Open the project in Forge and click <strong>Publish</strong>, then refresh this page.</p>
-</main></body></html>` 404
+	handle {
+		forward_auth api:8000 {
+			uri /v1/authorize-host
+			header_up X-Rodium-Forwarded-Host {http.request.host}
+			copy_headers X-Site-Slug
+		}
+
+		@site_root path /
+		handle @site_root {
+			rewrite * /forge-assets/{http.request.header.X-Site-Slug}/index.html
+			reverse_proxy minio:9000 {
+				header_up Host minio:9000
+				@missing status 404
+				handle_response @missing {
+					header Content-Type "text/html; charset=utf-8"
+					respond "Site not published" 404
+				}
+			}
+		}
+
+		handle /* {
+			rewrite * /forge-assets/{http.request.header.X-Site-Slug}{uri}
+			reverse_proxy minio:9000 {
+				header_up Host minio:9000
+				@missing status 404
+				handle_response @missing {
+					rewrite * /forge-assets/{http.request.header.X-Site-Slug}/index.html
+					reverse_proxy minio:9000 {
+						header_up Host minio:9000
+						@still_missing status 404
+						handle_response @still_missing {
+							header Content-Type "text/html; charset=utf-8"
+							respond "Site not published" 404
+						}
 					}
 				}
 			}

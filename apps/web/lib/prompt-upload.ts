@@ -26,14 +26,23 @@ export async function uploadPromptAttachments(
     }
     const fd = new FormData();
     fd.append("file", item.file);
-    const res = await fetch(`${apiBase()}/projects/${projectId}/files/upload`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${getToken()}`,
-        "Accept-Language": locale,
-      },
-      body: fd,
-    });
+    const doUpload = () =>
+      fetch(`${apiBase()}/projects/${projectId}/files/upload`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${getToken()}`,
+          "Accept-Language": locale,
+        },
+        body: fd,
+      });
+    let res: Response;
+    try {
+      res = await doUpload();
+    } catch {
+      // Transient network failure ("Failed to fetch") — retry once.
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      res = await doUpload();
+    }
     if (!res.ok) {
       const detail = await res.text().catch(() => res.statusText);
       throw new Error(detail || "Upload failed");

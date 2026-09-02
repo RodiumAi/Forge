@@ -2405,13 +2405,23 @@ html:has(.builder) body {
   width: 1.35rem;
   height: 1.35rem;
   border-radius: 6px;
-  background: linear-gradient(135deg, #f2620a, #ff8a3d);
-  color: #111;
+  /* Neutral chip — an orange gradient here drowned the site's own favicon. */
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #9ca3af;
   font-size: 0.7rem;
   font-weight: 800;
   display: grid;
   place-items: center;
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.publish-favicon img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  display: block;
 }
 
 .publish-url-link {
@@ -2995,6 +3005,190 @@ html:has(.builder) body {
   margin: 0.5rem 1rem;
   color: #86efac;
   font-size: 0.85rem;
+}
+
+/* Floating save confirmation — visible wherever the user is scrolled. */
+.options-toast {
+  position: fixed;
+  bottom: max(1.25rem, env(safe-area-inset-bottom, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 120;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  border-radius: 12px;
+  border: 1px solid rgba(134, 239, 172, 0.35);
+  background: rgba(16, 34, 22, 0.96);
+  color: #86efac;
+  font-size: 0.88rem;
+  font-weight: 600;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  max-width: min(92vw, 480px);
+  animation: options-toast-in 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+
+@keyframes options-toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* —— Custom domain (Options → Publishing) —— */
+.domain-add-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.domain-add-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.5rem 0.7rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--home-input-bg, rgba(255, 255, 255, 0.04));
+  color: inherit;
+  font-size: 0.9rem;
+}
+
+.domain-card {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.domain-card-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.domain-hostname {
+  font-size: 0.95rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.domain-remove {
+  margin-left: auto;
+}
+
+.domain-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.domain-badge-ok {
+  color: #86efac;
+  border-color: rgba(134, 239, 172, 0.4);
+  background: rgba(134, 239, 172, 0.08);
+}
+
+.domain-badge-processing {
+  color: #93c5fd;
+  border-color: rgba(147, 197, 253, 0.4);
+}
+
+.domain-badge-failed {
+  color: #fca5a5;
+  border-color: rgba(252, 165, 165, 0.4);
+}
+
+.domain-dns-table {
+  display: grid;
+  gap: 0.25rem;
+  overflow-x: auto;
+}
+
+.domain-dns-row {
+  display: grid;
+  grid-template-columns: minmax(90px, 0.7fr) 56px minmax(120px, 1fr) minmax(160px, 1.4fr);
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.4rem 0.5rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  min-width: 480px;
+}
+
+.domain-dns-row:not(.domain-dns-head) {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+}
+
+.domain-dns-head {
+  font-weight: 700;
+  color: var(--muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.domain-dns-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.domain-dns-copy code {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.78rem;
+}
+
+.domain-dns-copy button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem;
+  font-size: 0.72rem;
+}
+
+.domain-dns-copy button:hover {
+  color: inherit;
+}
+
+.domain-error {
+  margin: 0;
+  color: #fca5a5;
+  font-size: 0.82rem;
+}
+
+.domain-hint {
+  margin: 0;
+  color: #fcd34d;
+  font-size: 0.82rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .options-toast {
+    animation: none;
+  }
 }
 
 .builder-empty {

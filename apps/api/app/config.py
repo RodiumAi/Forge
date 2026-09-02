@@ -131,6 +131,29 @@ class Settings(BaseSettings):
         scheme = "https" if self.environment in ("staging", "production") else "http"
         return f"{scheme}://{slug}.{self.sites_base_domain}"
 
+    # ── Custom domains (Vercel-style CNAME flow) ────────────────────────────
+    # CNAME target shown to users; empty → derived from sites_base_domain.
+    custom_domain_cname_target: str = ""
+    # AWS provisioning (ACM cert + ALB host rule). Both empty → degraded mode:
+    # no ACM record, verify only checks the routing CNAME (local/dev/CI).
+    custom_domain_alb_listener_arn: str = ""
+    custom_domain_gateway_tg_arn: str = ""
+
+    @property
+    def effective_custom_domain_cname_target(self) -> str:
+        if self.custom_domain_cname_target.strip():
+            return self.custom_domain_cname_target.strip().rstrip(".")
+        # Strip any :port — a CNAME target is a bare hostname.
+        base = self.sites_base_domain.split(":")[0]
+        return f"sites.{base}"
+
+    @property
+    def custom_domain_aws_enabled(self) -> bool:
+        return bool(
+            self.custom_domain_alb_listener_arn.strip()
+            and self.custom_domain_gateway_tg_arn.strip()
+        )
+
     @property
     def object_store_enabled(self) -> bool:
         access, secret = self.resolved_object_store_credentials()

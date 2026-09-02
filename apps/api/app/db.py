@@ -158,6 +158,24 @@ def init_db() -> None:
         )
         """,
         "INSERT INTO forge_platform_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING",
+        """
+        CREATE TABLE IF NOT EXISTS project_domains (
+            id UUID PRIMARY KEY,
+            project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+            hostname VARCHAR(253) NOT NULL,
+            status VARCHAR(16) NOT NULL DEFAULT 'pending_dns',
+            cname_target VARCHAR(253) NOT NULL DEFAULT '',
+            acm_validation_name VARCHAR(300),
+            acm_validation_value VARCHAR(300),
+            acm_certificate_arn VARCHAR(300),
+            last_error TEXT,
+            verified_at TIMESTAMPTZ,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+        """,
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_project_domains_hostname ON project_domains (hostname)",
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_project_domains_project ON project_domains (project_id)",
     ]
     with engine.begin() as conn:
         for sql in statements:

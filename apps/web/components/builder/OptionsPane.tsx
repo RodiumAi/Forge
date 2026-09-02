@@ -21,6 +21,7 @@ import { api, apiBase, getToken } from "@/lib/api";
 import { removeProject } from "@/lib/lists-cache";
 import { Icon } from "@/components/ui/icon";
 import { useI18n } from "@/lib/i18n/I18nProvider";
+import { CustomDomainSection } from "@/components/builder/CustomDomainSection";
 import { SeoOptionsSection } from "@/components/builder/SeoOptionsSection";
 import { sitesBaseDomain, sitesScheme, sitesUrlForSlug } from "@/lib/sites-url";
 
@@ -204,6 +205,14 @@ export function OptionsPane({
     setError(null);
   }
 
+  // Success feedback is a floating toast (auto-dismiss) — an inline message at
+  // the top of a long form goes unnoticed when the user is scrolled down.
+  useEffect(() => {
+    if (!message) return;
+    const timer = setTimeout(() => setMessage(null), 3500);
+    return () => clearTimeout(timer);
+  }, [message]);
+
   async function saveGeneral(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
@@ -367,7 +376,12 @@ export function OptionsPane({
         </header>
 
         {error && <p className="builder-pane-error">{error}</p>}
-        {message && <p className="builder-pane-ok">{message}</p>}
+        {message && (
+          <div className="options-toast" role="status" aria-live="polite">
+            <Icon icon={Save} className="ui-icon-sm" />
+            {message}
+          </div>
+        )}
 
         {section === "general" && (
           <form className="options-card" onSubmit={(e) => void saveGeneral(e)}>
@@ -483,6 +497,15 @@ export function OptionsPane({
                 </a>
               </div>
             )}
+
+            <CustomDomainSection
+              projectId={projectId}
+              onOk={flashOk}
+              onError={(msg) => {
+                setError(msg);
+                setMessage(null);
+              }}
+            />
 
             <div className="options-seo-block">
               <h4>{t("optionsExportTitle")}</h4>

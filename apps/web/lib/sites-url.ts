@@ -34,3 +34,16 @@ export function sitesHostLabel(slug: string): string {
   if (!normalized) return "";
   return `${normalized}.${sitesBaseDomain()}`;
 }
+
+/** Public URL for a project: validated custom domain wins, slug URL otherwise.
+ *  Mirrors API `sites_url_for_project()` — `ProjectOut.sites_url` already
+ *  carries this, use the helper only when composing from raw parts. */
+export function effectivePublicUrl(
+  slug: string,
+  customDomain?: { hostname: string; status: string } | null,
+): string {
+  if (customDomain && customDomain.status === "validated" && customDomain.hostname) {
+    return `https://${customDomain.hostname}`;
+  }
+  return sitesUrlForSlug(slug);
+}
