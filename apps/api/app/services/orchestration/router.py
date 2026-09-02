@@ -107,10 +107,10 @@ def classify_task(user_text: str) -> str:
 
 def route_task(task_class: str) -> Route:
     settings = get_settings()
-    lite = (settings.lite_model or "").strip() or "google/gemini-3.1-flash-lite"
-    flash = (settings.default_model or "").strip() or "google/gemini-3.7-flash"
-    image = (settings.default_image_model or "").strip() or "openai/gpt-image-2"
-    escalation = (settings.escalation_model or "").strip() or flash
+    lite = (settings.effective_lite_model or "").strip() or "google/gemini-3.7-flash"
+    flash = (settings.effective_default_model or "").strip() or "google/gemini-3.7-flash"
+    image = (settings.effective_default_image_model or "").strip() or "openai/gpt-image-2"
+    escalation = (settings.effective_escalation_model or "").strip() or flash
     if settings.enable_pro_escalation and task_class in (
         "code.scaffold",
         "code.edit.large",

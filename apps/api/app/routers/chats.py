@@ -539,13 +539,13 @@ async def send_message(
                     user_id=user.id,
                     locale=locale,
                     auth=gen_auth,
-                    model=get_settings().default_model,
+                    model=get_settings().effective_default_model,
                 )
                 yield push_step("select_files", t("step_select_files", locale), "done")
                 yield push_step("generate", t("step_generate_code", locale), "running")
                 async for chunk in stream_chat_completion(
                     auth=gen_auth,
-                    model=get_settings().default_model,
+                    model=get_settings().effective_default_model,
                     messages=llm_messages,
                     locale=locale,  # type: ignore[arg-type]
                 ):
@@ -852,7 +852,7 @@ async def submit_clarify(
     run_id_str = str(run.id)
     run_prompt = run.prompt or ""
     run_task_class = run.task_class or "code.edit.medium"
-    run_model = run.model_slug or get_settings().default_model
+    run_model = run.model_slug or get_settings().effective_default_model
     clarify_json = run.clarify_json
     answers = body.answers or {}
     auto_exec = (run.mode or "agent") == "agent"
@@ -974,7 +974,7 @@ async def confirm_plan(
     answers = json.loads(run.answers_json) if run.answers_json else None
     questions = json.loads(run.clarify_json) if run.clarify_json else None
     answers_block = format_answers_for_prompt(answers, questions)
-    model = run.model_slug or get_settings().default_model
+    model = run.model_slug or get_settings().effective_default_model
     project_id_str = str(project.id)
     chat_id_pk = chat.id
 

@@ -136,6 +136,19 @@ class AgentRun(Base):
     )
 
 
+class ForgePlatformSettings(Base):
+    __tablename__ = "forge_platform_settings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
+    default_model: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    default_image_model: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    lite_model: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    escalation_model: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
 class ModelCatalog(Base):
     __tablename__ = "model_catalog"
 

@@ -46,3 +46,15 @@ def admin_delete_project(
             detail={"code": "forge_project_not_found", "message": "Project not found."},
         )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/platform-settings/env-defaults")
+def admin_platform_env_defaults(_: None = Depends(_require_admin_secret)) -> dict[str, str]:
+    """Env bootstrap defaults for RodiumAi admin (compare with DB overrides)."""
+    s = get_settings()
+    return {
+        "defaultModel": s.default_model,
+        "defaultImageModel": s.default_image_model,
+        "liteModel": s.lite_model,
+        "escalationModel": s.escalation_model,
+    }

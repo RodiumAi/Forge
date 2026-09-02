@@ -206,7 +206,7 @@ async def suggest_project_name(
         auth = await resolve_generation_auth(db, user)
         return await complete_chat(
             auth=auth,
-            model=settings.default_model,
+            model=settings.effective_default_model,
             messages=messages,
             locale=locale,
             temperature=0.2,

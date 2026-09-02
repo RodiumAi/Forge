@@ -25,7 +25,7 @@ router = APIRouter(prefix="/settings", tags=["settings"])
 def _get_or_create_settings(db: Session, user: User) -> UserSettings:
     settings_row = db.get(UserSettings, user.id)
     if settings_row is None:
-        settings_row = UserSettings(user_id=user.id, default_model=get_settings().default_model)
+        settings_row = UserSettings(user_id=user.id, default_model=get_settings().effective_default_model)
         db.add(settings_row)
         db.commit()
         db.refresh(settings_row)

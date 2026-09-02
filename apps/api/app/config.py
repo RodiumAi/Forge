@@ -46,16 +46,16 @@ class Settings(BaseSettings):
     # Forkable starter kits (Vite/React snapshots). Docker: /data/templates
     templates_root: str = "./data/templates"
     cors_origins: str = "http://localhost:3100,http://127.0.0.1:3100,http://localhost:8080"
-    # LLM models (override via .env — no slugs in router.py)
+    # LLM models (override via .env or the RodiumAi admin platform settings)
     # LITE_MODEL: small edits, classify, coherence
-    # DEFAULT_MODEL: scaffold, plan, medium/large edits, verify.repair
+    # DEFAULT_MODEL: sections, medium edits, verify.repair
+    # ESCALATION_MODEL: scaffold plans + large edits (strong instruction-following)
     # DEFAULT_IMAGE_MODEL: image generation
-    lite_model: str = "google/gemini-3.1-flash-lite"
+    lite_model: str = "google/gemini-3.7-flash"
     default_model: str = "google/gemini-3.7-flash"
     default_image_model: str = "openai/gpt-image-2"
-    enable_pro_escalation: bool = False
-    # Optional heavier model when enable_pro_escalation is true (future use).
-    escalation_model: str = "google/gemini-3.7-flash"
+    enable_pro_escalation: bool = True
+    escalation_model: str = "anthropic/claude-sonnet-4-6"
     access_token_expire_minutes: int = 60 * 24 * 7
     preview_port_start: int = 5200
     preview_port_end: int = 5299
@@ -191,6 +191,30 @@ class Settings(BaseSettings):
     @property
     def rodium_oidc_revoke_url(self) -> str:
         return self._rodium_oidc_server_base + "/api/v1/oauth/revoke"
+
+    @property
+    def effective_default_model(self) -> str:
+        from app.services.platform_settings import effective_model
+
+        return effective_model("default_model", self.default_model)
+
+    @property
+    def effective_default_image_model(self) -> str:
+        from app.services.platform_settings import effective_model
+
+        return effective_model("default_image_model", self.default_image_model)
+
+    @property
+    def effective_lite_model(self) -> str:
+        from app.services.platform_settings import effective_model
+
+        return effective_model("lite_model", self.lite_model)
+
+    @property
+    def effective_escalation_model(self) -> str:
+        from app.services.platform_settings import effective_model
+
+        return effective_model("escalation_model", self.escalation_model)
 
 
 _DEV_SECRET_KEYS = {"dev-secret-change-me", "dev-secret-forge-web", "", None}

@@ -28,7 +28,7 @@ async def generate_project_image(
     locale: str = "fr",
 ) -> dict:
     settings = get_settings()
-    model = model or settings.default_image_model
+    model = model or settings.effective_default_image_model
     payload = {
         "model": model,
         "prompt": prompt[:4000],

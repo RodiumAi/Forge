@@ -80,7 +80,7 @@ def _user_out(user: User) -> UserOut:
 def _get_or_create_settings(db: Session, user: User) -> UserSettings:
     row = db.get(UserSettings, user.id)
     if row is None:
-        row = UserSettings(user_id=user.id, default_model=get_settings().default_model)
+        row = UserSettings(user_id=user.id, default_model=get_settings().effective_default_model)
         db.add(row)
         db.commit()
         db.refresh(row)
@@ -200,7 +200,7 @@ async def rodium_oauth_callback(
         )
         db.add(user)
         db.flush()
-        db.add(UserSettings(user_id=user.id, default_model=get_settings().default_model))
+        db.add(UserSettings(user_id=user.id, default_model=get_settings().effective_default_model))
     else:
         user.rodium_sub = sub
         user.email = email
