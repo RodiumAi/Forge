@@ -6,6 +6,7 @@ import {
   FormEvent,
   useCallback,
   useEffect,
+  useId,
   useRef,
   useState,
 } from "react";
@@ -301,6 +302,7 @@ export default function ProjectPage() {
   const streamingRunIdRef = useRef<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputId = useId();
   const bootSentRef = useRef(false);
   const bootPromptRef = useRef<string | null>(initialBoot);
   const chatRetryRef = useRef<ChatRetryAction | null>(null);
@@ -798,13 +800,6 @@ export default function ProjectPage() {
     addFiles(list);
   }
 
-  function openFilePicker() {
-    const input = fileInputRef.current;
-    if (!input || composerInputLocked) return;
-    input.value = "";
-    input.click();
-  }
-
   function removeAttachment(id: string) {
     setAttachments((prev) => {
       const target = prev.find((item) => item.id === id);
@@ -1171,8 +1166,17 @@ export default function ProjectPage() {
           return prev.filter((a) => !(a.source === "local" && a.kind === "image"));
         });
         if (fileInputRef.current) fileInputRef.current.value = "";
+        // Show the SERVER error verbatim when there is one (S3 denied, quota,
+        // 503 object store…) — only true browser-level network failures get
+        // the generic "check your connection" fallback. friendlyStreamError
+        // would also swallow server messages containing "timeout".
+        const raw = err instanceof Error ? err.message : String(err || "");
+        const isBrowserNetworkFailure =
+          /failed to fetch|network request failed|networkerror|load failed/i.test(raw) || !raw.trim();
         pushChatError(
-          friendlyStreamError(err, t("attachmentUploadFailed"), t("rodiumSessionExpired")),
+          isBrowserNetworkFailure
+            ? t("attachmentUploadFailed")
+            : friendlyStreamError(err, raw, t("rodiumSessionExpired")),
           null,
         );
         return;
@@ -2020,6 +2024,7 @@ export default function ProjectPage() {
                       files never arrived — drag & drop worked fine). */}
                   <input
                     ref={fileInputRef}
+                    id={fileInputId}
                     type="file"
                     className="landing-import-input"
                     multiple
@@ -2027,14 +2032,14 @@ export default function ProjectPage() {
                     onChange={onFilesSelected}
                     tabIndex={-1}
                     aria-hidden
+                    disabled={composerInputLocked}
                   />
-                  <button
-                    type="button"
-                    className="builder-plus-label"
+                  <label
+                    htmlFor={composerInputLocked ? undefined : fileInputId}
+                    className={`builder-plus-label${composerInputLocked ? " is-disabled" : ""}`}
                     title={t("importHint")}
                     aria-label={t("importAria")}
-                    disabled={composerInputLocked}
-                    onClick={openFilePicker}
+                    aria-disabled={composerInputLocked}
                   >
                     <span className="builder-plus">
                       <Icon icon={Plus} className="ui-icon-md" />
@@ -2044,7 +2049,7 @@ export default function ProjectPage() {
                         </span>
                       ) : null}
                     </span>
-                  </button>
+                  </label>
                   {working ? (
                     <button
                       type="button"
