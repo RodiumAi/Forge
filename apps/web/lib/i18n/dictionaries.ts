@@ -144,6 +144,10 @@ export const dictionaries = {
     editProjectName: "Rename project",
     noChat: "No chat",
     streamError: "Connection interrupted. Try again · keep the request short if it fails again.",
+    imageTooLargeForAi:
+      "The mockup is too large to send. Forge will compress images automatically — retry, or attach a smaller screenshot.",
+    generationServiceError:
+      "Generation failed on our side. Wait a moment and retry your prompt.",
     rodiumSessionExpired:
       "RodiumAi session expired. Sign out, sign in with RodiumAi again, then retry your prompt.",
     previewFailed: "Preview failed",
@@ -689,6 +693,10 @@ export const dictionaries = {
     editProjectName: "Renommer le projet",
     noChat: "Aucun chat",
     streamError: "Connexion interrompue. Réessayez · raccourcissez la demande si ça échoue encore.",
+    imageTooLargeForAi:
+      "Le mockup est trop volumineux. Forge compresse les images automatiquement — réessayez ou joignez une capture plus petite.",
+    generationServiceError:
+      "La génération a échoué côté serveur. Patientez un instant puis relancez votre prompt.",
     rodiumSessionExpired:
       "Session RodiumAi expirée. Déconnectez-vous, reconnectez-vous avec RodiumAi, puis réessayez.",
     previewFailed: "Échec de la preview",

@@ -6,6 +6,7 @@ import {
   FormEvent,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -182,7 +183,12 @@ function dedupeMessages(msgs: Message[]): Message[] {
 }
 
 
-function friendlyStreamError(err: unknown, fallback: string, rodiumExpired: string): string {
+function friendlyStreamError(
+  err: unknown,
+  fallback: string,
+  rodiumExpired: string,
+  opts?: { imageTooLarge?: string; serviceError?: string },
+): string {
   const raw = err instanceof Error ? err.message : String(err || fallback);
   if (
     /failed to fetch|networkerror|network request failed|load failed|network error|incomplete chunked|peer closed connection|connection reset|timed out|timeout/i.test(
@@ -201,11 +207,44 @@ function friendlyStreamError(err: unknown, fallback: string, rodiumExpired: stri
   if (/invalid or unauthorized rodiumai key|clé rodiumai invalide/i.test(raw)) {
     return rodiumExpired;
   }
+  if (
+    /entity too large|payload_too_large|payloadtoolarge|too large to send|trop volumineuse/i.test(
+      raw,
+    )
+  ) {
+    return opts?.imageTooLarge ?? fallback;
+  }
+  if (
+    /rodiumai error \(500\)|internal_error|unexpected error occurred|erreur rodiumai \(500\)/i.test(
+      raw,
+    )
+  ) {
+    return opts?.serviceError ?? fallback;
+  }
+  if (/^rodiumai error \(\d+\):\s*\{/i.test(raw)) {
+    return opts?.serviceError ?? fallback;
+  }
   // Surface Rodium network codes as the friendly stream message.
   if (/rodiumai error \(network\)/i.test(raw)) {
     return fallback;
   }
   return raw || fallback;
+}
+
+function streamErrorLabels(t: (key: string) => string) {
+  return {
+    fallback: t("streamError"),
+    rodiumExpired: t("rodiumSessionExpired"),
+    imageTooLarge: t("imageTooLargeForAi"),
+    serviceError: t("generationServiceError"),
+  };
+}
+
+function formatStreamError(err: unknown, labels: ReturnType<typeof streamErrorLabels>): string {
+  return friendlyStreamError(err, labels.fallback, labels.rodiumExpired, {
+    imageTooLarge: labels.imageTooLarge,
+    serviceError: labels.serviceError,
+  });
 }
 
 /** Human label for the selection chip — never the raw CSS selector path.
@@ -226,6 +265,7 @@ export default function ProjectPage() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { t, locale } = useI18n();
+  const streamErrLabels = useMemo(() => streamErrorLabels(t), [t]);
 
   const initialUrl = parseBuilderUrlState(searchParams);
 
@@ -287,6 +327,7 @@ export default function ProjectPage() {
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
   const [clarifyQuestions, setClarifyQuestions] = useState<ClarifyQuestion[]>([]);
   const [planTasks, setPlanTasks] = useState<PlanTask[]>([]);
+  const [streamInlineError, setStreamInlineError] = useState<string | null>(null);
   const [planNeedsConfirm, setPlanNeedsConfirm] = useState(false);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
 
@@ -567,9 +608,20 @@ export default function ProjectPage() {
   const pushChatError = useCallback(
     (message: string, retry: ChatRetryAction | null = null) => {
       const text = message.trim() || t("streamError");
+      const inline =
+        busy ||
+        liveRef.current.planTasks.length > 0 ||
+        liveRef.current.steps.length > 0 ||
+        liveRef.current.clarify.length > 0;
       chatRetryRef.current = retry;
       setChatRetry(retry);
       setError(null);
+      if (inline) {
+        setStreamInlineError(text);
+        stickToBottomRef.current = true;
+        return;
+      }
+      setStreamInlineError(null);
       setMessages((prev) => {
         const withoutStale = prev.filter((m) => m.kind !== "error");
         return [
@@ -585,7 +637,7 @@ export default function ProjectPage() {
       });
       stickToBottomRef.current = true;
     },
-    [t],
+    [busy, t],
   );
 
   // Wire the preview hook's error channel now that pushChatError exists.
@@ -1027,7 +1079,7 @@ export default function ProjectPage() {
         });
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") return;
-        pushChatError(friendlyStreamError(err, t("streamError"), t("rodiumSessionExpired")), {
+        pushChatError(formatStreamError(err, streamErrLabels), {
           kind: "subscribe",
           runId,
         });
@@ -1040,7 +1092,7 @@ export default function ProjectPage() {
         void refreshRodiumWallet();
       }
     },
-    [chatId, handleStreamEvent, locale, projectId, pushChatError, seedStreamState, t],
+    [chatId, handleStreamEvent, locale, projectId, pushChatError, seedStreamState, streamErrLabels, t],
   );
 
   useEffect(() => {
@@ -1143,6 +1195,7 @@ export default function ProjectPage() {
     setStreamSteps([]);
     setStreamOps([]);
     setStreamEffort(null);
+    setStreamInlineError(null);
     setPlanTasks((prev) =>
       prev.map((task) => (task.status === "running" ? { ...task, status: "pending" } : task)),
     );
@@ -1217,6 +1270,7 @@ export default function ProjectPage() {
 
       setBusy(true);
       setError(null);
+      setStreamInlineError(null);
       setBootRetryPrompt(null);
       setMessages((prev) => prev.filter((m) => m.kind !== "error"));
       chatRetryRef.current = null;
@@ -1362,7 +1416,7 @@ export default function ProjectPage() {
               opts: { ...opts, skipUserBubble: true },
             };
         pushChatError(
-          friendlyStreamError(err, t("streamError"), t("rodiumSessionExpired")),
+          formatStreamError(err, streamErrLabels),
           retry,
         );
         setStreaming("");
@@ -1379,7 +1433,7 @@ export default function ProjectPage() {
         void refreshRodiumWallet();
       }
     },
-    [busy, chatId, editingMessageId, elementSelection, handleStreamEvent, locale, planMode, projectId, pushChatError, seedStreamState, t],
+    [busy, chatId, editingMessageId, elementSelection, handleStreamEvent, locale, planMode, projectId, pushChatError, seedStreamState, streamErrLabels, t],
   );
 
   const submitClarify = useCallback(
@@ -1413,7 +1467,7 @@ export default function ProjectPage() {
           });
         });
       } catch (err) {
-        pushChatError(friendlyStreamError(err, t("streamError"), t("rodiumSessionExpired")), {
+        pushChatError(formatStreamError(err, streamErrLabels), {
           kind: "clarify",
           answers,
         });
@@ -1431,6 +1485,7 @@ export default function ProjectPage() {
     setBusy(true);
     setPlanNeedsConfirm(false);
     setError(null);
+    setStreamInlineError(null);
     setPlanTasks((prev) => {
       if (!prev.length) return prev;
       const next = prev.map((task) =>
@@ -1492,7 +1547,7 @@ export default function ProjectPage() {
       if (err instanceof Error && err.name === "AbortError") {
         return;
       }
-      pushChatError(friendlyStreamError(err, t("streamError"), t("rodiumSessionExpired")), {
+      pushChatError(formatStreamError(err, streamErrLabels), {
         kind: "plan",
       });
       if (err instanceof Error && err.message === t("planInvalid")) {
@@ -1513,7 +1568,7 @@ export default function ProjectPage() {
       setBusy(false);
       void refreshRodiumWallet();
     }
-  }, [activeRunId, chatId, handleStreamEvent, locale, planTasks, projectId, pushChatError, seedStreamState, t]);
+  }, [activeRunId, chatId, handleStreamEvent, locale, planTasks, projectId, pushChatError, seedStreamState, streamErrLabels, t]);
 
   useEffect(() => {
     if (!chatId || loading || bootSentRef.current || bootInFlight.has(projectId)) return;
@@ -1623,7 +1678,8 @@ export default function ProjectPage() {
     Boolean(streaming) ||
     clarifyQuestions.length > 0 ||
     planTasks.length > 0 ||
-    streamSteps.length > 0;
+    streamSteps.length > 0 ||
+    Boolean(streamInlineError);
 
   return (
     <div className="builder">
@@ -1883,6 +1939,23 @@ export default function ProjectPage() {
                     onDismiss={() => void dismissPlan()}
                   />
                 )}
+                {streamInlineError ? (
+                  <div className="builder-msg-error-body">
+                    <p className="builder-msg-error-text">{streamInlineError}</p>
+                    {chatRetry ? (
+                      <div className="builder-msg-error-actions">
+                        <button
+                          type="button"
+                          className="builder-msg-error-retry"
+                          disabled={busy}
+                          onClick={() => void retryChatAction()}
+                        >
+                          {t("retryAction")}
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
                 {clarifyQuestions.length > 0 && (
                   <ClarifyCard
                     questions={clarifyQuestions}
