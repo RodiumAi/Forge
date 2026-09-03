@@ -199,6 +199,11 @@ html:has(.landing) {
   background: #050505;
 }
 
+[data-theme="light"] html:has(.landing),
+html[data-theme="light"]:has(.landing) {
+  background: #f6f3ee;
+}
+
 html:has(.landing) body {
   overflow: visible;
   min-height: 100%;
@@ -213,8 +218,61 @@ a {
 
 button,
 input,
-textarea {
+textarea,
+select {
   font: inherit;
+}
+
+/* Native select popups follow the effective color scheme; without explicit
+   option colors, Windows/Chromium could render a LIGHT popup while the page
+   passed down a near-white `color` — white-on-white options in dark mode. */
+select {
+  color-scheme: dark;
+}
+
+select option {
+  background: #141418;
+  color: #f3f3f3;
+}
+
+[data-theme="light"] select {
+  color-scheme: light;
+}
+
+[data-theme="light"] select option {
+  background: #ffffff;
+  color: #1c1917;
+}
+
+/* The builder is dark-only (no theme switch is rendered there): pin its
+   token set + color-scheme so a user arriving with data-theme="light" still
+   gets a coherent dark chrome instead of dark surfaces with black text. */
+.builder,
+.design-slideover-root,
+.builder select {
+  color-scheme: dark;
+}
+
+.builder {
+  --bg: #0a0a0a;
+  --fg: #ededed;
+  --muted: #9ca3af;
+  --border: #262626;
+  --home-input-bg: rgba(255, 255, 255, 0.06);
+  --home-text: #ededed;
+  --home-text-soft: #9ca3af;
+  --home-border: #262626;
+  --home-border-strong: #3f3f46;
+  --home-hover: rgba(255, 255, 255, 0.06);
+  --home-panel: #101010;
+  --home-chip: rgba(255, 255, 255, 0.05);
+  background: #0a0a0a;
+  color: var(--fg);
+}
+
+.builder select option {
+  background: #141418;
+  color: #f3f3f3;
 }
 
 .container {
