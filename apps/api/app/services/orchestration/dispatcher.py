@@ -201,6 +201,8 @@ async def _stream_verify_repair(
         surgical_edit=surgical_edit,
         focus_paths=focus_paths,
     )
+    if db is not None:
+        db.commit()  # release the pooled connection before the LLM stream
     current_auth = await resolve_auth() if resolve_auth else auth
     repair_buf: list[str] = []
     try:
@@ -339,6 +341,10 @@ async def run_plan_tasks(
             # from stale conversation memory.
             focus_paths=[str(f) for f in (task.get("files") or []) if isinstance(f, str)],
         )
+        # End the read transaction: the LLM stream below can run for minutes
+        # and must not pin a pooled DB connection the whole time.
+        if db is not None:
+            db.commit()
         yield push_step("select_files", t("step_select_files", locale), "done")
         yield push_step("generate", t("step_generate", locale), "running")
 

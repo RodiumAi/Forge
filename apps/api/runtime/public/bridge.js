@@ -633,6 +633,21 @@
     return false;
   }
 
+  /** Loose slug equality: exact, containment, or long-enough common prefix.
+   *  Bridges accents/plural/language drift between route slugs and nav labels
+   *  ("activities" route vs "Activités" label → activites, prefix "activit"). */
+  function slugsClose(a, b) {
+    if (!a || !b) return false;
+    if (a === b) return true;
+    if (a.length >= 4 && b.indexOf(a) === 0) return true;
+    if (b.length >= 4 && a.indexOf(b) === 0) return true;
+    var min = Math.min(a.length, b.length);
+    if (min < 4) return false;
+    var common = 0;
+    while (common < min && a.charAt(common) === b.charAt(common)) common++;
+    return common >= Math.max(4, Math.ceil(min * 0.7));
+  }
+
   function tryNavigateDedicatedPage(pageKey, normalized) {
     var keyLower = pageKey.toLowerCase();
     var forgePages = document.querySelectorAll("[data-forge-page]");
@@ -648,6 +663,19 @@
       }
     }
 
+    // Deterministic: anchors whose href targets the requested route
+    // ("/activities", "#/activities", "#activities").
+    var anchors = document.querySelectorAll("a[href]");
+    for (var h = 0; h < anchors.length; h++) {
+      var href = (anchors[h].getAttribute("href") || "").trim();
+      var hrefNorm = href.replace(/^#\/?/, "/").replace(/\/+$/, "") || "/";
+      if (hrefNorm === normalized) {
+        safeClick(anchors[h]);
+        reportPreviewPath(normalized);
+        return true;
+      }
+    }
+
     var container = findPageContainer(pageKey);
     if (container) {
       var clickable = container.querySelector("a, button, [role='button']");
@@ -657,16 +685,19 @@
       return true;
     }
 
-    // The #1 generated pattern: a nav control labeled exactly like the page
-    // ("Contact", "À propos"). Buttons drive setPage() state; anchors drive a
-    // router — safeClick blocks the native navigation that would leave
-    // /runner/ while letting SPA handlers run.
-    var navScopes = document.querySelectorAll("nav, header, [class*='nav']");
+    // The #1 generated pattern: a nav control labeled like the page
+    // ("Contact", "À propos", "Activités"). Buttons drive setPage() state;
+    // anchors drive a router — safeClick blocks native navigation. Dashboards
+    // put their nav in sidebars/menus, not only <nav>.
+    var navScopes = document.querySelectorAll(
+      "nav, header, aside, [role='navigation'], [class*='nav'], [class*='sidebar'], [class*='menu']",
+    );
+    var wantedSlug = pageKeySlug(pageKey);
     for (var s = 0; s < navScopes.length; s++) {
       var controls = navScopes[s].querySelectorAll("a, button, [role='button']");
       for (var c = 0; c < controls.length; c++) {
         var ctl = controls[c];
-        if (slugify(ctl.textContent) === pageKeySlug(pageKey)) {
+        if (slugsClose(slugify(ctl.textContent), wantedSlug)) {
           safeClick(ctl);
           reportPreviewPath(normalized);
           return true;
