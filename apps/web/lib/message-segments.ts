@@ -39,6 +39,20 @@ function pushText(out: MessageSegment[], buffer: string) {
   if (content) out.push({ kind: "text", content });
 }
 
+/** Drop a PARTIAL forge tag still streaming in at the end of the buffer —
+ *  otherwise the chat briefly shows raw `<forge-write path="…` as prose. */
+function trimPartialTag(buffer: string): string {
+  const lt = buffer.lastIndexOf("<");
+  if (lt === -1) return buffer;
+  const tail = buffer.slice(lt).toLowerCase();
+  if (tail.includes(">")) return buffer; // tag closed — the parser handles it
+  const tags = ["<forge-write", "</forge-write", "<forge-delete", "<forge"];
+  if (tags.some((tag) => tag.startsWith(tail) || tail.startsWith(tag))) {
+    return buffer.slice(0, lt);
+  }
+  return buffer;
+}
+
 export function splitMessageSegments(raw: string): MessageSegment[] {
   const out: MessageSegment[] = [];
   let rest = raw || "";
@@ -52,7 +66,7 @@ export function splitMessageSegments(raw: string): MessageSegment[] {
     const writeAt = write?.index ?? Infinity;
     const delAt = del?.index ?? Infinity;
     if (writeAt === Infinity && delAt === Infinity) {
-      text += rest;
+      text += trimPartialTag(rest);
       break;
     }
 
