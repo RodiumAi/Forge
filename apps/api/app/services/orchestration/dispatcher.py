@@ -414,6 +414,53 @@ async def run_plan_tasks(
         yield push_step("apply_writes", t("step_apply_writes", locale), "running")
         assistant_text = "".join(task_buf)
         writes, deletes = parse_forge_tags(assistant_text)
+
+        # Empty model response (upstream hiccup): retry the task once, then
+        # fail it honestly — a "done" task with zero writes silently skipped
+        # the work and the user believed it was applied. The final coherence
+        # pass is exempt: "nothing to fix" is a legitimate empty outcome.
+        if tid != "coherence" and not writes and not deletes and len(assistant_text.strip()) < 40:
+            yield push_step("generate", t("step_generate", locale), "running")
+            retry_buf: list[str] = []
+            try:
+                async for chunk in stream_chat_completion(
+                    auth=current_auth,
+                    model=model,
+                    messages=llm_messages,
+                    locale=locale,
+                ):
+                    if run_id and is_cancelled(run_id):
+                        task["status"] = "error"
+                        await emit_progress(idx)
+                        yield _sse({"type": "error", "message": "cancelled", "plan": tasks})
+                        return
+                    if chunk.kind == "thinking":
+                        thinking_parts.append(chunk.content)
+                        yield _sse({"type": "thinking", "delta": chunk.content})
+                    else:
+                        retry_buf.append(chunk.content)
+                        full.append(chunk.content)
+                        yield _sse({"type": "token", "content": chunk.content})
+            except Exception:
+                retry_buf = []
+            yield push_step("generate", t("step_generate", locale), "done")
+            if retry_buf:
+                assistant_text = "".join(retry_buf)
+                writes, deletes = parse_forge_tags(assistant_text)
+            if not writes and not deletes and len(assistant_text.strip()) < 40:
+                task["status"] = "error"
+                await emit_progress(idx)
+                yield push_step(f"task:{tid}", title, "error")
+                yield _sse({"type": "plan_task", "id": tid, "status": "error", "label": title})
+                yield _sse(
+                    {
+                        "type": "error",
+                        "message": t("empty_model_response", locale),
+                        "plan": tasks,
+                    }
+                )
+                return
+
         written, violations = await apply_validated_writes_async(
             project_id, writes, snapshot_label=f"before: {title}"
         )
