@@ -184,6 +184,9 @@ async def _iter_single_pass(
         model=model,
         surgical_edit=surgical_edit,
     )
+    # End the read transaction: the LLM stream below can run for minutes and
+    # must not pin a pooled DB connection the whole time.
+    db.commit()
     yield push_step("select_files", t("step_select_files", locale), "done")
     yield push_step("generate", t("step_generate_code", locale), "running")
 
@@ -243,6 +246,7 @@ async def _iter_single_pass(
             model=model,
             surgical_edit=surgical_edit,
         )
+        db.commit()
         empty_retry_full: list[str] = []
         try:
             async for chunk in stream_chat_completion(
@@ -298,6 +302,7 @@ async def _iter_single_pass(
             model=model,
             surgical_edit=surgical_edit,
         )
+        db.commit()
         retry_full: list[str] = []
         try:
             async for chunk in stream_chat_completion(
@@ -860,6 +865,8 @@ async def send_message(
             if needs_confirm:
                 return
             history = _history(db, chat_id_pk)
+            # Release the DB connection before relaying the whole run.
+            db.commit()
             spawn_plan_job(
                 run_id=run_pk,
                 user_id=user.id,
@@ -974,6 +981,8 @@ async def submit_clarify(
             history = _history(db, chat_id_pk)
             questions = json.loads(clarify_json) if clarify_json else None
             answers_block = format_answers_for_prompt(answers, questions)
+            # Release the DB connection before relaying the whole run.
+            db.commit()
             spawn_plan_job(
                 run_id=run_pk,
                 user_id=user.id,
@@ -1038,6 +1047,9 @@ async def confirm_plan(
 
     history = _history(db, chat_id_pk)
     user_id = user.id
+    # End the implicit read transaction and release the connection: the SSE
+    # relay below runs for the whole plan and must not pin the pool.
+    db.close()
 
     spawn_plan_job(
         run_id=run_pk,
@@ -1071,6 +1083,9 @@ async def stream_run_events(
     """Replay + live SSE for a background plan run (reconnect after refresh)."""
     locale = resolve_locale(request)
     _owned_run(db, user, project_id, chat_id, run_id, locale)
+    # The stream below can live for the whole run: release the DB connection
+    # NOW or every reconnect pins one until the pool is exhausted.
+    db.close()
     after = 0
     try:
         after = max(0, int(request.query_params.get("after") or 0))
@@ -1278,6 +1293,8 @@ async def branch_messages(
             if needs_confirm:
                 return
             history = _history(db, chat_id_pk)
+            # Release the DB connection before relaying the whole run.
+            db.commit()
             spawn_plan_job(
                 run_id=run_pk,
                 user_id=user.id,
