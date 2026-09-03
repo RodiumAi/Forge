@@ -7,7 +7,19 @@ from app.config import get_settings
 
 settings = get_settings()
 
-engine = create_engine(settings.database_url, pool_pre_ping=True)
+# Pool sized for an SSE-heavy API: streams + background plan jobs are long-
+# lived, and the default 5+10 pool exhausted under a single active plan run
+# (every request then failed with QueuePool timeout → "Network request failed"
+# cascades in the builder). Sessions must still release connections before
+# long awaits — see the `db.commit()` calls ahead of LLM streams.
+engine = create_engine(
+    settings.database_url,
+    pool_pre_ping=True,
+    pool_size=15,
+    max_overflow=25,
+    pool_timeout=10,
+    pool_recycle=1800,
+)
 # expire_on_commit=False avoids DetachedInstanceError when request-scoped
 # User/Settings objects are reused after commits (token refresh, streaming).
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, expire_on_commit=False, bind=engine)
