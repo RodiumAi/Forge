@@ -19,6 +19,8 @@ export type RefreshOptions = {
   remount?: boolean;
   /** Ask the server for a clean restart. */
   restart?: boolean;
+  /** Background-triggered refresh: never surface errors in the chat. */
+  quiet?: boolean;
 };
 
 type Params = {
@@ -49,6 +51,21 @@ export function usePreviewControl({ projectId, loading, onError, previewFailedLa
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const updatingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoStarted = useRef(false);
+  // Ref mirror so the debounced refresh reads the CURRENT url, not a stale closure.
+  const previewUrlRef = useRef<string | null>(null);
+  useEffect(() => {
+    previewUrlRef.current = previewUrl;
+  }, [previewUrl]);
+
+  /** Short "updating" flash after an optimistic in-place edit. */
+  const flashUpdating = useCallback((ms = 1200) => {
+    setPreviewUpdating(true);
+    if (updatingTimer.current) clearTimeout(updatingTimer.current);
+    updatingTimer.current = setTimeout(() => {
+      setPreviewUpdating(false);
+      updatingTimer.current = null;
+    }, ms);
+  }, []);
 
   const previewSrc = useMemo(
     () => buildPreviewSrc(previewUrl, previewKey, apiBase()),
@@ -57,20 +74,27 @@ export function usePreviewControl({ projectId, loading, onError, previewFailedLa
 
   const remount = useCallback(() => setPreviewKey((k) => k + 1), []);
 
-  const startPreview = useCallback(async () => {
-    setPreviewBusy(true);
-    try {
-      const status = await api<PreviewStatusResponse>(`/projects/${projectId}/preview/start`, {
-        method: "POST",
-      });
-      setPreviewUrl(status.runner_url || status.url);
-      remount();
-    } catch (err) {
-      onError(err instanceof Error ? err.message : previewFailedLabel);
-    } finally {
-      setPreviewBusy(false);
-    }
-  }, [onError, previewFailedLabel, projectId, remount]);
+  const startPreview = useCallback(
+    async (opts?: { quiet?: boolean }) => {
+      setPreviewBusy(true);
+      try {
+        const status = await api<PreviewStatusResponse>(`/projects/${projectId}/preview/start`, {
+          method: "POST",
+          timeoutMs: 45_000,
+        });
+        setPreviewUrl(status.runner_url || status.url);
+        remount();
+      } catch (err) {
+        // Background auto-starts (fired on agent file writes) must not spam
+        // the chat with "Request timed out after 90000ms" while the backend
+        // is busy generating.
+        if (!opts?.quiet) onError(err instanceof Error ? err.message : previewFailedLabel);
+      } finally {
+        setPreviewBusy(false);
+      }
+    },
+    [onError, previewFailedLabel, projectId, remount],
+  );
 
   const forcePreviewRefresh = useCallback(
     async (opts?: RefreshOptions) => {
@@ -86,27 +110,27 @@ export function usePreviewControl({ projectId, loading, onError, previewFailedLa
         try {
           const status = await api<PreviewStatusResponse>(
             `/projects/${projectId}/preview/restart`,
-            { method: "POST" },
+            { method: "POST", timeoutMs: 45_000 },
           );
           if (status.url) setPreviewUrl(status.runner_url || status.url);
           if (shouldRemount) remount();
         } catch (err) {
           // Fall back to a plain start if restart is unavailable.
-          await startPreview();
+          await startPreview({ quiet: opts?.quiet });
           if (shouldRemount) remount();
-          onError(err instanceof Error ? err.message : previewFailedLabel);
+          if (!opts?.quiet) onError(err instanceof Error ? err.message : previewFailedLabel);
         }
       } else if (opts?.softStart) {
         try {
           const status = await api<PreviewStatusResponse>(`/projects/${projectId}/preview`);
           if (!status.running || !status.url) {
-            await startPreview();
+            await startPreview({ quiet: opts?.quiet });
           } else {
             setPreviewUrl(status.runner_url || status.url);
             if (shouldRemount) remount();
           }
         } catch {
-          await startPreview();
+          await startPreview({ quiet: opts?.quiet });
         }
       } else if (shouldRemount) {
         remount();
@@ -120,24 +144,22 @@ export function usePreviewControl({ projectId, loading, onError, previewFailedLa
     [onError, previewFailedLabel, projectId, remount, startPreview],
   );
 
-  /** Debounced restart, so a burst of agent writes triggers a single reload. */
+  /** Debounced SOFT refresh during agent runs: re-push the source bundle into
+   *  the already-loaded runner (no server restart, no iframe reload — the old
+   *  restart-per-burst made the screen flicker for the whole run). Falls back
+   *  to a quiet start when the preview is not up yet. */
   const schedulePreviewRefresh = useCallback(() => {
     if (refreshTimer.current) clearTimeout(refreshTimer.current);
     refreshTimer.current = setTimeout(() => {
       refreshTimer.current = null;
-      void forcePreviewRefresh({ restart: true });
-    }, 900);
-  }, [forcePreviewRefresh]);
-
-  /** Short "updating" flash after an optimistic in-place edit. */
-  const flashUpdating = useCallback((ms = 1200) => {
-    setPreviewUpdating(true);
-    if (updatingTimer.current) clearTimeout(updatingTimer.current);
-    updatingTimer.current = setTimeout(() => {
-      setPreviewUpdating(false);
-      updatingTimer.current = null;
-    }, ms);
-  }, []);
+      if (previewUrlRef.current) {
+        setRenderNonce((n) => n + 1);
+        flashUpdating();
+      } else {
+        void forcePreviewRefresh({ softStart: true, quiet: true });
+      }
+    }, 1200);
+  }, [flashUpdating, forcePreviewRefresh]);
 
   /** Soft sync after a visual edit: re-push the bundle, keep the iframe alive. */
   const repushPreview = useCallback(() => {

@@ -49,3 +49,16 @@ task-definition-deploy.json
 /scripts/
 
 
+
+# Secrets & credentials � never commit
+*.pem
+*.key
+*.p12
+*.pfx
+.env.*
+!.env.example
+!*.env.example
+!.env.ecs.example
+*.tfstate
+*.tfstate.backup
+!.env.production.example

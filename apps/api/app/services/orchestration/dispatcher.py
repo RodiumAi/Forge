@@ -432,6 +432,11 @@ async def run_plan_tasks(
         await emit_progress(idx)
         yield push_step(f"task:{tid}", title, "done")
         yield _sse({"type": "plan_task", "id": tid, "status": "done", "label": title})
+        # One preview refresh per completed task (not per file write): the
+        # client used to reload the iframe on every write, which flickered
+        # non-stop during multi-task plans.
+        if written:
+            yield _sse({"type": "preview_refresh"})
 
         # Mid-plan CSS/build check — catch orphan classes before the next rewrite.
         if len(tasks) >= 2 and tid != "coherence":
