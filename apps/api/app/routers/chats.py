@@ -222,6 +222,62 @@ async def _iter_single_pass(
     yield push_step("apply_writes", t("step_apply_writes", locale), "running")
     writes, deletes = parse_forge_tags("".join(full))
 
+    # Empty/near-empty model response (transient upstream hiccup): retry once,
+    # then fail HONESTLY. Reporting "Here is what was put in place" with zero
+    # writes made users believe the edit happened.
+    if not writes and not deletes and len("".join(full).strip()) < 40:
+        yield push_step("generate", t("step_generate_code", locale), "running")
+        nudge = (
+            "Your previous response was empty. Implement the user's request NOW "
+            "using forge-write tags with full file contents. Do not answer with prose only.\n\n"
+            f"User request:\n{user_content}"
+        )
+        empty_retry_messages = await build_llm_messages(
+            project_id=project_id_str,
+            history=[*history, ("user", user_content), ("user", nudge)],
+            user_query=nudge,
+            db=db,
+            user_id=user_id,
+            locale=locale,
+            auth=auth,
+            model=model,
+            surgical_edit=surgical_edit,
+        )
+        empty_retry_full: list[str] = []
+        try:
+            async for chunk in stream_chat_completion(
+                auth=auth,
+                model=model,
+                messages=empty_retry_messages,
+                locale=locale,  # type: ignore[arg-type]
+            ):
+                if is_cancelled(run_id_str):
+                    yield push_step("generate", t("step_generate_code", locale), "error")
+                    yield _sse({"type": "error", "message": "cancelled"})
+                    return
+                if chunk.kind == "thinking":
+                    thinking_parts.append(chunk.content)
+                    yield _sse({"type": "thinking", "delta": chunk.content})
+                else:
+                    empty_retry_full.append(chunk.content)
+                    yield _sse({"type": "token", "content": chunk.content})
+        except RodiumError as exc:
+            yield push_step("generate", t("step_generate_code", locale), "error")
+            yield _sse({"type": "error", "message": str(exc)})
+            return
+        if empty_retry_full:
+            full = empty_retry_full
+            writes, deletes = parse_forge_tags("".join(full))
+        yield push_step("generate", t("step_generate_code", locale), "done")
+        if not writes and not deletes and len("".join(full).strip()) < 40:
+            yield push_step("apply_writes", t("step_apply_writes", locale), "error")
+            yield _sse({"type": "error", "message": t("empty_model_response", locale)})
+            live = db.get(AgentRun, run_pk)
+            if live is not None:
+                live.status = "error"
+                db.commit()
+            return
+
     required_urls = [img.url for img in extract_image_urls(user_content) if img.url.startswith("http")]
     if required_urls and not any(any(url in op.content for op in writes) for url in required_urls):
         retry_prompt = (
