@@ -253,6 +253,16 @@ function formatStreamError(err: unknown, labels: ReturnType<typeof streamErrorLa
   });
 }
 
+/** Network-level stream failure (drop, reset, proxy timeout) — worth an
+ *  automatic reconnect to the run's buffered event stream instead of an
+ *  error bubble that resets the whole plan UI. */
+function isNetworkStreamError(err: unknown): boolean {
+  const raw = err instanceof Error ? err.message : String(err || "");
+  return /failed to fetch|networkerror|network request failed|load failed|timed out|timeout|incomplete chunked|peer closed connection|connection reset|err_network|aborted/i.test(
+    raw,
+  );
+}
+
 /** Human label for the selection chip — never the raw CSS selector path.
  *  Prefers #id, then tag + a short text excerpt (e.g. `nav · “PromptVault”`). */
 function selectionChipLabel(sel: ElementSelection): string {
@@ -701,7 +711,7 @@ export default function ProjectPage() {
           sawRemoteRun = false;
           setFilesRevision((rev) => rev + 1);
           void refreshRoutes();
-          void forcePreviewRefresh({ softStart: true, remount: true });
+          void forcePreviewRefresh({ softStart: true, remount: true, quiet: true });
         }
       } catch {
         /* transient — next tick retries */
@@ -942,7 +952,7 @@ export default function ProjectPage() {
             schedulePreviewRefresh();
             break;
           case "ensure-preview-started":
-            if (!previewUrl && !previewBusy) void startPreview();
+            if (!previewUrl && !previewBusy) void startPreview({ quiet: true });
             break;
           case "cancelled":
             break;
@@ -989,7 +999,7 @@ export default function ProjectPage() {
             });
             setStreamSummary("");
             if (applied) {
-              void forcePreviewRefresh({ restart: true });
+              void forcePreviewRefresh({ restart: true, quiet: true });
               setMainMode("preview");
               setMobilePane("workspace");
               setPreviewTool(null);
@@ -1030,59 +1040,85 @@ export default function ProjectPage() {
       streamingRunIdRef.current = runId;
       setBusy(true);
       setError(null);
+      // Reconnect support: the backend buffers run events and replays them
+      // from `?after=N`. On a network drop we resume from the cursor instead
+      // of surfacing an error and resetting the plan UI.
+      let seen = 0;
+      let attempts = 0;
+      let sawTerminal = false;
+      let detached = false;
       try {
-        const res = await fetch(
-          `${apiBase()}/projects/${projectId}/chats/${chatId}/runs/${runId}/events`,
-          {
-            method: "GET",
-            signal: abortCtrl.signal,
-            headers: {
-              Authorization: `Bearer ${getToken()}`,
-              "Accept-Language": locale,
-              Accept: "text/event-stream",
-            },
-          },
-        );
-        if (!res.ok || !res.body) {
-          throw new Error(res.statusText || t("streamError"));
-        }
         const stateRef = seedStreamState();
         setStreamActive(true);
-        await readSseStream(res, async (payloadEvent) => {
-          if (
-            String(payloadEvent.type || "") === "error" &&
-            String(payloadEvent.message || "") === "run_detached"
-          ) {
-            try {
-              const active = await api<{
-                id: string;
-                status: string;
-                plan: PlanTask[];
-              } | null>(`/projects/${projectId}/chats/${chatId}/runs/active`);
-              if (!active?.id || !Array.isArray(active.plan) || !active.plan.length) {
-                setPlanTasks([]);
-                setPlanNeedsConfirm(false);
-                setBusy(false);
+        while (!sawTerminal && !detached) {
+          try {
+            const res = await fetch(
+              `${apiBase()}/projects/${projectId}/chats/${chatId}/runs/${runId}/events?after=${seen}`,
+              {
+                method: "GET",
+                signal: abortCtrl.signal,
+                headers: {
+                  Authorization: `Bearer ${getToken()}`,
+                  "Accept-Language": locale,
+                  Accept: "text/event-stream",
+                },
+              },
+            );
+            if (!res.ok || !res.body) {
+              throw new Error(res.statusText || t("streamError"));
+            }
+            await readSseStream(res, async (payloadEvent) => {
+              const type = String(payloadEvent.type || "");
+              if (type === "error" && String(payloadEvent.message || "") === "run_detached") {
+                // Synthetic marker from the server poll loop — not a buffered
+                // run event, so it must NOT advance the cursor.
+                detached = true;
+                try {
+                  const active = await api<{
+                    id: string;
+                    status: string;
+                    plan: PlanTask[];
+                  } | null>(`/projects/${projectId}/chats/${chatId}/runs/active`);
+                  if (!active?.id || !Array.isArray(active.plan) || !active.plan.length) {
+                    setPlanTasks([]);
+                    setPlanNeedsConfirm(false);
+                    setBusy(false);
+                    return;
+                  }
+                  const mapped = mapActivePlanTasks(active.plan);
+                  const doneCount = mapped.filter((task) => task.status === "done").length;
+                  const partialProgress = doneCount > 0 && doneCount < mapped.length;
+                  setPlanTasks(mapped);
+                  setPlanNeedsConfirm(active.status === "awaiting_plan_confirm" && !partialProgress);
+                  setBusy(active.status === "running");
+                } catch {
+                  setPlanNeedsConfirm(true);
+                  setBusy(false);
+                }
                 return;
               }
-              const mapped = mapActivePlanTasks(active.plan);
-              const doneCount = mapped.filter((task) => task.status === "done").length;
-              const partialProgress = doneCount > 0 && doneCount < mapped.length;
-              setPlanTasks(mapped);
-              setPlanNeedsConfirm(active.status === "awaiting_plan_confirm" && !partialProgress);
-              setBusy(active.status === "running");
-            } catch {
-              setPlanNeedsConfirm(true);
-              setBusy(false);
+              seen += 1;
+              attempts = 0;
+              if (type === "done" || type === "error") sawTerminal = true;
+              handleStreamEvent(payloadEvent, {
+                stateRef,
+                userPayload: "",
+                clearBootOnce: () => undefined,
+              });
+            });
+            // Stream closed cleanly without a terminal event (proxy idle
+            // cut...): reconnect from the cursor like a network error.
+            if (!sawTerminal && !detached) throw new Error("stream ended early");
+          } catch (err) {
+            if (abortCtrl.signal.aborted || (err instanceof Error && err.name === "AbortError")) {
+              return;
             }
-            return;
+            attempts += 1;
+            if (attempts > 5) throw err;
+            await new Promise((resolve) => setTimeout(resolve, Math.min(8_000, 500 * 2 ** attempts)));
+            if (abortCtrl.signal.aborted) return;
           }
-          handleStreamEvent(payloadEvent, {
-            stateRef,
-            userPayload: "",
-            clearBootOnce: () => undefined,
-          });
-        });
+        }
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") return;
         pushChatError(formatStreamError(err, streamErrLabels), {
@@ -1410,6 +1446,13 @@ export default function ProjectPage() {
         if (err instanceof Error && err.name === "AbortError") {
           return;
         }
+        // Network drop mid-run: the backend keeps executing and buffers every
+        // event — reattach to the run stream instead of erroring + resetting.
+        const dropRunId = streamingRunIdRef.current;
+        if (dropRunId && isNetworkStreamError(err)) {
+          await subscribeRunEvents(dropRunId);
+          return;
+        }
         if (opts.bootKey) {
           setBootRetryPrompt(payload);
         }
@@ -1439,7 +1482,7 @@ export default function ProjectPage() {
         void refreshRodiumWallet();
       }
     },
-    [busy, chatId, editingMessageId, elementSelection, handleStreamEvent, locale, planMode, projectId, pushChatError, seedStreamState, streamErrLabels, t],
+    [busy, chatId, editingMessageId, elementSelection, handleStreamEvent, locale, planMode, projectId, pushChatError, seedStreamState, streamErrLabels, subscribeRunEvents, t],
   );
 
   const submitClarify = useCallback(
@@ -1553,6 +1596,13 @@ export default function ProjectPage() {
       if (err instanceof Error && err.name === "AbortError") {
         return;
       }
+      // Network drop mid-plan: the run keeps going server-side — reattach to
+      // the buffered event stream instead of flipping tasks back to pending.
+      const dropRunId = streamingRunIdRef.current || activeRunId;
+      if (dropRunId && isNetworkStreamError(err)) {
+        await subscribeRunEvents(dropRunId);
+        return;
+      }
       pushChatError(formatStreamError(err, streamErrLabels), {
         kind: "plan",
       });
@@ -1574,7 +1624,7 @@ export default function ProjectPage() {
       setBusy(false);
       void refreshRodiumWallet();
     }
-  }, [activeRunId, chatId, handleStreamEvent, locale, planTasks, projectId, pushChatError, seedStreamState, streamErrLabels, t]);
+  }, [activeRunId, chatId, handleStreamEvent, locale, planTasks, projectId, pushChatError, seedStreamState, streamErrLabels, subscribeRunEvents, t]);
 
   useEffect(() => {
     if (!chatId || loading || bootSentRef.current || bootInFlight.has(projectId)) return;
@@ -1732,7 +1782,7 @@ export default function ProjectPage() {
           if (mode !== "preview") setPreviewTool(null);
           syncBuilderUrl({ mainMode: mode, mobilePane: "workspace", previewTool: nextTool });
           if (mode === "preview") {
-            void forcePreviewRefresh({ softStart: true, remount: false });
+            void forcePreviewRefresh({ softStart: true, remount: false, quiet: true });
           }
         }}
         viewport={viewport}

@@ -146,16 +146,19 @@ describe("file operations", () => {
     expect(state.ops[0].taskId).toBeUndefined();
   });
 
-  it("asks to refresh routes and start the preview only on writes", () => {
+  it("asks to refresh routes and start the preview only on writes — never a preview refresh per file", () => {
     const write = reduceStreamEvent(initialStreamState(), { type: "file_write", path: "a" }, OPTS);
     expect(kinds(write.effects)).toEqual([
-      "schedule-preview-refresh",
       "refresh-routes",
       "ensure-preview-started",
     ]);
 
     const del = reduceStreamEvent(initialStreamState(), { type: "file_delete", path: "a" }, OPTS);
-    expect(kinds(del.effects)).toEqual(["schedule-preview-refresh"]);
+    expect(kinds(del.effects)).toEqual([]);
+
+    // Preview refreshes are driven by explicit dispatcher events only.
+    const refresh = reduceStreamEvent(initialStreamState(), { type: "preview_refresh" }, OPTS);
+    expect(kinds(refresh.effects)).toEqual(["schedule-preview-refresh"]);
   });
 });
 
