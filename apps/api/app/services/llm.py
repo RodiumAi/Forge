@@ -81,6 +81,9 @@ def _raise_rodium_error(response: httpx.Response, locale: Locale) -> None:
     if response.status_code == 402 or "quota" in text.lower() or "balance" in text.lower():
         raise RodiumError(t("rodium_quota", locale), response.status_code)
 
+    if response.status_code == 413 or "entity too large" in lower or "payload_too_large" in lower:
+        raise RodiumError(t("rodium_payload_too_large", locale), 413)
+
     raise RodiumError(
         t("rodium_error", locale, code=response.status_code, body=text),
         response.status_code,

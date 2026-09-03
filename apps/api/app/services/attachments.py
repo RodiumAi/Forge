@@ -6,10 +6,12 @@ import base64
 import contextlib
 import re
 from dataclasses import dataclass
+from io import BytesIO
 from typing import Any
 from uuid import UUID
 
 import httpx
+from PIL import Image
 from sqlalchemy.orm import Session
 
 from app.models import StoredObject
@@ -57,6 +59,63 @@ ASSET_VISION_INSTRUCTION = (
 
 MAX_VISION_IMAGES = 5
 MAX_IMAGE_BYTES = 8 * 1024 * 1024
+# Rodium Nest JSON body limit is ~12 MB; base64 adds ~33%. Keep each vision
+# frame under ~1 MB binary so chat/completions stays well below the cap.
+MAX_VISION_BINARY_BYTES = 900_000
+MAX_VISION_DIMENSION_PX = 1920
+
+
+def normalize_vision_image(body: bytes, ctype: str) -> tuple[bytes, str]:
+    """Downscale/compress reference mockups before embedding as data: URLs."""
+    if not body or "svg" in (ctype or "").lower():
+        return body, ctype
+    if len(body) <= MAX_VISION_BINARY_BYTES:
+        try:
+            with Image.open(BytesIO(body)) as probe:
+                w, h = probe.size
+            if max(w, h) <= MAX_VISION_DIMENSION_PX:
+                return body, ctype
+        except Exception:
+            return body, ctype
+
+    try:
+        img = Image.open(BytesIO(body))
+        img.load()
+    except Exception:
+        return body, ctype
+
+    w, h = img.size
+    scale = min(1.0, MAX_VISION_DIMENSION_PX / max(w, h, 1))
+    if scale < 1.0:
+        img = img.resize((max(1, int(w * scale)), max(1, int(h * scale))), Image.Resampling.LANCZOS)
+
+    if img.mode in ("RGBA", "LA", "P"):
+        base = Image.new("RGB", img.size, (255, 255, 255))
+        layer = img.convert("RGBA") if img.mode == "P" else img
+        base.paste(layer, mask=layer.split()[-1])
+        img = base
+    elif img.mode != "RGB":
+        img = img.convert("RGB")
+
+    quality = 85
+    while quality >= 55:
+        buf = BytesIO()
+        img.save(buf, format="JPEG", quality=quality, optimize=True)
+        out = buf.getvalue()
+        if len(out) <= MAX_VISION_BINARY_BYTES:
+            return out, "image/jpeg"
+        quality -= 10
+
+    smaller = img.resize((max(1, img.width * 3 // 4), max(1, img.height * 3 // 4)), Image.Resampling.LANCZOS)
+    buf = BytesIO()
+    smaller.save(buf, format="JPEG", quality=68, optimize=True)
+    return buf.getvalue(), "image/jpeg"
+
+
+def _vision_data_url(body: bytes, ctype: str) -> str:
+    normalized, norm_type = normalize_vision_image(body, ctype)
+    b64 = base64.b64encode(normalized).decode("ascii")
+    return f"data:{norm_type};base64,{b64}"
 
 
 @dataclass
@@ -198,10 +257,9 @@ async def resolve_image_part(
             body, ctype, name = stored
             if "svg" in ctype:
                 return {"type": "text", "text": f"[Attached image {name}]"}
-            b64 = base64.b64encode(body).decode("ascii")
             return {
                 "type": "image_url",
-                "image_url": {"url": f"data:{ctype};base64,{b64}"},
+                "image_url": {"url": _vision_data_url(body, ctype)},
             }
 
     url = (resolved.url or "").strip()
@@ -214,10 +272,9 @@ async def resolve_image_part(
             body, ctype = fetched
             if "svg" in ctype:
                 return {"type": "text", "text": f"[Attached image {resolved.name}: {url}]"}
-            b64 = base64.b64encode(body).decode("ascii")
             return {
                 "type": "image_url",
-                "image_url": {"url": f"data:{ctype};base64,{b64}"},
+                "image_url": {"url": _vision_data_url(body, ctype)},
             }
         return {"type": "text", "text": f"[Attached image {resolved.name}: {url}]"}
 
@@ -227,10 +284,9 @@ async def resolve_image_part(
             body, ctype = local
             if "svg" in ctype:
                 return {"type": "text", "text": f"[Attached image {resolved.name}: {url}]"}
-            b64 = base64.b64encode(body).decode("ascii")
             return {
                 "type": "image_url",
-                "image_url": {"url": f"data:{ctype};base64,{b64}"},
+                "image_url": {"url": _vision_data_url(body, ctype)},
             }
 
     if db is not None:

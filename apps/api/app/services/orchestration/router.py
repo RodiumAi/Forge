@@ -124,6 +124,7 @@ def route_task(task_class: str) -> Route:
         "plan.scaffold": (flash, "primary"),
         "plan.feature": (flash, "primary"),
         "code.scaffold": (flash, "primary"),
+        "code.scaffold.with_vision": (flash, "primary"),
         "code.section": (flash, "primary"),
         "code.assemble": (lite, "lite"),
         "code.edit.small": (lite, "lite"),
@@ -150,7 +151,11 @@ def route_task(task_class: str) -> Route:
 
 
 def classify_and_route(user_text: str, *, force_scaffold: bool = False) -> Route:
-    text = strip_attachment_noise(user_text or "")
+    raw = user_text or ""
+    text = strip_attachment_noise(raw)
     if force_scaffold and text and not _IMAGE_GENERATE_RE.search(text):
+        if has_reference_attachments(raw) and extract_image_urls(raw):
+            # Mockup-driven first build: Gemini vision, not Claude escalation.
+            return route_task("code.scaffold.with_vision")
         return route_task("code.scaffold")
     return route_task(classify_task(user_text))
