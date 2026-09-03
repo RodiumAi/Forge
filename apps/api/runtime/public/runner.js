@@ -85,11 +85,80 @@ function getPreviewShellBase() {
   return "";
 }
 
-function injectRouterBasename(code) {
-  const base = getPreviewShellBase();
-  if (!base || !code.includes("BrowserRouter")) return code;
-  if (/\bbasename\s*[=:]/.test(code)) return code;
-  return code.replace(/<BrowserRouter(?![^>]*\bbasename\b)(\s|>)/g, `<BrowserRouter basename="${base}"$1`);
+function jsxHasBasenameAttr(attributes) {
+  return attributes.some(
+    (a) =>
+      a.type === "JSXAttribute" &&
+      a.name &&
+      a.name.type === "JSXIdentifier" &&
+      a.name.name === "basename",
+  );
+}
+
+function objectHasBasenameProperty(properties) {
+  return properties.some((p) => {
+    if (p.type !== "ObjectProperty") return false;
+    const key = p.key;
+    return (
+      (key.type === "Identifier" && key.name === "basename") ||
+      (key.type === "StringLiteral" && key.value === "basename")
+    );
+  });
+}
+
+/** Inject react-router basename so /projects/{id}/draft maps to app routes (/). */
+function basenamePreviewPlugin(_api, opts) {
+  const t = _api.types;
+  const base = opts.basename;
+  if (!base) return { visitor: {} };
+
+  function addBasenameAttr(path) {
+    if (jsxHasBasenameAttr(path.node.attributes)) return;
+    path.node.attributes.unshift(
+      t.jsxAttribute(t.jsxIdentifier("basename"), t.stringLiteral(base)),
+    );
+  }
+
+  function ensureBasenameOptions(args) {
+    let opts = args[1];
+    if (!opts) {
+      opts = t.objectExpression([]);
+      args.push(opts);
+    }
+    if (!t.isObjectExpression(opts) || objectHasBasenameProperty(opts.properties)) return;
+    opts.properties.unshift(
+      t.objectProperty(t.identifier("basename"), t.stringLiteral(base)),
+    );
+  }
+
+  return {
+    visitor: {
+      JSXOpeningElement(path) {
+        const name = path.node.name;
+        if (t.isJSXIdentifier(name) && name.name === "BrowserRouter") {
+          addBasenameAttr(path);
+          return;
+        }
+        if (
+          t.isJSXMemberExpression(name) &&
+          t.isJSXIdentifier(name.property) &&
+          name.property.name === "BrowserRouter"
+        ) {
+          addBasenameAttr(path);
+        }
+      },
+      CallExpression(path) {
+        const callee = path.node.callee;
+        if (!t.isIdentifier(callee) || callee.name !== "createBrowserRouter") return;
+        if (!path.node.arguments.length) return;
+        ensureBasenameOptions(path.node.arguments);
+      },
+    },
+  };
+}
+
+function needsRouterBasename(code) {
+  return code.includes("BrowserRouter") || code.includes("createBrowserRouter");
 }
 
 function resolveAssetUrl(src, assets) {
@@ -203,17 +272,22 @@ function collectImports(code) {
 
 function transform(code, path) {
   try {
+    const base = getPreviewShellBase();
+    const plugins = [];
+    if (base && needsRouterBasename(code)) {
+      plugins.push([basenamePreviewPlugin, { basename: base }]);
+    }
     const out = Babel.transform(code, {
       filename: path,
       presets: PRESETS,
+      plugins,
       sourceMaps: "inline",
       compact: false,
       configFile: false,
       babelrc: false,
     });
     const js = out.code || "";
-    const patched = injectRouterBasename(js);
-    return { code: patched, imports: collectImports(patched), error: null };
+    return { code: js, imports: collectImports(js), error: null };
   } catch (e) {
     return {
       code: "",
