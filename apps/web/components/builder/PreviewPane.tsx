@@ -120,6 +120,9 @@ export function PreviewPane({
   desiredToolRef.current = previewTool;
 
   const runnerReadyRef = useRef(false);
+  // True once the app mounted in the iframe: later runtime errors must not
+  // slam the blocking "Restart preview" overlay over a site that still works.
+  const appMountedRef = useRef(false);
   const [babelError, setBabelError] = useState<string | null>(null);
 
   // Babel runner: push source bundle into the iframe (origin = API).
@@ -170,16 +173,30 @@ export function PreviewPane({
         // App mounted — that says nothing about the visual-edit bridge, which
         // acknowledges separately via forge-tool-ack. Conflating the two showed
         // "click to edit" next to "bridge unavailable" at the same time.
+        appMountedRef.current = true;
         setLoadError(false);
         setBabelError(null);
       }
       if (data.type === "forge:transform-error" || data.type === "forge:error") {
-        setLoadError(true);
         const err = data.error && typeof data.error === "object" ? data.error : data;
+        const msg = typeof err.message === "string" ? err.message : "Preview error";
+        // Known-benign DOM noise (bridge/contentEditable vs React reconciliation,
+        // stale selectors): never block the preview for these.
+        const benign =
+          /removeChild|insertBefore|not a child of this node|is not a valid selector|ResizeObserver loop/i.test(
+            msg,
+          );
+        // Runtime error AFTER a successful mount: the site is still rendered —
+        // opening the same app in a new tab shows no blocking overlay either.
+        const afterMount = data.type === "forge:error" && appMountedRef.current;
+        if (benign || afterMount) {
+          console.debug("[forge] preview runtime error (non-blocking):", msg);
+          return;
+        }
+        setLoadError(true);
         const path = typeof err.path === "string" ? err.path : "";
         const line = err.line != null ? `:${err.line}` : "";
         const col = err.column != null ? `:${err.column}` : "";
-        const msg = typeof err.message === "string" ? err.message : "Preview error";
         const loc = path ? `${path}${line}${col}` : "";
         setBabelError(loc ? `${loc} — ${msg}` : msg);
       }
@@ -198,6 +215,7 @@ export function PreviewPane({
 
   useEffect(() => {
     setLoadError(false);
+    appMountedRef.current = false;
   }, [previewSrc]);
 
   function clearNavigateRetries() {

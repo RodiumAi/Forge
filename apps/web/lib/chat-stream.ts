@@ -207,7 +207,9 @@ export function reduceStreamEvent(
       taskId: next.currentTaskId || undefined,
     };
     next = { ...next, ops: [...next.ops, op], applied: true };
-    effects.push({ kind: "schedule-preview-refresh" });
+    // No preview refresh here: one refresh per WRITE caused an endless
+    // restart→remount→reload loop for the whole run. The dispatcher emits
+    // explicit `preview_refresh` events at task boundaries instead.
     if (type === "file_write") {
       effects.push({ kind: "refresh-routes" }, { kind: "ensure-preview-started" });
     }
