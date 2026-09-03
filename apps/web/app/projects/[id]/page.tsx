@@ -718,7 +718,12 @@ export default function ProjectPage() {
           const failedAt = failedSubscribesRef.current.get(active.id) || 0;
           if (
             active.status === "running" &&
+            // Re-check AFTER the await above: a local stream may have started
+            // while /runs/active was in flight. Subscribing here would abort
+            // it and desync busy/streamActive (flickering panel + unlocked
+            // composer while the plan runs).
             !streamAbortRef.current &&
+            !streamingRunIdRef.current &&
             Date.now() - failedAt > 60_000
           ) {
             void subscribeRunEventsRef.current?.(active.id);
@@ -1145,10 +1150,15 @@ export default function ProjectPage() {
         });
         setPlanNeedsConfirm(true);
       } finally {
-        if (streamAbortRef.current === abortCtrl) streamAbortRef.current = null;
-        if (streamingRunIdRef.current === runId) streamingRunIdRef.current = null;
-        setStreamActive(false);
-        setBusy(false);
+        // Ownership guard — a newer stream may have replaced this one.
+        if (streamAbortRef.current === abortCtrl) {
+          streamAbortRef.current = null;
+          setStreamActive(false);
+          setBusy(false);
+        }
+        if (streamingRunIdRef.current === runId && streamAbortRef.current === null) {
+          streamingRunIdRef.current = null;
+        }
         void refreshRodiumWallet();
       }
     },
@@ -1494,10 +1504,17 @@ export default function ProjectPage() {
         setStreamEffort(null);
         setClarifyQuestions([]);
       } finally {
-        streamAbortRef.current = null;
-        streamingRunIdRef.current = null;
-        setStreamActive(false);
-        setBusy(false);
+        // Only reset shared stream state if WE still own the stream: a
+        // reattach (poll / drop-fallback) may have replaced it, and blindly
+        // clearing busy/streamActive here unlocked the composer and showed
+        // "Resume plan" while the run was still streaming.
+        const ownsStream = streamAbortRef.current === abortCtrl;
+        if (ownsStream) {
+          streamAbortRef.current = null;
+          streamingRunIdRef.current = null;
+          setStreamActive(false);
+          setBusy(false);
+        }
         void refreshRodiumWallet();
       }
     },
@@ -1569,10 +1586,10 @@ export default function ProjectPage() {
       ...prev.filter((s) => s.id !== "plan-exec"),
       { id: "plan-exec", label: t("planStatusStarting"), status: "running" },
     ]);
+    streamAbortRef.current?.abort();
+    const abortCtrl = new AbortController();
+    streamAbortRef.current = abortCtrl;
     try {
-      streamAbortRef.current?.abort();
-      const abortCtrl = new AbortController();
-      streamAbortRef.current = abortCtrl;
       const res = await fetch(
         `${apiBase()}/projects/${projectId}/chats/${chatId}/runs/${activeRunId}/confirm-plan`,
         {
@@ -1652,9 +1669,12 @@ export default function ProjectPage() {
         );
       }
     } finally {
-      streamAbortRef.current = null;
-      setStreamActive(false);
-      setBusy(false);
+      // Ownership guard — a reattached stream may have replaced ours.
+      if (streamAbortRef.current === abortCtrl) {
+        streamAbortRef.current = null;
+        setStreamActive(false);
+        setBusy(false);
+      }
       void refreshRodiumWallet();
     }
   }, [activeRunId, chatId, handleStreamEvent, locale, planTasks, projectId, pushChatError, seedStreamState, streamErrLabels, subscribeRunEvents, t]);
