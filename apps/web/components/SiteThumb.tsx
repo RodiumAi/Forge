@@ -215,6 +215,17 @@ export function SiteThumb({
     };
   }, [frameSrc, visible, frameAllowed]);
 
+  // The compile slot exists to serialize BABEL COMPILATION, not display.
+  // Holding it while the card stays mounted meant only the FIRST card ever
+  // rendered — every other project sat on the gradient placeholder forever.
+  // Release as soon as this card is ready (mounted or grace timeout) so the
+  // next card can start compiling; the rendered iframe stays mounted.
+  useEffect(() => {
+    if (!frameReady || !slotHeldRef.current) return;
+    releaseDraftFrameSlot();
+    slotHeldRef.current = false;
+  }, [frameReady]);
+
   useEffect(() => {
     const el = shellRef.current;
     if (!el) return;
