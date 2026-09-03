@@ -32,9 +32,7 @@ def materialize_setup(project, monkeypatch):
 def test_materialize_asset_markers_rewrites_private_s3_url(materialize_setup):
     project, object_id = materialize_setup
     s3 = "https://rodiumai-forge-uploads-prod.s3.eu-west-1.amazonaws.com/forge/u/p/x-logo.png"
-    text = (
-        f"[Image attached: logo.png | url:{s3} | object:{object_id} | intent:asset]"
-    )
+    text = f"[Image attached: logo.png | url:{s3} | object:{object_id} | intent:asset]"
     out = materialize_asset_markers(object(), project, text)
     assert s3 not in out
     assert "/images/" in out
