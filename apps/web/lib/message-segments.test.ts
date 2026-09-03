@@ -82,6 +82,15 @@ describe("streaming", () => {
     expect(segments.every((s) => s.kind === "text")).toBe(true);
   });
 
+  it("never leaks a partial opening tag into the prose", () => {
+    for (const tail of ["<forge", "<forge-write", '<forge-write path="src/App.tsx', "</forge-write"]) {
+      const segments = splitMessageSegments(`Voici la suite\n${tail}`);
+      expect(segments).toEqual([{ kind: "text", content: "Voici la suite" }]);
+    }
+    // A real "<" in prose is untouched.
+    expect(splitMessageSegments("a < b")).toEqual([{ kind: "text", content: "a < b" }]);
+  });
+
   it("flips to complete once the closing tag arrives", () => {
     const open = splitMessageSegments('<forge-write path="a.ts">x');
     const closed = splitMessageSegments('<forge-write path="a.ts">x</forge-write>');
