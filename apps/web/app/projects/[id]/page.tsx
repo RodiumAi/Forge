@@ -356,6 +356,10 @@ export default function ProjectPage() {
   /** Runs the user explicitly stopped — ignore Firestore "running" echoes for these. */
   const ignoredRunIdsRef = useRef<Set<string>>(new Set());
   const streamingRunIdRef = useRef<string | null>(null);
+  /** Late-bound handle: the poll effect is declared before subscribeRunEvents. */
+  const subscribeRunEventsRef = useRef<((runId: string) => Promise<void>) | null>(null);
+  /** Run ids whose auto-reattach failed recently — cool-down before retrying. */
+  const failedSubscribesRef = useRef<Map<string, number>>(new Map());
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bootSentRef = useRef(false);
@@ -706,6 +710,19 @@ export default function ProjectPage() {
         if (active?.id && !ignoredRunIdsRef.current.has(active.id)) {
           sawRemoteRun = true;
           setActiveRunId(active.id);
+          // A run is EXECUTING but no local stream is attached (dropped SSE,
+          // other tab): reattach immediately. Without this the composer stayed
+          // editable and the panel showed "Resume plan" while the plan ran —
+          // and clicking Resume hit a 400 (run_invalid_state) that wiped the
+          // plan, flickering the whole panel.
+          const failedAt = failedSubscribesRef.current.get(active.id) || 0;
+          if (
+            active.status === "running" &&
+            !streamAbortRef.current &&
+            Date.now() - failedAt > 60_000
+          ) {
+            void subscribeRunEventsRef.current?.(active.id);
+          }
         } else if (sawRemoteRun) {
           // A run seen on a previous tick ended elsewhere: pick up its writes.
           sawRemoteRun = false;
@@ -1121,6 +1138,7 @@ export default function ProjectPage() {
         }
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") return;
+        failedSubscribesRef.current.set(runId, Date.now());
         pushChatError(formatStreamError(err, streamErrLabels), {
           kind: "subscribe",
           runId,
@@ -1136,6 +1154,7 @@ export default function ProjectPage() {
     },
     [chatId, handleStreamEvent, locale, projectId, pushChatError, seedStreamState, streamErrLabels, t],
   );
+  subscribeRunEventsRef.current = subscribeRunEvents;
 
   useEffect(() => {
     const rid = restoredBgRunRef.current;
@@ -1576,6 +1595,20 @@ export default function ProjectPage() {
           /* ignore */
         }
         if (res.status === 400) {
+          // "run_invalid_state" usually means the run is STILL EXECUTING and
+          // the UI simply lost its stream: reattach instead of wiping the
+          // plan (which flickered the panel and re-enabled the composer).
+          try {
+            const active = await api<{ id: string; status: string } | null>(
+              `/projects/${projectId}/chats/${chatId}/runs/active`,
+            );
+            if (active?.id && active.status === "running") {
+              await subscribeRunEvents(active.id);
+              return;
+            }
+          } catch {
+            /* fall through to the invalid-plan reset */
+          }
           setPlanTasks([]);
           setPlanNeedsConfirm(false);
           setActiveRunId(null);

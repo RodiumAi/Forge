@@ -204,7 +204,10 @@ export function PreviewPane({
 
     window.addEventListener("message", onMessage);
     const t = window.setTimeout(() => {
-      void pushRender(targetOrigin);
+      // Only push once the iframe actually loaded the runner: posting into a
+      // not-yet-navigated frame (about:blank inherits the parent origin)
+      // spammed "target origin does not match" console errors on every push.
+      if (runnerReadyRef.current) void pushRender(targetOrigin);
     }, 400);
     return () => {
       window.removeEventListener("message", onMessage);
@@ -216,6 +219,7 @@ export function PreviewPane({
   useEffect(() => {
     setLoadError(false);
     appMountedRef.current = false;
+    runnerReadyRef.current = false;
   }, [previewSrc]);
 
   function clearNavigateRetries() {
