@@ -29,6 +29,8 @@ router = APIRouter(tags=["preview"])
 _DRAFT_THUMB_CACHE: dict[str, tuple[float, str]] = {}
 _DRAFT_THUMB_TTL_S = 90.0
 _DRAFT_THUMB_CACHE_MAX = 40
+# Bump when runner shell / basename injection changes — avoids stale thumb HTML.
+_DRAFT_THUMB_CACHE_VERSION = 2
 
 
 class SourceBundle(BaseModel):
@@ -57,12 +59,16 @@ def _project_extra_imports(project_id: str) -> dict[str, str]:
         return {}
 
 
+def _draft_thumb_cache_key(project_id: str) -> str:
+    return f"{project_id}:v{_DRAFT_THUMB_CACHE_VERSION}"
+
+
 def _draft_thumb_cache_get(project_id: str) -> str | None:
-    row = _DRAFT_THUMB_CACHE.get(project_id)
+    row = _DRAFT_THUMB_CACHE.get(_draft_thumb_cache_key(project_id))
     if not row:
         return None
     if time.time() - row[0] > _DRAFT_THUMB_TTL_S:
-        _DRAFT_THUMB_CACHE.pop(project_id, None)
+        _DRAFT_THUMB_CACHE.pop(_draft_thumb_cache_key(project_id), None)
         return None
     return row[1]
 
@@ -70,7 +76,7 @@ def _draft_thumb_cache_get(project_id: str) -> str | None:
 def _draft_thumb_cache_set(project_id: str, html: str) -> None:
     if len(_DRAFT_THUMB_CACHE) >= _DRAFT_THUMB_CACHE_MAX:
         _DRAFT_THUMB_CACHE.pop(next(iter(_DRAFT_THUMB_CACHE)), None)
-    _DRAFT_THUMB_CACHE[project_id] = (time.time(), html)
+    _DRAFT_THUMB_CACHE[_draft_thumb_cache_key(project_id)] = (time.time(), html)
 
 
 def _status(project: Project, *, running: bool) -> PreviewStatus:
@@ -153,7 +159,9 @@ def draft_page(
     )
     if is_thumb:
         _draft_thumb_cache_set(pid, html)
-    return HTMLResponse(html, headers={"Cache-Control": "no-store" if not is_thumb else "private, max-age=60"})
+    return HTMLResponse(
+        html, headers={"Cache-Control": "no-store" if not is_thumb else "private, max-age=60"}
+    )
 
 
 @router.post("/projects/{project_id}/preview/start", response_model=PreviewStatus)
