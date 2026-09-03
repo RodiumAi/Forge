@@ -231,7 +231,13 @@ function friendlyStreamError(
   return raw || fallback;
 }
 
-function streamErrorLabels(t: (key: string) => string) {
+type StreamErrorKey =
+  | "streamError"
+  | "rodiumSessionExpired"
+  | "imageTooLargeForAi"
+  | "generationServiceError";
+
+function streamErrorLabels(t: (key: StreamErrorKey) => string) {
   return {
     fallback: t("streamError"),
     rodiumExpired: t("rodiumSessionExpired"),
