@@ -159,7 +159,9 @@ def draft_page(
     )
     if is_thumb:
         _draft_thumb_cache_set(pid, html)
-    return HTMLResponse(html, headers={"Cache-Control": "no-store" if not is_thumb else "private, max-age=60"})
+    return HTMLResponse(
+        html, headers={"Cache-Control": "no-store" if not is_thumb else "private, max-age=60"}
+    )
 
 
 @router.post("/projects/{project_id}/preview/start", response_model=PreviewStatus)
