@@ -643,7 +643,7 @@ export default function LandingPage() {
           </div>
           <div className="lp-footer-bottom">
             <ThemeSwitch />
-            <LocaleSwitch />
+            <LocaleSwitch className="locale-dropdown--up" />
           </div>
         </div>
       </footer>

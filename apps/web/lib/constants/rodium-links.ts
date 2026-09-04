@@ -1,5 +1,5 @@
 /** Official RodiumAI URLs — aligned with rodiumai_user social-links + legal routes. */
-export const RODIUM_SITE = "https://rodiumai.io" as const;
+export const RODIUM_SITE = "https://www.rodiumai.io" as const;
 
 export const SOCIAL_LINKS = {
   discord: "https://discord.gg/Av7J9GBJAJ",

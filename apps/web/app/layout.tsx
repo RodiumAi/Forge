@@ -6,6 +6,7 @@ import { PostHogPageView } from "@/components/posthog/PostHogPageView";
 import { PostHogProvider } from "@/components/posthog/PostHogProvider";
 import { appFonts } from "@/lib/fonts";
 import { I18nProvider } from "@/lib/i18n/I18nProvider";
+import { THEME_INIT_SCRIPT } from "@/lib/theme/init-script";
 import { ThemeProvider } from "@/lib/theme/ThemeProvider";
 import "highlight.js/styles/github-dark.css";
 import "./globals.css";
@@ -86,18 +87,17 @@ export const metadata: Metadata = {
   },
 };
 
-const themeInitScript = `(function(){try{var t=localStorage.getItem("forge_theme");document.documentElement.dataset.theme=t==="light"?"light":"dark";}catch(e){document.documentElement.dataset.theme="dark";}})();`;
-
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
+    // No data-theme here on purpose: the script below sets it before paint.
+    // Hardcoding "dark" made every light-mode user flash dark on each load.
     <html
       lang="fr"
       suppressHydrationWarning
-      data-theme="dark"
       className={appFonts.className}
     >
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         {/* Display serif for the hero tagline. Runtime <link> (not next/font):
             Docker builds run offline with FORGE_FONT_MODE=fallback, where a
             build-time font fetch would fail. */}

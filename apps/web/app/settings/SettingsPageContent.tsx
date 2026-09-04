@@ -36,7 +36,9 @@ export default function SettingsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t, locale } = useI18n();
-  const { theme, setTheme } = useTheme();
+  // Keyed off the preference, not the resolved theme: "System" must read as
+  // selected even though what's painted is light or dark.
+  const { preference, setPreference } = useTheme();
 
   const [section, setSection] = useState<SettingsSection>(() => parseSection(searchParams.get("tab")));
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -150,17 +152,27 @@ export default function SettingsPageContent() {
                 <div className="settings-theme-toggle" role="group" aria-label={t("settingsThemeLabel")}>
                   <button
                     type="button"
-                    className={theme === "dark" ? "active" : ""}
-                    onClick={() => setTheme("dark")}
+                    className={preference === "system" ? "active" : ""}
+                    aria-pressed={preference === "system"}
+                    onClick={() => setPreference("system")}
                   >
-                    {t("settingsThemeDark")}
+                    {t("settingsThemeSystem")}
                   </button>
                   <button
                     type="button"
-                    className={theme === "light" ? "active" : ""}
-                    onClick={() => setTheme("light")}
+                    className={preference === "light" ? "active" : ""}
+                    aria-pressed={preference === "light"}
+                    onClick={() => setPreference("light")}
                   >
                     {t("settingsThemeLight")}
+                  </button>
+                  <button
+                    type="button"
+                    className={preference === "dark" ? "active" : ""}
+                    aria-pressed={preference === "dark"}
+                    onClick={() => setPreference("dark")}
+                  >
+                    {t("settingsThemeDark")}
                   </button>
                 </div>
               </SettingsRow>
