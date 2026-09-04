@@ -9,10 +9,41 @@ export type UploadResponse = {
   public_path?: string;
 };
 
+/** Upload one file via XHR so we can report real progress (fetch can't). */
+function uploadWithProgress(
+  url: string,
+  fd: FormData,
+  locale: string,
+  onProgress?: (pct: number) => void,
+): Promise<{ status: number; body: string }> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", url);
+    xhr.setRequestHeader("Authorization", `Bearer ${getToken()}`);
+    xhr.setRequestHeader("Accept-Language", locale);
+    // A stalled upload used to hang sendMessage forever (input cleared,
+    // chip stuck, no error). Bound it so failures surface as chat errors.
+    xhr.timeout = 60_000;
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && onProgress) {
+        onProgress(Math.min(99, Math.round((e.loaded / e.total) * 100)));
+      }
+    };
+    xhr.onload = () => {
+      onProgress?.(100);
+      resolve({ status: xhr.status, body: xhr.responseText });
+    };
+    xhr.onerror = () => reject(new Error("network"));
+    xhr.ontimeout = () => reject(new Error("Upload timed out"));
+    xhr.send(fd);
+  });
+}
+
 export async function uploadPromptAttachments(
   projectId: string,
   attachments: import("@/lib/prompt-attachments").PromptAttachment[],
   locale: string,
+  onProgress?: (attachmentId: string, pct: number) => void,
 ): Promise<import("@/lib/prompt-attachments").PromptAttachment[]> {
   const out: import("@/lib/prompt-attachments").PromptAttachment[] = [];
   for (const item of attachments) {
@@ -26,29 +57,19 @@ export async function uploadPromptAttachments(
     }
     const fd = new FormData();
     fd.append("file", item.file);
-    const doUpload = () =>
-      fetch(`${apiBase()}/projects/${projectId}/files/upload`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${getToken()}`,
-          "Accept-Language": locale,
-        },
-        body: fd,
-        // A stalled upload used to hang sendMessage forever (input cleared,
-        // chip stuck, no error). Bound it so failures surface as chat errors.
-        signal: AbortSignal.timeout(60_000),
-      });
-    let res: Response;
+    const uploadUrl = `${apiBase()}/projects/${projectId}/files/upload`;
+    const report = (pct: number) => onProgress?.(item.id, pct);
+    let res: { status: number; body: string };
     try {
-      res = await doUpload();
+      res = await uploadWithProgress(uploadUrl, fd, locale, report);
     } catch {
       // Transient network failure ("Failed to fetch") — retry once.
       await new Promise((resolve) => setTimeout(resolve, 800));
-      res = await doUpload();
+      res = await uploadWithProgress(uploadUrl, fd, locale, report);
     }
-    if (!res.ok) {
-      const detail = await res.text().catch(() => res.statusText);
-      let message = detail || "Upload failed";
+    if (res.status < 200 || res.status >= 300) {
+      const detail = res.body || `Upload failed (${res.status})`;
+      let message = detail;
       try {
         const parsed = JSON.parse(detail) as { detail?: string | { msg?: string }[] };
         if (typeof parsed.detail === "string") message = parsed.detail;
@@ -60,7 +81,7 @@ export async function uploadPromptAttachments(
       }
       throw new Error(message);
     }
-    const data = (await res.json()) as UploadResponse;
+    const data = JSON.parse(res.body) as UploadResponse;
     const durablePreview =
       data.object_id
         ? `${apiBase().replace(/\/$/, "")}/projects/${projectId}/assets/${data.object_id}/content?access_token=${encodeURIComponent(getToken() || "")}`
