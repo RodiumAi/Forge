@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
 from app.config import get_settings
-from app.db import get_db
+from app.db import SessionLocal, get_db
 from app.i18n import resolve_locale, t
 from app.models import AgentRun, Chat, Message, Project, User
 from app.schemas import (
@@ -881,6 +881,7 @@ async def send_message(
             history = _history(db, chat_id_pk)
             # Release the DB connection before relaying the whole run.
             db.commit()
+            db.close()
             spawn_plan_job(
                 run_id=run_pk,
                 user_id=user.id,
@@ -896,10 +897,11 @@ async def send_message(
                 yield chunk
         except Exception as exc:
             try:
-                err_row = db.get(AgentRun, run_pk)
-                if err_row is not None:
-                    err_row.status = "error"
-                    db.commit()
+                with SessionLocal() as err_db:
+                    err_row = err_db.get(AgentRun, run_pk)
+                    if err_row is not None:
+                        err_row.status = "error"
+                        err_db.commit()
             except Exception:
                 pass
             yield _sse({"type": "error", "message": str(exc)[:500]})
