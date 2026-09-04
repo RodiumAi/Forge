@@ -46,6 +46,7 @@ import {
   revokePromptAttachment,
   type PromptLabels,
 } from "@/lib/prompt-attachments";
+import { PROMPT_MAX_CHARS, PromptTooLongError } from "@/lib/constants/prompt";
 
 type Project = {
   id: string;
@@ -236,7 +237,11 @@ function DashboardInner() {
       setFiles([]);
       router.replace(`/projects/${project.id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("errorGeneric"));
+      if (err instanceof PromptTooLongError) {
+        setError(t("promptTooLong"));
+      } else {
+        setError(err instanceof Error ? err.message : t("errorGeneric"));
+      }
       setCreating(false);
     }
   }
@@ -385,9 +390,18 @@ function DashboardInner() {
               {error} <Link href="/settings?tab=generation">{t("openSettings")}</Link>
             </p>
           )}
+          {prompt.length > PROMPT_MAX_CHARS - 1000 ? (
+            <p
+              className={`prompt-char-count${prompt.length >= PROMPT_MAX_CHARS ? " at-limit" : ""}`}
+              aria-live="polite"
+            >
+              {prompt.length.toLocaleString()} / {PROMPT_MAX_CHARS.toLocaleString()}
+            </p>
+          ) : null}
           <textarea
             ref={textareaRef}
             value={prompt}
+            maxLength={PROMPT_MAX_CHARS}
             onChange={(e) => setPrompt(e.target.value)}
             onKeyDown={onKeyDown}
             placeholder={t("promptPlaceholder")}

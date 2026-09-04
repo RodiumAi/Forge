@@ -70,6 +70,7 @@ import {
   parseUserMessageContent,
   revokePromptAttachment,
 } from "@/lib/prompt-attachments";
+import { PAYLOAD_MAX_CHARS, PROMPT_MAX_CHARS } from "@/lib/constants/prompt";
 import { uploadPromptAttachments } from "@/lib/prompt-upload";
 import { UserMessageBody } from "@/components/UserMessageBody";
 import {
@@ -1354,6 +1355,12 @@ export default function ProjectPage() {
       });
       const payload = built.trim();
       if (!payload.trim()) return;
+      if (payload.length > PAYLOAD_MAX_CHARS) {
+        // Text + attachment markers + inlined document text exceed the API's
+        // 50k content cap — fail with a clear message instead of a raw 422.
+        pushChatError(t("promptTooLong"), null);
+        return;
+      }
       setElementSelection(null);
 
       const displayAtts: MessageAttachment[] = uploaded.map((a) => ({
@@ -2214,9 +2221,18 @@ export default function ProjectPage() {
               {editingMessageId ? (
                 <p className="builder-editing-hint">{t("editingMessage")}</p>
               ) : null}
+              {input.length > PROMPT_MAX_CHARS - 1000 ? (
+                <p
+                  className={`prompt-char-count${input.length >= PROMPT_MAX_CHARS ? " at-limit" : ""}`}
+                  aria-live="polite"
+                >
+                  {input.length.toLocaleString()} / {PROMPT_MAX_CHARS.toLocaleString()}
+                </p>
+              ) : null}
               <textarea
                 ref={textareaRef}
                 value={input}
+                maxLength={PROMPT_MAX_CHARS}
                 onChange={(e) => {
                   const v = e.target.value;
                   setInput(v);

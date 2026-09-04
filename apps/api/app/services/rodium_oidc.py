@@ -14,6 +14,10 @@ from jose import JWTError, jwt
 
 from app.config import get_settings
 
+# Bound Nest round-trips so login cannot sit open until a proxy kills the socket
+# (browser then shows opaque "Network request failed").
+NEST_HTTP_TIMEOUT = httpx.Timeout(12.0, connect=5.0)
+
 
 class RodiumOidcError(Exception):
     def __init__(self, message: str, status_code: int | None = None):
@@ -97,7 +101,7 @@ async def refresh_access_token(refresh_token: str) -> dict[str, Any]:
 
 async def _token_request(data: dict[str, str]) -> dict[str, Any]:
     settings = get_settings()
-    async with httpx.AsyncClient(timeout=httpx.Timeout(30.0, connect=10.0)) as client:
+    async with httpx.AsyncClient(timeout=NEST_HTTP_TIMEOUT) as client:
         response = await client.post(
             settings.rodium_oidc_token_url,
             data=data,
@@ -116,7 +120,7 @@ async def _token_request(data: dict[str, str]) -> dict[str, Any]:
 
 async def fetch_userinfo(access_token: str) -> dict[str, Any]:
     settings = get_settings()
-    async with httpx.AsyncClient(timeout=httpx.Timeout(30.0, connect=10.0)) as client:
+    async with httpx.AsyncClient(timeout=NEST_HTTP_TIMEOUT) as client:
         response = await client.get(
             settings.rodium_oidc_userinfo_url,
             headers={"Authorization": f"Bearer {access_token}"},
@@ -134,7 +138,7 @@ async def fetch_userinfo(access_token: str) -> dict[str, Any]:
 
 async def fetch_api_keys(access_token: str) -> list[dict[str, Any]]:
     settings = get_settings()
-    async with httpx.AsyncClient(timeout=httpx.Timeout(30.0, connect=10.0)) as client:
+    async with httpx.AsyncClient(timeout=NEST_HTTP_TIMEOUT) as client:
         response = await client.get(
             settings.rodium_oidc_api_keys_url,
             headers={"Authorization": f"Bearer {access_token}"},
@@ -151,7 +155,7 @@ async def fetch_api_keys(access_token: str) -> list[dict[str, Any]]:
 
 async def fetch_wallet(access_token: str) -> dict[str, Any]:
     settings = get_settings()
-    async with httpx.AsyncClient(timeout=httpx.Timeout(30.0, connect=10.0)) as client:
+    async with httpx.AsyncClient(timeout=NEST_HTTP_TIMEOUT) as client:
         response = await client.get(
             settings.rodium_oidc_wallet_url,
             headers={"Authorization": f"Bearer {access_token}"},
