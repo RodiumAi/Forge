@@ -124,6 +124,7 @@ def init_db() -> None:
         "ALTER TABLE messages ADD COLUMN IF NOT EXISTS model_slug VARCHAR(128)",
         "ALTER TABLE messages ADD COLUMN IF NOT EXISTS effort_label VARCHAR(32)",
         "ALTER TABLE messages ADD COLUMN IF NOT EXISTS plan_json TEXT",
+        "ALTER TABLE messages ADD COLUMN IF NOT EXISTS plan_meta_json TEXT",
         """
         CREATE TABLE IF NOT EXISTS agent_runs (
             id UUID PRIMARY KEY,
@@ -144,6 +145,7 @@ def init_db() -> None:
         )
         """,
         "CREATE INDEX IF NOT EXISTS ix_agent_runs_chat_id ON agent_runs (chat_id)",
+        "ALTER TABLE agent_runs ADD COLUMN IF NOT EXISTS plan_meta_json TEXT",
         """
         CREATE TABLE IF NOT EXISTS model_catalog (
             slug VARCHAR(128) PRIMARY KEY,

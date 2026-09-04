@@ -32,6 +32,56 @@ describe("tokens and thinking", () => {
 });
 
 describe("steps", () => {
+  it("captures plan meta (title/summary) from the plan event", () => {
+    const { state } = run([
+      {
+        type: "plan",
+        needs_confirm: true,
+        meta: { title: "Azure Claude Gateway Fix", summary: "Fix routing and sanitize errors." },
+        tasks: [{ id: "t1", title: "One" }],
+      },
+    ]);
+    expect(state.planMeta).toEqual({
+      title: "Azure Claude Gateway Fix",
+      summary: "Fix routing and sanitize errors.",
+    });
+  });
+
+  it("ignores empty plan meta and clears it on cancel", () => {
+    const first = run([
+      { type: "plan", needs_confirm: true, meta: {}, tasks: [{ id: "t1", title: "One" }] },
+    ]);
+    expect(first.state.planMeta).toBeNull();
+    const second = run([
+      {
+        type: "plan",
+        needs_confirm: false,
+        meta: { title: "T" },
+        tasks: [{ id: "t1", title: "One" }],
+      },
+      { type: "error", message: "cancelled" },
+    ]);
+    expect(second.state.planMeta).toBeNull();
+  });
+
+  it("keeps plan meta across a paused (step-by-step) done and forwards it to finalize", () => {
+    const { state, effects } = run([
+      {
+        type: "plan",
+        needs_confirm: false,
+        meta: { title: "T", summary: "S" },
+        tasks: [{ id: "t1", title: "One" }],
+      },
+      { type: "done", summary: "ok", paused: true, plan: [{ id: "t1", title: "One", status: "done" }] },
+    ]);
+    expect(state.planMeta).toEqual({ title: "T", summary: "S" });
+    const finalize = effects.find((e) => e.kind === "finalize");
+    expect(finalize && finalize.kind === "finalize" ? finalize.payload.planMeta : null).toEqual({
+      title: "T",
+      summary: "S",
+    });
+  });
+
   it("replaces a step in place instead of appending twice", () => {
     const { state } = run([
       { type: "step", id: "s1", label: "Generating", status: "running" },

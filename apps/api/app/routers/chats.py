@@ -384,6 +384,17 @@ def list_messages(
     return db.query(Message).filter(Message.chat_id == chat.id).order_by(Message.created_at.asc()).all()
 
 
+def _parse_plan_meta(raw: str | None) -> dict:
+    """Tolerant parse of ``plan_meta_json`` ({"title","summary"})."""
+    if not raw:
+        return {}
+    try:
+        parsed = json.loads(raw)
+        return parsed if isinstance(parsed, dict) else {}
+    except Exception:
+        return {}
+
+
 @router.get(
     "/projects/{project_id}/chats/{chat_id}/runs/active",
     response_model=AgentRunOut | None,
@@ -471,6 +482,7 @@ def get_active_run(
         mode=run.mode,
         prompt=run.prompt or "",
         plan=plan,
+        plan_meta=_parse_plan_meta(run.plan_meta_json),
         clarify=clarify,
     )
 
@@ -828,7 +840,7 @@ async def send_message(
                     "status": "running",
                 }
             )
-            plan = await build_plan(
+            plan, plan_meta = await build_plan(
                 prompt=user_content,
                 answers=None,
                 task_class=route.task_class,
@@ -841,6 +853,7 @@ async def send_message(
                 yield _sse({"type": "error", "message": t("run_invalid_state", locale)})
                 return
             live.plan_json = json.dumps(plan)
+            live.plan_meta_json = json.dumps(plan_meta, ensure_ascii=False) if plan_meta else None
             # Multi-step plans always pause after planning: the user chooses
             # between running the whole pipeline or step-by-step execution.
             needs_confirm = _plan_requires_confirm(mode, route.task_class, plan)
@@ -859,6 +872,7 @@ async def send_message(
                     "type": "plan",
                     "run_id": str(run_pk),
                     "tasks": plan,
+                    "meta": plan_meta,
                     "needs_confirm": needs_confirm,
                 }
             )
@@ -943,7 +957,7 @@ async def submit_clarify(
                     "status": "running",
                 }
             )
-            plan = await build_plan(
+            plan, plan_meta = await build_plan(
                 prompt=run_prompt,
                 answers=answers,
                 task_class=run_task_class,
@@ -956,6 +970,7 @@ async def submit_clarify(
                 yield _sse({"type": "error", "message": t("run_invalid_state", locale)})
                 return
             run_row.plan_json = json.dumps(plan)
+            run_row.plan_meta_json = json.dumps(plan_meta, ensure_ascii=False) if plan_meta else None
             needs_confirm = _plan_requires_confirm("agent" if auto_exec else "plan", run_task_class, plan)
             run_row.status = "awaiting_plan_confirm" if needs_confirm else "running"
             db.commit()
@@ -972,6 +987,7 @@ async def submit_clarify(
                     "type": "plan",
                     "run_id": run_id_str,
                     "tasks": plan,
+                    "meta": plan_meta,
                     "needs_confirm": needs_confirm,
                 }
             )
@@ -1258,7 +1274,7 @@ async def branch_messages(
                     "status": "running",
                 }
             )
-            plan = await build_plan(
+            plan, plan_meta = await build_plan(
                 prompt=user_content,
                 answers=None,
                 task_class=route.task_class,
@@ -1271,6 +1287,7 @@ async def branch_messages(
                 yield _sse({"type": "error", "message": t("run_invalid_state", locale)})
                 return
             live.plan_json = json.dumps(plan)
+            live.plan_meta_json = json.dumps(plan_meta, ensure_ascii=False) if plan_meta else None
             needs_confirm = _plan_requires_confirm(mode, route.task_class, plan)
             live.status = "awaiting_plan_confirm" if needs_confirm else "running"
             db.commit()
@@ -1287,6 +1304,7 @@ async def branch_messages(
                     "type": "plan",
                     "run_id": str(run_pk),
                     "tasks": plan,
+                    "meta": plan_meta,
                     "needs_confirm": needs_confirm,
                 }
             )
