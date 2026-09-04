@@ -37,6 +37,7 @@ def persist_plan_error(db: Session, run_pk: UUID, payload: dict, locale: str = "
                 steps_json=None,
                 file_ops_json=None,
                 plan_json=json.dumps(plan, ensure_ascii=False),
+                plan_meta_json=row.plan_meta_json,
                 task_class=row.task_class,
                 model_slug=row.model_slug,
             )
@@ -83,6 +84,7 @@ def persist_assistant(
             steps_json=json.dumps(steps, ensure_ascii=False) if steps else None,
             file_ops_json=json.dumps(applied, ensure_ascii=False) if applied else None,
             plan_json=json.dumps(plan, ensure_ascii=False) if plan else None,
+            plan_meta_json=run.plan_meta_json if plan else None,
             task_class=run.task_class,
             model_slug=run.model_slug,
             effort_label=None,

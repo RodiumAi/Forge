@@ -409,8 +409,13 @@ async def build_plan(
     auth: RodiumGenerationAuth,
     model: str,
     locale: Locale = "en",
-) -> list[dict[str, Any]]:
-    """Build a short task plan. Falls back to templates if LLM fails."""
+) -> tuple[list[dict[str, Any]], dict[str, str]]:
+    """Build a short task plan plus display meta (title/summary).
+
+    Returns ``(tasks, meta)`` where ``meta`` is ``{"title","summary"}`` (either
+    key may be missing when the LLM answer lacks them or the fallback is used).
+    Falls back to templates if the LLM fails.
+    """
     if task_class.startswith(("code.scaffold", "plan.scaffold")):
         fallback = _default_scaffold_plan(locale)
         max_tasks = 8
@@ -425,10 +430,11 @@ async def build_plan(
         answers_txt = "User clarifications:\n" + "\n".join(f"- {k}: {v}" for k, v in answers.items())
 
     system = (
-        "You are Forge planner in PLAN MODE. Output ONLY valid JSON array of objects: "
-        '{"id":"snake_case","title":"short UX-facing title",'
-        '"acceptance":"one-line done criteria","files":["optional/paths"]}. '
-        "NO code, NO markdown fences, NO forge-write tags. Titles in "
+        "You are Forge planner in PLAN MODE. Output ONLY valid JSON object: "
+        '{"title":"3-6 word plan name","summary":"1-2 sentence description of the goal",'
+        '"tasks":[{"id":"snake_case","title":"short UX-facing title",'
+        '"acceptance":"one-line done criteria","files":["optional/paths"]}]}. '
+        "NO code, NO markdown fences, NO forge-write tags. Title, summary and task titles in "
         + ("French." if locale == "fr" else "English.")
         + " Plan UX-first for edits: pages/sections/states before polish. "
         + f"Prefer 1 to {max_tasks} tasks for edits (max {max_tasks}). "
@@ -462,8 +468,18 @@ async def build_plan(
             cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned)
             cleaned = re.sub(r"\s*```$", "", cleaned)
         parsed = json.loads(cleaned)
+        meta: dict[str, str] = {}
+        if isinstance(parsed, dict):
+            # New object shape: {"title", "summary", "tasks": [...]}.
+            title = str(parsed.get("title") or "").strip()[:120]
+            summary = str(parsed.get("summary") or parsed.get("description") or "").strip()[:400]
+            if title:
+                meta["title"] = title
+            if summary:
+                meta["summary"] = summary
+            parsed = parsed.get("tasks")
         if not isinstance(parsed, list) or not parsed:
-            return fallback
+            return fallback, meta
         out: list[dict[str, Any]] = []
         for i, item in enumerate(parsed[:max_tasks]):
             if not isinstance(item, dict):
@@ -525,12 +541,12 @@ async def build_plan(
                             "status": "pending",
                         }
                     )
-            return out
-        return fallback
+            return out, meta
+        return fallback, meta
     except (RodiumError, json.JSONDecodeError, TypeError, ValueError):
-        return fallback
+        return fallback, {}
     except Exception:
-        return fallback
+        return fallback, {}
 
 
 def format_answers_for_prompt(answers: dict[str, str] | None, questions: list[dict] | None) -> str:
