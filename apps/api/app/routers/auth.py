@@ -1,13 +1,15 @@
 import asyncio
 import json
+import logging
+import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.auth import create_access_token, get_current_user, hash_password, verify_password
 from app.config import get_settings
 from app.crypto import decrypt_secret
-from app.db import get_db
+from app.db import SessionLocal, get_db
 from app.i18n import resolve_locale, t
 from app.models import User, UserSettings
 from app.schemas import (
@@ -48,6 +50,7 @@ from app.services.rodium_oidc import (
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+logger = logging.getLogger("auth")
 
 
 def _picture_from_userinfo(info: dict) -> str | None:
@@ -133,6 +136,46 @@ async def _ensure_default_generation_key(
     return await ensure_default_api_key_id(db, user, row, keys)
 
 
+async def _hydrate_rodium_account_cache(user_id: uuid.UUID, access_token: str) -> None:
+    """Fetch Nest keys/wallet after login JWT is already returned to the browser."""
+    try:
+        keys = await fetch_api_keys(access_token)
+        wallet = await fetch_wallet(access_token)
+    except Exception:
+        logger.warning(
+            "rodium.callback.hydrate_nest_failed",
+            extra={"user_id": str(user_id)},
+            exc_info=True,
+        )
+        return
+
+    try:
+        with SessionLocal() as db:
+            user = db.get(User, user_id)
+            if user is None:
+                return
+            row = _get_or_create_settings(db, user)
+            if isinstance(keys, list):
+                row.rodium_api_keys_json = json.dumps(keys)
+            if isinstance(wallet, dict):
+                row.rodium_wallet_json = json.dumps(wallet)
+            if not row.rodium_api_key_hint:
+                row.rodium_api_key_hint = "RodiumAi account"
+            db.commit()
+            await _ensure_default_generation_key(
+                db,
+                user,
+                row,
+                keys if isinstance(keys, list) else [],
+            )
+    except Exception:
+        logger.warning(
+            "rodium.callback.hydrate_db_failed",
+            extra={"user_id": str(user_id)},
+            exc_info=True,
+        )
+
+
 def _api_keys_out(items: list) -> list[RodiumApiKeyOut]:
     out: list[RodiumApiKeyOut] = []
     for item in items:
@@ -170,15 +213,16 @@ def rodium_oauth_start(request: Request) -> OAuthStartResponse:
 async def rodium_oauth_callback(
     body: OAuthCallbackRequest,
     request: Request,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ) -> TokenResponse:
+    # Critical path only: code exchange + userinfo. Keys/wallet hydrate in
+    # background so a slow Nest/ALB cut never surfaces as "Network request failed".
     try:
         verifier = parse_oauth_state(body.state)
         tokens = await exchange_code(code=body.code, code_verifier=verifier)
         access = tokens["access_token"]
         info = await fetch_userinfo(access)
-        keys = await fetch_api_keys(access)
-        wallet = await fetch_wallet(access)
     except RodiumOidcError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -214,12 +258,11 @@ async def rodium_oauth_callback(
 
     settings_row = _get_or_create_settings(db, user)
     _store_oauth_tokens(settings_row, tokens)
-    settings_row.rodium_api_keys_json = json.dumps(keys)
-    settings_row.rodium_wallet_json = json.dumps(wallet)
     if not settings_row.rodium_api_key_hint:
         settings_row.rodium_api_key_hint = "RodiumAi account"
     db.commit()
-    await _ensure_default_generation_key(db, user, settings_row, keys if isinstance(keys, list) else [])
+
+    background_tasks.add_task(_hydrate_rodium_account_cache, user.id, access)
 
     return TokenResponse(access_token=create_access_token(user.id))
 
