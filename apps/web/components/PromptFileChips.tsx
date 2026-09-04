@@ -17,6 +17,8 @@ type PromptFileChipsProps = {
   onRemove: (id: string) => void;
   /** Needed to resolve private MinIO thumbs via authenticated proxy. */
   projectId?: string | null;
+  /** Upload progress per attachment id (0-100); shows a bar while defined. */
+  progress?: Record<string, number>;
 };
 
 function resolveChipThumb(
@@ -37,7 +39,7 @@ function resolveChipThumb(
   return preview;
 }
 
-export function PromptFileChips({ items, onRemove, projectId }: PromptFileChipsProps) {
+export function PromptFileChips({ items, onRemove, projectId, progress }: PromptFileChipsProps) {
   const { t } = useI18n();
   const [preview, setPreview] = useState<{ src: string; name: string } | null>(null);
 
@@ -64,10 +66,12 @@ export function PromptFileChips({ items, onRemove, projectId }: PromptFileChipsP
           const name = attachmentName(item);
           const thumb = resolveChipThumb(item, projectId);
           const isImage = item.kind === "image";
+          const pct = progress?.[item.id];
+          const uploading = typeof pct === "number" && pct < 100;
           return (
             <div
               key={item.id}
-              className={`landing-file-chip ${isImage ? "landing-file-chip-image" : ""}`}
+              className={`landing-file-chip ${isImage ? "landing-file-chip-image" : ""}${uploading ? " is-uploading" : ""}`}
               title={name}
             >
               {isImage && thumb ? (
@@ -87,6 +91,14 @@ export function PromptFileChips({ items, onRemove, projectId }: PromptFileChipsP
                 </span>
               )}
               <span className="landing-file-name">{name}</span>
+              {typeof pct === "number" ? (
+                <span className="landing-file-progress" aria-live="polite">
+                  <span className="landing-file-progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
+                    <span className="landing-file-progress-fill" style={{ width: `${pct}%` }} />
+                  </span>
+                  <span className="landing-file-progress-pct">{pct}%</span>
+                </span>
+              ) : null}
               {item.source === "project" ? (
                 <span className="landing-file-ref" aria-hidden>
                   @

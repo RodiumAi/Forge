@@ -39,10 +39,20 @@ def test_materialize_asset_markers_rewrites_private_s3_url(materialize_setup):
     assert f"object:{object_id}" in out
 
 
-def test_reference_intent_marker_is_unchanged(materialize_setup):
+def test_reference_marker_with_private_url_is_also_materialized(materialize_setup):
+    """A raw private-bucket URL is broken whatever the intent — always rewrite it."""
     project, object_id = materialize_setup
     s3 = "https://rodiumai-forge-uploads-prod.s3.eu-west-1.amazonaws.com/forge/u/p/x.png"
     text = f"[Reference screenshot: mock.png | url:{s3} | object:{object_id} | intent:reference]"
+    out = materialize_asset_markers(object(), project, text)
+    assert s3 not in out
+    assert "/images/" in out
+
+
+def test_reference_marker_with_public_url_is_unchanged(materialize_setup):
+    project, object_id = materialize_setup
+    cdn = "https://cdn.example.com/mock.png"
+    text = f"[Reference screenshot: mock.png | url:{cdn} | object:{object_id} | intent:reference]"
     assert materialize_asset_markers(object(), project, text) == text
 
 

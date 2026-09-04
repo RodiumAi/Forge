@@ -325,11 +325,17 @@ def materialize_asset_markers(db: Session, project_id: str, user_text: str) -> s
 
     def replacer(match: re.Match[str]) -> str:
         marker = match.group(0)
-        if _intent_for_marker(marker) != "asset":
-            return marker
         obj_m = _OBJECT_IN_MARKER_RE.search(marker)
         if not obj_m:
             return marker
+        # Materialize when the marker is asset-intent OR when its URL points at
+        # the private uploads bucket: a raw private S3 URL written into JSX is
+        # always broken (AccessDenied), whatever the declared intent. Copying a
+        # reference screenshot into public/images/ is harmless by comparison.
+        if _intent_for_marker(marker) != "asset":
+            url_m = _URL_IN_MARKER_RE.search(marker) or _PUBLIC_IN_MARKER_RE.search(marker)
+            if not url_m or not is_private_upload_url(url_m.group(1).strip()):
+                return marker
         try:
             oid = UUID(obj_m.group(1).strip())
         except ValueError:

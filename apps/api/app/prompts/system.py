@@ -146,8 +146,12 @@ file contents here
 
 ## Uploaded assets
 
-27. When the user attaches an image with a CDN `url:` in **this turn** and asks to use
-    it as logo/favicon/brand asset, prefer that exact public URL.
+27. When the user attaches an image with a `url:` in **this turn** and asks to use it
+    as logo/favicon/brand asset, use that exact URL **only if it is a relative path**
+    (e.g. `/images/...`). NEVER hardcode an absolute storage URL (`*.amazonaws.com`,
+    `*.s3.*`): those buckets are private and render as AccessDenied. If the marker
+    only carries an absolute storage URL, reference the expected local copy under
+    `/images/<filename>` instead.
 28. If a project logo already exists at `/logo.png` (or the path in DESIGN.md), keep
     using that path. Never discard the project logo to invent a new brand mark.
 29. Never substitute a placeholder for a user-uploaded or project logo asset.
