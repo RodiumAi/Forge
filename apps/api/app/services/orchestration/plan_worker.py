@@ -52,22 +52,33 @@ async def _execute_plan_job(
     run_queue.clear_run_events(rid)
     clear_cancelled(rid)
     run_queue.claim_run(rid)
-    db = SessionLocal()
-    try:
+
+    # Never hold one Session across LLM awaits — that exhausted QueuePool in prod
+    # (ALB 502 without CORS headers → browser "Network / CORS" errors on login).
+    with SessionLocal() as db:
         user = db.get(User, user_id)
         if user is None:
-            run_queue.publish_run_event(rid, {"type": "error", "message": "User not found", "plan": tasks})
+            run_queue.publish_run_event(
+                rid, {"type": "error", "message": "User not found", "plan": tasks}
+            )
+            run_queue.release_run(rid)
+            _running_tasks.pop(rid, None)
             return
 
-        from app.services.orchestration.plan_persist import (
-            handle_plan_stream_payload,
-            make_progress_cb,
-        )
+    from app.services.orchestration.plan_persist import (
+        handle_plan_stream_payload,
+        make_progress_cb,
+    )
 
-        async def resolve_auth():
-            fresh = db.get(User, user_id) or user
+    async def resolve_auth():
+        with SessionLocal() as db:
+            fresh = db.get(User, user_id)
+            if fresh is None:
+                raise RuntimeError("User not found")
             return await resolve_generation_auth(db, fresh)
 
+    try:
+        initial_auth = await resolve_auth()
         async for chunk in run_plan_tasks(
             project_id=project_id,
             history=history,
@@ -75,33 +86,35 @@ async def _execute_plan_job(
             answers_block=answers_block,
             tasks=tasks,
             model=model,
-            auth=await resolve_auth(),
+            auth=initial_auth,
             resolve_auth=resolve_auth,
-            on_progress=make_progress_cb(db, run_id),
+            on_progress=make_progress_cb(run_id),
             locale=locale,
             run_id=rid,
             user_id=user_id,
-            db=db,
+            db=None,
             step_mode=step_mode,
         ):
             payload = _parse_sse_chunk(chunk)
             if payload:
                 run_queue.publish_run_event(rid, payload)
-                handle_plan_stream_payload(
-                    db,
-                    run_id,
-                    payload,
-                    plan=tasks,
-                    locale=locale,
-                )
+                with SessionLocal() as db:
+                    handle_plan_stream_payload(
+                        db,
+                        run_id,
+                        payload,
+                        plan=tasks,
+                        locale=locale,
+                    )
     except Exception as exc:
         logger.exception("plan job failed run_id=%s", rid)
         try:
-            row = db.get(AgentRun, run_id)
-            if row is not None:
-                row.status = "error"
-                row.plan_json = json.dumps(tasks)
-                db.commit()
+            with SessionLocal() as db:
+                row = db.get(AgentRun, run_id)
+                if row is not None:
+                    row.status = "error"
+                    row.plan_json = json.dumps(tasks)
+                    db.commit()
         except Exception:
             pass
         run_queue.publish_run_event(
@@ -110,7 +123,6 @@ async def _execute_plan_job(
         )
     finally:
         run_queue.release_run(rid)
-        db.close()
         _running_tasks.pop(rid, None)
 
 
