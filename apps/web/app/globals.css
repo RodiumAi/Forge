@@ -1826,6 +1826,21 @@ html:has(.builder) body {
   color: #93c5fd;
 }
 
+/* Live char counter shown near the composer limit (all prompt inputs). */
+.prompt-char-count {
+  margin: 0 0 0.35rem;
+  align-self: flex-end;
+  text-align: right;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  color: #f59e0b;
+}
+
+.prompt-char-count.at-limit {
+  color: #ef4444;
+  font-weight: 600;
+}
+
 .builder-msg-user-wrap {
   position: relative;
 }

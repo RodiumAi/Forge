@@ -2,6 +2,7 @@ import { api } from "@/lib/api";
 import { buildPromptWithAttachments, type PromptAttachment, type PromptLabels } from "@/lib/prompt-attachments";
 import { uploadPromptAttachments } from "@/lib/prompt-upload";
 import { clearPendingFiles, loadPendingFiles, savePendingFiles } from "@/lib/pending-files";
+import { PAYLOAD_MAX_CHARS, PromptTooLongError } from "@/lib/constants/prompt";
 
 export const PENDING_PROMPT_KEY = "forge_pending_prompt";
 export const PENDING_TEMPLATE_KEY = "forge_pending_template";
@@ -80,6 +81,14 @@ export async function createProjectWithAttachments(
   locale: string,
 ): Promise<CreatedProject> {
   const trimmed = text.trim();
+  // Preflight the assembled size BEFORE creating the project. Inlined doc text
+  // (md/txt/pdf) dominates the payload and is read from local files here, so we
+  // can measure it up front and fail cleanly instead of leaving an empty orphan
+  // project behind. The only thing missing at this point is image public URLs
+  // (a few hundred chars), well within the margin below the API's 50k cap.
+  const preview = await buildPromptWithAttachments(trimmed, attachments, labels);
+  if (preview.length > PAYLOAD_MAX_CHARS) throw new PromptTooLongError();
+
   const project = await api<CreatedProject>("/projects", {
     method: "POST",
     body: JSON.stringify({
