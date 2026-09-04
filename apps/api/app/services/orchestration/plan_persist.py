@@ -107,6 +107,15 @@ def handle_plan_stream_payload(
         row = db.get(AgentRun, run_pk)
         if row is not None:
             persist_assistant(db, row, payload, locale)
+            # Self-heal: if the model hardcoded a private uploads-bucket URL in
+            # generated files, rewrite it to a local public/images/ copy now,
+            # so the very first preview/publish isn't shipped broken.
+            try:
+                from app.services.asset_storage import repair_private_upload_urls_in_project
+
+                repair_private_upload_urls_in_project(db, row.project_id)
+            except Exception:
+                pass
             if payload.get("paused"):
                 # Step-by-step mode: task finished but the plan is not over.
                 # Re-arm the run so POST /confirm-plan can launch the next step.

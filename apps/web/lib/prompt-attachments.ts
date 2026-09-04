@@ -42,7 +42,7 @@ export type MessageAttachment = {
 };
 
 const EXPLICIT_ASSET_USE_RE =
-  /\b(?:use|set|put|place|attach|insert|comme|met(?:s|tre)|utilis(?:e|er))\b[\s\S]{0,40}\b(?:as|pour|for|en)?\s*(?:the|la|le|this|cette|cet|mon|my)?\s*(?:logo|favicon|icône|icone|bannière|banner|marque|brand)\b/i;
+  /\b(?:use|set|put|place|attach|insert|comme|met(?:s|tre)|utilis(?:e|er))\b[\s\S]{0,40}\b(?:as|pour|for|en)?\s*(?:the|la|le|this|cette|cet|mon|my)?\s*(?:logo|favicon|ic[oô]nes?|icons?|banni[eè]res?|banners?|marque|brand|image de marque)\b/i;
 
 /** Filename looks like a logo/favicon file the user wants embedded in the site. */
 const ASSET_FILENAME_RE =
@@ -265,10 +265,14 @@ function parseImageMarkerBody(body: string): {
 }
 
 function isAssetIntent(prompt: string, images: PromptAttachment[]): boolean {
+  // An explicit instruction ("use this as the logo/icon/…") always wins over
+  // the filename heuristic: ChatGPT/screenshot-style names ("Capture d'écran…",
+  // "ChatGPT Image…") used to force reference intent, so the asset was never
+  // materialized into public/ and the site shipped a private S3 URL.
+  if (EXPLICIT_ASSET_USE_RE.test(prompt)) return true;
   if (images.some((img) => REFERENCE_FILENAME_RE.test(attachmentName(img)))) {
     return false;
   }
-  if (EXPLICIT_ASSET_USE_RE.test(prompt)) return true;
   return images.some((img) => ASSET_FILENAME_RE.test(attachmentName(img)));
 }
 
