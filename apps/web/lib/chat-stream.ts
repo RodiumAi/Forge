@@ -13,7 +13,7 @@
 
 import type { AgentStep, AgentWarning, FileOp } from "@/components/AgentActivityPanel";
 import type { ClarifyQuestion } from "@/components/ClarifyCard";
-import type { PlanTask } from "@/components/PlanPanel";
+import type { PlanMeta, PlanTask } from "@/components/PlanPanel";
 
 export type ChatStreamState = {
   streaming: string;
@@ -24,6 +24,8 @@ export type ChatStreamState = {
   effort: string | null;
   summary: string;
   planTasks: PlanTask[];
+  /** LLM-generated plan title/summary shown on the "Created Plan" card. */
+  planMeta: PlanMeta | null;
   planNeedsConfirm: boolean;
   clarify: ClarifyQuestion[];
   activeRunId: string | null;
@@ -44,6 +46,7 @@ export function initialStreamState(): ChatStreamState {
     effort: null,
     summary: "",
     planTasks: [],
+    planMeta: null,
     planNeedsConfirm: false,
     clarify: [],
     activeRunId: null,
@@ -56,6 +59,7 @@ export function initialStreamState(): ChatStreamState {
 export type FinalizePayload = {
   content: string;
   plan: PlanTask[];
+  planMeta: PlanMeta | null;
   thinking: string;
   steps: AgentStep[];
   ops: FileOp[];
@@ -169,6 +173,8 @@ export function reduceStreamEvent(
   if (type === "plan") {
     const needs = Boolean(event.needs_confirm);
     const tasks = normalizeTasks(event.tasks);
+    const rawMeta = event.meta && typeof event.meta === "object" ? (event.meta as PlanMeta) : null;
+    const planMeta = rawMeta && (rawMeta.title || rawMeta.summary) ? rawMeta : null;
     // Auto-run: show the first task as running immediately, otherwise the UI
     // stays silent until the first task:* step arrives.
     if (!needs && tasks.length) tasks[0] = { ...tasks[0], status: "running" };
@@ -177,6 +183,7 @@ export function reduceStreamEvent(
         ...next,
         activeRunId: typeof event.run_id === "string" ? event.run_id : next.activeRunId,
         planTasks: tasks,
+        planMeta,
         planNeedsConfirm: needs,
         clarify: [],
         busy: needs ? false : next.busy,
@@ -247,7 +254,14 @@ export function reduceStreamEvent(
     if (message === "cancelled") {
       effects.push({ kind: "cancelled" });
       return {
-        state: { ...next, planTasks: [], planNeedsConfirm: false, activeRunId: null, busy: false },
+        state: {
+          ...next,
+          planTasks: [],
+          planMeta: null,
+          planNeedsConfirm: false,
+          activeRunId: null,
+          busy: false,
+        },
         effects,
       };
     }
@@ -278,6 +292,7 @@ export function reduceStreamEvent(
       payload: {
         content,
         plan: finalPlan,
+        planMeta: next.planMeta,
         thinking: next.thinking,
         steps: next.steps,
         ops: next.ops,
@@ -295,6 +310,7 @@ export function reduceStreamEvent(
           busy: false,
           activeRunId: next.activeRunId,
           planTasks: finalPlan,
+          planMeta: next.planMeta,
           planNeedsConfirm: true,
         },
         effects,

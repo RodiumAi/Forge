@@ -34,7 +34,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { HistoryPanel } from "@/components/builder/HistoryPanel";
 import { AssistantBody } from "@/components/chat/AssistantBody";
 import { ScrollToBottom } from "@/components/chat/ScrollToBottom";
-import { PlanPanel, type PlanTask } from "@/components/PlanPanel";
+import { PlanPanel, type PlanMeta, type PlanTask } from "@/components/PlanPanel";
 import { PromptFileChips } from "@/components/PromptFileChips";
 import { PromptAssetMention } from "@/components/PromptAssetMention";
 import { BuilderTopbar } from "@/components/builder/BuilderTopbar";
@@ -108,6 +108,7 @@ type Message = {
   steps_json?: string | null;
   file_ops_json?: string | null;
   plan_json?: string | null;
+  plan_meta_json?: string | null;
   effort_label?: string | null;
   attachments?: MessageAttachment[] | null;
   kind?: "error";
@@ -138,6 +139,20 @@ function parseJsonArray<T>(raw: string | null | undefined): T[] {
     return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
+  }
+}
+
+function parsePlanMeta(raw: string | null | undefined): PlanMeta | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      const meta = parsed as PlanMeta;
+      return meta.title || meta.summary ? meta : null;
+    }
+    return null;
+  } catch {
+    return null;
   }
 }
 
@@ -343,6 +358,7 @@ export default function ProjectPage() {
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
   const [clarifyQuestions, setClarifyQuestions] = useState<ClarifyQuestion[]>([]);
   const [planTasks, setPlanTasks] = useState<PlanTask[]>([]);
+  const [planMeta, setPlanMeta] = useState<PlanMeta | null>(null);
   const [streamInlineError, setStreamInlineError] = useState<string | null>(null);
   const [planNeedsConfirm, setPlanNeedsConfirm] = useState(false);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
@@ -577,12 +593,18 @@ export default function ProjectPage() {
         status: string;
         mode: string;
         plan: PlanTask[];
+        plan_meta?: PlanMeta | null;
         clarify: ClarifyQuestion[];
       } | null>(`/projects/${projectId}/chats/${main.id}/runs/active`);
       if (active?.id) {
+        const activeMeta =
+          active.plan_meta && (active.plan_meta.title || active.plan_meta.summary)
+            ? active.plan_meta
+            : null;
         if (persistedComplete) {
           setActiveRunId(null);
           setPlanTasks([]);
+          setPlanMeta(null);
           setPlanNeedsConfirm(false);
           setClarifyQuestions([]);
           setBusy(false);
@@ -591,6 +613,7 @@ export default function ProjectPage() {
           setClarifyQuestions(active.clarify);
           setPlanNeedsConfirm(false);
           setPlanTasks([]);
+          setPlanMeta(null);
           setBusy(false);
         } else if (
           (active.status === "awaiting_plan_confirm" || active.status === "error") &&
@@ -602,6 +625,7 @@ export default function ProjectPage() {
           const doneCount = mapped.filter((task) => task.status === "done").length;
           const partialProgress = doneCount > 0 && doneCount < mapped.length;
           setPlanTasks(mapped);
+          setPlanMeta(activeMeta);
           setPlanNeedsConfirm(active.status === "awaiting_plan_confirm" && !partialProgress);
           setClarifyQuestions([]);
           setBusy(false);
@@ -609,6 +633,7 @@ export default function ProjectPage() {
         } else if (active.status === "running" && Array.isArray(active.plan) && active.plan.length) {
           setActiveRunId(active.id);
           setPlanTasks(mapActivePlanTasks(active.plan));
+          setPlanMeta(activeMeta);
           setPlanNeedsConfirm(false);
           setBusy(true);
           restoredBgRunRef.current = active.id;
@@ -948,6 +973,7 @@ export default function ProjectPage() {
         }
         setStreamEffort(state.effort);
         setPlanTasks(state.planTasks);
+        setPlanMeta(state.planMeta);
         setPlanNeedsConfirm(state.planNeedsConfirm);
         setClarifyQuestions(state.clarify);
         if (state.activeRunId !== before.activeRunId) setActiveRunId(state.activeRunId);
@@ -982,7 +1008,8 @@ export default function ProjectPage() {
             failure = effect.message;
             break;
           case "finalize": {
-            const { content, plan, thinking, steps, ops, effort, applied } = effect.payload;
+            const { content, plan, planMeta: finalMeta, thinking, steps, ops, effort, applied } =
+              effect.payload;
             setStreamSummary(content);
             setMessages((m) => {
               const withoutDupUser = session.userPayload.trim()
@@ -1015,6 +1042,7 @@ export default function ProjectPage() {
                   steps_json: JSON.stringify(steps),
                   file_ops_json: JSON.stringify(ops),
                   plan_json: plan.length ? JSON.stringify(plan) : null,
+                  plan_meta_json: plan.length && finalMeta ? JSON.stringify(finalMeta) : null,
                   effort_label: effort,
                 },
               ];
@@ -1212,6 +1240,7 @@ export default function ProjectPage() {
       }
     }
     setPlanTasks([]);
+    setPlanMeta(null);
     setPlanNeedsConfirm(false);
     setClarifyQuestions([]);
     setActiveRunId(null);
@@ -1352,6 +1381,7 @@ export default function ProjectPage() {
       setClarifyQuestions([]);
       if (!isBranch) {
         setPlanTasks([]);
+        setPlanMeta(null);
         setPlanNeedsConfirm(false);
         setActiveRunId(null);
       }
@@ -1627,6 +1657,7 @@ export default function ProjectPage() {
             /* fall through to the invalid-plan reset */
           }
           setPlanTasks([]);
+          setPlanMeta(null);
           setPlanNeedsConfirm(false);
           setActiveRunId(null);
           throw new Error(t("planInvalid"));
@@ -1987,7 +2018,15 @@ export default function ProjectPage() {
                     />
                   )}
                   {m.role === "assistant" && msgPlan.length > 0 ? (
-                    <PlanPanel tasks={msgPlan} needsConfirm={false} busy={false} executing={false} />
+                    <PlanPanel
+                      tasks={msgPlan}
+                      meta={parsePlanMeta(m.plan_meta_json)}
+                      ops={ops}
+                      needsConfirm={false}
+                      busy={false}
+                      executing={false}
+                      onOpenFile={openFileInEditor}
+                    />
                   ) : null}
                   {m.role === "user" ? (
                     <div className="builder-msg-user-wrap">
@@ -2033,6 +2072,7 @@ export default function ProjectPage() {
                 {planTasks.length > 0 && (
                   <PlanPanel
                     tasks={planTasks}
+                    meta={planMeta}
                     needsConfirm={planNeedsConfirm}
                     busy={busy}
                     ops={streamOps}
@@ -2046,6 +2086,7 @@ export default function ProjectPage() {
                     onExecute={() => void executePlan()}
                     onExecuteStep={() => void executePlan(true)}
                     onDismiss={() => void dismissPlan()}
+                    onStop={() => void stopGeneration()}
                   />
                 )}
                 {streamInlineError ? (
