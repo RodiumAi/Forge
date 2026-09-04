@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi import BackgroundTasks
+
 from app.routers import auth as auth_mod
 from app.schemas import OAuthCallbackRequest
 from app.services.rodium_oidc import NEST_HTTP_TIMEOUT
