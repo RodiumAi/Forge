@@ -15,10 +15,13 @@ settings = get_settings()
 engine = create_engine(
     settings.database_url,
     pool_pre_ping=True,
-    pool_size=15,
-    max_overflow=25,
-    pool_timeout=10,
+    # Chat/plan SSE + background jobs must not starve login/dashboard under load.
+    # Prefer LIFO so bursty traffic reuses hot connections; recycle before NAT/idle drops.
+    pool_size=25,
+    max_overflow=35,
+    pool_timeout=20,
     pool_recycle=1800,
+    pool_use_lifo=True,
 )
 # expire_on_commit=False avoids DetachedInstanceError when request-scoped
 # User/Settings objects are reused after commits (token refresh, streaming).
