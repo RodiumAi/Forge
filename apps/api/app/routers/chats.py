@@ -556,6 +556,8 @@ async def send_message(
     # Image branch: keep single-pass for V1
     if route.is_image and mode == "agent":
         history = _history(db, chat.id)
+        user_id = user.id
+        db.close()
 
         async def image_stream():
             steps: list[dict] = []
@@ -572,7 +574,7 @@ async def send_message(
                     steps.append({"id": step_id, "label": label, "status": st})
                 return _sse({"type": "step", "id": step_id, "label": label, "status": st})
 
-            yield _sse({"type": "user_message", "id": user_msg_id, "run_id": str(run.id)})
+            yield _sse({"type": "user_message", "id": user_msg_id, "run_id": str(run_pk)})
             yield push_step("classify", t("step_classify", locale), "running")
             yield _sse(
                 {
@@ -604,16 +606,18 @@ async def send_message(
                     "Use forge-write tags."
                 )
                 yield push_step("select_files", t("step_select_files", locale), "running")
-                llm_messages = await build_llm_messages(
-                    project_id=project_id_str,
-                    history=[*history, ("user", wire_prompt)],
-                    user_query=wire_prompt,
-                    db=db,
-                    user_id=user.id,
-                    locale=locale,
-                    auth=gen_auth,
-                    model=get_settings().effective_default_model,
-                )
+                with SessionLocal() as stream_db:
+                    llm_messages = await build_llm_messages(
+                        project_id=project_id_str,
+                        history=[*history, ("user", wire_prompt)],
+                        user_query=wire_prompt,
+                        db=stream_db,
+                        user_id=user_id,
+                        locale=locale,
+                        auth=gen_auth,
+                        model=get_settings().effective_default_model,
+                    )
+                    stream_db.commit()
                 yield push_step("select_files", t("step_select_files", locale), "done")
                 yield push_step("generate", t("step_generate_code", locale), "running")
                 async for chunk in stream_chat_completion(
@@ -665,35 +669,34 @@ async def send_message(
                     "steps": steps,
                     "applied": applied,
                 }
-                _persist_assistant(db, run, payload, locale)
-                run.status = "done"
-                db.commit()
+                with SessionLocal() as stream_db:
+                    live = stream_db.get(AgentRun, run_pk)
+                    if live is not None:
+                        _persist_assistant(stream_db, live, payload, locale)
+                        live.status = "done"
+                        stream_db.commit()
                 yield _sse({"type": "done", **payload, "effort_label": route_effort})
             except RodiumError as exc:
-                run.status = "error"
-                db.commit()
+                with SessionLocal() as stream_db:
+                    live = stream_db.get(AgentRun, run_pk)
+                    if live is not None:
+                        live.status = "error"
+                        stream_db.commit()
                 yield _sse({"type": "error", "message": str(exc)})
 
         return _event_stream(image_stream())
 
-    # Clarify gate
+    # Clarify gate — stream the first SSE frames IMMEDIATELY, then call the
+    # LLM. Previously `await build_clarify_questions_llm(...)` ran before any
+    # byte left the server: short first prompts stayed on "Starting build…"
+    # until the proxy/browser dropped the silent connection → "Connection
+    # interrupted" even for a one-line request.
     if clarify:
-        # Contextual questionnaire (LLM) with static-template fallback: a
-        # "developer portfolio" prompt asks for the developer's name/title/
-        # projects, not three generic questions.
-        questions = await build_clarify_questions_llm(
-            user_content,
-            locale,  # type: ignore[arg-type]
-            auth=gen_auth,
-            model=route.model,
-            force_scaffold=force_scaffold,
-        )
-        run.clarify_json = json.dumps(questions)
-        run.status = "awaiting_clarify"
-        db.commit()
+        run_model = route.model
+        db.close()
 
         async def clarify_stream():
-            yield _sse({"type": "user_message", "id": user_msg_id, "run_id": str(run.id)})
+            yield _sse({"type": "user_message", "id": user_msg_id, "run_id": str(run_pk)})
             yield _sse(
                 {
                     "type": "route",
@@ -710,11 +713,45 @@ async def send_message(
                     "status": "running",
                 }
             )
+            try:
+                questions = await build_clarify_questions_llm(
+                    user_content,
+                    locale,  # type: ignore[arg-type]
+                    auth=gen_auth,
+                    model=run_model,
+                    force_scaffold=force_scaffold,
+                )
+            except Exception as exc:
+                with SessionLocal() as err_db:
+                    live = err_db.get(AgentRun, run_pk)
+                    if live is not None:
+                        live.status = "error"
+                        err_db.commit()
+                yield _sse({"type": "error", "message": str(exc)[:500]})
+                return
+
+            with SessionLocal() as s:
+                live = s.get(AgentRun, run_pk)
+                if live is None:
+                    yield _sse({"type": "error", "message": t("run_invalid_state", locale)})
+                    return
+                live.clarify_json = json.dumps(questions)
+                live.status = "awaiting_clarify"
+                s.commit()
+
             yield _sse(
                 {
                     "type": "clarify",
-                    "run_id": str(run.id),
+                    "run_id": str(run_pk),
                     "questions": questions,
+                }
+            )
+            yield _sse(
+                {
+                    "type": "step",
+                    "id": "clarify",
+                    "label": t("step_clarify", locale),
+                    "status": "done",
                 }
             )
 
@@ -791,6 +828,12 @@ async def send_message(
         )
 
     # Build plan (and auto-exec for agent mode)
+    stream_user_id = user.id
+    route_model = route.model
+    route_task_class = route.task_class
+    route_tier = route.tier
+    # Release the request-scoped session before the long SSE generator runs.
+    db.close()
 
     async def plan_stream():
         try:
@@ -806,30 +849,31 @@ async def send_message(
             yield _sse(
                 {
                     "type": "route",
-                    "task_class": route.task_class,
+                    "task_class": route_task_class,
                     "effort_label": route_effort,
-                    "tier": route.tier,
+                    "tier": route_tier,
                 }
             )
             for step_evt in _attachment_steps():
                 yield step_evt
 
             if use_single_pass:
-                async for chunk in _iter_single_pass(
-                    db=db,
-                    run_pk=run_pk,
-                    project_id_str=project_id_str,
-                    chat_id_pk=chat_id_pk,
-                    user_content=user_content,
-                    model=route.model,
-                    auth=gen_auth,
-                    locale=locale,  # type: ignore[arg-type]
-                    route_effort=route_effort,
-                    user_id=user.id,
-                    surgical_edit=route.task_class
-                    in ("code.edit.small", "text.copy", "text.micro", "code.edit.medium"),
-                ):
-                    yield chunk
+                with SessionLocal() as stream_db:
+                    async for chunk in _iter_single_pass(
+                        db=stream_db,
+                        run_pk=run_pk,
+                        project_id_str=project_id_str,
+                        chat_id_pk=chat_id_pk,
+                        user_content=user_content,
+                        model=route_model,
+                        auth=gen_auth,
+                        locale=locale,  # type: ignore[arg-type]
+                        route_effort=route_effort,
+                        user_id=stream_user_id,
+                        surgical_edit=route_task_class
+                        in ("code.edit.small", "text.copy", "text.micro", "code.edit.medium"),
+                    ):
+                        yield chunk
                 return
 
             yield _sse(
@@ -843,22 +887,26 @@ async def send_message(
             plan, plan_meta = await build_plan(
                 prompt=user_content,
                 answers=None,
-                task_class=route.task_class,
+                task_class=route_task_class,
                 auth=gen_auth,
-                model=route.model,
+                model=route_model,
                 locale=locale,  # type: ignore[arg-type]
             )
-            live = db.get(AgentRun, run_pk)
-            if live is None:
-                yield _sse({"type": "error", "message": t("run_invalid_state", locale)})
-                return
-            live.plan_json = json.dumps(plan)
-            live.plan_meta_json = json.dumps(plan_meta, ensure_ascii=False) if plan_meta else None
-            # Multi-step plans always pause after planning: the user chooses
-            # between running the whole pipeline or step-by-step execution.
-            needs_confirm = _plan_requires_confirm(mode, route.task_class, plan)
-            live.status = "awaiting_plan_confirm" if needs_confirm else "running"
-            db.commit()
+            with SessionLocal() as stream_db:
+                live = stream_db.get(AgentRun, run_pk)
+                if live is None:
+                    yield _sse({"type": "error", "message": t("run_invalid_state", locale)})
+                    return
+                live.plan_json = json.dumps(plan)
+                live.plan_meta_json = json.dumps(plan_meta, ensure_ascii=False) if plan_meta else None
+                # Multi-step plans always pause after planning: the user chooses
+                # between running the whole pipeline or step-by-step execution.
+                needs_confirm = _plan_requires_confirm(mode, route_task_class, plan)
+                live.status = "awaiting_plan_confirm" if needs_confirm else "running"
+                stream_db.commit()
+                history = (
+                    _history(stream_db, chat_id_pk) if not needs_confirm else []
+                )
             yield _sse(
                 {
                     "type": "step",
@@ -878,19 +926,15 @@ async def send_message(
             )
             if needs_confirm:
                 return
-            history = _history(db, chat_id_pk)
-            # Release the DB connection before relaying the whole run.
-            db.commit()
-            db.close()
             spawn_plan_job(
                 run_id=run_pk,
-                user_id=user.id,
+                user_id=stream_user_id,
                 project_id=project_id_str,
                 history=history,
                 user_prompt=user_content,
                 answers_block="",
                 tasks=plan,
-                model=route.model,
+                model=route_model,
                 locale=locale,  # type: ignore[arg-type]
             )
             async for chunk in iter_run_event_sse(str(run_pk)):
