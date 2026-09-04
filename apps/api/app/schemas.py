@@ -220,6 +220,7 @@ class MessageOut(BaseModel):
     steps_json: str | None = None
     file_ops_json: str | None = None
     plan_json: str | None = None
+    plan_meta_json: str | None = None
     task_class: str | None = None
     model_slug: str | None = None
     effort_label: str | None = None
@@ -259,6 +260,7 @@ class AgentRunOut(BaseModel):
     mode: str
     prompt: str = ""
     plan: list[dict] = Field(default_factory=list)
+    plan_meta: dict = Field(default_factory=dict)
     clarify: list[dict] = Field(default_factory=list)
 
     model_config = {"from_attributes": True}
