@@ -39,16 +39,26 @@ html.forge-fonts-fallback {
   --font-serif-display: "Fraunces", Georgia, "Times New Roman", serif;
 }
 
-:root,
-[data-theme="dark"] {
-  color-scheme: dark;
-  --bg: #070707;
-  --bg-elevated: #111111;
-  --bg-soft: #171717;
-  --fg: #f3f3f3;
-  --muted: #9b9b9b;
+/* Theme tokens.
+
+   LIGHT is the base palette on bare :root, so a document that never gets a
+   data-theme (JS disabled, or the head script throwing) still renders readable
+   instead of black-on-black. Dark is layered on top twice:
+     1. the OS preference, guarded so an explicit "light" choice always wins;
+     2. an explicit [data-theme="dark"] choice.
+   Those two dark blocks carry the SAME values — keep them in sync.
+
+   Geometry, fonts and the brand accent live here only: they don't change
+   between themes. */
+:root {
+  color-scheme: light;
+  --bg: #f4f4f5;
+  --bg-elevated: #ffffff;
+  --bg-soft: #fafafa;
+  --fg: #111111;
+  --muted: #666666;
   --accent: #f2620a;
-  --accent-soft: rgba(242, 98, 10, 0.15);
+  --accent-soft: rgba(242, 98, 10, 0.12);
   --btn-primary-bg: #f2620a;
   --btn-primary-fg: #111;
   --btn-primary-radius: 8px;
@@ -58,12 +68,74 @@ html.forge-fonts-fallback {
   /* App UI (dashboard, builder) */
   --btn-compact-pad: 0.4rem 0.75rem;
   --btn-compact-size: 0.82rem;
-  --border: #262626;
-  --danger: #ef4444;
+  --border: #e4e4e7;
+  --danger: #dc2626;
   --radius: 12px;
   --font-display: var(--font-open-sauce-sans), "Open Sauce Sans", system-ui, sans-serif;
   --font-body: var(--font-open-sauce-sans), "Open Sauce Sans", system-ui, sans-serif;
   --font: var(--font-open-sauce-sans), "Open Sauce Sans", system-ui, sans-serif;
+  --home-bg: #f4f4f5;
+  --home-surface: #ffffff;
+  --home-panel: #ffffff;
+  --home-text: #111111;
+  --home-text-muted: rgba(0, 0, 0, 0.58);
+  --home-text-soft: rgba(0, 0, 0, 0.45);
+  --home-border: rgba(0, 0, 0, 0.08);
+  --home-border-strong: rgba(0, 0, 0, 0.14);
+  --home-hover: rgba(0, 0, 0, 0.05);
+  --home-input-bg: #ffffff;
+  --home-chip: rgba(0, 0, 0, 0.04);
+  --home-chip-strong: rgba(0, 0, 0, 0.07);
+  --home-danger-text: #b91c1c;
+  --home-ok-text: #15803d;
+  --home-warn-text: #a16207;
+  --body-gradient: radial-gradient(1200px 600px at 10% -10%, rgba(242, 98, 10, 0.08) 0%, var(--bg) 55%);
+}
+
+/* Dark #1 — OS preference. The :not() guard is what lets an explicit light
+   choice survive on a dark-preferring machine. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #070707;
+    --bg-elevated: #111111;
+    --bg-soft: #171717;
+    --fg: #f3f3f3;
+    --muted: #9b9b9b;
+    --accent-soft: rgba(242, 98, 10, 0.15);
+    --border: #262626;
+    --danger: #ef4444;
+    --home-bg: #050505;
+    --home-surface: rgba(8, 8, 8, 0.92);
+    --home-panel: #121212;
+    --home-text: #ffffff;
+    --home-text-muted: rgba(255, 255, 255, 0.55);
+    --home-text-soft: rgba(255, 255, 255, 0.42);
+    --home-border: rgba(255, 255, 255, 0.08);
+    --home-border-strong: rgba(255, 255, 255, 0.14);
+    --home-hover: rgba(255, 255, 255, 0.08);
+    --home-input-bg: rgba(255, 255, 255, 0.06);
+    --home-chip: rgba(255, 255, 255, 0.06);
+    --home-chip-strong: rgba(255, 255, 255, 0.1);
+    --home-danger-text: #fca5a5;
+    --home-ok-text: #86efac;
+    --home-warn-text: #fcd34d;
+    --body-gradient: radial-gradient(1200px 600px at 10% -10%, #1a0f08 0%, var(--bg) 55%);
+  }
+}
+
+/* Dark #2 — explicit choice. Higher specificity than :root so it wins whatever
+   the OS says and wherever this lands in the cascade. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #070707;
+  --bg-elevated: #111111;
+  --bg-soft: #171717;
+  --fg: #f3f3f3;
+  --muted: #9b9b9b;
+  --accent-soft: rgba(242, 98, 10, 0.15);
+  --border: #262626;
+  --danger: #ef4444;
   --home-bg: #050505;
   --home-surface: rgba(8, 8, 8, 0.92);
   --home-panel: #121212;
@@ -141,34 +213,11 @@ html.forge-fonts-fallback {
   }
 }
 
-[data-theme="light"] {
-  color-scheme: light;
-  --bg: #f4f4f5;
-  --bg-elevated: #ffffff;
-  --bg-soft: #fafafa;
-  --fg: #111111;
-  --muted: #666666;
-  --accent: #f2620a;
-  --accent-soft: rgba(242, 98, 10, 0.12);
-  --border: #e4e4e7;
-  --danger: #dc2626;
-  --home-bg: #f4f4f5;
-  --home-surface: #ffffff;
-  --home-panel: #ffffff;
-  --home-text: #111111;
-  --home-text-muted: rgba(0, 0, 0, 0.58);
-  --home-text-soft: rgba(0, 0, 0, 0.45);
-  --home-border: rgba(0, 0, 0, 0.08);
-  --home-border-strong: rgba(0, 0, 0, 0.14);
-  --home-hover: rgba(0, 0, 0, 0.05);
-  --home-input-bg: #ffffff;
-  --home-chip: rgba(0, 0, 0, 0.04);
-  --home-chip-strong: rgba(0, 0, 0, 0.07);
-  --home-danger-text: #b91c1c;
-  --home-ok-text: #15803d;
-  --home-warn-text: #a16207;
-  --body-gradient: radial-gradient(1200px 600px at 10% -10%, rgba(242, 98, 10, 0.08) 0%, var(--bg) 55%);
-}
+/* The light palette itself now lives on bare :root (see the token block above),
+   so [data-theme="light"] needs no value list of its own — the dark blocks are
+   guarded and simply don't apply. Keeping a second copy here would only invite
+   the two from drifting apart. Component-level `[data-theme="light"] .foo`
+   overrides further down are unaffected. */
 
 * {
   box-sizing: border-box;
@@ -196,12 +245,20 @@ html:has(.home) body {
 html:has(.landing) {
   overflow-x: clip;
   overflow-y: auto;
-  background: #050505;
+  background: #f6f3ee;
 }
 
-[data-theme="light"] html:has(.landing),
-html[data-theme="light"]:has(.landing) {
-  background: #f6f3ee;
+/* Landing's dark ground, mirroring the token blocks: OS preference first, then
+   an explicit choice. (A `[data-theme="light"] html:has(...)` rule used to sit
+   here and could never match — <html> is the root, so it has no ancestor.) */
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme="light"]):has(.landing) {
+    background: #050505;
+  }
+}
+
+html[data-theme="dark"]:has(.landing) {
+  background: #050505;
 }
 
 html:has(.landing) body {
@@ -225,23 +282,36 @@ select {
 
 /* Native select popups follow the effective color scheme; without explicit
    option colors, Windows/Chromium could render a LIGHT popup while the page
-   passed down a near-white `color` — white-on-white options in dark mode. */
+   passed down a near-white `color` — white-on-white options in dark mode.
+   Light-first, like the tokens, so a document with no data-theme stays
+   coherent. */
 select {
-  color-scheme: dark;
-}
-
-select option {
-  background: #141418;
-  color: #f3f3f3;
-}
-
-[data-theme="light"] select {
   color-scheme: light;
 }
 
-[data-theme="light"] select option {
+select option {
   background: #ffffff;
   color: #1c1917;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) select {
+    color-scheme: dark;
+  }
+
+  :root:not([data-theme="light"]) select option {
+    background: #141418;
+    color: #f3f3f3;
+  }
+}
+
+[data-theme="dark"] select {
+  color-scheme: dark;
+}
+
+[data-theme="dark"] select option {
+  background: #141418;
+  color: #f3f3f3;
 }
 
 /* The builder is dark-only (no theme switch is rendered there): pin its
@@ -253,8 +323,16 @@ select option {
   color-scheme: dark;
 }
 
-.builder {
+/* The slideover is portaled out of .builder, so it needs the same tokens
+   rather than inheriting them. */
+.builder,
+.design-slideover-root {
   --bg: #0a0a0a;
+  /* Pinned too: .clarify-custom, .clarify-progress-track, .design-swatch and
+     .code-image-view read these. Left unpinned they resolved to the LIGHT
+     palette, punching near-white panels into the dark builder. */
+  --bg-elevated: #111111;
+  --bg-soft: #171717;
   --fg: #ededed;
   --muted: #9ca3af;
   --border: #262626;
@@ -266,6 +344,9 @@ select option {
   --home-hover: rgba(255, 255, 255, 0.06);
   --home-panel: #101010;
   --home-chip: rgba(255, 255, 255, 0.05);
+}
+
+.builder {
   background: #0a0a0a;
   color: var(--fg);
 }
@@ -357,8 +438,12 @@ select option {
   border-color: var(--accent);
 }
 
+/* Same treatment as .auth-callback-card: derive the surface from the themed
+   elevated token instead of a literal. The old rgba(17,17,17,.9) stayed black
+   in light mode, which is what made the login card unreadable — its inputs and
+   text switched to light while the card behind them did not. */
 .card {
-  background: rgba(17, 17, 17, 0.9);
+  background: color-mix(in srgb, var(--bg-elevated) 92%, transparent);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 1.25rem;
@@ -4680,6 +4765,15 @@ html:has(.builder) body {
   gap: 0.15rem;
 }
 
+/* Opens upward. Needed in the landing footer: .lp-footer sets `overflow: clip`
+   (for its decorative wash), and the switch sits on the footer's last row — a
+   downward menu is cut off by that box, hiding the second language. There is
+   always room above, so flip rather than loosen the clip. */
+.locale-dropdown--up .locale-dropdown-menu {
+  top: auto;
+  bottom: calc(100% + 0.35rem);
+}
+
 .locale-dropdown-menu button {
   appearance: none;
   border: 0;
@@ -6705,7 +6799,7 @@ html:has(.builder) body {
 .site-thumb {
   position: relative;
   overflow: hidden;
-  background: #111;
+  background: var(--home-panel);
   width: 100%;
   aspect-ratio: 16 / 10;
 }
@@ -6728,7 +6822,7 @@ html:has(.builder) body {
   display: block;
   /* Match the card chrome — a white iframe bg flashed as a "blank thumb"
      whenever the draft revealed before React painted the hero. */
-  background: #111;
+  background: var(--home-panel);
   pointer-events: none;
   overflow: hidden;
   /* Hide the iframe scrollbar chrome (projects + templates). */
@@ -6745,7 +6839,11 @@ html:has(.builder) body {
 .site-thumb-fallback {
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(242, 98, 10, 0.35), rgba(20, 20, 20, 0.9));
+  background: linear-gradient(
+    135deg,
+    rgba(242, 98, 10, 0.35),
+    color-mix(in srgb, var(--home-panel) 90%, transparent)
+  );
 }
 
 .site-thumb-fallback.is-loading {
