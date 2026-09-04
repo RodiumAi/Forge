@@ -1,16 +1,20 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { AuthCallbackScreen } from "@/components/auth/AuthCallbackScreen";
 import { BrandLogo } from "@/components/BrandLogo";
-import { api } from "@/lib/api";
+import { api, getToken } from "@/lib/api";
 import { LocaleSwitch, useI18n } from "@/lib/i18n/I18nProvider";
 
-export default function LoginPage() {
+function LoginInner() {
   const router = useRouter();
+  const params = useSearchParams();
   const { t } = useI18n();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const autostart = params.get("autostart") === "1";
+  const startedRef = useRef(false);
 
   async function loginWithRodium() {
     setLoading(true);
@@ -22,6 +26,21 @@ export default function LoginPage() {
       setError(err instanceof Error ? err.message : t("errorGeneric"));
       setLoading(false);
     }
+  }
+
+  useEffect(() => {
+    if (!autostart || startedRef.current) return;
+    startedRef.current = true;
+    if (getToken()) {
+      router.replace("/dashboard");
+      return;
+    }
+    void loginWithRodium();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot autostart
+  }, [autostart, router]);
+
+  if (autostart && !error) {
+    return <AuthCallbackScreen />;
   }
 
   return (
@@ -86,5 +105,13 @@ export default function LoginPage() {
         </button>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<AuthCallbackScreen />}>
+      <LoginInner />
+    </Suspense>
   );
 }
