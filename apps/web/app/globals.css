@@ -5776,6 +5776,40 @@ html:has(.builder) body {
   max-width: min(220px, 100%);
 }
 
+.landing-file-chip.is-uploading {
+  opacity: 0.9;
+}
+
+.landing-file-progress {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 74px;
+}
+
+.landing-file-progress-track {
+  flex: 1;
+  height: 4px;
+  min-width: 44px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.15);
+  overflow: hidden;
+}
+
+.landing-file-progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent, #f2620a);
+  transition: width 0.2s ease;
+}
+
+.landing-file-progress-pct {
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.75);
+}
+
 .landing .landing-file-chip {
   border-color: color-mix(in srgb, var(--lp-ember) 35%, transparent);
   background: color-mix(in srgb, var(--lp-ember) 14%, var(--lp-panel));

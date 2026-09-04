@@ -310,6 +310,8 @@ export default function ProjectPage() {
   );
   const [input, setInput] = useState("");
   const [attachments, setAttachments] = useState<PromptAttachment[]>([]);
+  /** Upload progress per attachment id (0-100) while sendMessage uploads. */
+  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
   const [fileError, setFileError] = useState<string | null>(null);
   const [fileNotice, setFileNotice] = useState<string | null>(null);
   const [mentionOpen, setMentionOpen] = useState(false);
@@ -1312,9 +1314,12 @@ export default function ProjectPage() {
       let uploaded = attached;
       try {
         if (attached.some((a) => a.source === "local" && a.kind === "image")) {
-          uploaded = await uploadPromptAttachments(projectId, attached, locale);
+          uploaded = await uploadPromptAttachments(projectId, attached, locale, (id, pct) =>
+            setUploadProgress((prev) => ({ ...prev, [id]: pct })),
+          );
         }
       } catch (err) {
+        setUploadProgress({});
         // Drop failed local images so the composer + picker stay usable.
         setAttachments((prev) => {
           for (const item of prev) {
@@ -1435,6 +1440,7 @@ export default function ProjectPage() {
       if (isBranch) setEditingMessageId(null);
       // Keep blob URLs on the message bubble — do not revoke here.
       setAttachments([]);
+      setUploadProgress({});
 
       streamAbortRef.current?.abort();
       const abortCtrl = new AbortController();
@@ -1741,6 +1747,13 @@ export default function ProjectPage() {
 
   async function submitComposer() {
     if (composerInputLocked) return;
+    // Guard BEFORE clearing the input: sendMessage silently no-ops without a
+    // chat id (slow load / failed boot), which used to eat the message while
+    // leaving the attachment chip stranded in the composer.
+    if (!chatId) {
+      setError(t("noChat"));
+      return;
+    }
     const text = input.trim();
     const files = attachments;
     if (!text && files.length === 0 && !elementSelection) return;
@@ -1812,7 +1825,9 @@ export default function ProjectPage() {
   }
 
   const canSend =
-    Boolean(input.trim() || attachments.length || elementSelection) && !composerInputLocked;
+    Boolean(input.trim() || attachments.length || elementSelection) &&
+    !composerInputLocked &&
+    Boolean(chatId);
   const showLivePanel =
     busy ||
     Boolean(streaming) ||
@@ -2149,6 +2164,7 @@ export default function ProjectPage() {
                     items={attachments}
                     onRemove={removeAttachment}
                     projectId={projectId}
+                    progress={uploadProgress}
                   />
                 </div>
               ) : null}
