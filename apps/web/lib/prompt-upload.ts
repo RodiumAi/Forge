@@ -34,6 +34,9 @@ export async function uploadPromptAttachments(
           "Accept-Language": locale,
         },
         body: fd,
+        // A stalled upload used to hang sendMessage forever (input cleared,
+        // chip stuck, no error). Bound it so failures surface as chat errors.
+        signal: AbortSignal.timeout(60_000),
       });
     let res: Response;
     try {
