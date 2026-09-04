@@ -18,6 +18,8 @@ data/projects/*
 
 **/dist/
 
+*.tsbuildinfo
+
 *.pyc
 
 .DS_Store
