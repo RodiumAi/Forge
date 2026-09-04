@@ -2,6 +2,8 @@
 
 import { useEffect } from "react";
 
+import { THEME_INIT_SCRIPT } from "@/lib/theme/init-script";
+
 /**
  * Last-resort boundary: catches errors thrown by the root layout itself
  * (providers, fonts, theme). It must render its own <html>/<body> because the
@@ -20,7 +22,14 @@ export default function GlobalError({
   }, [error]);
 
   return (
-    <html lang="fr" data-theme="dark">
+    // No data-theme attribute: the script below sets it, and if even that fails
+    // the @media (prefers-color-scheme) block in globals.css still resolves a
+    // readable theme. Hardcoding "dark" here showed light-mode users a dark
+    // crash screen.
+    <html lang="fr" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body>
         <div className="app-error" role="alert">
           <div className="app-error-card">
