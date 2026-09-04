@@ -142,8 +142,13 @@ def handle_plan_stream_payload(
         persist_plan_error(db, run_pk, payload, locale)
 
 
-def make_progress_cb(db: Session, run_pk: UUID):
+def make_progress_cb(run_pk: UUID):
+    """Checkpoint with a short-lived session — never pin the pool across LLM awaits."""
+
     async def _cb(tasks: list, cursor: int) -> None:
-        checkpoint_plan(db, run_pk, tasks, cursor)
+        from app.db import SessionLocal
+
+        with SessionLocal() as db:
+            checkpoint_plan(db, run_pk, tasks, cursor)
 
     return _cb
