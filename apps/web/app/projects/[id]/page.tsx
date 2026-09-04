@@ -1741,6 +1741,13 @@ export default function ProjectPage() {
 
   async function submitComposer() {
     if (composerInputLocked) return;
+    // Guard BEFORE clearing the input: sendMessage silently no-ops without a
+    // chat id (slow load / failed boot), which used to eat the message while
+    // leaving the attachment chip stranded in the composer.
+    if (!chatId) {
+      setError(t("noChat"));
+      return;
+    }
     const text = input.trim();
     const files = attachments;
     if (!text && files.length === 0 && !elementSelection) return;
@@ -1812,7 +1819,9 @@ export default function ProjectPage() {
   }
 
   const canSend =
-    Boolean(input.trim() || attachments.length || elementSelection) && !composerInputLocked;
+    Boolean(input.trim() || attachments.length || elementSelection) &&
+    !composerInputLocked &&
+    Boolean(chatId);
   const showLivePanel =
     busy ||
     Boolean(streaming) ||
