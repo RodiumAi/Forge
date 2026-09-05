@@ -6,5 +6,5 @@
 
 -r requirements.txt
 
-ruff==0.16.4
+ruff==0.16.5
 pytest==8.3.4
