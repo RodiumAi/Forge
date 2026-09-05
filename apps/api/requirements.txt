@@ -1,9 +1,9 @@
-﻿fastapi>=0.115.0,<0.116
+fastapi>=0.115.0,<0.116
 uvicorn[standard]>=0.34.0,<0.35
 sqlalchemy>=2.0.40,<2.1
 psycopg[binary]>=3.2.10,<4
 pydantic>=2.11.0,<3
-pydantic-settings>=2.8.0,<3
+pydantic-settings>=2.15.0,<3
 email-validator>=2.0.0,<3
 python-jose[cryptography]>=3.4.0,<4
 passlib[bcrypt]>=1.7.4,<2
