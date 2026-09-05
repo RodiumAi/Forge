@@ -9,7 +9,7 @@
     "transform": "node cli.mjs"
   },
   "dependencies": {
-    "@babel/standalone": "^7.26.9"
+    "@babel/standalone": "^8.0.4"
   },
   "devDependencies": {
     "lucide-react": "0.468.0"
