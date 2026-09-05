@@ -12,6 +12,6 @@
     "@babel/standalone": "^7.26.9"
   },
   "devDependencies": {
-    "lucide-react": "0.468.0"
+    "lucide-react": "1.39.0"
   }
 }
