@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 from app.services.filesystem import write_file
-from app.services.source_edit import SourceVariant, collect_matches, select_unique
+from app.services.source_edit import SourceMatch, SourceVariant, collect_matches, select_unique
 
 _SOURCE_EXTS = (".tsx", ".ts", ".jsx", ".js", ".css")
 
@@ -50,6 +51,55 @@ def _encode_like(variant: SourceVariant, new: str) -> str:
     return new
 
 
+def _ws_flexible_pattern(text: str) -> re.Pattern[str]:
+    """Match `text` allowing any JSX/source whitespace between words."""
+    parts = [p for p in re.split(r"\s+", text.strip()) if p]
+    if len(parts) < 1:
+        raise ValueError("Text too short to edit safely")
+    return re.compile(r"\s+".join(re.escape(p) for p in parts))
+
+
+def _collect_ws_matches(project_id: str, text: str) -> list[SourceMatch]:
+    """Exact substring failed — retry with whitespace-flexible search.
+
+    Preview `innerText` collapses newlines/indentation that still exist in the
+    JSX source (`care\\n          coordination`). Without this path almost every
+    multi-line paragraph edit returns visual_edit_not_found.
+    """
+    from app.services.filesystem import list_files
+
+    pattern = _ws_flexible_pattern(text)
+    html_pattern = None
+    html = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+    if html != text:
+        html_pattern = _ws_flexible_pattern(html)
+
+    matches: list[SourceMatch] = []
+    for path, content in list_files(project_id).items():
+        if any(part in {"node_modules", "dist", ".vite", ".git"} for part in path.split("/")):
+            continue
+        if not path.endswith(_SOURCE_EXTS):
+            continue
+        for kind, pat in (("raw", pattern), ("html", html_pattern)):
+            if pat is None:
+                continue
+            found = list(pat.finditer(content))
+            if not found:
+                continue
+            # Store the first matched source span as the literal to replace.
+            literal = found[0].group(0)
+            matches.append(
+                SourceMatch(
+                    path,
+                    content,
+                    SourceVariant(literal, kind),
+                    count=len(found),
+                )
+            )
+            break
+    return matches
+
+
 def apply_visual_text_edit(project_id: str, old_text: str, new_text: str) -> VisualEditResult:
     old_text = (old_text or "").strip()
     new_text = new_text or ""
@@ -59,6 +109,8 @@ def apply_visual_text_edit(project_id: str, old_text: str, new_text: str) -> Vis
         raise ValueError("No change")
 
     matches = collect_matches(project_id, _candidate_variants(old_text), _SOURCE_EXTS)
+    if not matches:
+        matches = _collect_ws_matches(project_id, old_text)
     if not matches:
         raise FileNotFoundError("text_not_found")
 

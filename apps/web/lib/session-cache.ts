@@ -1,4 +1,5 @@
 import { api, getToken } from "@/lib/api";
+import { primeMediaToken } from "@/lib/media-token";
 import { identifyPosthogUser } from "@/lib/posthog/client";
 
 const STORAGE_KEY = "forge_session_v1";
@@ -10,6 +11,12 @@ export type SessionProfile = {
   name?: string | null;
   avatar_url?: string | null;
   rodium_linked?: boolean;
+  /**
+   * The user's id on the RodiumAI platform (cuid2), stored on our side as
+   * `users.rodium_sub`. Needed to build a top-up link to `rodiumai.io/pay`,
+   * which identifies the account to credit by that id.
+   */
+  rodium_sub?: string | null;
 };
 
 export type SessionWallet = {
@@ -137,6 +144,9 @@ export async function ensureSession(options?: { force?: boolean }): Promise<Sess
   if (refreshPromise) return refreshPromise;
 
   refreshPromise = (async () => {
+    // Fetched alongside the profile so `<img src>` URLs have a credential
+    // ready on first paint rather than a render later.
+    void primeMediaToken();
     try {
       const [meResult, accountResult] = await Promise.allSettled([
         api<SessionProfile & { id?: string; rodium_sub?: string | null }>("/auth/me"),
@@ -157,6 +167,7 @@ export async function ensureSession(options?: { force?: boolean }): Promise<Sess
           name: me.name,
           avatar_url: me.avatar_url,
           rodium_linked: me.rodium_linked,
+          rodium_sub: me.rodium_sub ?? null,
         };
         const distinctId = me.rodium_sub ?? (me.id ? String(me.id) : null);
         if (distinctId) {

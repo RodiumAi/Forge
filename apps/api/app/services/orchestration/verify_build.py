@@ -354,6 +354,83 @@ def verify_project_build(project_id: str) -> list[VerifyFinding]:
             )
         )
 
+    findings.extend(responsive_findings(files))
+
+    return findings
+
+
+# ── Responsive ─────────────────────────────────────────────────────────────
+#
+# Prototypes get reviewed in the builder's phone frame, so a layout that only
+# holds together at 1440px is a defect the user sees immediately. These are
+# warnings rather than criticals: a fixed width is ugly, not a black preview,
+# and promoting them would spend a repair pass on cosmetics ahead of a crash.
+
+_VIEWPORT_META_RE = re.compile(
+    r"""<meta[^>]+name\s*=\s*["']viewport["']""",
+    re.I,
+)
+# `width: 1200px` on a container, but not on things where a pixel width is
+# right: borders, icons, and anything already inside a max-width.
+_FIXED_WIDTH_RE = re.compile(
+    r"(?:^|[;{\s])(?:min-)?width\s*:\s*(\d{3,4})px\s*[;}]",
+    re.I | re.M,
+)
+_FIXED_WIDTH_MIN_PX = 480
+_STYLE_FILE_SUFFIXES = (".css",)
+
+
+def _selector_before(content: str, index: int) -> str:
+    """The rule a match sits in, for a message the model can act on."""
+    head = content[:index]
+    brace = head.rfind("{")
+    if brace == -1:
+        return ""
+    start = max(head.rfind("}", 0, brace), head.rfind("*/", 0, brace))
+    return head[start + 1 : brace].strip().splitlines()[-1][:80] if brace > start else ""
+
+
+def responsive_findings(files: dict[str, str]) -> list[VerifyFinding]:
+    findings: list[VerifyFinding] = []
+
+    index_html = files.get("index.html") or ""
+    if index_html and not _VIEWPORT_META_RE.search(index_html):
+        findings.append(
+            VerifyFinding(
+                code="responsive.missing_viewport_meta",
+                severity="warning",
+                path="index.html",
+                message=(
+                    "index.html has no <meta name=\"viewport\">. Without it a phone "
+                    "renders the desktop layout scaled down. Add "
+                    '<meta name="viewport" content="width=device-width, initial-scale=1" />.'
+                ),
+            )
+        )
+
+    for path, content in files.items():
+        if not path.endswith(_STYLE_FILE_SUFFIXES):
+            continue
+        offenders: list[str] = []
+        for match in _FIXED_WIDTH_RE.finditer(content):
+            if int(match.group(1)) < _FIXED_WIDTH_MIN_PX:
+                continue
+            selector = _selector_before(content, match.start())
+            offenders.append(f"{selector or '?'} → {match.group(0).strip().rstrip(';{}')}")
+        if offenders:
+            findings.append(
+                VerifyFinding(
+                    code="responsive.fixed_width_container",
+                    severity="warning",
+                    path=path,
+                    message=(
+                        "Fixed pixel widths overflow a phone viewport. Replace with "
+                        "max-width + width:100% (or min()/clamp()): "
+                        + "; ".join(offenders[:6])
+                    ),
+                )
+            )
+
     return findings
 
 
@@ -374,6 +451,10 @@ def repair_focus_paths(findings: list[VerifyFinding]) -> list[str] | None:
         focus.append("src/main.tsx")
     if any(f.code == "context.api_mismatch" for f in findings):
         focus.extend(["src/App.tsx", "src/context"])
+    for finding in findings:
+        # Responsive findings name the exact file that holds the offending rule.
+        if finding.code.startswith("responsive.") and finding.path:
+            focus.append(finding.path)
     seen: set[str] = set()
     out: list[str] = []
     for path in focus:
@@ -394,6 +475,8 @@ def format_findings_for_prompt(findings: list[VerifyFinding]) -> str:
         "sync orphan classNames with src/index.css using the EXACT same tokens "
         "(never rename to a parallel prefix mid-plan); fix createRoot named import; "
         "remove overflow:hidden from html/body so the page can scroll; "
+        "replace fixed pixel widths with max-width + width:100% so nothing "
+        "overflows a phone viewport; "
         "APPEND CSS only — do not drop existing navbar/hero rules."
     )
     if any(f.code == "export.named_missing" for f in findings):

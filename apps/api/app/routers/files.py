@@ -6,7 +6,7 @@ from fastapi.responses import RedirectResponse, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from app.auth import get_current_user
+from app.auth import get_current_user, get_media_user
 from app.config import get_settings
 from app.db import get_db
 from app.errors import SitesError
@@ -232,7 +232,7 @@ def get_public_asset(
     project_id: UUID,
     asset_path: str,
     request: Request,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_media_user),
     db: Session = Depends(get_db),
 ) -> Response:
     """Serve a file from the project's `public/` folder (favicon, OG image...).
@@ -341,7 +341,7 @@ def stream_asset_content(
     project_id: UUID,
     object_id: UUID,
     request: Request,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_media_user),
     db: Session = Depends(get_db),
 ) -> Response:
     """Authenticated asset body for <img src> (Bearer or ?access_token=)."""

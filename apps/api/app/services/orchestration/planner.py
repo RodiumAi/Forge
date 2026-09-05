@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 from typing import Any
 
 from app.i18n import Locale, t
 from app.services.llm import RodiumError, complete_chat
+
+logger = logging.getLogger("planner")
 from app.services.rodium_generation import RodiumGenerationAuth
 
 _VAGUE_RE = re.compile(
@@ -543,9 +546,11 @@ async def build_plan(
                     )
             return out, meta
         return fallback, meta
-    except (RodiumError, json.JSONDecodeError, TypeError, ValueError):
+    except (RodiumError, json.JSONDecodeError, TypeError, ValueError) as exc:
+        logger.warning("planner LLM failed, using static template: %s", exc)
         return fallback, {}
     except Exception:
+        logger.warning("planner LLM failed (unexpected), using static template", exc_info=True)
         return fallback, {}
 
 

@@ -143,11 +143,11 @@ export function BuilderTopbar({
     };
   }, [pageMenuOpen]);
 
-  const modes: { id: BuilderMode; label: string; icon: typeof Globe }[] = [
-    { id: "preview", label: t("builderModePreview"), icon: Globe },
-    { id: "files", label: t("builderModeFiles"), icon: FolderOpen },
-    { id: "code", label: t("builderModeCode"), icon: Braces },
-    { id: "options", label: t("builderModeOptions"), icon: Settings2 },
+  const modes: { id: BuilderMode; label: string; hint: string; icon: typeof Globe }[] = [
+    { id: "preview", label: t("builderModePreview"), hint: t("builderModePreviewHint"), icon: Globe },
+    { id: "files", label: t("builderModeFiles"), hint: t("builderModeFilesHint"), icon: FolderOpen },
+    { id: "code", label: t("builderModeCode"), hint: t("builderModeCodeHint"), icon: Braces },
+    { id: "options", label: t("builderModeOptions"), hint: t("builderModeOptionsHint"), icon: Settings2 },
   ];
 
   function startEdit() {
@@ -286,8 +286,9 @@ export function BuilderTopbar({
             role="tab"
             className={`builder-mode-btn${mainMode === m.id ? " active" : ""}`}
             aria-selected={mainMode === m.id}
+            aria-label={`${m.label}. ${m.hint}`}
             onClick={() => onModeChange(m.id)}
-            title={m.label}
+            title={`${m.label} — ${m.hint}`}
           >
             <Icon icon={m.icon} className="ui-icon-sm" />
             <span>{m.label}</span>
@@ -435,7 +436,6 @@ export function BuilderTopbar({
               disabled={previewBusy}
             >
               <Icon icon={RefreshCw} className={`ui-icon-md${previewBusy ? " agent-spin" : ""}`} />
-              <span className="builder-toolbar-restart-label">{t("restartPreview")}</span>
             </button>
           </>
         )}

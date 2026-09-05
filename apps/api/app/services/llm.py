@@ -11,13 +11,55 @@ from app.config import get_settings
 from app.i18n import Locale, t
 from app.services.rodium_generation import RodiumGenerationAuth
 
+# ── Error taxonomy ─────────────────────────────────────────────────────────
+#
+# One stable code per cause the user can actually do something about. These
+# travel from here into the SSE `error` frame, into `AgentRun.plan_meta_json`
+# (which was NULL on every failed run, making incidents undiagnosable), and
+# into the browser, where each maps to a message and a one-click action.
+# Adding a code means adding a row to `lib/chat-errors.ts` on the web side.
+
+ERR_NETWORK = "network"  # transport died; retrying is worthwhile
+ERR_TIMEOUT = "timeout"  # upstream went quiet past our budget
+ERR_AUTH_EXPIRED = "auth_expired"  # RodiumAi session/token no longer valid
+ERR_AUTH_BUSY = "auth_busy"  # token refresh contended past its deadline
+ERR_INVALID_KEY = "invalid_key"  # the API key is wrong or revoked
+ERR_QUOTA = "quota"  # no RODI left
+ERR_PAYLOAD_TOO_LARGE = "payload_too_large"
+ERR_EMPTY_RESPONSE = "empty_response"  # model returned nothing usable
+ERR_UPSTREAM = "upstream"  # upstream said no, for some other reason
+ERR_CANCELLED = "cancelled"
+ERR_INTERNAL = "internal"
+
+# httpx applies `read` PER CHUNK, not to the whole stream, so the old 300s was
+# not a 5-minute cap on a request — it was "wait five minutes for each next
+# token, forever". A stream that has sent nothing for a minute is dead; the
+# dispatcher's own wall-clock budget covers the legitimately-slow case.
+_STREAM_TIMEOUT = httpx.Timeout(60.0, connect=15.0, pool=30.0)
+_COMPLETE_TIMEOUT = httpx.Timeout(90.0, connect=15.0, pool=30.0)
+
 
 class RodiumError(Exception):
-    def __init__(self, message: str, status_code: int | None = None):
+    """An upstream generation failure, carrying a stable machine-readable code.
 
+    `code` exists because every consumer used to re-derive the cause by matching
+    English substrings against `message` — a classification that breaks silently
+    the day those messages get translated. The code is set once, here, where the
+    HTTP status and body are still available, and travels unchanged all the way
+    to the SSE frame and the browser's error bubble.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        status_code: int | None = None,
+        code: str = "upstream",
+    ):
         super().__init__(message)
 
         self.status_code = status_code
+
+        self.code = code
 
 
 StreamKind = Literal["token", "thinking"]
@@ -74,19 +116,22 @@ def _raise_rodium_error(response: httpx.Response, locale: Locale) -> None:
                 "sign in with rodiumai",
             )
         ):
-            raise RodiumError(t("rodium_session_expired", locale), response.status_code)
+            raise RodiumError(
+                t("rodium_session_expired", locale), response.status_code, ERR_AUTH_EXPIRED
+            )
 
-        raise RodiumError(t("rodium_invalid_key", locale), response.status_code)
+        raise RodiumError(t("rodium_invalid_key", locale), response.status_code, ERR_INVALID_KEY)
 
     if response.status_code == 402 or "quota" in text.lower() or "balance" in text.lower():
-        raise RodiumError(t("rodium_quota", locale), response.status_code)
+        raise RodiumError(t("rodium_quota", locale), response.status_code, ERR_QUOTA)
 
     if response.status_code == 413 or "entity too large" in lower or "payload_too_large" in lower:
-        raise RodiumError(t("rodium_payload_too_large", locale), 413)
+        raise RodiumError(t("rodium_payload_too_large", locale), 413, ERR_PAYLOAD_TOO_LARGE)
 
     raise RodiumError(
         t("rodium_error", locale, code=response.status_code, body=text),
         response.status_code,
+        ERR_UPSTREAM,
     )
 
 
@@ -149,11 +194,30 @@ def is_transient_network_error(exc: BaseException) -> bool:
     return any(marker in text for marker in _TRANSIENT_NETWORK_MARKERS)
 
 
+def error_code_for(exc: BaseException) -> str:
+    """Best-effort code for an exception that did not come from `RodiumError`.
+
+    The dispatcher catches bare `httpx` and stdlib exceptions too; without this
+    they would all land under `internal` and lose the distinction between "the
+    network blipped" (retry) and "the model refused" (don't).
+    """
+    if isinstance(exc, RodiumError):
+        return exc.code
+    if isinstance(exc, asyncio.TimeoutError):
+        return ERR_TIMEOUT
+    if isinstance(exc, asyncio.CancelledError):
+        return ERR_CANCELLED
+    if is_transient_network_error(exc):
+        return ERR_NETWORK
+    return ERR_INTERNAL
+
+
 def _network_rodium_error(exc: BaseException, locale: Locale) -> RodiumError:
 
     return RodiumError(
         t("rodium_error", locale, code="network", body=str(exc)[:200]),
         None,
+        ERR_TIMEOUT if isinstance(exc, httpx.ReadTimeout | httpx.ConnectTimeout) else ERR_NETWORK,
     )
 
 
@@ -182,7 +246,7 @@ async def _stream_playground_chat(
     }
 
     try:
-        async with httpx.AsyncClient(timeout=httpx.Timeout(300.0, connect=30.0)) as client:
+        async with httpx.AsyncClient(timeout=_STREAM_TIMEOUT) as client:
             async with client.stream("POST", url, headers=headers, json=payload) as response:
                 if response.status_code >= 400:
                     body = await response.aread()
@@ -225,7 +289,7 @@ async def _stream_secret_chat(
     }
 
     try:
-        async with httpx.AsyncClient(timeout=httpx.Timeout(300.0, connect=30.0)) as client:
+        async with httpx.AsyncClient(timeout=_STREAM_TIMEOUT) as client:
             async with client.stream("POST", _gateway_chat_url(), headers=headers, json=payload) as response:
                 if response.status_code >= 400:
                     body = await response.aread()
@@ -317,7 +381,7 @@ async def stream_chat_completion(
 
     if auth.mode == "playground":
         if not auth.access_token or not auth.api_key_id:
-            raise RodiumError(t("rodium_key_required", locale))
+            raise RodiumError(t("rodium_key_required", locale), None, ERR_INVALID_KEY)
 
         async def playground_factory() -> AsyncIterator[StreamChunk]:
 
@@ -336,7 +400,7 @@ async def stream_chat_completion(
         return
 
     if not auth.api_key_secret:
-        raise RodiumError(t("rodium_key_required", locale))
+        raise RodiumError(t("rodium_key_required", locale), None, ERR_INVALID_KEY)
 
     async def secret_factory() -> AsyncIterator[StreamChunk]:
 
@@ -391,7 +455,7 @@ async def complete_chat(
         if isinstance(last_error, RodiumError):
             raise last_error
 
-        raise RodiumError(t("rodium_error", locale, code="network", body="retry failed"))
+        raise RodiumError(t("rodium_error", locale, code="network", body="retry failed"), None, ERR_NETWORK)
 
     headers = {
         "Authorization": f"Bearer {auth.api_key_secret}",
@@ -409,7 +473,7 @@ async def complete_chat(
 
     for attempt in range(3):
         try:
-            async with httpx.AsyncClient(timeout=httpx.Timeout(120.0, connect=30.0)) as client:
+            async with httpx.AsyncClient(timeout=_COMPLETE_TIMEOUT) as client:
                 response = await client.post(_gateway_chat_url(), headers=headers, json=payload)
 
             if response.status_code >= 400:
@@ -421,7 +485,9 @@ async def complete_chat(
                 return str(data["choices"][0]["message"]["content"] or "")
 
             except (KeyError, IndexError, TypeError) as exc:
-                raise RodiumError("Invalid completion payload") from exc
+                raise RodiumError(
+                    "Invalid completion payload", response.status_code, ERR_EMPTY_RESPONSE
+                ) from exc
 
         except RodiumError:
             raise
@@ -437,4 +503,4 @@ async def complete_chat(
     if last_http is not None:
         raise _network_rodium_error(last_http, locale)
 
-    raise RodiumError(t("rodium_error", locale, code="network", body="retry failed"))
+    raise RodiumError(t("rodium_error", locale, code="network", body="retry failed"), None, ERR_NETWORK)

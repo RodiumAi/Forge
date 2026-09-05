@@ -14,7 +14,7 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.auth import get_current_user
+from app.auth import get_current_user, get_media_user
 from app.config import get_settings
 from app.db import get_db
 from app.i18n import resolve_locale, t
@@ -126,7 +126,7 @@ def source_bundle(
 def draft_page(
     project_id: UUID,
     request: Request,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_media_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
     """Standalone draft: the runner shell with the source bundle embedded.

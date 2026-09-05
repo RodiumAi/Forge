@@ -34,6 +34,21 @@ export type ChatStreamState = {
   applied: boolean;
   /** Plan task currently executing, so file ops can be grouped under it. */
   currentTaskId: string | null;
+  /**
+   * Tasks that failed for good while the plan carried on.
+   *
+   * A failed task no longer ends the run: the dispatcher records it, warns the
+   * tasks that follow, and continues. These are what the end-of-run summary
+   * lists and what the Resume button re-runs.
+   */
+  failedTasks: { id: string; label: string; code?: string }[];
+  /**
+   * True when the plan halted because a structural task (architecture,
+   * styles foundation) failed, instead of degrading through the rest of the
+   * tasks. Distinguishes "stopped on purpose" from "skipped and kept going"
+   * in the resume banner's wording.
+   */
+  stopped: boolean;
 };
 
 export function initialStreamState(): ChatStreamState {
@@ -53,6 +68,8 @@ export function initialStreamState(): ChatStreamState {
     busy: true,
     applied: false,
     currentTaskId: null,
+    failedTasks: [],
+    stopped: false,
   };
 }
 
@@ -75,7 +92,7 @@ export type ChatStreamEffect =
   | { kind: "schedule-preview-refresh" }
   | { kind: "ensure-preview-started" }
   | { kind: "cancelled" }
-  | { kind: "error"; message: string }
+  | { kind: "error"; message: string; code?: string }
   | { kind: "finalize"; payload: FinalizePayload };
 
 export type ReduceOptions = {
@@ -123,6 +140,34 @@ export function reduceStreamEvent(
 
   if (type === "thinking") {
     return { state: { ...next, thinking: next.thinking + String(event.delta || "") }, effects };
+  }
+
+  // The server is about to re-run an attempt whose partial output we already
+  // displayed (upstream drop, empty answer, fallback model). It has dropped
+  // those tokens on its side; if we kept ours the retry would append to half an
+  // answer and the user would read the same paragraph twice.
+  if (type === "stream_reset") {
+    return { state: { ...next, streaming: "", thinking: "" }, effects };
+  }
+
+  // A plan task gave up for good. The plan keeps going — the run only ends when
+  // `done` arrives — so this records the casualty without touching `busy`.
+  if (type === "task_failed") {
+    const id = String(event.id || "");
+    return {
+      state: {
+        ...next,
+        failedTasks: [
+          ...next.failedTasks.filter((f) => f.id !== id),
+          {
+            id,
+            label: String(event.label || ""),
+            code: typeof event.code === "string" ? event.code : undefined,
+          },
+        ],
+      },
+      effects,
+    };
   }
 
   if (type === "step") {
@@ -214,17 +259,31 @@ export function reduceStreamEvent(
       taskId: next.currentTaskId || undefined,
     };
     next = { ...next, ops: [...next.ops, op], applied: true };
-    // No preview refresh here: one refresh per WRITE caused an endless
-    // restart→remount→reload loop for the whole run. The dispatcher emits
-    // explicit `preview_refresh` events at task boundaries instead.
-    if (type === "file_write") {
-      effects.push({ kind: "refresh-routes" }, { kind: "ensure-preview-started" });
-    }
+    // Nothing per-write, on purpose. Both effects that used to live here fired
+    // once per file, in bursts of 5-20 per task:
+    //
+    // * `ensure-preview-started` read `previewUrl` from a closure captured when
+    //   the stream opened. If the preview was not up yet at that moment the
+    //   value stayed null for the WHOLE run, so every write started the preview
+    //   again, and every start remounted the iframe with a new `?t=` — a real
+    //   navigation, a white flash and a Babel reload. That is the flicker.
+    // * `refresh-routes` refetched the file tree plus up to 20 file bodies with
+    //   no debounce and no in-flight guard: ~880 overlapping requests on a
+    //   40-write plan, landing out of order.
+    //
+    // The dispatcher already emits `preview_refresh` at task boundaries, which
+    // is both the right moment and rare enough to act on directly.
     return { state: next, effects };
   }
 
   if (type === "preview_refresh") {
-    effects.push({ kind: "schedule-preview-refresh" });
+    // Task boundary: the only place routes can actually have changed, and rare
+    // enough (once per task) that refreshing them here costs nothing.
+    effects.push(
+      { kind: "schedule-preview-refresh" },
+      { kind: "refresh-routes" },
+      { kind: "ensure-preview-started" },
+    );
     return { state: next, effects };
   }
 
@@ -251,7 +310,11 @@ export function reduceStreamEvent(
 
   if (type === "error") {
     const message = String(event.message || opts.streamErrorLabel);
-    if (message === "cancelled") {
+    // The API's own classification (llm.py's taxonomy). Carried through
+    // untouched so `lib/chat-errors.ts` decides the wording and the button;
+    // guessing from `message` is what this replaces.
+    const code = typeof event.code === "string" ? event.code : undefined;
+    if (code === "cancelled" || message === "cancelled") {
       effects.push({ kind: "cancelled" });
       return {
         state: {
@@ -270,7 +333,7 @@ export function reduceStreamEvent(
       task.status === "running" ? { ...task, status: "error" } : task,
     );
     const canResume = planTasks.some((t) => t.status === "pending" || t.status === "error");
-    effects.push({ kind: "error", message });
+    effects.push({ kind: "error", message, code });
     return {
       state: { ...next, planTasks, planNeedsConfirm: canResume, busy: false },
       effects,
@@ -312,6 +375,33 @@ export function reduceStreamEvent(
           planTasks: finalPlan,
           planMeta: next.planMeta,
           planNeedsConfirm: true,
+        },
+        effects,
+      };
+    }
+
+    // A run that skipped steps is finished but not complete. Keep the run id
+    // and the checklist so the user can send exactly those steps back through
+    // `confirm-plan`, which re-arms everything not already `done`. The composer
+    // stays free — this is an offer, not a gate.
+    const failed = Array.isArray(event.failed) ? (event.failed as { task_id?: unknown }[]) : [];
+    if (failed.length) {
+      return {
+        state: {
+          ...initialStreamState(),
+          busy: false,
+          activeRunId: next.activeRunId,
+          planTasks: finalPlan,
+          planMeta: next.planMeta,
+          failedTasks: failed.map((item, i) => ({
+            id: String(item.task_id ?? `task_${i + 1}`),
+            label: String((item as { title?: unknown }).title ?? ""),
+            code:
+              typeof (item as { code?: unknown }).code === "string"
+                ? ((item as { code: string }).code)
+                : undefined,
+          })),
+          stopped: Boolean(event.stopped),
         },
         effects,
       };

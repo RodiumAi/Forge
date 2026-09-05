@@ -155,38 +155,55 @@ html.forge-fonts-fallback {
 }
 
 /* Global activity indicator (route + preview / async work).
-   A discreet top-right spinner pill — replaced the full-width 3px bar, which
-   read as "the whole page is loading" on every small background action. */
+   Hairline indeterminate shuttle — no “% complete”, just motion while busy. */
 .forge-top-loader {
   position: fixed;
-  top: 72px;
-  right: 18px;
+  top: 0;
+  left: 0;
+  right: 0;
   z-index: 9999;
   pointer-events: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 999px;
-  background: rgba(18, 18, 20, 0.72);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(6px);
-  animation: forge-top-loader-in 0.18s ease-out;
+  height: 0.5px;
+  overflow: hidden;
+  background: transparent;
+  animation: forge-top-loader-fade-in 0.12s ease-out;
 }
 
-[data-theme="light"] .forge-top-loader {
-  background: rgba(255, 255, 255, 0.85);
-  border-color: rgba(0, 0, 0, 0.08);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.14);
+.forge-top-loader-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 22%;
+  background: #f2620a;
+  box-shadow: 0 0 5px rgba(242, 98, 10, 0.35);
+  border-radius: 0;
+  animation: forge-top-loader-shuttle 2.4s ease-in-out infinite;
+  will-change: left;
 }
 
-.forge-top-loader.is-done {
-  opacity: 0;
-  transition: opacity 0.22s ease;
+@keyframes forge-top-loader-shuttle {
+  0% {
+    left: -22%;
+  }
+  50% {
+    left: 100%;
+  }
+  100% {
+    left: -22%;
+  }
 }
 
+@keyframes forge-top-loader-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Kept for standalone pages (e.g. verify-email) that still use a local spinner. */
 .forge-top-loader-spinner {
   width: 16px;
   height: 16px;
@@ -199,17 +216,6 @@ html.forge-fonts-fallback {
 @keyframes forge-top-loader-spin {
   to {
     transform: rotate(360deg);
-  }
-}
-
-@keyframes forge-top-loader-in {
-  from {
-    opacity: 0;
-    transform: translateY(-4px) scale(0.9);
-  }
-  to {
-    opacity: 1;
-    transform: none;
   }
 }
 
@@ -672,7 +678,10 @@ html:has(.builder) body {
 .builder-toolbar-btn-restart {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  justify-content: center;
+  min-width: 2.1rem;
+  padding-left: 0.45rem;
+  padding-right: 0.45rem;
 }
 
 .builder-toolbar-btn:hover {
@@ -701,6 +710,19 @@ html:has(.builder) body {
   padding: 0.75rem 0.9rem;
 }
 
+/* Ambiguous visual edit / soft refusal — warning, not a hard failure. */
+.builder-msg-error.is-warning {
+  border: 1px solid rgba(251, 146, 60, 0.45);
+  background: rgba(251, 146, 60, 0.14);
+}
+
+/* The same red card, but nested inside the live streaming panel rather than a
+   standalone message. It needs a gap from the plan/activity above it and a
+   little breathing room from the panel edges. */
+.builder-msg-error-inline {
+  margin: 0.85rem 0.25rem 0.25rem;
+}
+
 .builder-msg-error-body {
   display: flex;
   flex-direction: column;
@@ -713,6 +735,11 @@ html:has(.builder) body {
   font-size: 0.9rem;
   line-height: 1.45;
   white-space: pre-wrap;
+}
+
+.builder-msg-error.is-warning .builder-msg-error-text {
+  color: #fdba74;
+  font-weight: 500;
 }
 
 .builder-msg-error-actions {
@@ -742,10 +769,63 @@ html:has(.builder) body {
   cursor: not-allowed;
 }
 
+/* Primary CTA on warning cards (e.g. ambiguous visual edit → chat). */
+.builder-msg-error-action {
+  appearance: none;
+  border: 1px solid rgba(251, 146, 60, 0.55);
+  background: rgba(234, 88, 12, 0.28);
+  color: #ffedd5;
+  border-radius: 8px;
+  padding: 0.4rem 0.85rem;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.builder-msg-error-action:hover:not(:disabled) {
+  background: rgba(234, 88, 12, 0.42);
+  border-color: rgba(251, 146, 60, 0.75);
+}
+
+.builder-msg-error-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .builder-msg-error-link {
   color: #93c5fd;
   font-size: 0.82rem;
   text-decoration: underline;
+}
+
+/* `.builder-msg-error-retry` is used on <a> too (the top-up link), so it needs
+   the anchor bits a <button> gets for free. */
+a.builder-msg-error-retry {
+  display: inline-block;
+  text-decoration: none;
+}
+
+button.builder-msg-error-link {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+button.builder-msg-error-link:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* The steps a plan skipped, listed under the retry offer. */
+.builder-msg-error-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: #fecaca;
+  font-size: 0.85rem;
+  line-height: 1.5;
 }
 
 .builder-body {
@@ -756,7 +836,7 @@ html:has(.builder) body {
 
 .builder-sidebar {
   position: relative;
-  width: min(440px, 38vw);
+  width: var(--builder-chat-width, min(440px, 38vw));
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -766,12 +846,150 @@ html:has(.builder) body {
   overflow: hidden;
   /* Keep messages scrollable; composer mention menu needs to paint above. */
   isolation: isolate;
+  transition: width 0.18s ease;
+}
+
+.builder-sidebar.is-resizing {
+  transition: none;
+  user-select: none;
+}
+
+.builder-sidebar-body {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.builder-sidebar.is-collapsed {
+  width: 52px;
+  min-width: 52px;
+}
+
+.builder-sidebar.is-collapsed .builder-sidebar-body {
+  display: none;
+}
+
+.builder-chat-toolbar {
+  display: none;
+}
+
+@media (min-width: 901px) {
+  .builder-chat-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    flex-shrink: 0;
+    padding: 0.45rem 0.65rem 0.35rem 0.95rem;
+    border-bottom: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  .builder-chat-toolbar-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .builder-chat-collapse {
+    position: static;
+    opacity: 1;
+  }
+}
+
+.builder-chat-collapse {
+  appearance: none;
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: rgba(16, 16, 16, 0.92);
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.builder-chat-collapse:hover {
+  color: #fff;
+  border-color: rgba(242, 98, 10, 0.45);
+  background: rgba(242, 98, 10, 0.12);
+}
+
+.builder-chat-resize {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  width: 8px;
+  height: 100%;
+  z-index: 5;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.builder-chat-resize::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 3px;
+  height: 2.4rem;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  opacity: 0;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+.builder-chat-resize:hover::after,
+.builder-sidebar.is-resizing .builder-chat-resize::after {
+  opacity: 1;
+  background: rgba(242, 98, 10, 0.7);
+}
+
+.builder-chat-expand {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 0.85rem 0.35rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+  cursor: pointer;
+}
+
+.builder-chat-expand:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.builder-chat-expand-chevron {
+  opacity: 0.7;
+}
+
+.builder-chat-expand-label {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 /* Small laptops / tablets landscape: keep the preview breathing room. */
 @media (max-width: 1200px) and (min-width: 901px) {
-  .builder-sidebar {
-    width: min(360px, 34vw);
+  .builder-sidebar:not(.is-collapsed) {
+    width: var(--builder-chat-width, min(360px, 34vw));
   }
 }
 
@@ -893,19 +1111,6 @@ html:has(.builder) body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.builder-preview-updating {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  display: grid;
-  place-items: center;
-  background: rgba(8, 8, 8, 0.55);
-  color: #fff;
-  font-size: 0.9rem;
-  font-weight: 600;
-  pointer-events: none;
 }
 
 .clarify-card,
@@ -1525,7 +1730,8 @@ html:has(.builder) body {
 .design-slideover-root {
   position: fixed;
   inset: 0;
-  z-index: 90;
+  /* Above builder topbar (200) and preview chrome; below publish portal / lightbox. */
+  z-index: 260;
   pointer-events: none;
 }
 
@@ -1651,6 +1857,11 @@ html:has(.builder) body {
   gap: 0.5rem;
 }
 
+.design-palette-block {
+  display: grid;
+  gap: 0.4rem;
+}
+
 .design-swatch {
   display: inline-flex;
   align-items: center;
@@ -1661,12 +1872,45 @@ html:has(.builder) body {
   background: var(--bg-soft, rgba(255, 255, 255, 0.03));
 }
 
+.design-swatch-editable {
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.design-swatch-editable:hover {
+  border-color: rgba(242, 98, 10, 0.45);
+  background: rgba(242, 98, 10, 0.08);
+}
+
+.design-swatch-editable.is-busy {
+  opacity: 0.7;
+}
+
+.design-swatch-picker-wrap {
+  position: relative;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.design-swatch-picker {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  border: 0;
+  padding: 0;
+}
+
 .design-swatch i {
+  display: block;
   width: 16px;
   height: 16px;
   border-radius: 50%;
   border: 1px solid rgba(255, 255, 255, 0.25);
-  flex-shrink: 0;
+  pointer-events: none;
 }
 
 .design-swatch small {
@@ -1893,6 +2137,65 @@ html:has(.builder) body {
   color: #ffb380;
   background: rgba(242, 98, 10, 0.18);
   box-shadow: 0 0 0 1px rgba(242, 98, 10, 0.25);
+}
+
+/* Agent | Plan as a true mode switch (not a secondary chip). */
+.builder-mode-segment {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem;
+  gap: 0.1rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.builder-mode-segment-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.65rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+
+.builder-mode-segment-btn.active {
+  background: rgba(242, 98, 10, 0.22);
+  color: #ffd0b0;
+  box-shadow: inset 0 0 0 1px rgba(242, 98, 10, 0.4);
+}
+
+.builder-mode-segment-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.builder-files-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  min-height: 12rem;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.builder-files-empty-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.builder-files-goto-code {
+  margin-top: 0.25rem;
 }
 
 .builder-send-stop {
@@ -4444,10 +4747,6 @@ html:has(.builder) body {
     display: none;
   }
 
-  .builder-toolbar-restart-label {
-    display: none;
-  }
-
   .builder-toolbar-btn-icon {
     display: grid;
     place-items: center;
@@ -4507,6 +4806,23 @@ html:has(.builder) body {
   .builder-sidebar {
     border-right: 0;
     max-height: none;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .builder-sidebar.is-collapsed {
+    width: 100% !important;
+  }
+
+  .builder-sidebar.is-collapsed .builder-sidebar-body {
+    display: flex;
+  }
+
+  .builder-chat-collapse,
+  .builder-chat-resize,
+  .builder-chat-expand,
+  .builder-chat-toolbar {
+    display: none !important;
   }
 
   .builder-body-chat .builder-sidebar {
@@ -4988,11 +5304,11 @@ html:has(.builder) body {
 .lp-hero {
   position: relative;
   z-index: 1;
-  min-height: min(92vh, 860px);
+  min-height: min(72vh, 640px);
   display: grid;
   place-items: center;
   /* Clear the fixed floating nav; wash paints edge-to-edge under it. */
-  padding: 5.75rem 1rem 4.25rem;
+  padding: 5rem 1rem 1.75rem;
   text-align: center;
 }
 
@@ -5240,13 +5556,13 @@ html:has(.builder) body {
   appearance: none;
   border: 0;
   cursor: pointer;
-  display: grid;
-  place-items: center;
   flex-shrink: 0;
   transition: transform 0.15s ease, background 0.15s ease, opacity 0.15s ease;
 }
 
 .lp-plus {
+  display: grid;
+  place-items: center;
   width: 2.2rem;
   height: 2.2rem;
   border-radius: 999px;
@@ -5263,12 +5579,20 @@ html:has(.builder) body {
   margin-left: auto;
   min-width: 2.45rem;
   height: 2.45rem;
-  padding: 0 0.85rem;
+  padding: 0 0.95rem;
   border-radius: 999px;
   background: var(--lp-cta);
   color: var(--lp-cta-ink);
   font-weight: 650;
   font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+}
+
+.lp-send-label {
+  line-height: 1;
 }
 
 .lp-send:hover:not(:disabled) {
@@ -5287,13 +5611,23 @@ html:has(.builder) body {
   text-align: center;
 }
 
+.lp-proof-in-hero {
+  width: min(720px, 100%);
+  margin: 1.35rem 0 0;
+}
+
 .lp-proof-label {
   margin: 0 0 0.85rem;
   font-size: 0.82rem;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--lp-muted);
+  color: color-mix(in srgb, var(--lp-ink) 62%, transparent);
+}
+
+.lp-proof-in-hero .lp-proof-label {
+  margin-bottom: 0.55rem;
+  font-size: 0.75rem;
 }
 
 .lp-proof-row {
@@ -5308,7 +5642,12 @@ html:has(.builder) body {
   font-size: clamp(1.05rem, 2.4vw, 1.35rem);
   font-weight: 700;
   letter-spacing: -0.02em;
-  color: color-mix(in srgb, var(--lp-ink) 42%, transparent);
+  color: color-mix(in srgb, var(--lp-ink) 58%, transparent);
+}
+
+.lp-proof-in-hero .lp-proof-row {
+  font-size: clamp(0.92rem, 1.8vw, 1.1rem);
+  gap: 0.45rem 1.1rem;
 }
 
 .lp-section-title {
@@ -5629,10 +5968,15 @@ html:has(.builder) body {
 }
 
 .lp-contribute {
-  padding: 3.5rem 1rem;
+  position: relative;
+  isolation: isolate;
+  overflow: clip;
+  padding: 4rem 1rem 3.5rem;
 }
 
 .lp-contribute-inner {
+  position: relative;
+  z-index: 1;
   width: min(720px, 100%);
   margin: 0 auto;
   text-align: center;
@@ -5703,6 +6047,24 @@ html:has(.builder) body {
 .lp-cta-sub {
   margin: 0 0 0.5rem;
   color: var(--lp-muted);
+}
+
+.lp-cta-btn {
+  appearance: none;
+  border: 0;
+  margin-top: 0.35rem;
+  border-radius: 999px;
+  padding: 0.7rem 1.35rem;
+  background: var(--lp-cta);
+  color: var(--lp-cta-ink);
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+
+.lp-cta-btn:hover {
+  filter: brightness(1.08);
 }
 
 .lp-footer {
@@ -5815,12 +6177,33 @@ html:has(.builder) body {
 
 .lp-footer-bottom {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  flex-wrap: wrap;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--lp-line);
+}
+
+.lp-footer-copy {
+  margin: 0;
+  color: var(--lp-muted);
+  font-size: 0.82rem;
+}
+
+.lp-footer-bottom-actions {
+  display: flex;
   align-items: center;
   gap: 0.55rem;
-  flex-wrap: wrap;
-  padding-top: 0.35rem;
-  border-top: 1px solid var(--lp-line);
+  margin-left: auto;
+}
+
+/* Hide Next.js Issues badge on the public landing */
+body:has(.landing) nextjs-portal,
+body:has(.landing) [data-next-badge],
+body:has(.landing) [data-nextjs-toast],
+body:has(.landing) [data-next-mark] {
+  display: none !important;
 }
 
 /* Shared prompt chrome still used by dashboard / builder */
@@ -6231,6 +6614,15 @@ html:has(.builder) body {
   overflow: hidden;
 }
 
+/* Hide Next.js Dev Tools / Issues badge while on dashboard shell */
+.home ~ nextjs-portal,
+body:has(.home) nextjs-portal,
+body:has(.home) [data-next-badge],
+body:has(.home) [data-nextjs-toast],
+body:has(.home) [data-next-mark] {
+  display: none !important;
+}
+
 .home-glow {
   position: absolute;
   border-radius: 50%;
@@ -6514,6 +6906,27 @@ html:has(.builder) body {
   gap: 0.35rem;
 }
 
+.rodium-wallet-connect {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.4rem 0.75rem;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, #f2620a 40%, var(--home-border-strong));
+  background: color-mix(in srgb, #f2620a 12%, var(--home-input-bg));
+  color: var(--home-text);
+  text-decoration: none;
+  font-size: 0.8rem;
+  font-weight: 650;
+  line-height: 1.2;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.rodium-wallet-connect:hover {
+  background: color-mix(in srgb, #f2620a 20%, var(--home-hover));
+  border-color: color-mix(in srgb, #f2620a 55%, var(--home-border-strong));
+}
+
 .rodium-wallet-badge {
   display: grid;
   gap: 0.05rem;
@@ -6620,22 +7033,43 @@ html:has(.builder) body {
   flex-direction: column;
   align-items: center;
   text-align: center;
-  padding: 1.5rem 1.25rem 1rem;
+  padding: 0.85rem 1.25rem 0.65rem;
   color: var(--home-text);
 }
 
+.home-hero.is-compact {
+  padding-top: 0.45rem;
+  padding-bottom: 0.35rem;
+}
+
+.home-hero.is-compact .home-greeting {
+  display: none;
+}
+
 .home-greeting {
-  margin: 0 0 1.25rem;
+  margin: 0 0 0.7rem;
   font-family: var(--font-serif-display);
-  font-size: clamp(1.8rem, 4vw, 2.75rem);
+  font-size: clamp(1.35rem, 2.8vw, 1.9rem);
   font-weight: 600;
   letter-spacing: -0.015em;
-  max-width: 20ch;
+  max-width: 22ch;
   color: var(--home-text);
 }
 
 .home-prompt {
   width: min(760px, 100%);
+}
+
+.home .landing-prompt {
+  margin-top: 0;
+  padding: 0.75rem 0.9rem 0.7rem;
+  border-radius: 18px;
+}
+
+.home .landing-prompt textarea {
+  min-height: 72px;
+  max-height: 140px;
+  font-size: 0.98rem;
 }
 
 .home-panel {
@@ -6645,7 +7079,7 @@ html:has(.builder) body {
   border-top: 1px solid var(--home-border);
   border-radius: 28px 28px 0 0;
   padding: 1.1rem 1.25rem 2rem;
-  min-height: 42vh;
+  min-height: 32vh;
   backdrop-filter: blur(16px);
   color: var(--home-text);
 }
@@ -6751,6 +7185,9 @@ html:has(.builder) body {
 
 .home-card {
   appearance: none;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
   border: 1px solid var(--home-border);
   border-radius: 16px;
   background: var(--home-chip);
@@ -6774,22 +7211,25 @@ html:has(.builder) body {
 }
 
 .home-card-body {
-  padding: 0.75rem 0.85rem 0.9rem;
+  padding: 0.55rem 0.7rem 0.65rem;
   display: grid;
-  gap: 0.25rem;
+  gap: 0.2rem;
 }
 
 .home-card-body strong {
-  font-size: 0.95rem;
-  white-space: nowrap;
+  font-size: 0.88rem;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
   color: var(--home-text);
 }
 
 .home-card-body span {
   color: var(--home-text-muted);
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -6801,7 +7241,8 @@ html:has(.builder) body {
   overflow: hidden;
   background: var(--home-panel);
   width: 100%;
-  aspect-ratio: 16 / 10;
+  aspect-ratio: 16 / 9;
+  max-height: 148px;
 }
 
 .site-thumb-scaler {
@@ -6954,6 +7395,9 @@ html:has(.builder) body {
 
 .tpl-card {
   appearance: none;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
   border: 1px solid var(--home-border);
   border-radius: 16px;
   background: var(--home-chip);
@@ -7050,7 +7494,7 @@ html:has(.builder) body {
   }
 
   .home-greeting {
-    margin-bottom: 0.9rem;
+    margin-bottom: 0.55rem;
   }
 
   .home-panel {
@@ -7213,7 +7657,8 @@ html:has(.builder) body {
 
 .home-card-skel-thumb {
   width: 100%;
-  aspect-ratio: 16 / 10;
+  aspect-ratio: 16 / 9;
+  max-height: 148px;
   border-radius: 0;
   border-bottom: 1px solid var(--home-border);
 }
@@ -7404,7 +7849,7 @@ html:has(.builder) body {
 
 .home-settings-success {
   margin: 0;
-  color: #fdba74;
+  color: var(--home-ok-text);
   font-size: 0.9rem;
 }
 
@@ -7445,13 +7890,17 @@ html:has(.builder) body {
 .home-settings-test {
   appearance: none;
   border: 1px solid var(--home-border-strong);
-  background: var(--home-chip);
+  background: #ffffff;
   color: var(--home-text);
   border-radius: 999px;
   padding: 0.55rem 1rem;
   font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
+}
+
+[data-theme="dark"] .home-settings-test {
+  background: var(--home-chip);
 }
 
 .home-settings-test:hover:not(:disabled) {
@@ -7801,6 +8250,174 @@ html:has(.builder) body {
 
 .settings-block-content {
   padding: 0.35rem 1.15rem 1rem;
+}
+
+.settings-block-status {
+  display: flex;
+  align-items: center;
+  padding: 0.65rem 0 0.25rem;
+}
+
+.settings-block-content > .settings-row:first-child {
+  border-top: 0;
+  padding-top: 0.55rem;
+}
+
+/* Settings → Génération: Rodium account / manual key cards */
+.rodium-gen-card {
+  margin-top: 0.55rem;
+  padding: 1rem 1.05rem 1.05rem;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, #f2620a 28%, var(--home-border));
+  background: color-mix(in srgb, #f2620a 6%, #ffffff);
+}
+
+.rodium-gen-card.is-linked {
+  /* Avoid white-on-white nesting inside .settings-block in light mode */
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0.25rem 0 0;
+  margin-top: 0.15rem;
+}
+
+[data-theme="dark"] .rodium-gen-card {
+  background: color-mix(in srgb, #f2620a 8%, var(--home-input-bg));
+}
+
+[data-theme="dark"] .rodium-gen-card.is-linked {
+  border: 1px solid var(--home-border);
+  background: var(--home-chip);
+  box-shadow: none;
+  padding: 1rem 1.05rem 1.05rem;
+  margin-top: 0.55rem;
+}
+
+.rodium-gen-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.rodium-gen-card-titles {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.rodium-gen-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #c2410c;
+  background: color-mix(in srgb, #f2620a 12%, #fff7ed);
+  border: 1px solid color-mix(in srgb, #f2620a 28%, transparent);
+}
+
+[data-theme="dark"] .rodium-gen-pill {
+  color: rgba(253, 186, 116, 0.95);
+  background: color-mix(in srgb, #f2620a 16%, transparent);
+}
+
+.rodium-gen-empty {
+  display: grid;
+  gap: 0.85rem;
+  justify-items: start;
+}
+
+.rodium-gen-empty-copy {
+  margin: 0;
+  color: var(--home-text-soft);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  max-width: 42ch;
+}
+
+.rodium-gen-identity {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.9rem;
+}
+
+.rodium-gen-avatar-fallback {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 0.95rem;
+  background: color-mix(in srgb, #f2620a 22%, var(--home-chip));
+  color: var(--home-text);
+  flex-shrink: 0;
+}
+
+.rodium-gen-name {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.rodium-gen-email {
+  margin: 0.15rem 0 0;
+  font-size: 0.82rem;
+}
+
+.rodium-gen-wallet-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.85rem 1.25rem;
+  padding: 0.75rem 0.85rem;
+  margin-bottom: 0.75rem;
+  border-radius: 12px;
+  border: 1px solid var(--home-border);
+  background: #fafafa;
+}
+
+[data-theme="dark"] .rodium-gen-wallet-strip {
+  background: var(--home-panel);
+}
+
+.rodium-gen-wallet-label {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--home-text-muted);
+  margin-bottom: 0.15rem;
+}
+
+.rodium-gen-wallet-value {
+  font-size: 1.05rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  color: var(--home-text);
+}
+
+.rodium-gen-wallet-value.soft {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--home-text-soft);
+}
+
+.rodium-gen-wallet-unit {
+  margin-left: 0.3rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #c2410c;
+}
+
+[data-theme="dark"] .rodium-gen-wallet-unit {
+  color: rgba(253, 186, 116, 0.95);
 }
 
 .settings-row {
@@ -9153,4 +9770,140 @@ button.file-op-path:focus-visible { outline: 2px solid #f2620a; outline-offset: 
   .auth-callback-card {
     animation: none;
   }
+}
+
+/* ── Local auth screens (sign-up, sign-in, reset, verify) ─────────────────
+   Sits on top of .card / .btn / .input from the base sheet — these rules only
+   add the parts those did not already cover: the field stack, the "or" rule
+   between social and credentials, and the unverified-email banner. */
+
+.auth-field {
+  display: grid;
+  gap: 0.35rem;
+  margin-bottom: 0.85rem;
+}
+
+.auth-field label {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1.1rem 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-transform: lowercase;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.auth-social {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.auth-social-btn {
+  width: 100%;
+  font-weight: 500;
+  gap: 0.55rem;
+}
+
+.auth-notice {
+  margin: 0 0 0.85rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-soft);
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.auth-alt {
+  margin: 1rem 0 0;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.auth-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--fg);
+  cursor: pointer;
+  text-decoration: underline;
+  font-size: inherit;
+  font-family: inherit;
+}
+
+/* Sits at the top of the builder until the address is confirmed. Informative,
+   not blocking — nothing in the product is gated on it. */
+.auth-verify-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.85rem;
+  padding: 0.7rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-soft);
+  font-size: 0.85rem;
+}
+
+.auth-verify-banner strong {
+  font-weight: 600;
+}
+
+/* Password field with a reveal toggle. The button sits inside the input's
+   padding rather than beside it, so the field keeps the same width and
+   alignment as every other one in the form. */
+.auth-password {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.auth-password-input {
+  /* Room for the button so long values never slide underneath it. */
+  padding-right: 2.75rem;
+}
+
+.auth-password-toggle {
+  position: absolute;
+  right: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.auth-password-toggle:hover:not(:disabled) {
+  color: var(--fg);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.auth-password-toggle:focus-visible {
+  outline: 2px solid var(--accent-soft);
+  outline-offset: 1px;
+}
+
+.auth-password-toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

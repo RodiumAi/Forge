@@ -3,7 +3,14 @@
 import { FormEvent, useEffect, useId, useMemo, useRef, useState } from "react";
 import { ImagePlus, Palette, X } from "lucide-react";
 import { api, apiBase, getToken } from "@/lib/api";
-import { parseCharterPalette, parseCharterTone } from "@/lib/design-charter";
+import { getMediaToken } from "@/lib/media-token";
+import {
+  hexForColorInput,
+  mergePalettes,
+  parseCharterPalette,
+  parseCharterTone,
+  type CharterPalette,
+} from "@/lib/design-charter";
 import { Icon } from "@/components/ui/icon";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 
@@ -11,6 +18,8 @@ type Props = {
   projectId: string;
   open: boolean;
   onClose: () => void;
+  /** Soft-refresh preview after CSS tokens change. */
+  onColorsApplied?: () => void;
 };
 
 type CharterOut = {
@@ -19,6 +28,7 @@ type CharterOut = {
   brief: string | null;
   exists: boolean;
   logo_path?: string | null;
+  palette?: CharterPalette[];
 };
 
 type UploadResponse = {
@@ -28,40 +38,53 @@ type UploadResponse = {
   name: string;
 };
 
+type ColorPatchResponse = {
+  markdown: string;
+  css_updated: boolean;
+  palette: CharterPalette[];
+};
+
 const LOGO_ACCEPT = "image/png,image/jpeg,.png,.jpg,.jpeg";
 const LOGO_MAX_BYTES = 8 * 1024 * 1024;
 
 function persistedLogoUrl(projectId: string, logoPath: string | null, bust: number): string | null {
   if (!logoPath) return null;
-  const token = getToken();
+  const token = getMediaToken();
   if (!token) return null;
   return `${apiBase()}/projects/${projectId}/design-charter/logo?access_token=${encodeURIComponent(token)}&v=${bust}`;
 }
 
-export function DesignCharterSlideover({ projectId, open, onClose }: Props) {
+export function DesignCharterSlideover({ projectId, open, onClose, onColorsApplied }: Props) {
   const { t, locale } = useI18n();
   const fileInputId = useId();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const colorDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [brief, setBrief] = useState("");
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
   const [existingLogoPath, setExistingLogoPath] = useState<string | null>(null);
   const [logoBust, setLogoBust] = useState(0);
   const [markdown, setMarkdown] = useState("");
+  const [paletteOverride, setPaletteOverride] = useState<CharterPalette[] | null>(null);
   const [busy, setBusy] = useState(false);
+  const [colorBusy, setColorBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [colorSaved, setColorSaved] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     setError(null);
     setSaved(false);
+    setColorSaved(false);
     setLogoFile(null);
+    setPaletteOverride(null);
     void api<CharterOut>(`/projects/${projectId}/design-charter`)
       .then((data) => {
         setBrief(data.brief || "");
         setMarkdown(data.markdown || "");
         setExistingLogoPath(data.logo_path || null);
+        if (data.palette?.length) setPaletteOverride(data.palette);
         if (data.logo_path) setLogoBust(Date.now());
       })
       .catch((err) => setError(err instanceof Error ? err.message : t("errorGeneric")));
@@ -88,6 +111,7 @@ export function DesignCharterSlideover({ projectId, open, onClose }: Props) {
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
+      if (colorDebounceRef.current) clearTimeout(colorDebounceRef.current);
     };
   }, [open, onClose]);
 
@@ -95,7 +119,8 @@ export function DesignCharterSlideover({ projectId, open, onClose }: Props) {
     () => persistedLogoUrl(projectId, existingLogoPath, logoBust),
     [projectId, existingLogoPath, logoBust],
   );
-  const palette = useMemo(() => parseCharterPalette(markdown), [markdown]);
+  const parsedPalette = useMemo(() => parseCharterPalette(markdown), [markdown]);
+  const palette = paletteOverride ?? parsedPalette;
   const tone = useMemo(() => parseCharterTone(markdown), [markdown]);
 
   if (!open) return null;
@@ -176,12 +201,12 @@ export function DesignCharterSlideover({ projectId, open, onClose }: Props) {
         },
       );
       setMarkdown(res.markdown);
+      setPaletteOverride(null);
       if (res.brief) setBrief(res.brief);
       if (res.logo_path) {
         setExistingLogoPath(res.logo_path);
         setLogoBust(Date.now());
       }
-      // Keep the imported logo visible: clear only the pending File, show persisted preview.
       setLogoFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
       setSaved(true);
@@ -208,11 +233,47 @@ export function DesignCharterSlideover({ projectId, open, onClose }: Props) {
           brief: brief.trim() || "Manual DESIGN.md paste",
         }),
       });
+      setPaletteOverride(null);
       setSaved(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("errorGeneric"));
     } finally {
       setBusy(false);
+    }
+  }
+
+  function queueColorChange(name: string, hex: string) {
+    const nextHex = hexForColorInput(hex);
+    setPaletteOverride((prev) => {
+      const base = prev ?? parseCharterPalette(markdown);
+      return mergePalettes(
+        base.map((c) => (c.name === name ? { ...c, hex: nextHex } : c)),
+        [],
+      );
+    });
+    setColorSaved(false);
+    if (colorDebounceRef.current) clearTimeout(colorDebounceRef.current);
+    colorDebounceRef.current = setTimeout(() => {
+      void commitColorChange(name, nextHex);
+    }, 280);
+  }
+
+  async function commitColorChange(name: string, hex: string) {
+    setColorBusy(name);
+    setError(null);
+    try {
+      const res = await api<ColorPatchResponse>(`/projects/${projectId}/design-charter/colors`, {
+        method: "PATCH",
+        body: JSON.stringify({ name, hex }),
+      });
+      setMarkdown(res.markdown);
+      if (res.palette?.length) setPaletteOverride(res.palette);
+      setColorSaved(true);
+      onColorsApplied?.();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("designColorFailed"));
+    } finally {
+      setColorBusy(null);
     }
   }
 
@@ -262,6 +323,9 @@ export function DesignCharterSlideover({ projectId, open, onClose }: Props) {
             </div>
           )}
           {saved && <p className="design-saved">{t("designSaved")}</p>}
+          {colorSaved && !saved ? (
+            <p className="design-saved">{t("designColorUpdated")}</p>
+          ) : null}
 
           <form className="design-form" onSubmit={onGenerate}>
             <div className="design-label">
@@ -279,7 +343,6 @@ export function DesignCharterSlideover({ projectId, open, onClose }: Props) {
               <label htmlFor={fileInputId} className="design-logo-drop">
                 {displayPreview ? (
                   <>
-                    { }
                     <img src={displayPreview} alt="" className="design-logo-preview" />
                     <span className="design-logo-filename">
                       {logoFile?.name || existingLogoPath || t("designLogoChoose")}
@@ -330,15 +393,36 @@ export function DesignCharterSlideover({ projectId, open, onClose }: Props) {
 
           <div className="design-preview">
             {palette.length > 0 && (
-              <div className="design-palette" aria-label={t("designPalette")}>
-                {palette.map((c) => (
-                  <span key={c.name} className="design-swatch" title={`--${c.name}: ${c.hex}`}>
-                    <i style={{ background: c.hex }} aria-hidden />
-                    <small>
-                      {c.name} · {c.hex}
-                    </small>
-                  </span>
-                ))}
+              <div className="design-palette-block">
+                <p className="design-logo-hint">{t("designPaletteHint")}</p>
+                <div className="design-palette" aria-label={t("designPalette")}>
+                  {palette.map((c) => {
+                    const inputHex = hexForColorInput(c.hex);
+                    const updating = colorBusy === c.name;
+                    return (
+                      <label
+                        key={c.name}
+                        className={`design-swatch design-swatch-editable${updating ? " is-busy" : ""}`}
+                        title={`--${c.name}: ${c.hex}`}
+                      >
+                        <span className="design-swatch-picker-wrap">
+                          <input
+                            type="color"
+                            className="design-swatch-picker"
+                            value={inputHex}
+                            disabled={busy || Boolean(colorBusy)}
+                            aria-label={`--${c.name}`}
+                            onChange={(e) => queueColorChange(c.name, e.target.value)}
+                          />
+                          <i style={{ background: c.hex }} aria-hidden />
+                        </span>
+                        <small>
+                          {c.name} · {updating ? t("designColorUpdating") : c.hex}
+                        </small>
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
             )}
             {tone && <p className="design-tone">{tone}</p>}
@@ -349,6 +433,7 @@ export function DesignCharterSlideover({ projectId, open, onClose }: Props) {
                 value={markdown}
                 onChange={(e) => {
                   setMarkdown(e.target.value);
+                  setPaletteOverride(null);
                   setSaved(false);
                 }}
                 rows={14}

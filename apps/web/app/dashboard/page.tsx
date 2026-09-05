@@ -13,6 +13,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Plus, Search } from "lucide-react";
 import { apiBase, getToken } from "@/lib/api";
+import { useMediaToken } from "@/lib/media-token";
+import { VerifyEmailBanner } from "@/components/auth/VerifyEmailBanner";
 import { HomeLayout } from "@/components/HomeLayout";
 import { PromptFileChips } from "@/components/PromptFileChips";
 import { SiteThumb, invalidateThumbCache } from "@/components/SiteThumb";
@@ -62,6 +64,23 @@ type Project = {
 
 type Tab = "mine" | "recent" | "templates";
 
+function formatProjectMeta(iso: string, locale: string): string {
+  const date = new Date(iso);
+  if (!Number.isFinite(date.getTime())) return "";
+  try {
+    const rtf = new Intl.RelativeTimeFormat(locale === "fr" ? "fr" : "en", { numeric: "auto" });
+    const diffSec = Math.round((date.getTime() - Date.now()) / 1000);
+    const abs = Math.abs(diffSec);
+    if (abs < 60) return rtf.format(diffSec, "second");
+    if (abs < 3600) return rtf.format(Math.round(diffSec / 60), "minute");
+    if (abs < 86400) return rtf.format(Math.round(diffSec / 3600), "hour");
+    if (abs < 86400 * 30) return rtf.format(Math.round(diffSec / 86400), "day");
+    return date.toLocaleDateString(locale === "fr" ? "fr-FR" : "en-US");
+  } catch {
+    return date.toLocaleDateString(locale);
+  }
+}
+
 function DashboardInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -98,7 +117,7 @@ function DashboardInner() {
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = "auto";
-    el.style.height = `${Math.min(Math.max(el.scrollHeight, 96), 240)}px`;
+    el.style.height = `${Math.min(Math.max(el.scrollHeight, 72), 140)}px`;
   }, [prompt]);
 
   useEffect(() => {
@@ -347,13 +366,19 @@ function DashboardInner() {
 
   const canSubmit = Boolean(prompt.trim() || files.length) && !creating;
   const showTemplates = tab === "templates";
+  // Subscribed rather than read once: the token is fetched asynchronously, and
+  // without a re-render every thumbnail would stay on its placeholder until
+  // something unrelated happened to re-render the page.
+  const mediaToken = useMediaToken();
 
   function projectThumb(p: Project) {
     // Live render of the actual site via the standalone draft route. The old
     // card-preview served a static "Forge" placeholder for every generated
     // project (nothing writes a preview.html for them), and the template
     // preview showed the kit's mockup — not what the user built on top of it.
-    const token = getToken();
+    // Thumbnails are iframe loads, so their credential rides the query
+    // string — it must be the read-only media token, not the session.
+    const token = mediaToken;
     if (token) {
       const base = apiBase().replace(/\/$/, "");
       const parent = encodeURIComponent(window.location.origin);
@@ -370,11 +395,8 @@ function DashboardInner() {
   }
 
   return (
-    <HomeLayout
-      activeNav={showTemplates ? "templates" : "projects"}
-      onSearchClick={() => searchRef.current?.focus()}
-    >
-      <section className="home-hero">
+    <HomeLayout activeNav={showTemplates ? "templates" : "projects"}>
+      <section className={`home-hero${showTemplates ? " is-compact" : ""}`}>
         <h1 className="home-greeting">{t("dashboardGreeting")}</h1>
 
         <form
@@ -427,7 +449,12 @@ function DashboardInner() {
             >
               <Icon icon={Plus} />
             </button>
-            <button type="submit" className="landing-create" disabled={!canSubmit}>
+            <button
+              type="submit"
+              className="landing-create"
+              disabled={!canSubmit}
+              title={!canSubmit ? t("createNeedPrompt") : undefined}
+            >
               {creating ? t("loading") : t("create")}
             </button>
           </div>
@@ -544,12 +571,9 @@ function DashboardInner() {
                       className="home-card-thumb"
                     />
                     <div className="home-card-body">
-                      <strong>{p.name}</strong>
-                      <span>
-                        {p.slug}
-                        {mounted
-                          ? ` · ${new Date(p.created_at).toLocaleDateString(locale)}`
-                          : ""}
+                      <strong title={p.name}>{p.name}</strong>
+                      <span title={p.slug}>
+                        {mounted ? formatProjectMeta(p.updated_at || p.created_at, locale) : "…"}
                       </span>
                     </div>
                   </button>
@@ -584,8 +608,11 @@ function DashboardSuspenseFallback() {
 
 export default function DashboardPage() {
   return (
-    <Suspense fallback={<DashboardSuspenseFallback />}>
-      <DashboardInner />
-    </Suspense>
+    <>
+      <VerifyEmailBanner />
+      <Suspense fallback={<DashboardSuspenseFallback />}>
+        <DashboardInner />
+      </Suspense>
+    </>
   );
 }

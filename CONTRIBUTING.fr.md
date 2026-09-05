@@ -30,16 +30,27 @@ Vous **ne devez pas** :
 
 ### Cybersécurité
 
+**Testez sur votre stack locale, pas sur nos hôtes de production.**
+`docker compose up` vous donne le système complet ; c'est la cible supportée
+pour tout travail de sécurité. Nous n'opérons pas de bug bounty et n'accordons
+aucune autorisation générale de tester `rodiumai.io` ou ses sous-domaines.
+
 Vous **pouvez** :
 
-- Auditer **`https://api-forge.rodiumai.io`** et **`https://forge.rodiumai.io`** (et les sites publiés `*.forge.rodiumai.io` si pertinent).
-- Signaler les vulnérabilités confirmées via les **GitHub Security Advisories** (privé) — voir [SECURITY.fr.md](SECURITY.fr.md).
+- Auditer **votre propre déploiement local**, ainsi que tout site que vous avez publié vous-même.
+- Relire le code de ce dépôt à la recherche de vulnérabilités — aucune autorisation nécessaire.
+- Signaler les vulnérabilités confirmées via les **GitHub Security Advisories** (privé), ou par e-mail à **forge@rodiumai.io** — voir [SECURITY.fr.md](SECURITY.fr.md).
 - Ouvrir une **issue publique** uniquement pour des idées de durcissement non sensibles (en-têtes, CSP, hygiène des dépendances), avec un **rapport écrit** et des **captures / preuves** si possible.
 
 Vous **ne devez pas** :
 
-- Mener des tests intrusifs (DoS, brute force, ingénierie sociale) sans accord écrit des maintainers.
+- Tester nos environnements hébergés sans **autorisation écrite préalable**, que vous pouvez demander à forge@rodiumai.io. Un test non autorisé peut être illégal dans votre juridiction, quelle que soit votre intention.
+- Mener des tests intrusifs (DoS, brute force, ingénierie sociale) — jamais dans le périmètre, même sur un hôte pour lequel vous avez été autorisé.
+- Accéder, modifier ou conserver des données qui ne vous appartiennent pas, ni utiliser le compte d'un autre utilisateur.
 - Divulguer publiquement des détails exploitables avant qu'un correctif soit publié.
+
+Si vous signalez de bonne foi et restez dans le périmètre ci-dessus, nous
+n'engagerons aucune poursuite à l'encontre de vos recherches.
 
 ### Développeurs frontend & backend
 
@@ -254,6 +265,6 @@ Corrigez les échecs CI sur votre branche avant de demander une review.
 
 ## Où demander de l'aide
 
-- **Questions & idées :** GitHub Issues / Discussions
-- **Sécurité :** [SECURITY.fr.md](SECURITY.fr.md) — advisories privées uniquement pour les vulnérabilités
-- **Code de conduite :** [CODE_OF_CONDUCT.fr.md](CODE_OF_CONDUCT.fr.md)
+- **Questions & idées :** ouvrez une GitHub Issue avec l'un des modèles
+- **Sécurité :** [SECURITY.fr.md](SECURITY.fr.md) — advisories privées, ou forge@rodiumai.io
+- **Code de conduite :** [CODE_OF_CONDUCT.fr.md](CODE_OF_CONDUCT.fr.md) — signalements en privé à forge@rodiumai.io

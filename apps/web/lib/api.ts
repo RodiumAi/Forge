@@ -17,11 +17,27 @@ export function setToken(token: string | null) {
     localStorage.removeItem("forge_token");
     try {
       sessionStorage.removeItem("forge_session_v1");
+      // The media token outlives the session otherwise — an hour of read
+      // access left behind for whoever uses this browser next.
+      sessionStorage.removeItem("forge_media_token_v1");
     } catch {
       /* ignore */
     }
   }
 }
+
+/**
+ * Pages that own their own error display. A 401 here is an expected answer —
+ * a wrong password, an expired link — not a dead session, so bouncing the
+ * visitor to the landing page would throw away the message they need to read.
+ */
+const SELF_HANDLING_AUTH_PATHS = [
+  "/login",
+  "/register",
+  "/forgot-password",
+  "/reset-password",
+  "/verify-email",
+];
 
 /** Clear session and send the user to the landing page. */
 export function logoutToHome(reason?: string) {
@@ -29,7 +45,7 @@ export function logoutToHome(reason?: string) {
   resetPosthogUser();
   setToken(null);
   const path = window.location.pathname;
-  if (path === "/" || path === "/login" || path.startsWith("/auth")) return;
+  if (path === "/" || path.startsWith("/auth") || SELF_HANDLING_AUTH_PATHS.includes(path)) return;
   const url = reason ? `/?auth=${encodeURIComponent(reason)}` : "/";
   window.location.replace(url);
 }
@@ -37,10 +53,21 @@ export function logoutToHome(reason?: string) {
 export class ApiError extends Error {
   status: number;
 
-  constructor(message: string, status: number) {
+  /**
+   * Machine-readable cause from the API body (`{"detail": {"code", "message"}}`).
+   *
+   * Without it, callers classified failures by matching English substrings
+   * against `message` — a test that silently stops working the day those
+   * strings are translated, and that cannot distinguish "no RODI left" from
+   * any other 402. `lib/chat-errors.ts` maps this to a sentence and an action.
+   */
+  code?: string;
+
+  constructor(message: string, status: number, code?: string) {
     super(message);
     this.name = "ApiError";
     this.status = status;
+    this.code = code;
   }
 }
 
@@ -80,19 +107,65 @@ function localeHeader(explicit?: Locale): string {
   return localStorage.getItem("forge_locale") === "en" ? "en" : "fr";
 }
 
-function detailFromBody(data: unknown, fallback: string): string {
-  if (!data || typeof data !== "object") return fallback;
+export type ApiErrorBody = { message: string; code?: string };
+
+export function detailFromBody(data: unknown, fallback: string): ApiErrorBody {
+  if (!data || typeof data !== "object") return { message: fallback };
   const detail = (data as { detail?: unknown }).detail;
-  if (typeof detail === "string") return detail;
-  if (detail && typeof detail === "object" && "message" in detail) {
-    const msg = (detail as { message?: unknown }).message;
-    if (typeof msg === "string") return msg;
+  if (typeof detail === "string") return { message: detail };
+
+  // FastAPI reports request-validation failures as an array of objects
+  // ({type, loc, msg, ctx}). Stringifying that put things like
+  // `[{"type":"string_too_short","loc":["body","token"],…}]` in front of the
+  // user. Take the human-readable `msg` fields instead.
+  if (Array.isArray(detail)) {
+    const messages = detail
+      .map((item) =>
+        item && typeof item === "object" && typeof (item as { msg?: unknown }).msg === "string"
+          ? ((item as { msg: string }).msg)
+          : null,
+      )
+      .filter((msg): msg is string => Boolean(msg));
+    if (messages.length) return { message: messages.join(". ") };
+    return { message: fallback };
   }
+
+  // The API's own error shape: {"detail": {"code": "INSUFFICIENT_RODI",
+  // "message": "…"}}. Both halves matter — the message is what the user reads
+  // when we have no better wording, the code is what earns them a button.
+  if (detail && typeof detail === "object") {
+    const obj = detail as { message?: unknown; code?: unknown };
+    const message = typeof obj.message === "string" ? obj.message : fallback;
+    const code = typeof obj.code === "string" ? obj.code : undefined;
+    if (message !== fallback || code) return { message, code };
+  }
+  // Anything else is a shape we did not anticipate. Showing raw JSON is worse
+  // than saying nothing useful, so fall back to the status text.
+  return { message: fallback };
+}
+
+/**
+ * Read an error response the way `api()` does.
+ *
+ * Exported because the SSE call sites cannot use `api()` (they need the raw
+ * `ReadableStream`) and each grew its own parser instead. One of them checked
+ * `typeof data.detail === "string"`, which is false for the API's own
+ * `{code, message}` shape — so an empty RODI wallet reached the user as the
+ * bare HTTP status line, "Payment Required". One parser, one behaviour.
+ */
+export async function readApiError(res: Response): Promise<ApiError> {
+  let body: ApiErrorBody = { message: res.statusText };
   try {
-    return JSON.stringify(detail ?? data);
+    body = detailFromBody(await res.clone().json(), res.statusText);
   } catch {
-    return fallback;
+    try {
+      const text = await res.text();
+      if (text) body = { message: text.slice(0, 500) };
+    } catch {
+      /* keep the status text */
+    }
   }
+  return new ApiError(body.message || res.statusText, res.status, body.code);
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -179,8 +252,11 @@ export async function api<T>(
     }
 
     let detail: string = res.statusText;
+    let code: string | undefined;
     try {
-      detail = detailFromBody(await res.json(), detail);
+      const body = detailFromBody(await res.json(), detail);
+      detail = body.message;
+      code = body.code;
     } catch {
       /* keep statusText */
     }
@@ -189,7 +265,7 @@ export async function api<T>(
     // builder for a transient blip — only after retries are exhausted.
     if (res.status === 401) {
       logoutToHome("expired");
-      throw new ApiError(detail || "Unauthorized", 401);
+      throw new ApiError(detail || "Unauthorized", 401, code);
     }
 
     // The RodiumAI link is definitively dead (refresh token rejected or tokens
@@ -198,13 +274,16 @@ export async function api<T>(
     // re-links the account in one step.
     if (
       res.status === 403 &&
-      /account is not linked|session expired.*sign in with rodiumai|sign in with rodiumai again/i.test(detail)
+      (code === "RODIUM_LINK_EXPIRED" ||
+        /account is not linked|session expired.*sign in with rodiumai|sign in with rodiumai again/i.test(
+          detail,
+        ))
     ) {
       logoutToHome("expired");
-      throw new ApiError(detail, 403);
+      throw new ApiError(detail, 403, code);
     }
 
-    lastError = new ApiError(detail, res.status);
+    lastError = new ApiError(detail, res.status, code);
     if (RETRY_STATUSES.has(res.status) && attempt < maxAttempts - 1) {
       await sleep(2 ** attempt * 300);
       continue;

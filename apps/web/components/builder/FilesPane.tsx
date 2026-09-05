@@ -12,9 +12,11 @@ import type { ProjectAsset } from "@/lib/prompt-upload";
 type Props = {
   projectId: string;
   onChanged?: () => void;
+  /** Soft CTA when the pane is empty — Media ≠ source tree. */
+  onGoToCode?: () => void;
 };
 
-export function FilesPane({ projectId, onChanged }: Props) {
+export function FilesPane({ projectId, onChanged, onGoToCode }: Props) {
   const { t } = useI18n();
   const [assets, setAssets] = useState<ProjectAsset[]>([]);
   const [busy, setBusy] = useState(false);
@@ -75,7 +77,15 @@ export function FilesPane({ projectId, onChanged }: Props) {
       </header>
       {error && <p className="builder-pane-error">{error}</p>}
       {assets.length === 0 ? (
-        <p className="builder-empty">{t("filesEmpty")}</p>
+        <div className="builder-files-empty">
+          <p className="builder-empty">{t("filesEmpty")}</p>
+          <p className="builder-files-empty-hint">{t("filesEmptyHint")}</p>
+          {onGoToCode ? (
+            <button type="button" className="btn builder-files-goto-code" onClick={onGoToCode}>
+              {t("filesGoToCode")}
+            </button>
+          ) : null}
+        </div>
       ) : (
         <ul className="builder-files-grid">
           {assets.map((asset) => {

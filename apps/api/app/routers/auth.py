@@ -2,32 +2,51 @@ import asyncio
 import json
 import logging
 import uuid
+from datetime import UTC, datetime
+from urllib.parse import quote
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.auth import create_access_token, get_current_user, hash_password, verify_password
+from app.auth import (
+    MEDIA_TOKEN_TTL_MINUTES,
+    get_current_user,
+    hash_password,
+    media_token_for_user,
+    token_for_user,
+    verify_password,
+)
 from app.config import get_settings
 from app.crypto import decrypt_secret
 from app.db import SessionLocal, get_db
 from app.i18n import resolve_locale, t
-from app.models import User, UserSettings
+from app.models import AuthToken, OauthAccount, User, UserSettings
 from app.schemas import (
+    ForgotPasswordRequest,
     LoginRequest,
     LogoutResponse,
+    MediaTokenResponse,
     OAuthCallbackRequest,
+    OAuthFirebaseRequest,
     OAuthStartResponse,
     PasswordChangeRequest,
     PasswordChangeResponse,
     RegisterRequest,
+    RegistrationResponse,
+    ResendVerificationRequest,
+    ResetPasswordRequest,
     RodiumAccountOut,
     RodiumApiKeyOut,
     RodiumSelectKeyRequest,
     RodiumSelectKeyResponse,
     RodiumWalletOut,
+    SimpleOkResponse,
     TokenResponse,
     UserOut,
+    VerifyEmailRequest,
 )
+from app.services import auth_tokens, firebase_auth, mail, rate_limit, rodium_provisioning
 from app.services.rodium_generation import (
     ensure_default_api_key_id,
     ensure_rodium_access_token,
@@ -76,6 +95,8 @@ def _user_out(user: User) -> UserOut:
         avatar_url=user.avatar_url,
         rodium_linked=bool(user.rodium_sub),
         rodium_sub=user.rodium_sub,
+        email_verified=user.email_verified_at is not None,
+        has_password=bool(user.password_hash),
         created_at=user.created_at,
     )
 
@@ -196,13 +217,20 @@ def _api_keys_out(items: list) -> list[RodiumApiKeyOut]:
 
 @router.get("/rodium/start", response_model=OAuthStartResponse)
 def rodium_oauth_start(request: Request) -> OAuthStartResponse:
+    """Begin "Continue with RodiumAi".
+
+    `state_binding` is a one-time secret the browser generated and kept in
+    `sessionStorage`; only its hash reaches us. The callback must present the
+    original, which is what ties the flow to the browser that started it.
+    """
     locale = resolve_locale(request)
     settings = get_settings()
     if not settings.rodium_oidc_client_id:
         raise HTTPException(status_code=503, detail=t("rodium_oauth_not_configured", locale))
+    binding = (request.query_params.get("state_binding") or "").strip() or None
     try:
         verifier, challenge = generate_pkce()
-        state = create_oauth_state(verifier)
+        state = create_oauth_state(verifier, binding)
         url = build_authorize_url(state=state, code_challenge=challenge)
     except RodiumOidcError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
@@ -216,10 +244,11 @@ async def rodium_oauth_callback(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ) -> TokenResponse:
+    locale = resolve_locale(request)
     # Critical path only: code exchange + userinfo. Keys/wallet hydrate in
     # background so a slow Nest/ALB cut never surfaces as "Network request failed".
     try:
-        verifier = parse_oauth_state(body.state)
+        verifier = parse_oauth_state(body.state, body.state_binding)
         tokens = await exchange_code(code=body.code, code_verifier=verifier)
         access = tokens["access_token"]
         info = await fetch_userinfo(access)
@@ -233,7 +262,18 @@ async def rodium_oauth_callback(
 
     user = db.query(User).filter(User.rodium_sub == sub).first()
     if user is None:
-        user = db.query(User).filter(User.email == email).first()
+        # Adopt a local account with the same address — but only once that
+        # address is proven here too. Without the check, registering locally
+        # with someone else's address (unverified) and waiting for them to
+        # open Forge from their RodiumAi dashboard would hand the attacker
+        # their identity, their OAuth tokens and their RODI balance.
+        candidate = db.query(User).filter(User.email == email).first()
+        if candidate is not None and candidate.email_verified_at is None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=t("account_needs_password_login", locale),
+            )
+        user = candidate
     if user is None:
         user = User(
             email=email,
@@ -241,6 +281,8 @@ async def rodium_oauth_callback(
             rodium_sub=sub,
             name=name,
             avatar_url=picture,
+            # Reaching us through the RodiumAi issuer proves the address.
+            email_verified_at=datetime.now(UTC),
         )
         db.add(user)
         db.flush()
@@ -248,6 +290,8 @@ async def rodium_oauth_callback(
     else:
         user.rodium_sub = sub
         user.email = email
+        if user.email_verified_at is None:
+            user.email_verified_at = datetime.now(UTC)
         if name:
             user.name = name
         if picture:
@@ -264,7 +308,7 @@ async def rodium_oauth_callback(
 
     background_tasks.add_task(_hydrate_rodium_account_cache, user.id, access)
 
-    return TokenResponse(access_token=create_access_token(user.id))
+    return TokenResponse(access_token=token_for_user(user), email_verified=True)
 
 
 @router.get("/rodium/account", response_model=RodiumAccountOut)
@@ -318,6 +362,7 @@ async def rodium_account(
 
     return RodiumAccountOut(
         linked=True,
+        rodium_sub=user.rodium_sub,
         email=user.email,
         name=user.name,
         avatar_url=user.avatar_url,
@@ -401,23 +446,370 @@ async def rodium_select_key(
     )
 
 
-@router.post("/register", response_model=TokenResponse, deprecated=True)
-def register(body: RegisterRequest, request: Request, db: Session = Depends(get_db)) -> TokenResponse:
+async def _link_rodium_account(db: Session, user: User) -> str | None:
+    """Create the RodiumAi account behind a native Forge account.
+
+    Called only where the address is proven — a consumed verification link, or
+    a provider that verified it. Never at sign-up: at that point the address is
+    just a claim.
+
+    On success we store the tokens exactly as the OIDC callback does, so from
+    here on the account is indistinguishable from a linked one: key picker,
+    wallet balance and refresh all work.
+
+    Returns the access token so the caller can hydrate keys and wallet in the
+    background, or None when nothing was linked.
+    """
+    if user.rodium_sub or not rodium_provisioning.enabled():
+        return None
+    try:
+        result = await rodium_provisioning.provision(
+            email=user.email, full_name=user.name, avatar_url=user.avatar_url
+        )
+    except rodium_provisioning.ProvisionConflict:
+        # A RodiumAi account already owns this address. Linking it requires
+        # proving ownership, which only the consent flow does — so we leave the
+        # Forge account unlinked and the UI offers "Continue with RodiumAi".
+        logger.info("rodium.provision.exists email=%s", user.email)
+        return None
+    if result is None:
+        return None
+
+    user.rodium_sub = result.user_id
+    user.rodium_provisioned_at = datetime.now(UTC)
+    row = _get_or_create_settings(db, user)
+    _store_oauth_tokens(row, result.tokens)
+    if not row.rodium_api_key_hint:
+        row.rodium_api_key_hint = "RodiumAi account"
+    db.commit()
+    return str(result.tokens.get("access_token") or "") or None
+
+
+def _send_verification_email(db: Session, user: User, locale: str) -> None:
+    """Issue a fresh verification link and mail it.
+
+    Any outstanding link is burned first, so "resend" leaves exactly one
+    working link rather than a growing set of them.
+    """
+    auth_tokens.invalidate_outstanding(db, user.id, AuthToken.KIND_EMAIL_VERIFY)
+    raw = auth_tokens.issue_email_verify(db, user.id)
+    db.commit()
+    url = get_settings().web_url(f"/verify-email?token={quote(raw)}")
+    mail.send(mail.build_verify_email(user.email, url, locale))
+
+
+@router.post(
+    "/register", response_model=RegistrationResponse, status_code=status.HTTP_201_CREATED
+)
+def register(
+    body: RegisterRequest, request: Request, db: Session = Depends(get_db)
+) -> RegistrationResponse:
+    """Create a local account. Returns no session — the address comes first.
+
+    Signing someone in before they confirm would drop them into an empty
+    builder: no RodiumAi account, so no wallet, no generation key, nothing to
+    build with. Confirmation is what triggers all of that, so it is the real
+    end of registration and the UI says so.
+    """
     locale = resolve_locale(request)
-    raise HTTPException(status_code=status.HTTP_410_GONE, detail=t("rodium_oauth_required", locale))
+    rate_limit.enforce(request, "register", limit=5, window_seconds=3600)
+
+    email = body.email.strip().lower()
+    if db.query(User).filter(User.email == email).first() is not None:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=t("email_taken", locale))
+
+    user = User(
+        email=email,
+        password_hash=hash_password(body.password),
+        name=body.name.strip(),
+    )
+    db.add(user)
+    try:
+        db.flush()
+    except IntegrityError as exc:  # lost a race on the unique index
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=t("email_taken", locale)
+        ) from exc
+    db.add(UserSettings(user_id=user.id, default_model=get_settings().effective_default_model))
+    db.commit()
+    db.refresh(user)
+
+    _send_verification_email(db, user, locale)
+    return RegistrationResponse(email=user.email, message=t("verify_email_sent", locale))
 
 
-@router.post("/login", response_model=TokenResponse, deprecated=True)
+@router.post("/verify-email", response_model=TokenResponse)
+async def verify_email(
+    body: VerifyEmailRequest,
+    background_tasks: BackgroundTasks,
+    request: Request,
+    db: Session = Depends(get_db),
+) -> TokenResponse:
+    """Consume a verification link.
+
+    Returns a fresh session token so someone who opens the link in a different
+    browser than the one they signed up in lands signed in rather than at a
+    login screen.
+
+    This is also where the address becomes proven, so it is where the RodiumAi
+    account gets created.
+    """
+    locale = resolve_locale(request)
+    rate_limit.enforce(request, "verify-email", limit=20, window_seconds=3600)
+
+    user_id = auth_tokens.consume(db, body.token, AuthToken.KIND_EMAIL_VERIFY)
+    if user_id is None:
+        raise HTTPException(status_code=400, detail=t("invalid_or_expired_link", locale))
+
+    user = db.get(User, user_id)
+    if user is None:
+        raise HTTPException(status_code=400, detail=t("invalid_or_expired_link", locale))
+    if user.email_verified_at is None:
+        user.email_verified_at = datetime.now(UTC)
+    db.commit()
+    db.refresh(user)
+
+    access = await _link_rodium_account(db, user)
+    db.refresh(user)
+    if access:
+        # Keys and wallet hydrate after the response, same as the OIDC callback:
+        # the user should land in the builder, not wait on two extra round-trips.
+        # This is also what mints and selects their generation key, via
+        # `autoGenerateApiKey` on the platform side.
+        background_tasks.add_task(_hydrate_rodium_account_cache, user.id, access)
+
+    return TokenResponse(access_token=token_for_user(user), email_verified=True)
+
+
+@router.post("/verify-email/resend", response_model=SimpleOkResponse)
+def resend_verification(
+    body: ResendVerificationRequest, request: Request, db: Session = Depends(get_db)
+) -> SimpleOkResponse:
+    """Re-send the verification link. Always reports success.
+
+    Answering differently for a known and an unknown address would turn this
+    into a membership oracle, and it is reachable without a session.
+    """
+    locale = resolve_locale(request)
+    email = body.email.strip().lower()
+    rate_limit.enforce(request, "verify-resend", limit=3, window_seconds=900, subject=email)
+
+    user = db.query(User).filter(User.email == email).first()
+    if user is not None and user.email_verified_at is None:
+        _send_verification_email(db, user, locale)
+    return SimpleOkResponse(message=t("verify_email_sent", locale))
+
+
+@router.post("/forgot-password", response_model=SimpleOkResponse)
+def forgot_password(
+    body: ForgotPasswordRequest, request: Request, db: Session = Depends(get_db)
+) -> SimpleOkResponse:
+    """Start a password reset. Always reports success (membership oracle)."""
+    locale = resolve_locale(request)
+    email = body.email.strip().lower()
+    rate_limit.enforce(request, "forgot-password", limit=3, window_seconds=900, subject=email)
+
+    user = db.query(User).filter(User.email == email).first()
+    # Accounts without a local password (created through RodiumAi or a social
+    # provider) have nothing to reset; silently skipping keeps the response
+    # identical for them too.
+    if user is not None and user.password_hash:
+        auth_tokens.invalidate_outstanding(db, user.id, AuthToken.KIND_PASSWORD_RESET)
+        raw = auth_tokens.issue_password_reset(db, user.id)
+        db.commit()
+        url = get_settings().web_url(f"/reset-password?token={quote(raw)}")
+        mail.send(mail.build_reset_password(user.email, url, locale))
+    return SimpleOkResponse(message=t("reset_email_sent", locale))
+
+
+@router.post("/reset-password", response_model=TokenResponse)
+def reset_password(
+    body: ResetPasswordRequest, request: Request, db: Session = Depends(get_db)
+) -> TokenResponse:
+    """Set a new password from a reset link, and kill every other session."""
+    locale = resolve_locale(request)
+    rate_limit.enforce(request, "reset-password", limit=10, window_seconds=3600)
+
+    user_id = auth_tokens.consume(db, body.token, AuthToken.KIND_PASSWORD_RESET)
+    if user_id is None:
+        raise HTTPException(status_code=400, detail=t("invalid_or_expired_link", locale))
+
+    user = db.get(User, user_id)
+    if user is None:
+        raise HTTPException(status_code=400, detail=t("invalid_or_expired_link", locale))
+
+    user.password_hash = hash_password(body.password)
+    user.token_version = (user.token_version or 0) + 1
+    # Reaching the reset link proves control of the mailbox — at least as
+    # strong as the verification link, so treat the address as confirmed.
+    if user.email_verified_at is None:
+        user.email_verified_at = datetime.now(UTC)
+    auth_tokens.invalidate_outstanding(db, user.id, AuthToken.KIND_PASSWORD_RESET)
+    db.commit()
+    db.refresh(user)
+
+    return TokenResponse(access_token=token_for_user(user), email_verified=True)
+
+
+@router.post("/oauth/firebase", response_model=TokenResponse)
+async def oauth_firebase(
+    body: OAuthFirebaseRequest,
+    background_tasks: BackgroundTasks,
+    request: Request,
+    db: Session = Depends(get_db),
+) -> TokenResponse:
+    """Sign in with Google or GitHub via a Firebase ID token.
+
+    Linking policy — the one rule this file enforces everywhere:
+
+    * a match on `(provider, provider_account_id)` is the identity, and always
+      wins;
+    * otherwise we may adopt an existing account with the same address **only
+      if that address is already verified on both sides**. Otherwise anyone
+      could register locally with someone else's address (unverified) and wait
+      for the real owner to sign in with Google to inherit their projects.
+    """
+    locale = resolve_locale(request)
+    rate_limit.enforce(request, "oauth-firebase", limit=20, window_seconds=900)
+
+    if not firebase_auth.enabled():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=t("oauth_not_configured", locale),
+        )
+    try:
+        identity = firebase_auth.verify_id_token(body.id_token)
+    except firebase_auth.FirebaseAuthError as exc:
+        reason = str(exc)
+        if reason == "email_required":
+            raise HTTPException(status_code=400, detail=t("oauth_email_required", locale)) from exc
+        if reason == "unsupported_provider":
+            raise HTTPException(
+                status_code=400, detail=t("oauth_provider_unsupported", locale)
+            ) from exc
+        if reason == "firebase_not_configured":
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=t("oauth_not_configured", locale),
+            ) from exc
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail=t("oauth_invalid_token", locale)
+        ) from exc
+
+    link = (
+        db.query(OauthAccount)
+        .filter(
+            OauthAccount.provider == identity.provider,
+            OauthAccount.provider_account_id == identity.provider_account_id,
+        )
+        .first()
+    )
+    user = db.get(User, link.user_id) if link else None
+
+    if user is None:
+        existing = db.query(User).filter(User.email == identity.email).first()
+        if existing is not None:
+            if not identity.email_verified or existing.email_verified_at is None:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=t("account_needs_password_login", locale),
+                )
+            user = existing
+        else:
+            user = User(
+                email=identity.email,
+                password_hash=None,
+                name=identity.name,
+                avatar_url=identity.picture,
+                # The provider vouched for the address; that is the same
+                # evidence our own verification link produces.
+                email_verified_at=datetime.now(UTC) if identity.email_verified else None,
+            )
+            db.add(user)
+            db.flush()
+            db.add(
+                UserSettings(user_id=user.id, default_model=get_settings().effective_default_model)
+            )
+
+    if link is None:
+        db.add(
+            OauthAccount(
+                user_id=user.id,
+                provider=identity.provider,
+                provider_account_id=identity.provider_account_id,
+            )
+        )
+    if identity.name and not user.name:
+        user.name = identity.name
+    if identity.picture and not user.avatar_url:
+        user.avatar_url = identity.picture
+
+    db.commit()
+    db.refresh(user)
+
+    # Most providers vouch for the address, which is what makes this a valid
+    # moment to provision — no verification link needed.
+    if user.email_verified_at is None:
+        # GitHub accounts with a hidden or unconfirmed address land here. One
+        # rule everywhere: no confirmed address, no session — otherwise they
+        # would reach a builder with no RodiumAi account behind it. Send the
+        # link so they have a way forward.
+        _send_verification_email(db, user, locale)
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=t("email_not_verified", locale),
+        )
+
+    access = await _link_rodium_account(db, user)
+    db.refresh(user)
+    if access:
+        background_tasks.add_task(_hydrate_rodium_account_cache, user.id, access)
+
+    return TokenResponse(access_token=token_for_user(user), email_verified=True)
+
+
+@router.post("/login", response_model=TokenResponse)
 def login(body: LoginRequest, request: Request, db: Session = Depends(get_db)) -> TokenResponse:
     locale = resolve_locale(request)
-    # Keep local bootstrap accounts working if they already exist.
-    user = db.query(User).filter(User.email == body.email.lower()).first()
+    rate_limit.enforce(request, "login", limit=10, window_seconds=900)
+
+    user = db.query(User).filter(User.email == body.email.strip().lower()).first()
     if user is None or not user.password_hash or not verify_password(body.password, user.password_hash):
+        # One message for "no such account" and "wrong password" — the
+        # distinction is only useful to someone enumerating addresses.
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=t("rodium_oauth_required", locale),
+            detail=t("invalid_credentials", locale),
         )
-    return TokenResponse(access_token=create_access_token(user.id))
+    # Correct password, unconfirmed address: no session. 403 rather than 401 so
+    # the sign-in form can tell "wrong password" from "confirm your email" and
+    # offer to resend the link. Only reachable once the password checks out, so
+    # it reveals nothing to someone guessing addresses.
+    if user.email_verified_at is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=t("email_not_verified", locale),
+        )
+    return TokenResponse(
+        access_token=token_for_user(user),
+        email_verified=user.email_verified_at is not None,
+    )
+
+
+@router.post("/media-token", response_model=MediaTokenResponse)
+def issue_media_token(user: User = Depends(get_current_user)) -> MediaTokenResponse:
+    """Short-lived, read-only token for `<img src>` and iframe loads.
+
+    Those requests cannot set an Authorization header, so their credential
+    ends up in the query string — and therefore in access logs. This keeps
+    what leaks there scoped to reads and valid for an hour, instead of a
+    7-day session that opens the whole API.
+    """
+    return MediaTokenResponse(
+        token=media_token_for_user(user),
+        expires_in=MEDIA_TOKEN_TTL_MINUTES * 60,
+    )
 
 
 @router.get("/me", response_model=UserOut)
@@ -484,5 +876,10 @@ def change_password(
             status_code=status.HTTP_400_BAD_REQUEST, detail=t("invalid_current_password", locale)
         )
     user.password_hash = hash_password(body.new_password)
+    # Revoke every outstanding session, including any the caller does not
+    # control. `access_token` below re-authenticates the current browser so
+    # changing your password does not log you out of the tab you did it in.
+    user.token_version = (user.token_version or 0) + 1
     db.commit()
-    return PasswordChangeResponse()
+    db.refresh(user)
+    return PasswordChangeResponse(access_token=token_for_user(user))
