@@ -31,8 +31,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install ruff==0.16.4 pytest==8.3.4
+          pip install -r requirements-dev.txt
 
       - name: Install runtime CLI (smoke transform tests)
         working-directory: apps/api/runtime
@@ -126,7 +125,13 @@ jobs:
     needs: [api, web, runtime, compose]
     runs-on: ubuntu-latest
     steps:
+      # fetch-depth: 0 is required. The default shallow clone fetches one
+      # commit, so `gitleaks detect` would scan only the current tree — the
+      # blind spot being exactly where a secret removed in a later commit
+      # still lives.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Detect secrets
         run: |

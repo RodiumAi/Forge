@@ -49,6 +49,16 @@ def init_db() -> None:
     # Lightweight local schema upgrades (no Alembic yet).
     statements = [
         "ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMPTZ",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS rodium_provisioned_at TIMESTAMPTZ",
+        # Accounts that predate local sign-up all came through RodiumAi OIDC,
+        # which proves the address — backfill so they keep working under the
+        # "linking requires a verified email" rule.
+        """
+        UPDATE users SET email_verified_at = COALESCE(email_verified_at, created_at, now())
+        WHERE rodium_sub IS NOT NULL AND email_verified_at IS NULL
+        """,
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS rodium_sub VARCHAR(64)",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS name VARCHAR(200)",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT",
@@ -60,6 +70,33 @@ def init_db() -> None:
         "ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS rodium_wallet_json TEXT",
         "ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS rodium_api_keys_json TEXT",
         "ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS selected_rodium_api_key_id VARCHAR(64)",
+        """
+        CREATE TABLE IF NOT EXISTS auth_tokens (
+            id UUID PRIMARY KEY,
+            user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            kind VARCHAR(32) NOT NULL,
+            token_hash VARCHAR(64) NOT NULL,
+            expires_at TIMESTAMPTZ NOT NULL,
+            consumed_at TIMESTAMPTZ,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+        """,
+        "CREATE UNIQUE INDEX IF NOT EXISTS ix_auth_tokens_token_hash ON auth_tokens (token_hash)",
+        "CREATE INDEX IF NOT EXISTS ix_auth_tokens_user_id ON auth_tokens (user_id)",
+        """
+        CREATE TABLE IF NOT EXISTS oauth_accounts (
+            id UUID PRIMARY KEY,
+            user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            provider VARCHAR(32) NOT NULL,
+            provider_account_id VARCHAR(128) NOT NULL,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+        """,
+        "CREATE INDEX IF NOT EXISTS ix_oauth_accounts_user_id ON oauth_accounts (user_id)",
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_oauth_provider_account
+            ON oauth_accounts (provider, provider_account_id)
+        """,
         """
         CREATE TABLE IF NOT EXISTS site_usage_days (
             id UUID PRIMARY KEY,

@@ -1,27 +1,23 @@
 "use client";
 
+import { memo } from "react";
 import { ChatMarkdown } from "./ChatMarkdown";
-import { FileOpBlock } from "./FileOpBlock";
-import {
-  splitMessageSegments,
-  type ProseSegment,
-  type WriteSegment,
-} from "@/lib/message-segments";
+import { splitMessageSegments, type ProseSegment } from "@/lib/message-segments";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 
 /**
  * Assistant message body.
  *
- * Prose only. File operations are stripped from the body: they are already
- * listed in the activity panel and grouped under their plan task, so repeating
- * one card per <forge-write> buried the conversation under dozens of rows.
- * The single exception is the write currently streaming, shown as a one-line
- * progress indicator so the user sees work happening.
+ * Prose only. All file operations are hidden from the chat — a Replit/Lovable
+ * style progress view. The activity panel and plan checklist convey what is
+ * happening without exposing paths, and the streaming <forge-write> preview
+ * that used to live here was the single biggest per-token re-render source
+ * (it re-parsed and re-rendered a growing code block on every flush).
  */
-export function AssistantBody({
+function AssistantBodyInner({
   content,
   streaming = false,
-  onOpenFile,
+  onOpenFile: _onOpenFile,
 }: {
   content: string;
   streaming?: boolean;
@@ -29,8 +25,9 @@ export function AssistantBody({
 }) {
   const { t } = useI18n();
   const segments = splitMessageSegments(content || "");
+  const prose = segments.filter((s): s is ProseSegment => s.kind === "text");
 
-  if (!segments.length) {
+  if (!prose.length) {
     return streaming ? (
       <p className="assistant-pending">
         <span className="assistant-dots" aria-hidden="true">
@@ -43,52 +40,19 @@ export function AssistantBody({
     ) : null;
   }
 
-  const lastIndex = segments.length - 1;
-  const visible: (ProseSegment | WriteSegment)[] = [];
-  segments.forEach((segment, i) => {
-    if (segment.kind === "text") visible.push(segment);
-    // Only the in-progress write earns a line; finished ops live in the
-    // activity panel / plan checklist.
-    else if (segment.kind === "write" && !segment.complete && streaming && i === lastIndex) {
-      visible.push(segment);
-    }
-  });
-
-  if (!visible.length && streaming) {
-    return (
-      <p className="assistant-pending">
-        <span className="assistant-dots" aria-hidden="true">
-          <i />
-          <i />
-          <i />
-        </span>
-        <span>{t("genBuilding")}</span>
-      </p>
-    );
-  }
-
   return (
     <div className="assistant-body">
-      {visible.map((segment, i) => {
-        if (segment.kind === "text") {
-          return (
-            <ChatMarkdown
-              key={`t-${i}`}
-              content={segment.content}
-              streaming={streaming && i === visible.length - 1}
-            />
-          );
-        }
-        return (
-          <FileOpBlock
-            key={`w-${i}-${segment.path}`}
-            path={segment.path}
-            content={segment.content}
-            complete={false}
-            onOpenFile={onOpenFile}
-          />
-        );
-      })}
+      {prose.map((segment, i) => (
+        <ChatMarkdown
+          key={`t-${i}`}
+          content={segment.content}
+          streaming={streaming && i === prose.length - 1}
+        />
+      ))}
     </div>
   );
 }
+
+// Historical messages pass stable content and a stable onOpenFile — memo keeps
+// them out of every 80ms flush.
+export const AssistantBody = memo(AssistantBodyInner);

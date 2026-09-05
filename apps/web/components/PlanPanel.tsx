@@ -5,16 +5,13 @@ import {
   ChevronDown,
   Circle,
   CircleAlert,
-  Eye,
-  FileCode2,
   ListTodo,
   Loader2,
   Play,
   Square,
   StepForward,
-  Trash2,
 } from "lucide-react";
-import { useState } from "react";
+import { memo, useState } from "react";
 import { Icon } from "@/components/ui/icon";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import type { FileOp } from "@/components/AgentActivityPanel";
@@ -62,22 +59,23 @@ function TaskIcon({ status }: { status?: string }) {
   return <Icon icon={Circle} className="ui-icon-sm plan-task-icon-pending" />;
 }
 
-export function PlanPanel({
+function PlanPanelInner({
   tasks,
   meta = null,
   needsConfirm = false,
   busy = false,
   executing = false,
-  ops = [],
+  ops: _ops = [],
   onExecute,
   onExecuteStep,
   onDismiss,
   onStop,
-  onOpenFile,
+  onOpenFile: _onOpenFile,
 }: Props) {
   const { t } = useI18n();
-  // "View plan": the checklist starts collapsed when we have a header card
-  // with a summary, and opens automatically once execution starts.
+  // Checklist starts collapsed only for a completed header-only glance.
+  // While awaiting confirm / resume / errors / execution it must be open —
+  // otherwise Execute lives behind "View plan" and the plan is invisible.
   const [expanded, setExpanded] = useState(false);
   if (!tasks.length) return null;
 
@@ -104,10 +102,13 @@ export function PlanPanel({
   else if (isDone) statusLabel = t("planStatusDone");
 
   const hasHeaderCard = Boolean(meta?.title || meta?.summary);
-  const checklistOpen = !hasHeaderCard || expanded || isExecuting || Boolean(errorTask);
-  const filesTouched = new Set(ops.map((op) => op.path)).size;
-  const firstReviewable = ops.find((op) => op.op !== "delete");
-  const showFooter = filesTouched > 0 && (isExecuting || isDone || partialProgress || Boolean(errorTask));
+  const checklistOpen =
+    !hasHeaderCard ||
+    expanded ||
+    isExecuting ||
+    isAwaiting ||
+    canResume ||
+    Boolean(errorTask);
 
   let statusChipClass = "plan-status-chip";
   if (isExecuting) statusChipClass += " is-building";
@@ -193,47 +194,18 @@ export function PlanPanel({
           ) : null}
 
           <ol className="plan-tasks">
-            {tasks.map((task, index) => {
-              const taskOps = ops.filter((op) => op.taskId && String(op.taskId) === String(task.id));
-              return (
-                <li
-                  key={task.id}
-                  className={`plan-task plan-task-${task.status || "pending"}${
-                    task.status === "running" ? " plan-task-active" : ""
-                  }`}
-                >
-                  <span className="plan-task-index">{index + 1}</span>
-                  <TaskIcon status={task.status} />
-                  <span className="plan-task-title">
-                    {task.title}
-                    {taskOps.length > 0 && (
-                      <details className="plan-task-files">
-                        <summary>
-                          {t("planTaskFiles").replace("{n}", String(taskOps.length))}
-                        </summary>
-                        <ul>
-                          {taskOps.map((op, i) => (
-                            <li key={`${op.op}-${op.path}-${i}`} className={`plan-task-file is-${op.op}`}>
-                              <Icon
-                                icon={op.op === "delete" ? Trash2 : FileCode2}
-                                className="ui-icon-sm"
-                              />
-                              {onOpenFile && op.op !== "delete" ? (
-                                <button type="button" onClick={() => onOpenFile(op.path)}>
-                                  {op.path}
-                                </button>
-                              ) : (
-                                <span>{op.path}</span>
-                              )}
-                            </li>
-                          ))}
-                        </ul>
-                      </details>
-                    )}
-                  </span>
-                </li>
-              );
-            })}
+            {tasks.map((task, index) => (
+              <li
+                key={task.id}
+                className={`plan-task plan-task-${task.status || "pending"}${
+                  task.status === "running" ? " plan-task-active" : ""
+                }`}
+              >
+                <span className="plan-task-index">{index + 1}</span>
+                <TaskIcon status={task.status} />
+                <span className="plan-task-title">{task.title}</span>
+              </li>
+            ))}
           </ol>
 
           {showExecute ? (
@@ -272,32 +244,20 @@ export function PlanPanel({
         </div>
       ) : null}
 
-      {showFooter ? (
+      {isExecuting && onStop ? (
         <div className="plan-footer">
-          <span className="plan-footer-files">
-            <Icon icon={FileCode2} className="ui-icon-sm" />
-            {t("planFilesTouched").replace("{n}", String(filesTouched))}
-          </span>
           <span className="plan-footer-actions">
-            {isExecuting && onStop ? (
-              <button type="button" className="plan-footer-btn plan-footer-stop" onClick={onStop}>
-                <Icon icon={Square} className="ui-icon-sm" />
-                {t("planStop")}
-              </button>
-            ) : null}
-            {!isExecuting && firstReviewable && onOpenFile ? (
-              <button
-                type="button"
-                className="plan-footer-btn plan-footer-review"
-                onClick={() => onOpenFile(firstReviewable.path)}
-              >
-                <Icon icon={Eye} className="ui-icon-sm" />
-                {t("planReview")}
-              </button>
-            ) : null}
+            <button type="button" className="plan-footer-btn plan-footer-stop" onClick={onStop}>
+              <Icon icon={Square} className="ui-icon-sm" />
+              {t("planStop")}
+            </button>
           </span>
         </div>
       ) : null}
     </div>
   );
 }
+
+// See AgentActivityPanel: historical plan panels receive stable props but
+// re-render on every parent flush without memo.
+export const PlanPanel = memo(PlanPanelInner);

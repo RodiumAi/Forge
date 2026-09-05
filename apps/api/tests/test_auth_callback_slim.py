@@ -52,12 +52,14 @@ def test_callback_critical_path_skips_keys_and_wallet(monkeypatch: pytest.Monkey
         calls.append("wallet")
         return {"balanceRodi": "42"}
 
-    monkeypatch.setattr(auth_mod, "parse_oauth_state", lambda _state: "verifier")
+    monkeypatch.setattr(
+        auth_mod, "parse_oauth_state", lambda _state, _binding=None: "verifier"
+    )
     monkeypatch.setattr(auth_mod, "exchange_code", fake_exchange)
     monkeypatch.setattr(auth_mod, "fetch_userinfo", fake_userinfo)
     monkeypatch.setattr(auth_mod, "fetch_api_keys", fake_keys)
     monkeypatch.setattr(auth_mod, "fetch_wallet", fake_wallet)
-    monkeypatch.setattr(auth_mod, "create_access_token", lambda _uid: "forge-jwt")
+    monkeypatch.setattr(auth_mod, "token_for_user", lambda _user: "forge-jwt")
     monkeypatch.setattr(auth_mod, "_store_oauth_tokens", lambda _row, _tokens: None)
 
     user_id = uuid.uuid4()

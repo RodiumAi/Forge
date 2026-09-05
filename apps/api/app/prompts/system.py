@@ -115,6 +115,27 @@ file contents here
       imported at its top). This is what keeps the design intact across the plan.
 26. Keep spacing, hierarchy, grids/cards, and responsive behavior consistent.
 
+## Responsive (mobile is not an afterthought)
+
+Prototypes are reviewed on a phone frame as often as on a desktop one. A layout
+that only works at 1440px is not finished.
+
+- Write mobile-first: base rules target narrow screens, `@media (min-width: …)`
+  adds the wider layouts. Never the reverse.
+- `index.html` MUST carry `<meta name="viewport" content="width=device-width,
+  initial-scale=1" />`. Without it a phone renders the desktop layout scaled down.
+- NO fixed pixel widths on layout containers, sections, cards, hero blocks or
+  images. Use `max-width` + `width: 100%`, percentages, `min()`/`clamp()`, grid
+  or flex. `width: 1200px` on a container is a horizontal scrollbar on a phone.
+- Nothing may overflow horizontally at 360px. Long words and URLs need
+  `overflow-wrap: anywhere`; wide tables, code blocks and carousels scroll
+  inside their own `overflow-x: auto` container, never the page body.
+- Grids collapse to one column on small screens; multi-column layouts use
+  `repeat(auto-fit, minmax(…, 1fr))` or an explicit breakpoint.
+- Tap targets — buttons, nav links, icon buttons — are at least 44x44px.
+- Type scales with the viewport (`clamp()` for headings); a 64px desktop hero
+  title must not stay 64px on a phone.
+
 ## Current file state (critical — never revert user edits)
 
 27. The "Selected files (full)" blocks are the CURRENT on-disk state. The user may

@@ -32,11 +32,41 @@ Services d'appui : **MinIO** (uploads S3), **Valkey** (file de runs / annulation
 - **24 templates** : voir [docs/TEMPLATES.md](docs/TEMPLATES.md).
 - **Manifest du runtime** : `packages.json` est la source unique de l'import map, de l'allowlist AST et des types Monaco.
 
+## Prérequis
+
+| Outil | Version | Nécessaire pour |
+| --- | --- | --- |
+| Docker + Compose v2 | version courante | le démarrage rapide ci-dessous |
+| Node.js | **22** (`.nvmrc`) | lancer `apps/web` sur l'hôte |
+| Python | **3.12** (`.python-version`) | lancer `apps/api` sur l'hôte |
+
+La CI tourne exactement sur ces versions. Des runtimes plus anciens peuvent
+compiler en local et échouer en CI — `ruff` cible `py312` et plusieurs
+dépendances sont sensibles à la version.
+
+> **La connexion dépend d'un service absent de ce dépôt.** L'authentification
+> passe par le fournisseur OIDC RodiumAI : avec `RODIUM_OIDC_CLIENT_ID` vide
+> (valeur par défaut), `GET /auth/rodium/start` renvoie `503`, et il n'existe
+> aucun compte local de repli — `/auth/register` renvoie définitivement
+> `410 Gone`. Vous pouvez lancer toute la stack, parcourir le code et travailler
+> sur les templates, mais pas vous connecter au builder sans identifiants
+> RodiumAI. Voir le [suivi des issues](https://github.com/RodiumAi/Forge/issues)
+> si vous en avez besoin.
+
 ## Démarrage rapide (Docker)
 
 ```bash
 cp .env.example .env
-docker compose up -d --build   # ou : make up
+make up          # docker compose up -d --build, puis applique le schéma
+```
+
+Sans `make`, exécutez les deux étapes vous-même — un volume neuf n'a aucune
+table tant que la seconde n'a pas tourné :
+
+```bash
+cp .env.example .env
+docker compose up -d --build
+docker compose exec -T api python -c "from app.db import init_db; init_db()"
 ```
 
 | Service | URL |
@@ -55,8 +85,9 @@ Lancez l'infra avec Docker, puis l'API et/ou le web en local.
 
 ```bash
 cd apps/api
-python -m venv .venv && .venv/Scripts/activate   # ou source .venv/bin/activate
-pip install -r requirements.txt
+python -m venv .venv && source .venv/bin/activate   # Windows : .venv\Scripts\activate
+pip install -r requirements-dev.txt                 # deps runtime + ruff + pytest
+cp .env.example .env
 uvicorn app.main:app --reload --port 8100
 ```
 
@@ -68,14 +99,46 @@ npm install
 npm run dev   # port 3100
 ```
 
+## Tests et vérifications
+
+Ce sont exactement les commandes de la CI : un run local vert signifie une CI verte.
+
+```bash
+# apps/web
+npm run lint && npm run typecheck && npm test
+FORGE_FONT_MODE=fallback npm run build
+
+# apps/api  (TEMPLATES_ROOT doit pointer vers data/templates)
+ruff check app tests && ruff format --check app tests
+pytest -q
+
+# apps/api/runtime
+npm ci && npm test
+```
+
 ## Variables d'environnement
 
-Copiez `.env.example` vers `.env` et ajustez au besoin — il documente toutes les variables essentielles (base de données, MinIO, Valkey, clé du gateway RodiumAI, etc.).
+Copiez `.env.example` vers `.env` et ajustez au besoin — il documente toutes les
+variables essentielles (base de données, MinIO, Valkey, gateway RodiumAI, etc.).
+`apps/api` et `apps/web` ont chacun leur propre `.env.example` pour le
+développement sur l'hôte.
+
+## Contribuer
+
+Les contributions sont bienvenues. [CONTRIBUTING.fr.md](CONTRIBUTING.fr.md)
+couvre le setup, les vérifications à lancer avant de pousser, le process de PR
+et la soumission d'un kit template. Merci de lire aussi le
+[Code de Conduite](CODE_OF_CONDUCT.fr.md).
+
+En contribuant, vous acceptez que vos contributions soient placées sous la
+licence MIT qui couvre ce projet.
 
 ## Documentation
 
+- [docs/ARCHITECTURE.fr.md](docs/ARCHITECTURE.fr.md) — le fonctionnement réel d'un run, de la preview et de la publication
 - [CONTRIBUTING.fr.md](CONTRIBUTING.fr.md) — setup dev, vérifications, guide PR, **kits templates**
 - [docs/TEMPLATES.fr.md](docs/TEMPLATES.fr.md) — contrat complet de création de templates
+- [DOCKER.fr.md](DOCKER.fr.md) — stack locale, ports, notes de preview
 - [SECURITY.fr.md](SECURITY.fr.md) — signalement de vulnérabilités
 - [CODE_OF_CONDUCT.fr.md](CODE_OF_CONDUCT.fr.md)
 - [LICENSE](LICENSE) — MIT

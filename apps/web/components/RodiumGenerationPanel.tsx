@@ -2,7 +2,9 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { api, getToken } from "@/lib/api";
+import { rodiumRechargeUrl } from "@/lib/constants/rodium-links";
 import { useI18n } from "@/lib/i18n/I18nProvider";
+import { startRodiumOAuth } from "@/lib/rodium-oauth";
 import { patchSessionCache } from "@/lib/session-cache";
 import { SettingsBlock, SettingsRow } from "@/components/SettingsShell";
 
@@ -25,6 +27,7 @@ type RodiumAccount = {
     is_active: boolean;
   }>;
   selected_api_key_id?: string | null;
+  rodium_sub?: string | null;
   has_generation_key?: boolean;
   generation_key_hint?: string | null;
 };
@@ -52,6 +55,8 @@ export function RodiumGenerationPanel() {
   const [selectedKeyId, setSelectedKeyId] = useState("");
   const [selectingKey, setSelectingKey] = useState(false);
   const [showManualPaste, setShowManualPaste] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [connecting, setConnecting] = useState(false);
   const [apiKeyPaste, setApiKeyPaste] = useState("");
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -74,6 +79,8 @@ export function RodiumGenerationPanel() {
         if (cancelled) return;
         setAccount(rodium);
         setKeyStatus(item);
+        // Unlinked: surface paste by default (only path without OIDC).
+        if (!rodium.linked) setShowManualPaste(true);
         patchSessionCache({
           rodium: { linked: Boolean(rodium.linked), wallet: rodium.wallet ?? null },
           profile: {
@@ -116,9 +123,13 @@ export function RodiumGenerationPanel() {
       (apiKeyPaste.trim() || keyStatus.configured || account?.has_generation_key),
   );
 
-  async function refreshAccountAndKey() {
+  async function refreshAccountAndKey(fresh = false) {
+    // `fresh=1` widens the server-side timeout so the platform is actually
+    // queried rather than served from cache — that is the whole point of the
+    // refresh button, which exists so adding a key on RodiumAi does not
+    // require signing out and back in.
     const [rodium, item] = await Promise.all([
-      api<RodiumAccount>("/auth/rodium/account"),
+      api<RodiumAccount>(fresh ? "/auth/rodium/account?fresh=1" : "/auth/rodium/account"),
       api<RodiumKeyStatus>("/settings/rodium", {}, locale),
     ]);
     setAccount(rodium);
@@ -130,9 +141,45 @@ export function RodiumGenerationPanel() {
         name: rodium.name,
         avatar_url: rodium.avatar_url,
         rodium_linked: Boolean(rodium.linked),
+        // Dropping this would break the top-up link in the navbar badge.
+        rodium_sub: rodium.rodium_sub ?? null,
       },
     });
     return rodium;
+  }
+
+  async function onRefresh() {
+    setRefreshing(true);
+    setError(null);
+    setMessage(null);
+    try {
+      await refreshAccountAndKey(true);
+      setMessage(t("rodiumRefreshed"));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("errorGeneric"));
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  async function onConnect() {
+    setConnecting(true);
+    setError(null);
+    const result = await startRodiumOAuth({
+      returnTo: "/settings?tab=generation",
+      unavailableHref: null,
+    });
+    if (!result.ok) {
+      setConnecting(false);
+      if (result.reason === "oidc_unavailable") {
+        setError(t("rodiumManualKeyHelp"));
+        setShowManualPaste(true);
+      } else if (result.error instanceof Error) {
+        setError(result.error.message);
+      } else {
+        setError(t("errorGeneric"));
+      }
+    }
   }
 
   async function onSelectAccountKey(e: FormEvent) {
@@ -208,42 +255,128 @@ export function RodiumGenerationPanel() {
     return <p className="settings-panel-loading">{t("loading")}</p>;
   }
 
+  const linked = Boolean(account?.linked);
+  const balanceRaw = account?.wallet?.balance_rodi ?? null;
+  const providedRaw = account?.wallet?.provided_total_rodi ?? null;
+  const balance =
+    balanceRaw == null || balanceRaw === ""
+      ? "—"
+      : (() => {
+          const n = Number(String(balanceRaw).replace(",", "."));
+          if (!Number.isFinite(n)) return balanceRaw;
+          try {
+            return new Intl.NumberFormat(locale === "fr" ? "fr-FR" : "en-US", {
+              maximumFractionDigits: 2,
+            }).format(n);
+          } catch {
+            return balanceRaw;
+          }
+        })();
+  const provided =
+    providedRaw == null || providedRaw === ""
+      ? null
+      : (() => {
+          const n = Number(String(providedRaw).replace(",", "."));
+          if (!Number.isFinite(n)) return providedRaw;
+          try {
+            return new Intl.NumberFormat(locale === "fr" ? "fr-FR" : "en-US", {
+              maximumFractionDigits: 2,
+            }).format(n);
+          } catch {
+            return providedRaw;
+          }
+        })();
+  const providedNum = Number(String(providedRaw ?? "").replace(",", "."));
+  const showProvided = Number.isFinite(providedNum) && providedNum > 0;
+
   return (
     <>
-      <SettingsBlock title={t("rodiumAccountTitle")} subtitle={t("rodiumManagedHelp")}>
-        <SettingsRow title={t("settingsRodiumStatus")}>
-          <span className={`home-settings-badge ${account?.linked ? "ok" : "warn"}`}>
-            {account?.linked ? t("rodiumManaged") : t("rodiumNotConfigured")}
-            {account?.email ? ` · ${account.email}` : ""}
-          </span>
-        </SettingsRow>
-        {(account?.name || account?.email) && (
-          <SettingsRow title={t("rodiumAccountTitle")}>
-            <div className="home-connector-meta">
-              {account?.avatar_url ? (
-                <img className="home-connector-avatar" src={account.avatar_url} alt="" />
+      <SettingsBlock
+        title={t("rodiumAccountTitle")}
+        subtitle={linked ? t("rodiumAccountLinkedHelp") : t("connectRodiumAiHint")}
+      >
+        <div className={`rodium-gen-card${linked ? " is-linked" : ""}`}>
+          <div className="rodium-gen-card-head">
+            <div className="rodium-gen-card-titles">
+              {!linked ? (
+                <span className="rodium-gen-pill">{t("rodiumRecommended")}</span>
               ) : null}
-              <div>
-                <p>
-                  <strong>{account?.name || account?.email || "—"}</strong>
-                </p>
-                {account?.email && account?.name ? <p className="muted">{account.email}</p> : null}
-              </div>
+              <span className={`home-settings-badge ${linked ? "ok" : "warn"}`}>
+                {linked ? t("rodiumConnected") : t("rodiumNotConfigured")}
+              </span>
             </div>
-          </SettingsRow>
-        )}
+          </div>
+
+          {linked ? (
+            <>
+              <div className="rodium-gen-identity">
+                {account?.avatar_url ? (
+                  <img className="home-connector-avatar" src={account.avatar_url} alt="" />
+                ) : (
+                  <div className="rodium-gen-avatar-fallback" aria-hidden>
+                    {(account?.name || account?.email || "R").slice(0, 1).toUpperCase()}
+                  </div>
+                )}
+                <div>
+                  <p className="rodium-gen-name">
+                    <strong>{account?.name || account?.email || "—"}</strong>
+                  </p>
+                  {account?.email && account?.name ? (
+                    <p className="muted rodium-gen-email">{account.email}</p>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="rodium-gen-wallet-strip">
+                <div>
+                  <span className="rodium-gen-wallet-label">{t("balanceRodi")}</span>
+                  <strong className="rodium-gen-wallet-value">{balance}</strong>
+                  <span className="rodium-gen-wallet-unit">RODI</span>
+                </div>
+                {showProvided ? (
+                  <div>
+                    <span className="rodium-gen-wallet-label">{t("providedRodi")}</span>
+                    <span className="rodium-gen-wallet-value soft">{provided}</span>
+                  </div>
+                ) : null}
+                <a
+                  className="home-settings-test"
+                  href={rodiumRechargeUrl(account?.rodium_sub)}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {t("rechargeRodi")}
+                </a>
+              </div>
+
+              <div className="home-settings-actions">
+                <button
+                  type="button"
+                  className="home-settings-test"
+                  onClick={() => void onRefresh()}
+                  disabled={refreshing}
+                >
+                  {refreshing ? t("rodiumRefreshing") : t("rodiumRefreshKeys")}
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="rodium-gen-empty">
+              <p className="rodium-gen-empty-copy">{t("connectRodiumAiHint")}</p>
+              <button
+                type="button"
+                className="landing-create home-settings-save"
+                onClick={() => void onConnect()}
+                disabled={connecting}
+              >
+                {connecting ? t("rodiumConnectWorking") : t("connectRodiumAi")}
+              </button>
+            </div>
+          )}
+        </div>
       </SettingsBlock>
 
-      <SettingsBlock title={t("rodiumWalletTitle")}>
-        <SettingsRow title={t("balanceRodi")}>
-          <span className="settings-value">{account?.wallet?.balance_rodi ?? "—"}</span>
-        </SettingsRow>
-        <SettingsRow title={t("providedRodi")}>
-          <span className="settings-value">{account?.wallet?.provided_total_rodi ?? "—"}</span>
-        </SettingsRow>
-      </SettingsBlock>
-
-      <SettingsBlock title={t("rodiumKeysTitle")} subtitle={t("rodiumSelectKeyHelp")}>
+      <SettingsBlock title={t("rodiumManualKeyTitle")} subtitle={t("rodiumManualKeyHelp")}>
         <SettingsRow
           title={t("settingsRodiumStatus")}
           hint={
@@ -257,7 +390,7 @@ export function RodiumGenerationPanel() {
           </span>
         </SettingsRow>
 
-        {activeKeys.length ? (
+        {linked && activeKeys.length ? (
           <form className="settings-inline-form" onSubmit={(e) => void onSelectAccountKey(e)}>
             <label className="home-settings-field">
               <span>{t("rodiumSelectKey")}</span>
@@ -306,6 +439,14 @@ export function RodiumGenerationPanel() {
               <button
                 type="button"
                 className="home-settings-test"
+                onClick={() => void onRefresh()}
+                disabled={refreshing}
+              >
+                {refreshing ? t("rodiumRefreshing") : t("rodiumRefreshKeys")}
+              </button>
+              <button
+                type="button"
+                className="home-settings-test"
                 onClick={() => setShowManualPaste((v) => !v)}
               >
                 {showManualPaste ? t("rodiumHidePaste") : t("rodiumShowPaste")}
@@ -313,17 +454,47 @@ export function RodiumGenerationPanel() {
             </div>
           </form>
         ) : (
-          <p className="muted">{t("rodiumNoKeys")}</p>
+          <div className="settings-inline-form">
+            {linked && !activeKeys.length ? (
+              <p className="muted">{t("rodiumNoKeys")}</p>
+            ) : null}
+            {error && <p className="error home-settings-feedback">{error}</p>}
+            {message && <p className="home-settings-success">{message}</p>}
+            {testMessage && (
+              <p className={testOk ? "home-settings-success" : "error home-settings-feedback"}>
+                {testMessage}
+              </p>
+            )}
+            {linked ? (
+              <div className="home-settings-actions">
+                <button
+                  type="button"
+                  className="home-settings-test"
+                  onClick={() => void onRefresh()}
+                  disabled={refreshing}
+                >
+                  {refreshing ? t("rodiumRefreshing") : t("rodiumRefreshKeys")}
+                </button>
+                <button
+                  type="button"
+                  className="home-settings-test"
+                  onClick={() => setShowManualPaste((v) => !v)}
+                >
+                  {showManualPaste ? t("rodiumHidePaste") : t("rodiumShowPaste")}
+                </button>
+              </div>
+            ) : null}
+          </div>
         )}
 
-        {showManualPaste && (
+        {(showManualPaste || !linked) && (
           <form className="settings-inline-form" onSubmit={(e) => void onPasteSubmit(e)}>
             <label className="home-settings-field">
               <span>{t("rodiumPasteKeyFallback")}</span>
               <input
                 className="home-settings-input"
                 type="password"
-                placeholder="rd_sk_…"
+                placeholder="rd_sk_prod_…"
                 value={apiKeyPaste}
                 onChange={(e) => setApiKeyPaste(e.target.value)}
                 autoComplete="off"
@@ -338,6 +509,16 @@ export function RodiumGenerationPanel() {
               >
                 {saving ? t("settingsSaving") : t("rodiumSaveKey")}
               </button>
+              {keyStatus?.supports_test && (
+                <button
+                  type="button"
+                  className="home-settings-test"
+                  onClick={() => void onTest()}
+                  disabled={testing || !canTest}
+                >
+                  {testing ? t("rodiumTesting") : t("rodiumTest")}
+                </button>
+              )}
             </div>
           </form>
         )}

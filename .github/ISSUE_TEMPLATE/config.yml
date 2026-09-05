@@ -1,1 +1,16 @@
 blank_issues_enabled: false
+
+# Shown on the "New issue" chooser. Without these, a visitor whose need is not a
+# bug/feature/template proposal has nowhere to go, because blank issues are off.
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/RodiumAi/Forge/security/advisories/new
+    about: Please report vulnerabilities privately, never as a public issue.
+
+  - name: Documentation
+    url: https://github.com/RodiumAi/Forge/tree/main/docs
+    about: Setup, template authoring and contribution guides.
+
+  - name: Report a Code of Conduct concern
+    url: mailto:forge@rodiumai.io
+    about: Handled privately by email — never open a public issue for this.

@@ -1,48 +1,28 @@
-/** Lightweight top progress controller (YouTube-style). */
+/** Indeterminate top activity indicator — on while any keyed job is running. */
 
-type Listener = (state: { active: boolean; value: number }) => void;
+type Listener = (state: { active: boolean }) => void;
 
 const listeners = new Set<Listener>();
 const keys = new Set<string>();
-let value = 0;
-let trickleTimer: ReturnType<typeof setInterval> | null = null;
 let hideTimer: ReturnType<typeof setTimeout> | null = null;
+/** Soft “still visible while fading out” so CSS can animate opacity. */
+let fading = false;
 let seq = 0;
 
 function notify() {
-  const active = keys.size > 0 || value > 0;
+  const active = keys.size > 0 || fading;
   for (const fn of listeners) {
     try {
-      fn({ active, value });
+      fn({ active });
     } catch {
       /* ignore */
     }
   }
 }
 
-function clearTrickle() {
-  if (trickleTimer) {
-    clearInterval(trickleTimer);
-    trickleTimer = null;
-  }
-}
-
-function startTrickle() {
-  clearTrickle();
-  trickleTimer = setInterval(() => {
-    if (keys.size === 0) return;
-    // Ease toward ~90% while waiting
-    if (value < 0.9) {
-      const remaining = 0.9 - value;
-      value += Math.max(0.008, remaining * 0.08);
-      notify();
-    }
-  }, 200);
-}
-
 export function subscribeTopProgress(listener: Listener): () => void {
   listeners.add(listener);
-  listener({ active: keys.size > 0 || value > 0, value });
+  listener({ active: keys.size > 0 || fading });
   return () => listeners.delete(listener);
 }
 
@@ -51,15 +31,9 @@ export function topProgressStart(key?: string) {
     clearTimeout(hideTimer);
     hideTimer = null;
   }
+  fading = false;
   const id = key || `auto-${++seq}`;
-  const wasEmpty = keys.size === 0;
   keys.add(id);
-  if (wasEmpty) {
-    value = 0.12;
-    startTrickle();
-  } else if (value < 0.2) {
-    value = 0.2;
-  }
   notify();
   return id;
 }
@@ -73,18 +47,17 @@ export function topProgressDone(key?: string) {
     return;
   }
 
-  clearTrickle();
-  value = 1;
+  // Brief hold so the CSS fade-out can run, then unmount.
+  fading = true;
   notify();
   hideTimer = setTimeout(() => {
-    value = 0;
-    notify();
+    fading = false;
     hideTimer = null;
-  }, 280);
+    notify();
+  }, 220);
 }
 
-export function topProgressInc(amount = 0.05) {
-  if (keys.size === 0) return;
-  value = Math.min(0.95, value + amount);
-  notify();
+/** No-op — kept so older call sites that trickled progress still compile. */
+export function topProgressInc(_amount = 0.05) {
+  /* indeterminate — progress % unused */
 }

@@ -1,0 +1,10 @@
+# Dev / CI tooling for the API. Runtime dependencies stay in requirements.txt
+# so the production image never ships a test runner or a linter.
+#
+# Single source of truth for these pins: CI and `make test` both install from
+# this file, so bumping a version here is enough.
+
+-r requirements.txt
+
+ruff==0.16.4
+pytest==8.3.4

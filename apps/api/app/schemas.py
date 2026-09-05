@@ -7,6 +7,7 @@ from pydantic import BaseModel, EmailStr, Field
 class RegisterRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
+    name: str = Field(min_length=1, max_length=200)
 
 
 class LoginRequest(BaseModel):
@@ -17,6 +18,9 @@ class LoginRequest(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+    #: False right after sign-up. The web app uses it to show the
+    #: "confirm your address" banner without an extra round-trip.
+    email_verified: bool = True
 
 
 class UserOut(BaseModel):
@@ -26,9 +30,63 @@ class UserOut(BaseModel):
     avatar_url: str | None = None
     rodium_linked: bool = False
     rodium_sub: str | None = None
+    email_verified: bool = False
+    #: True when this account has a local password, i.e. the settings screen
+    #: should offer "change password" rather than "managed by RodiumAi".
+    has_password: bool = False
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+# ── Local account flows ────────────────────────────────────────────────────
+
+
+class RegistrationResponse(BaseModel):
+    """Deliberately carries no session token.
+
+    An account is not usable until its address is confirmed, so registering
+    hands back nothing to sign in with — only what the UI needs to tell the
+    person where to look and to offer a resend.
+    """
+
+    ok: bool = True
+    email: EmailStr
+    email_verified: bool = False
+    message: str | None = None
+
+
+class VerifyEmailRequest(BaseModel):
+    token: str = Field(min_length=8, max_length=512)
+
+
+class ResendVerificationRequest(BaseModel):
+    email: EmailStr
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(min_length=8, max_length=512)
+    password: str = Field(min_length=8, max_length=128)
+
+
+class OAuthFirebaseRequest(BaseModel):
+    id_token: str = Field(min_length=16)
+
+
+class MediaTokenResponse(BaseModel):
+    """Short-lived, read-only credential for browser-loaded resources."""
+
+    token: str
+    expires_in: int
+
+
+class SimpleOkResponse(BaseModel):
+    ok: bool = True
+    message: str | None = None
 
 
 class OAuthStartResponse(BaseModel):
@@ -38,6 +96,9 @@ class OAuthStartResponse(BaseModel):
 class OAuthCallbackRequest(BaseModel):
     code: str
     state: str
+    #: The one-time secret this browser generated before `/auth/rodium/start`.
+    #: Proves the callback is being completed by whoever began the flow.
+    state_binding: str | None = Field(default=None, max_length=256)
 
 
 class RodiumWalletOut(BaseModel):
@@ -58,6 +119,9 @@ class RodiumApiKeyOut(BaseModel):
 
 class RodiumAccountOut(BaseModel):
     linked: bool
+    #: Platform user id. Needed client-side to build the top-up link
+    #: (`{userApp}/pay?uid=…`), so it must survive a settings refresh.
+    rodium_sub: str | None = None
     email: str | None = None
     name: str | None = None
     avatar_url: str | None = None
@@ -86,6 +150,9 @@ class PasswordChangeRequest(BaseModel):
 
 class PasswordChangeResponse(BaseModel):
     ok: bool = True
+    #: Changing the password revokes every existing session; this re-issues
+    #: one for the browser that made the change.
+    access_token: str | None = None
 
 
 class LogoutResponse(BaseModel):

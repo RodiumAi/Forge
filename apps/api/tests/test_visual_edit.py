@@ -52,6 +52,20 @@ class TestTextEdit:
         apply_visual_text_edit(project, "Tom & Jerry", "Tom & Anna")
         assert read_file(project, "src/App.tsx") == "<p>Tom &amp; Anna</p>"
 
+    def test_matches_jsx_whitespace_collapsed_by_the_preview(self, project):
+        # Preview innerText collapses the indent/newline that JSX keeps in source.
+        write_file(
+            project,
+            "src/App.tsx",
+            "<p>\n          MediOS unifies care\n          coordination today.\n        </p>",
+        )
+        apply_visual_text_edit(
+            project,
+            "MediOS unifies care coordination today.",
+            "MediOS unifies clinics today.",
+        )
+        assert "MediOS unifies clinics today." in read_file(project, "src/App.tsx")
+
     def test_reports_missing_text(self, project):
         write_file(project, "src/App.tsx", "<h1>Bonjour</h1>")
         with pytest.raises(FileNotFoundError):
