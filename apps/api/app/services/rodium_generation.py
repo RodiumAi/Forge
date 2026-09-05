@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Literal
@@ -76,12 +77,34 @@ def store_oauth_tokens(row: UserSettings, tokens: dict) -> None:
 # the user then saw "account is not linked" while still signed into Forge.
 _refresh_locks: dict[str, asyncio.Lock] = {}
 
+# A refresh normally takes well under a second. Waiting longer than this means
+# the holder is wedged, and every queued request is sitting behind it with not
+# one byte on the wire — which is what "the prompt spins for minutes and nothing
+# happens" looked like. Better to fail one request loudly than stall them all.
+_REFRESH_LOCK_TIMEOUT_S = 20.0
+
 
 def _refresh_lock(user_id: str) -> asyncio.Lock:
     lock = _refresh_locks.get(user_id)
     if lock is None:
         lock = _refresh_locks.setdefault(user_id, asyncio.Lock())
     return lock
+
+
+@asynccontextmanager
+async def _held_refresh_lock(user_id: str):
+    lock = _refresh_lock(user_id)
+    try:
+        await asyncio.wait_for(lock.acquire(), timeout=_REFRESH_LOCK_TIMEOUT_S)
+    except TimeoutError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="RodiumAi is temporarily unreachable. Retry in a moment.",
+        ) from exc
+    try:
+        yield
+    finally:
+        lock.release()
 
 
 def _token_expiry(row: UserSettings) -> datetime | None:
@@ -102,7 +125,7 @@ async def ensure_rodium_access_token(db: Session, user: User, row: UserSettings)
     if expires and expires > now:
         return decrypt_secret(row.rodium_access_token_encrypted)
 
-    async with _refresh_lock(str(user.id)):
+    async with _held_refresh_lock(str(user.id)):
         # Another request may have refreshed while we waited for the lock.
         db.refresh(row)
         expires = _token_expiry(row)

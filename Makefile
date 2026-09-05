@@ -39,7 +39,10 @@ psql: ## Console PostgreSQL
 redis: ## Console Valkey
 	$(COMPOSE) exec valkey valkey-cli
 
-test: ## Tests API (si pytest est installé)
-	$(COMPOSE) exec -T api python -c "from app.config import get_settings; print(get_settings().environment)"
+test: ## Tests API sur l'hote (venv requis - voir CONTRIBUTING.md)
+	# Runs on the host, not in the container: the runtime image ships neither
+	# tests/ nor a test runner, by design. Install once with
+	#   cd apps/api && pip install -r requirements-dev.txt
+	cd apps/api && TEMPLATES_ROOT="$(CURDIR)/data/templates" pytest -q
 
 .PHONY: help up down reset logs migrate seed shell psql redis test

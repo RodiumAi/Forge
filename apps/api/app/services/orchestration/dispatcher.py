@@ -2,23 +2,77 @@
 
 from __future__ import annotations
 
+import asyncio
+import re
+import time
 from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import Any
 
 from app.i18n import Locale, t
 from app.services.apply_writes import apply_validated_writes_async
 from app.services.filesystem import delete_file
-from app.services.llm import RodiumError, is_transient_network_error, stream_chat_completion
+from app.services.llm import (
+    ERR_AUTH_BUSY,
+    ERR_AUTH_EXPIRED,
+    ERR_INVALID_KEY,
+    ERR_QUOTA,
+    RodiumError,
+    StreamChunk,
+    error_code_for,
+    is_transient_network_error,
+    stream_chat_completion,
+)
 from app.services.orchestration.context import build_llm_messages
+from app.services.orchestration.router import fallback_model
 from app.services.rodium_generation import RodiumGenerationAuth
 from app.services.tags import parse_forge_tags
 from app.services.text_plain import build_run_summary, to_plain_text
+
+# Wall-clock ceiling for one plan task's generation, across every retry-free
+# attempt. httpx only bounds the wait for the NEXT chunk, so a model dribbling
+# one token a minute could hold a task open indefinitely — one production run
+# burned 28 minutes before dying. A task that has not finished in four minutes
+# is not going to.
+_TASK_BUDGET_S = 240.0
 
 
 def _sse(payload: dict) -> str:
     import json
 
     return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+
+
+async def _stream_within_budget(
+    *,
+    auth: RodiumGenerationAuth,
+    model: str,
+    messages: list[dict[str, Any]],
+    locale: Locale,
+    budget_s: float,
+) -> AsyncIterator[StreamChunk]:
+    """`stream_chat_completion` under a total wall-clock budget.
+
+    Raises `asyncio.TimeoutError` once the budget is spent, which the caller
+    classifies as `timeout` and treats like any other task failure.
+    """
+    deadline = time.monotonic() + budget_s
+    agen = stream_chat_completion(
+        auth=auth, model=model, messages=messages, locale=locale
+    ).__aiter__()
+    try:
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError(f"generation exceeded {budget_s:.0f}s")
+            try:
+                chunk = await asyncio.wait_for(agen.__anext__(), timeout=remaining)
+            except StopAsyncIteration:
+                return
+            yield chunk
+    finally:
+        # wait_for cancels the pending __anext__ on timeout, leaving the
+        # underlying HTTP stream open unless we close it explicitly.
+        await agen.aclose()
 
 
 def _resume_context_block(tasks: list[dict[str, Any]], applied: list[dict], idx: int) -> str:
@@ -34,6 +88,66 @@ def _resume_context_block(tasks: list[dict[str, Any]], applied: list[dict], idx:
     if paths:
         lines.append("- Files already touched: " + ", ".join(paths[:40]))
     return "\n".join(lines)
+
+
+def _failed_context_block(failures: list[dict[str, Any]]) -> str:
+    """Tell the model which earlier tasks were skipped.
+
+    Continuing past a failure is only safe if the tasks that follow know the
+    ground shifted: a page task whose "architecture" step never ran will import
+    modules that do not exist and take the whole build down with it.
+    """
+    if not failures:
+        return ""
+    titles = [str(f.get("title") or f.get("task_id") or "") for f in failures]
+    return "\n".join(
+        [
+            "Skipped tasks (these did NOT complete):",
+            *(f"- {title}" for title in titles[:8]),
+            "If your task depends on any of them, implement the minimum needed "
+            "for the app to compile and render — do not assume their files, "
+            "exports or styles exist. Do not attempt to redo them in full.",
+        ]
+    )
+
+
+def _failures_summary(failures: list[dict[str, Any]], locale: Locale, *, stopped: bool = False) -> str:
+    """The end-of-run note listing what did not go through.
+
+    A run that quietly drops two of eight steps and still says "done" is worse
+    than one that fails loudly, so the skipped work is named in the assistant
+    message itself, not only in the plan checklist. `stopped` marks the case
+    where a structural task failed and the plan halted instead of degrading
+    through the rest of the tasks — the wording says so plainly, since the
+    remaining tasks were never attempted at all.
+    """
+    if not failures:
+        return ""
+    titles = [str(f.get("title") or f.get("task_id") or "") for f in failures]
+    if stopped:
+        stop_title = titles[0]
+        if locale == "fr":
+            head = f"Le plan s'est arrêté à l'étape « {stop_title} » :"
+            tail = "Les étapes suivantes en dépendent et n'ont pas été lancées. Vous pouvez les relancer depuis le plan."
+        else:
+            head = f"The plan stopped at step \"{stop_title}\":"
+            tail = "The remaining steps depend on it and were never started. You can re-run them from the plan."
+        return "\n".join([head, tail])
+    if locale == "fr":
+        head = (
+            "Une étape n'a pas abouti :"
+            if len(titles) == 1
+            else f"{len(titles)} étapes n'ont pas abouti :"
+        )
+        tail = "Vous pouvez les relancer depuis le plan."
+    else:
+        head = (
+            "One step did not complete:"
+            if len(titles) == 1
+            else f"{len(titles)} steps did not complete:"
+        )
+        tail = "You can re-run them from the plan."
+    return "\n".join([head, *(f"- {title}" for title in titles), tail])
 
 
 def _coherence_task(locale: Locale) -> dict[str, Any]:
@@ -150,6 +264,30 @@ def _is_surgical_task(task: dict[str, Any], *, total_tasks: int) -> bool:
     return bool(total_tasks == 1 and ("edit" in tid or "modif" in title or "change" in title))
 
 
+_STRUCTURAL_TASK_IDS = {"architecture", "structure", "styles_foundation"}
+_STRUCTURAL_TASK_RE = re.compile(r"architect|structure|styles?_found|foundation")
+
+
+def is_structural_task(task: dict[str, Any]) -> bool:
+    """Everything else in the plan assumes this one landed.
+
+    A failed `architecture` or `styles_foundation` task means later tasks import
+    modules and reuse classes that were never written — continuing degrades the
+    whole build instead of just skipping one feature. The regex also catches
+    LLM-authored plans that rename the id but keep the same structural role.
+    """
+    tid = str(task.get("id") or "").lower()
+    return tid in _STRUCTURAL_TASK_IDS or bool(_STRUCTURAL_TASK_RE.search(tid))
+
+
+# A failure with one of these codes dooms every remaining task, not just this
+# one: an empty RODI balance or a dead key can't heal between tasks, so skipping
+# ahead only burns wall-clock re-hitting the same wall while the UI keeps showing
+# "Building…". These abort the run outright with a terminal `error` frame, which
+# the browser turns into the red inline message and unlocks the composer.
+_FATAL_FAILURE_CODES = {ERR_QUOTA, ERR_INVALID_KEY, ERR_AUTH_EXPIRED, ERR_AUTH_BUSY}
+
+
 async def _stream_verify_repair(
     *,
     project_id: str,
@@ -214,7 +352,9 @@ async def _stream_verify_repair(
         ):
             if run_id and is_cancelled(run_id):
                 yield push_step(step_id, step_label, "error")
-                yield _sse({"type": "error", "message": "cancelled", "plan": tasks})
+                yield _sse(
+                    {"type": "error", "code": "cancelled", "message": "cancelled", "plan": tasks}
+                )
                 return
             if chunk.kind == "thinking":
                 thinking_parts.append(chunk.content)
@@ -265,7 +405,20 @@ async def run_plan_tasks(
     db=None,
     step_mode: bool = False,
 ) -> AsyncIterator[str]:
-    """Yield SSE chunks while executing each plan task sequentially."""
+    """Yield SSE chunks while executing each plan task sequentially.
+
+    A task that exhausts its retry budget is recorded and SKIPPED; the plan
+    carries on. It used to `return`, which meant one bad step threw away every
+    step after it — in production that cost a run 28 minutes of work at task 3
+    of 8, with no record of why. Failures are collected here, announced as they
+    happen, injected into later prompts so dependent tasks can degrade
+    gracefully, and reported in the terminal `done` frame.
+
+    The one exception is a failed *structural* task (`is_structural_task`):
+    everything after it assumes it landed, so degrading gracefully is not an
+    option and the plan stops there instead, leaving the rest `pending` for
+    the Resume button.
+    """
     from app.services.orchestration.cancel import is_cancelled
 
     tasks = ensure_coherence_task(tasks, locale)
@@ -273,6 +426,8 @@ async def run_plan_tasks(
     full: list[str] = []
     applied: list[dict] = []
     steps: list[dict] = []
+    failures: list[dict[str, Any]] = []
+    stopped_early = False
 
     async def emit_progress(cursor: int) -> None:
         if not on_progress:
@@ -294,7 +449,9 @@ async def run_plan_tasks(
         if run_id and is_cancelled(run_id):
             task["status"] = "error"
             await emit_progress(idx)
-            yield _sse({"type": "error", "message": "cancelled", "plan": tasks})
+            yield _sse(
+                {"type": "error", "code": "cancelled", "message": "cancelled", "plan": tasks}
+            )
             return
 
         if str(task.get("status") or "") == "done":
@@ -309,11 +466,13 @@ async def run_plan_tasks(
 
         is_resume = any(str(t.get("status") or "") == "done" for t in tasks) or bool(applied)
         resume_block = _resume_context_block(tasks, applied, idx) if is_resume else ""
+        failed_block = _failed_context_block(failures)
 
         task_prompt = (
             f"User request:\n{user_prompt}\n\n"
             f"{answers_block}\n\n"
             f"{resume_block}\n\n"
+            f"{failed_block}\n\n"
             f"{_task_prompt_block(task, idx=idx, total=len(tasks))}"
         ).strip()
 
@@ -352,20 +511,33 @@ async def run_plan_tasks(
         task_buf: list[str] = []
         auth_retried = False
         network_retries = 0
+        model_retried = False
+        task_model = model
+        task_cancelled = False
+        task_failure: dict[str, Any] | None = None
+        attempts = 0
+
+        def _rewind(buf: list[str] = task_buf) -> None:
+            # Drop this attempt's partial tokens: the browser is told to rewind
+            # too, so a retry does not append to half an answer. The guard
+            # matters — `full[-0:]` is the WHOLE list, not an empty slice.
+            if buf:
+                del full[-len(buf) :]
+            buf.clear()
+
         while True:
+            attempts += 1
             try:
-                async for chunk in stream_chat_completion(
+                async for chunk in _stream_within_budget(
                     auth=current_auth,
-                    model=model,
+                    model=task_model,
                     messages=llm_messages,
                     locale=locale,
+                    budget_s=_TASK_BUDGET_S,
                 ):
                     if run_id and is_cancelled(run_id):
-                        task["status"] = "error"
-                        await emit_progress(idx)
-                        yield push_step("generate", t("step_generate", locale), "error")
-                        yield _sse({"type": "error", "message": "cancelled", "plan": tasks})
-                        return
+                        task_cancelled = True
+                        break
                     if chunk.kind == "thinking":
                         thinking_parts.append(chunk.content)
                         yield _sse({"type": "thinking", "delta": chunk.content})
@@ -374,47 +546,94 @@ async def run_plan_tasks(
                         full.append(chunk.content)
                         yield _sse({"type": "token", "content": chunk.content})
                 break
-            except RodiumError as exc:
-                if not auth_retried and resolve_auth and exc.status_code in (401, 403):
+            except Exception as exc:
+                code = error_code_for(exc)
+                retryable_auth = (
+                    isinstance(exc, RodiumError)
+                    and exc.status_code in (401, 403)
+                    and resolve_auth is not None
+                )
+
+                if not auth_retried and retryable_auth:
                     auth_retried = True
                     current_auth = await resolve_auth()
-                    # Drop partial tokens from this failed attempt.
-                    if task_buf:
-                        del full[-len(task_buf) :]
-                    task_buf.clear()
+                    _rewind()
                     continue
+
                 if network_retries < 2 and is_transient_network_error(exc):
                     network_retries += 1
-                    if task_buf:
-                        del full[-len(task_buf) :]
-                    task_buf.clear()
-                    yield push_step(
-                        "generate",
-                        t("step_generate", locale),
-                        "running",
-                    )
+                    _rewind()
+                    yield _sse({"type": "stream_reset", "reason": code})
+                    yield push_step("generate", t("step_generate", locale), "running")
                     continue
-                task["status"] = "error"
-                await emit_progress(idx)
-                yield push_step("generate", t("step_generate", locale), "error")
-                yield push_step(f"task:{tid}", title, "error")
-                yield _sse({"type": "plan_task", "id": tid, "status": "error", "label": title})
-                yield _sse({"type": "error", "message": str(exc), "plan": tasks})
-                return
-            except Exception as exc:
-                task["status"] = "error"
-                await emit_progress(idx)
-                yield push_step("generate", t("step_generate", locale), "error")
-                yield push_step(f"task:{tid}", title, "error")
-                yield _sse({"type": "plan_task", "id": tid, "status": "error", "label": title})
+
+                # Not the network and not auth: the model itself failed, refused
+                # or produced something unusable. One shot on a different model
+                # before giving the task up.
+                alternate = None if model_retried else fallback_model(task_model)
+                if alternate:
+                    model_retried = True
+                    task_model = alternate
+                    _rewind()
+                    yield _sse({"type": "stream_reset", "reason": code})
+                    yield push_step("generate", t("step_generate", locale), "running")
+                    continue
+
+                _rewind()
+                task_failure = {
+                    "task_id": tid,
+                    "title": title,
+                    "code": code,
+                    "message": str(exc)[:300] or t("step_generate", locale),
+                    "attempts": attempts,
+                }
+                break
+
+        if task_cancelled:
+            task["status"] = "error"
+            await emit_progress(idx)
+            yield push_step("generate", t("step_generate", locale), "error")
+            yield _sse({"type": "error", "code": "cancelled", "message": "cancelled", "plan": tasks})
+            return
+
+        if task_failure is not None:
+            # Skip, do not abort: the tasks after this one are still worth
+            # running, and `_failed_context_block` warns them about the gap.
+            # A structural task is the one exception — the rest of the plan
+            # assumes it landed, so it stays `pending` instead of degrading.
+            failures.append(task_failure)
+            task["status"] = "error"
+            await emit_progress(idx)
+            yield push_step("generate", t("step_generate", locale), "error")
+            yield push_step(f"task:{tid}", title, "error")
+            yield _sse({"type": "plan_task", "id": tid, "status": "error", "label": title})
+            yield _sse(
+                {
+                    "type": "task_failed",
+                    "id": tid,
+                    "label": title,
+                    "code": task_failure["code"],
+                    "message": task_failure["message"],
+                }
+            )
+            # An empty balance or dead key can't recover between tasks: don't
+            # skip ahead into a run of identical failures with "Building…" still
+            # spinning. Abort with a terminal `error` — the browser stops the run,
+            # shows the red inline message, and offers the recharge action.
+            if task_failure["code"] in _FATAL_FAILURE_CODES:
                 yield _sse(
                     {
                         "type": "error",
-                        "message": str(exc)[:400] or t("step_generate", locale),
+                        "code": task_failure["code"],
+                        "message": task_failure["message"],
                         "plan": tasks,
                     }
                 )
                 return
+            if is_structural_task(task):
+                stopped_early = True
+                break
+            continue
 
         yield push_step("generate", t("step_generate", locale), "done")
         yield push_step("apply_writes", t("step_apply_writes", locale), "running")
@@ -427,19 +646,20 @@ async def run_plan_tasks(
         # pass is exempt: "nothing to fix" is a legitimate empty outcome.
         if tid != "coherence" and not writes and not deletes and len(assistant_text.strip()) < 40:
             yield push_step("generate", t("step_generate", locale), "running")
+            yield _sse({"type": "stream_reset", "reason": "empty_response"})
             retry_buf: list[str] = []
+            retry_cancelled = False
             try:
-                async for chunk in stream_chat_completion(
+                async for chunk in _stream_within_budget(
                     auth=current_auth,
-                    model=model,
+                    model=task_model,
                     messages=llm_messages,
                     locale=locale,
+                    budget_s=_TASK_BUDGET_S,
                 ):
                     if run_id and is_cancelled(run_id):
-                        task["status"] = "error"
-                        await emit_progress(idx)
-                        yield _sse({"type": "error", "message": "cancelled", "plan": tasks})
-                        return
+                        retry_cancelled = True
+                        break
                     if chunk.kind == "thinking":
                         thinking_parts.append(chunk.content)
                         yield _sse({"type": "thinking", "delta": chunk.content})
@@ -449,23 +669,41 @@ async def run_plan_tasks(
                         yield _sse({"type": "token", "content": chunk.content})
             except Exception:
                 retry_buf = []
+            if retry_cancelled:
+                task["status"] = "error"
+                await emit_progress(idx)
+                yield _sse(
+                    {"type": "error", "code": "cancelled", "message": "cancelled", "plan": tasks}
+                )
+                return
             yield push_step("generate", t("step_generate", locale), "done")
             if retry_buf:
                 assistant_text = "".join(retry_buf)
                 writes, deletes = parse_forge_tags(assistant_text)
             if not writes and not deletes and len(assistant_text.strip()) < 40:
+                failures.append(
+                    {
+                        "task_id": tid,
+                        "title": title,
+                        "code": "empty_response",
+                        "message": t("empty_model_response", locale),
+                        "attempts": attempts + 1,
+                    }
+                )
                 task["status"] = "error"
                 await emit_progress(idx)
                 yield push_step(f"task:{tid}", title, "error")
                 yield _sse({"type": "plan_task", "id": tid, "status": "error", "label": title})
                 yield _sse(
                     {
-                        "type": "error",
+                        "type": "task_failed",
+                        "id": tid,
+                        "label": title,
+                        "code": "empty_response",
                         "message": t("empty_model_response", locale),
-                        "plan": tasks,
                     }
                 )
-                return
+                continue
 
         written, violations = await apply_validated_writes_async(
             project_id, writes, snapshot_label=f"before: {title}"
@@ -597,6 +835,8 @@ async def run_plan_tasks(
                 if applied:
                     yield _sse({"type": "preview_refresh"})
                 summary = to_plain_text(build_run_summary(tasks=tasks, applied=applied, locale=locale))
+                if failures:
+                    summary = (summary + "\n\n" + _failures_summary(failures, locale)).strip()
                 yield _sse(
                     {
                         "type": "done",
@@ -607,6 +847,7 @@ async def run_plan_tasks(
                         "thinking_text": "".join(thinking_parts) or None,
                         "steps": steps,
                         "plan": tasks,
+                        "failed": failures,
                         "verify_findings": [],
                     }
                 )
@@ -648,7 +889,10 @@ async def run_plan_tasks(
         "error" if route_critical else "done",
     )
 
-    if findings_have_critical(findings):
+    # A structural task never ran: the project is deliberately half-built, and
+    # a repair pass would try to improvise the missing architecture/foundation
+    # instead of leaving it for the Resume button. Skip repair, keep findings.
+    if findings_have_critical(findings) and not stopped_early:
         yield push_step("verify_build", "Verifying build", "error")
         yield push_step("verify_repair", "Repairing verify findings", "running")
         async for chunk in _stream_verify_repair(
@@ -728,6 +972,41 @@ async def run_plan_tasks(
             t("step_verify_pages", locale),
             "error" if route_critical else "done",
         )
+        # A plan that skipped tasks is far likelier to leave the project
+        # uncompilable, and the repair pass is the only thing standing between
+        # that and a black preview. Buy one more attempt in exactly that case.
+        if failures and findings_have_critical(findings):
+            yield push_step("verify_repair_gap", "Repairing skipped-task fallout", "running")
+            async for chunk in _stream_verify_repair(
+                project_id=project_id,
+                history=history,
+                user_prompt=user_prompt,
+                findings=findings,
+                db=db,
+                user_id=user_id,
+                locale=locale,
+                auth=auth,
+                resolve_auth=resolve_auth,
+                run_id=run_id,
+                tasks=tasks,
+                applied=applied,
+                full=full,
+                thinking_parts=thinking_parts,
+                step_id="verify_repair_gap",
+                step_label="Repairing skipped-task fallout",
+                snapshot_label="before gap repair",
+                format_findings_for_prompt=format_findings_for_prompt,
+                push_step=push_step,
+                focus_paths=repair_focus_paths(findings),
+                extra_prompt=_failed_context_block(failures),
+            ):
+                yield chunk
+            findings = (
+                verify_project_build(project_id)
+                + await smoke_transform_findings(project_id)
+                + page_route_findings(project_id)
+            )
+
         if findings_have_critical(findings):
             yield _sse(
                 {
@@ -742,7 +1021,11 @@ async def run_plan_tasks(
         else:
             yield push_step("verify_build", "Verifying build", "done")
     else:
-        yield push_step("verify_build", "Verifying build", "done")
+        yield push_step(
+            "verify_build",
+            "Verifying build",
+            "error" if findings_have_critical(findings) else "done",
+        )
 
     if applied:
         # No dependency install and no dev server to bounce: the runner receives
@@ -750,6 +1033,8 @@ async def run_plan_tasks(
         yield _sse({"type": "preview_refresh"})
 
     summary = to_plain_text(build_run_summary(tasks=tasks, applied=applied, locale=locale))
+    if failures:
+        summary = (summary + "\n\n" + _failures_summary(failures, locale, stopped=stopped_early)).strip()
     if findings_have_critical(findings):
         summary = (
             summary + "\n\nWarning: critical build verify findings remain — preview may be black."
@@ -765,6 +1050,8 @@ async def run_plan_tasks(
             "thinking_text": "".join(thinking_parts) or None,
             "steps": steps,
             "plan": tasks,
+            "failed": failures,
+            "stopped": stopped_early,
             "verify_findings": [f.to_dict() for f in findings],
         }
     )

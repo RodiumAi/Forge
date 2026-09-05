@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import {
   Check,
   ChevronDown,
@@ -39,28 +39,6 @@ type Props = {
   onOpenFile?: (path: string) => void;
 };
 
-type NormalizedOp = {
-  key: string;
-  kind: "write" | "delete";
-  path: string;
-};
-
-const OPS_VISIBLE = 6;
-
-function normalizeOps(ops: Props["fileOps"]): NormalizedOp[] {
-  if (!ops?.length) return [];
-  return ops.map((op, index) => {
-    if (typeof op === "string") {
-      return { key: `${index}:${op}`, kind: "write" as const, path: op };
-    }
-    return {
-      key: `${index}:${op.op}:${op.path}`,
-      kind: op.op === "delete" ? ("delete" as const) : ("write" as const),
-      path: op.path,
-    };
-  });
-}
-
 function formatDuration(ms: number): string {
   if (ms < 1000) return `${Math.max(1, Math.round(ms / 100)) / 10}s`;
   if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`;
@@ -92,25 +70,25 @@ function useStepTimings(steps: AgentStep[]) {
   return timings.current;
 }
 
-export function AgentActivityPanel({
+function AgentActivityPanelInner({
   steps = [],
   thinking = "",
-  fileOps,
+  fileOps: _fileOps,
   warnings = [],
   effortLabel,
   streaming = false,
   live = false,
-  onOpenFile,
+  onOpenFile: _onOpenFile,
 }: Props) {
   const { t } = useI18n();
   // Historic turns start collapsed: previously everything stayed expanded
   // forever, which made the thread unreadable after a few turns.
   const [thinkingOpen, setThinkingOpen] = useState(false);
   const [stepsOpen, setStepsOpen] = useState(live);
-  const [opsExpanded, setOpsExpanded] = useState(false);
   const thinkingRef = useRef<HTMLPreElement>(null);
 
-  const ops = useMemo(() => normalizeOps(fileOps), [fileOps]);
+  // `fileOps` is kept in the type for backwards compatibility with persisted
+  // messages, but no longer rendered — files stay under the hood.
   const timings = useStepTimings(steps);
 
   // Follow the reasoning as it streams instead of letting it scroll out of the
@@ -128,7 +106,6 @@ export function AgentActivityPanel({
   if (
     !steps.length &&
     !thinking &&
-    !ops.length &&
     !warnings.length &&
     !effortLabel &&
     !streaming
@@ -149,8 +126,6 @@ export function AgentActivityPanel({
     : t("agentStepsSummary")
         .replace("{n}", String(doneSteps))
         .replace("{d}", totalMs > 0 ? formatDuration(totalMs) : "—");
-
-  const visibleOps = opsExpanded ? ops : ops.slice(0, OPS_VISIBLE);
 
   return (
     <div className="agent-activity">
@@ -217,42 +192,9 @@ export function AgentActivityPanel({
         </div>
       ) : null}
 
-      {ops.length > 0 && (
-        <ul className="builder-file-ops">
-          {visibleOps.map((op) => {
-            const Tag = onOpenFile ? "button" : "span";
-            return (
-              <li key={op.key} className={`file-op file-op-${op.kind}`}>
-                <Icon
-                  icon={op.kind === "delete" ? Trash2 : FilePlus2}
-                  className="ui-icon-sm"
-                />
-                <Tag
-                  {...(onOpenFile
-                    ? {
-                        type: "button" as const,
-                        onClick: () => onOpenFile(op.path),
-                        title: t("fileOpOpen"),
-                      }
-                    : {})}
-                  className="file-op-path"
-                >
-                  {op.path}
-                </Tag>
-              </li>
-            );
-          })}
-          {ops.length > OPS_VISIBLE && (
-            <li className="file-op-more">
-              <button type="button" onClick={() => setOpsExpanded((v) => !v)}>
-                {opsExpanded
-                  ? t("fileOpsLess")
-                  : t("fileOpsMore").replace("{n}", String(ops.length - OPS_VISIBLE))}
-              </button>
-            </li>
-          )}
-        </ul>
-      )}
+      {/* File-op list intentionally hidden: a Replit/Lovable-style flow shows
+          progress, not paths. Ops are still tracked in state (drives the
+          `applied` flag and preview refresh) — just not rendered. */}
 
       {warnings.length > 0 && (
         <ul className="agent-warnings">
@@ -269,6 +211,13 @@ export function AgentActivityPanel({
     </div>
   );
 }
+
+// Every parent flush during a run rebuilds this component's props with new
+// array identities. Historical turns receive identical props on every flush
+// — memo() keeps them out of the render loop, cutting cost by ~N (number of
+// past turns). The live panel still re-renders because its steps/ops arrays
+// grow with each event.
+export const AgentActivityPanel = memo(AgentActivityPanelInner);
 
 /** Kept for the "modified" icon import to stay referenced by the design system. */
 export const FILE_OP_ICONS = { write: FilePlus2, edit: FilePenLine, delete: Trash2 };

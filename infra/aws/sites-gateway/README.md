@@ -1,42 +1,51 @@
-# Forge Sites Gateway (prod)
+# Forge Sites Gateway
 
-Sert les sites publiés `{slug}.forge.rodiumai.io` et les **domaines custom** validés.
+Sert les sites publiés `{slug}.<votre-domaine>` et les **domaines custom** validés.
 
 ## Architecture
 
 ```
-Client → ALB rodiumai-alb (HTTPS, ACM)
-       → forge-sites-gateway-tg
-       → ECS forge-sites-gateway (Caddy :80)
-           ├─ *.forge.rodiumai.io → slug via map Host
-           ├─ custom domain      → forward_auth api-forge /v1/authorize-host
-           └─ /*                 → S3 forge-assets-prod/{slug}/…
+Client → ALB (HTTPS, certificat ACM)
+       → target group du gateway
+       → ECS sites-gateway (Caddy :80)
+           ├─ *.<votre-domaine>  → slug via map Host
+           ├─ custom domain      → forward_auth API /v1/authorize-host
+           └─ /*                 → S3 <bucket-assets>/{slug}/…
 ```
 
-## ARNs prod (eu-west-1, compte 330990434320)
+## Valeurs à renseigner
 
-| Ressource | ARN / valeur |
-|-----------|----------------|
-| ALB DNS | `rodiumai-alb-334140168.eu-west-1.elb.amazonaws.com` |
-| Listener HTTPS 443 | `arn:aws:elasticloadbalancing:eu-west-1:330990434320:listener/app/rodiumai-alb/207d44553a3764d8/56e38638ee544466` |
-| Target group gateway | `arn:aws:elasticloadbalancing:eu-west-1:330990434320:targetgroup/forge-sites-gateway-tg/4bf460b3badb1eda` |
-| ECR image | `330990434320.dkr.ecr.eu-west-1.amazonaws.com/forge/sites-gateway` |
+Ce déploiement dépend de ressources AWS propres à votre compte. Relevez-les une
+fois créées, puis reportez-les dans les variables d'environnement de la tâche
+ECS de l'API (étape 3 ci-dessous).
+
+| Ressource | Où la trouver | Forme attendue |
+|-----------|---------------|----------------|
+| DNS de l'ALB | Console EC2 → Load balancers | `<nom>-<id>.<region>.elb.amazonaws.com` |
+| Listener HTTPS 443 | Console EC2 → Load balancers → Listeners | `arn:aws:elasticloadbalancing:<region>:<account-id>:listener/app/…` |
+| Target group du gateway | Console EC2 → Target groups | `arn:aws:elasticloadbalancing:<region>:<account-id>:targetgroup/…` |
+| Image ECR | Console ECR → Repositories | `<account-id>.dkr.ecr.<region>.amazonaws.com/forge/sites-gateway` |
+
+> Ne versionnez pas ces valeurs. Un ARN et un identifiant de compte ne sont pas
+> des secrets au sens strict, mais publiés ensemble ils dressent une carte
+> précise de votre infrastructure. Gardez-les dans votre outillage de
+> déploiement privé (SSM, Secrets Manager, variables de CI).
 
 ## Checklist one-time (ops)
 
-1. **DNS registrar** `rodiumai.io` : créer `sites.forge.rodiumai.io` → CNAME `rodiumai-alb-334140168.eu-west-1.elb.amazonaws.com`
-2. **IAM** : attacher [`../iam/forge-custom-domains-policy.json`](../iam/forge-custom-domains-policy.json) au rôle `rodiumai-ecs-task-role` :
+1. **DNS registrar** : créer `sites.<votre-domaine>` → CNAME vers le DNS de l'ALB
+2. **IAM** : attacher [`../iam/forge-custom-domains-policy.json`](../iam/forge-custom-domains-policy.json) au rôle de tâche ECS :
    ```bash
    aws iam put-role-policy \
-     --role-name rodiumai-ecs-task-role \
+     --role-name <votre-role-de-tache-ecs> \
      --policy-name ForgeCustomDomains \
      --policy-document file://infra/aws/iam/forge-custom-domains-policy.json
    ```
-3. **ECS task `forge-api`** — ajouter les variables :
+3. **Tâche ECS de l'API** — ajouter les variables :
    ```
-   CUSTOM_DOMAIN_CNAME_TARGET=sites.forge.rodiumai.io
-   CUSTOM_DOMAIN_ALB_LISTENER_ARN=arn:aws:elasticloadbalancing:eu-west-1:330990434320:listener/app/rodiumai-alb/207d44553a3764d8/56e38638ee544466
-   CUSTOM_DOMAIN_GATEWAY_TG_ARN=arn:aws:elasticloadbalancing:eu-west-1:330990434320:targetgroup/forge-sites-gateway-tg/4bf460b3badb1eda
+   CUSTOM_DOMAIN_CNAME_TARGET=sites.<votre-domaine>
+   CUSTOM_DOMAIN_ALB_LISTENER_ARN=<arn-du-listener-https>
+   CUSTOM_DOMAIN_GATEWAY_TG_ARN=<arn-du-target-group>
    ```
 4. **Déployer** le gateway : workflow `.github/workflows/deploy-gateway.yml` ou build manuel ECR + `aws ecs update-service`
 5. **Test E2E** : domaine que vous contrôlez (ex. `www.test.votredomaine.com`) → 2 CNAME → vérifier dans Forge → `curl -I https://www.test.votredomaine.com`
@@ -52,4 +61,5 @@ curl -H "X-Rodium-Forwarded-Host: www.client.com" http://localhost:8100/v1/autho
 
 ## Sécurité
 
-Ne jamais committer de task definitions ECS avec secrets en clair. Utiliser SSM/Secrets Manager et **rotater** toute clé déjà exposée dans l'historique git.
+Ne jamais committer de task definitions ECS avec secrets en clair. Utiliser
+SSM/Secrets Manager et **rotater** toute clé déjà exposée dans l'historique git.

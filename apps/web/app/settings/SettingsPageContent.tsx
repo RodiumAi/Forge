@@ -11,7 +11,7 @@ import {
   SettingsShell,
   type SettingsSection,
 } from "@/components/SettingsShell";
-import { api, getToken } from "@/lib/api";
+import { api, getToken, setToken } from "@/lib/api";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { useTheme } from "@/lib/theme/ThemeProvider";
 
@@ -21,6 +21,8 @@ type Profile = {
   name?: string | null;
   avatar_url?: string | null;
   rodium_linked?: boolean;
+  /** True when this account has a local password to change. */
+  has_password?: boolean;
   created_at: string;
 };
 
@@ -82,13 +84,20 @@ export default function SettingsPageContent() {
     setError(null);
     setMessage(null);
     try {
-      await api("/auth/change-password", {
-        method: "POST",
-        body: JSON.stringify({
-          current_password: currentPassword,
-          new_password: newPassword,
-        }),
-      });
+      // Changing the password revokes every outstanding session, including
+      // this tab's. The endpoint hands back a replacement so the person who
+      // just changed it is not logged out by their own action.
+      const result = await api<{ access_token?: string | null }>(
+        "/auth/change-password",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            current_password: currentPassword,
+            new_password: newPassword,
+          }),
+        },
+      );
+      if (result?.access_token) setToken(result.access_token);
       setCurrentPassword("");
       setNewPassword("");
       setMessage(t("settingsPasswordChanged"));
@@ -113,12 +122,12 @@ export default function SettingsPageContent() {
           <SettingsPanel title={t("settingsAccountTitle")} subtitle={t("settingsAccountSub")}>
             <SettingsBlock title={t("settingsProfileSection")} subtitle={t("settingsProfileHelp")}>
               {profile?.avatar_url ? (
-                <SettingsRow title={t("settingsProfilePhoto")} hint={t("rodiumManagedHelp")}>
+                <SettingsRow title={t("settingsProfilePhoto")}>
                   <img className="settings-avatar" src={profile.avatar_url} alt="" />
                 </SettingsRow>
               ) : null}
               {profile?.name ? (
-                <SettingsRow title={t("rodiumAccountTitle")} hint={t("rodiumManagedHelp")}>
+                <SettingsRow title={t("authNameLabel")}>
                   <span className="settings-value">{profile.name}</span>
                 </SettingsRow>
               ) : null}
@@ -126,8 +135,8 @@ export default function SettingsPageContent() {
                 <span className="settings-value">{profile?.email || "—"}</span>
               </SettingsRow>
               {profile?.rodium_linked ? (
-                <SettingsRow title={t("rodiumManaged")} hint={t("loginRodiumHint")}>
-                  <span className="settings-value">{t("rodiumConfigured")}</span>
+                <SettingsRow title={t("rodiumAccountTitle")} hint={t("loginRodiumHint")}>
+                  <span className="home-settings-badge ok">{t("rodiumConnected")}</span>
                 </SettingsRow>
               ) : null}
               {joinedDate && (
@@ -182,9 +191,14 @@ export default function SettingsPageContent() {
 
         {!loading && section === "security" && (
           <SettingsPanel title={t("settingsSecurityTitle")} subtitle={t("settingsSecuritySub")}>
-            {profile?.rodium_linked ? (
+            {/* Keyed on whether a password exists, not on whether RodiumAi is
+                linked: since local sign-up landed, an account can have both,
+                and those users must still be able to change their password. */}
+            {!profile?.has_password ? (
               <SettingsBlock title={t("settingsPasswordSection")} subtitle={t("loginRodiumHint")}>
-                <p className="settings-value">{t("loginRodiumHint")}</p>
+                <div className="settings-block-status">
+                  <span className="home-settings-badge ok">{t("rodiumConnected")}</span>
+                </div>
               </SettingsBlock>
             ) : (
               <SettingsBlock title={t("settingsPasswordSection")} subtitle={t("settingsPasswordHelp")}>

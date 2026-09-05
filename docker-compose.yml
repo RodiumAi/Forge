@@ -86,9 +86,14 @@ services:
       OBJECT_STORE_ADDRESSING: path
       REDIS_URL: redis://valkey:6379/0
       API_BASE_URL: http://localhost:8100
+      # Origin used to build the links we email out (verify, reset).
+      WEB_APP_URL: ${WEB_APP_URL:-http://localhost:3100}
+      # `mailpit` resolves on the compose network; the host port is only for
+      # the web UI. Same transport the platform API uses in development.
+      MAIL_TRANSPORT: ${MAIL_TRANSPORT:-smtp}
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
       TEMPLATES_ROOT: /data/templates
-      PREVIEW_MODE: ${PREVIEW_MODE:-babel_runner}
-      PUBLISH_MODE: ${PUBLISH_MODE:-esm}
       RUNNER_PARENT_ORIGINS: http://localhost:3100,http://127.0.0.1:3100
       SSE_HEARTBEAT_SECONDS: "15"
       ALB_IDLE_TIMEOUT_SECONDS: "600"
@@ -96,6 +101,10 @@ services:
       - ./data/projects:/data/projects
       - ./data/templates:/data/templates:ro
       - ./infra/local:/srv/infra:ro
+      # Live-reload API sources while iterating on visual-edit / bridge.
+      - ./apps/api/app:/app/app
+      - ./apps/api/runtime/public:/app/runtime/public
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     depends_on:
       postgres:
         condition: service_healthy
@@ -103,6 +112,8 @@ services:
         condition: service_healthy
       minio-init:
         condition: service_completed_successfully
+      mailpit:
+        condition: service_started
 
   web:
     build:
@@ -110,6 +121,13 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8100}
+        # Next inlines NEXT_PUBLIC_* at build time, so these have to be build
+        # args — setting them only under `environment` would leave the bundle
+        # with empty values and the social buttons permanently hidden.
+        NEXT_PUBLIC_FIREBASE_API_KEY: ${NEXT_PUBLIC_FIREBASE_API_KEY:-}
+        NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:-}
+        NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${NEXT_PUBLIC_FIREBASE_PROJECT_ID:-}
+        NEXT_PUBLIC_FIREBASE_APP_ID: ${NEXT_PUBLIC_FIREBASE_APP_ID:-}
     container_name: forge-web-ui
     restart: unless-stopped
     ports:
@@ -120,6 +138,26 @@ services:
       FORGE_FONT_MODE: fallback
     depends_on:
       - api
+
+  # Catches every outbound mail and shows it at http://localhost:8026.
+  # Ships with the stack so a fresh clone can complete email verification and
+  # password reset without owning a mail provider — the flows are real, only
+  # the delivery is local.
+  #
+  # Mailpit rather than MailHog: MailHog's last release was 2020 and its
+  # AngularJS preview fails to render multipart/alternative messages, showing
+  # its own `{{preview.previewHTML}}` template expression instead of the mail.
+  # Mailpit is the maintained drop-in — same SMTP port, same job.
+  mailpit:
+    image: axllent/mailpit:v1.21
+    container_name: forge-web-mailpit
+    restart: unless-stopped
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "1"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+    ports:
+      - "${FORGE_WEB_MAILPIT_SMTP_PORT:-1026}:1025"
+      - "${FORGE_WEB_MAILPIT_UI_PORT:-8026}:8025"
 
   caddy:
     image: caddy:2.9-alpine

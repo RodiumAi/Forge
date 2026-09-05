@@ -4,6 +4,8 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AuthCallbackScreen } from "@/components/auth/AuthCallbackScreen";
 import { api, setToken } from "@/lib/api";
+import { consumeStateBinding } from "@/lib/oauth-state";
+import { consumeOAuthReturnTo } from "@/lib/rodium-oauth";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 
 function CallbackInner() {
@@ -30,9 +32,13 @@ function CallbackInner() {
     startedRef.current = true;
 
     let cancelled = false;
+    // Burn the secret this browser stashed before the redirect. The server
+    // refuses the state unless its hash matches, which is what stops someone
+    // else's captured state from completing a sign-in here.
+    const stateBinding = consumeStateBinding();
     api<{ access_token: string }>("/auth/rodium/callback", {
       method: "POST",
-      body: JSON.stringify({ code, state }),
+      body: JSON.stringify({ code, state, state_binding: stateBinding }),
     })
       .then(async (data) => {
         if (cancelled) return;
@@ -43,7 +49,10 @@ function CallbackInner() {
         } catch {
           // Session hydrate is best-effort; dashboard will refresh again.
         }
-        if (!cancelled) router.replace("/dashboard");
+        if (!cancelled) {
+          const returnTo = consumeOAuthReturnTo();
+          router.replace(returnTo || "/dashboard");
+        }
       })
       .catch((err) => {
         if (cancelled) return;

@@ -4,7 +4,7 @@
     {
       "Effect": "Allow",
       "Principal": {
-        "Federated": "arn:aws:iam::330990434320:oidc-provider/token.actions.githubusercontent.com"
+        "Federated": "arn:aws:iam::<ACCOUNT_ID>:oidc-provider/token.actions.githubusercontent.com"
       },
       "Action": "sts:AssumeRoleWithWebIdentity",
       "Condition": {
@@ -13,8 +13,7 @@
         },
         "StringLike": {
           "token.actions.githubusercontent.com:sub": [
-            "repo:RodiumAi/Forge:*",
-            "repo:RodiumAi@282585446/Forge@1344172064:*"
+            "repo:<GITHUB_ORG>/<GITHUB_REPO>:*"
           ]
         }
       }

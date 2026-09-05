@@ -1,4 +1,16 @@
-import { apiBase, getToken } from "@/lib/api";
+import { apiBase } from "@/lib/api";
+import { getMediaToken, primeMediaToken } from "@/lib/media-token";
+
+/**
+ * The read-only token these URLs carry. Null on the very first render if
+ * nothing has primed it yet; the fetch it kicks off dispatches
+ * `MEDIA_TOKEN_EVENT`, and callers re-render then.
+ */
+function mediaToken(): string | null {
+  const token = getMediaToken();
+  if (!token) void primeMediaToken();
+  return token;
+}
 
 /** Private uploads bucket URLs (S3/MinIO) — never usable as <img src>. */
 export function isPrivateUploadUrl(url: string | null | undefined): boolean {
@@ -15,7 +27,7 @@ export function isPrivateUploadUrl(url: string | null | undefined): boolean {
 /** Durable authenticated URL for chat thumbs (<img src>). */
 export function assetContentUrl(projectId: string, objectId: string): string | null {
   if (!projectId || !objectId) return null;
-  const token = getToken();
+  const token = mediaToken();
   if (!token) return null;
   const base = apiBase().replace(/\/$/, "");
   return `${base}/projects/${projectId}/assets/${objectId}/content?access_token=${encodeURIComponent(token)}`;
@@ -35,7 +47,7 @@ export function projectPublicUrl(
 ): string | null {
   if (!projectId || !path) return null;
   if (path.startsWith("http://") || path.startsWith("https://")) return path;
-  const token = getToken();
+  const token = mediaToken();
   if (!token) return null;
   const rel = path.replace(/^public\//i, "").replace(/^\//, "");
   if (!rel) return null;

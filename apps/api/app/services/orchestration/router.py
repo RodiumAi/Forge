@@ -150,6 +150,29 @@ def route_task(task_class: str) -> Route:
     )
 
 
+def fallback_model(model: str) -> str | None:
+    """A different model to re-try a task on after the primary one failed.
+
+    A task can fail for reasons that are about the model rather than the
+    network — a refusal, a malformed response, a context it cannot handle. One
+    attempt on the escalation model (or on the default when the failure WAS the
+    escalation model) turns a fair share of those into successes, and costs one
+    extra call at most once per task.
+
+    Returns None when there is nothing distinct to fall back to, so the caller
+    skips the attempt rather than paying for the same model twice.
+    """
+    settings = get_settings()
+    default = (settings.effective_default_model or "").strip()
+    escalation = (settings.effective_escalation_model or "").strip()
+    current = (model or "").strip()
+
+    for candidate in (escalation, default):
+        if candidate and candidate != current:
+            return candidate
+    return None
+
+
 def classify_and_route(user_text: str, *, force_scaffold: bool = False) -> Route:
     raw = user_text or ""
     text = strip_attachment_noise(raw)

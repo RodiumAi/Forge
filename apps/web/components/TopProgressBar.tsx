@@ -45,15 +45,17 @@ function startRouteProgressDeferred() {
 
 /**
  * Global activity indicator for route changes and explicit loads (preview,
- * publish, generation…). Renders as a discreet top-right spinner pill: the old
- * full-width top bar suggested a whole-page load on every background action.
+ * publish, generation…). Thin indeterminate line that shuttles while busy.
  */
 export function TopProgressBar() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [state, setState] = useState({ active: false, value: 0 });
+  const [active, setActive] = useState(false);
 
-  useEffect(() => subscribeTopProgress(setState), []);
+  useEffect(
+    () => subscribeTopProgress((s) => setActive(s.active)),
+    [],
+  );
 
   // Finish the bar when the App Router settles on a new URL.
   useEffect(() => {
@@ -111,17 +113,17 @@ export function TopProgressBar() {
     };
   }, []);
 
-  const visible = state.active || state.value > 0;
-  if (!visible) return null;
+  if (!active) return null;
 
   return (
     <div
-      className={`forge-top-loader${state.value >= 1 ? " is-done" : ""}`}
-      role="status"
-      aria-live="polite"
+      className="forge-top-loader"
+      role="progressbar"
+      aria-valuetext="Loading"
+      aria-busy="true"
       aria-label="Loading"
     >
-      <span className="forge-top-loader-spinner" />
+      <div className="forge-top-loader-bar" />
     </div>
   );
 }

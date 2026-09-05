@@ -143,7 +143,14 @@ function LandingPromptBox({
           disabled={!canSubmit}
           aria-label={t("create")}
         >
-          {submitting ? t("loading") : <Icon icon={ArrowUp} />}
+          {submitting ? (
+            t("loading")
+          ) : (
+            <>
+              <span className="lp-send-label">{t("create")}</span>
+              <Icon icon={ArrowUp} />
+            </>
+          )}
         </button>
       </div>
     </form>
@@ -381,10 +388,10 @@ export default function LandingPage() {
             target="_blank"
             rel="noopener noreferrer"
             className="lp-nav-contribute"
-            aria-label={t("landingNavContribute")}
+            aria-label={t("landingFooterContribute")}
           >
             <GithubMark />
-            <span className="lp-nav-contribute-label">{t("landingNavContribute")}</span>
+            <span className="lp-nav-contribute-label">{t("landingNavGithub")}</span>
           </a>
           <button type="button" className="lp-nav-cta" onClick={goAuth}>
             {t("openForge")}
@@ -404,20 +411,16 @@ export default function LandingPage() {
             textareaRef={textareaRef}
             fileInputRef={fileInputRef}
           />
+          <div className="lp-proof lp-proof-in-hero" aria-label={t("landingProofLabel")}>
+            <p className="lp-proof-label">{t("landingProofLabel")}</p>
+            <ul className="lp-proof-row">
+              <li>{t("landingProof1")}</li>
+              <li>{t("landingProof2")}</li>
+              <li>{t("landingProof3")}</li>
+            </ul>
+          </div>
         </div>
       </section>
-
-      <LandingReveal>
-        <section className="lp-proof" aria-label={t("landingProofLabel")}>
-          <p className="lp-proof-label">{t("landingProofLabel")}</p>
-          <ul className="lp-proof-row">
-            <li>{t("landingProof1")}</li>
-            <li>{t("landingProof2")}</li>
-            <li>{t("landingProof3")}</li>
-            <li>{t("landingProof4")}</li>
-          </ul>
-        </section>
-      </LandingReveal>
 
       <LandingReveal>
         <section className="lp-how" id="how">
@@ -541,6 +544,7 @@ export default function LandingPage() {
 
       <LandingReveal>
         <section className="lp-contribute" id="contribute">
+          <div className="lp-cta-wash" aria-hidden />
           <div className="lp-contribute-inner">
             <h2 className="lp-section-title">{t("landingContributeTitle")}</h2>
             <p className="lp-contribute-lead">{t("landingContributeLead")}</p>
@@ -584,7 +588,9 @@ export default function LandingPage() {
               <a href="#templates">{t("landingNavTemplates")}</a>
               <a href="#how">{t("landingNavHow")}</a>
               <a href="#contribute">{t("landingNavContribute")}</a>
-              <Link href="/login">{t("landingStart")}</Link>
+              {/* "Get started" means sign-up now that local accounts exist;
+                  before this route was a redirect back to /login. */}
+              <Link href="/register">{t("landingStart")}</Link>
             </div>
             <div>
               <h3>{t("landingFooterResources")}</h3>
@@ -595,9 +601,9 @@ export default function LandingPage() {
               >
                 {t("landingFooterContribute")}
               </a>
-              <Link href="/settings?tab=generation">
-                {t("settingsTabRodium")}
-              </Link>
+              <a href={RODIUM_SITE} target="_blank" rel="noopener noreferrer">
+                {t("landingFooterRodium")}
+              </a>
               <Link href="/dashboard">{t("projects")}</Link>
             </div>
             <div>
@@ -637,13 +643,16 @@ export default function LandingPage() {
               >
                 {t("landingFooterCookies")}
               </a>
-              <span>{t("landingFooterRights")}</span>
-              <span>© {year} RodiumAi</span>
             </div>
           </div>
           <div className="lp-footer-bottom">
-            <ThemeSwitch />
-            <LocaleSwitch className="locale-dropdown--up" />
+            <p className="lp-footer-copy">
+              © {year} RodiumAi · {t("landingFooterRights")}
+            </p>
+            <div className="lp-footer-bottom-actions">
+              <ThemeSwitch />
+              <LocaleSwitch className="locale-dropdown--up" />
+            </div>
           </div>
         </div>
       </footer>

@@ -42,6 +42,38 @@ class Settings(BaseSettings):
     rodium_oidc_scopes: str = "openid profile email api_keys.read wallet.read"
     # Public origin of the RodiumAi user app (avatars often live there locally).
     rodium_user_app_url: str = "http://localhost:3000"
+    # Public origin of THIS web app — used to build the links we email out
+    # (verify email, reset password). Must be the URL a browser can reach.
+    web_app_url: str = "http://localhost:3100"
+
+    # ── Local accounts (email/password, Google, GitHub) ──────────────────────
+    # Transport for transactional mail:
+    #   smtp     → plain SMTP. The default, pointed at the Mailpit container in
+    #              docker-compose: a real inbox at http://localhost:8026 with
+    #              nothing to sign up for. Same setup the platform API uses.
+    #   console  → write the link to the log. For running the API outside
+    #              Docker, where there is no SMTP server to talk to.
+    #   ses      → AWS SES via boto3 (needs the AWS_* credentials below)
+    #   disabled → send nothing (verification links become unobtainable)
+    mail_transport: Literal["smtp", "ses", "console", "disabled"] = "smtp"
+    mail_from: str = "Forge <no-reply@rodiumai.io>"
+    smtp_host: str = "mailpit"
+    smtp_port: int = 1025
+    #: Mailpit wants neither; a real relay will.
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_starttls: bool = False
+    # Firebase Admin — verifies the Google/GitHub ID tokens minted in the browser.
+    # All three empty → the social endpoints return 503 and the web app hides
+    # the buttons, so a clone never shows an option that cannot work.
+    firebase_project_id: str = ""
+    firebase_client_email: str = ""
+    firebase_private_key: str = ""
+
+    # ── RodiumAi account provisioning (official instance only) ───────────────
+    # Empty token → no-op. A clone creates local accounts and nothing else.
+    rodium_provision_url: str = ""
+    rodium_provision_token: str = ""
     projects_root: str = "./data/projects"
     # Forkable starter kits (Vite/React snapshots). Docker: /data/templates
     templates_root: str = "./data/templates"
@@ -105,7 +137,16 @@ class Settings(BaseSettings):
     # SSE comment heartbeats so ALB/proxies with long idle timeouts stay open.
     sse_heartbeat_seconds: float = 15.0
     # Target ALB idle timeout (seconds) — document & IaC must match before streaming runs.
+    # NOTE: nothing in this codebase reads this; it documents what the load
+    # balancer must be configured to, and no IaC in this repo applies it.
     alb_idle_timeout_seconds: int = 600
+
+    # A `running` run whose worker is neither local nor claimed for this long is
+    # treated as interrupted; an `awaiting_clarify` / `awaiting_plan_confirm`
+    # run untouched for this long is expired. Both exist because neither state
+    # self-heals: production kept one prompt "awaiting confirmation" for 30h.
+    stale_run_seconds: int = 3600
+    abandoned_run_seconds: int = 86400
 
     managed_storage_bytes_limit: int = 500 * 1024 * 1024
 
@@ -211,6 +252,36 @@ class Settings(BaseSettings):
     @property
     def rodium_oidc_revoke_url(self) -> str:
         return self._rodium_oidc_server_base + "/api/v1/oauth/revoke"
+
+    @property
+    def rodium_provisioning_url(self) -> str:
+        """Nest endpoint that creates a RodiumAi account + generation key.
+
+        Defaults to the same host we already talk OIDC to, so the official
+        instance only has to set the token.
+        """
+        base = (self.rodium_provision_url or self._rodium_oidc_server_base).rstrip("/")
+        return base + "/api/v1/internal/provisioning/users"
+
+    @property
+    def provisioning_enabled(self) -> bool:
+        return bool(self.rodium_provision_token.strip())
+
+    @property
+    def firebase_enabled(self) -> bool:
+        return bool(
+            self.firebase_project_id.strip()
+            and self.firebase_client_email.strip()
+            and self.firebase_private_key.strip()
+        )
+
+    @property
+    def firebase_private_key_pem(self) -> str:
+        r"""Env vars cannot hold real newlines, so the key ships with `\n`."""
+        return self.firebase_private_key.replace("\\n", "\n")
+
+    def web_url(self, path: str) -> str:
+        return self.web_app_url.rstrip("/") + "/" + path.lstrip("/")
 
     @property
     def effective_default_model(self) -> str:

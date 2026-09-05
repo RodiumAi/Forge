@@ -32,7 +32,12 @@ Project maintainers are responsible for clarifying and enforcing these standards
 
 ## Reporting
 
-Report unacceptable behavior via **GitHub Issues** on this repository.
+Report unacceptable behavior privately to **forge@rodiumai.io**. Reports are
+handled confidentially, and the person who reports is never identified to the
+person reported without their consent.
+
+Please do not use public GitHub Issues for this — a conduct report should not be
+visible to the person it concerns, nor to anyone else.
 
 ## Attribution
 

@@ -17,10 +17,69 @@ class User(Base):
     rodium_sub: Mapped[str | None] = mapped_column(String(64), unique=True, index=True, nullable=True)
     name: Mapped[str | None] = mapped_column(String(200), nullable=True)
     avatar_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    #: Set once the address is proven (verification link, or a Google/GitHub
+    #: sign-in). This is the flag every account-linking decision hangs on:
+    #: an unverified address must never be enough to claim an existing account.
+    email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    #: Bumped on password change / reset. Session JWTs carry the value they
+    #: were minted with, so bumping it invalidates every outstanding token —
+    #: without it a 7-day JWT would survive a password reset.
+    token_version: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    #: When a RodiumAi account was created for this user by the provisioning
+    #: call. Distinct from `rodium_sub`, which means "we hold OAuth tokens".
+    rodium_provisioned_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     settings: Mapped["UserSettings | None"] = relationship(back_populates="user", uselist=False)
     projects: Mapped[list["Project"]] = relationship(back_populates="user")
+
+
+class AuthToken(Base):
+    """Single-use, hashed token backing email verification and password reset.
+
+    Only the sha256 of the token is stored, so a database leak does not hand
+    over working links — same posture as `OAuthAuthorizationCode.codeHash` on
+    the RodiumAi side. One table for both kinds because they differ only by
+    TTL and by what `consume()` is allowed to do next.
+    """
+
+    __tablename__ = "auth_tokens"
+
+    KIND_EMAIL_VERIFY = "email_verify"
+    KIND_PASSWORD_RESET = "password_reset"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class OauthAccount(Base):
+    """A federated identity (Google / GitHub) bound to a Forge user.
+
+    Mirrors `OauthAccount` on the RodiumAi side. Its existence is what makes
+    a social login idempotent: the second sign-in matches on
+    `(provider, provider_account_id)` rather than falling back to an email
+    comparison, which is the part that can be abused.
+    """
+
+    __tablename__ = "oauth_accounts"
+    __table_args__ = (UniqueConstraint("provider", "provider_account_id", name="uq_oauth_provider_account"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    provider: Mapped[str] = mapped_column(String(32), nullable=False)
+    provider_account_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class UserSettings(Base):

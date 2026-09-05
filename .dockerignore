@@ -1,0 +1,46 @@
+# Build context for the api image is the repository root (see docker-compose.yml
+# and apps/api/Dockerfile), so everything below would otherwise be uploaded to
+# the Docker daemon on every build — .git alone is hundreds of MB once the repo
+# has some history, and local dev adds node_modules/.venv on top.
+#
+# apps/web has its own .dockerignore; its build context is ./apps/web.
+
+.git
+.github
+.gitignore
+
+# Local dependency trees — reinstalled inside the image
+node_modules
+**/node_modules
+.venv
+**/.venv
+__pycache__
+**/__pycache__
+*.pyc
+
+# Build output
+.next
+**/.next
+dist
+**/dist
+*.tsbuildinfo
+
+# Scratch / test workspaces
+testForge
+data/projects/*
+!data/projects/.gitkeep
+
+# Secrets and local config — never bake these into an image
+.env
+.env.*
+!.env.example
+
+# Editor / OS noise
+.DS_Store
+.vscode
+.idea
+
+# Docs and assets the API image does not need
+docs
+*.md
+!data/templates/**/*.md

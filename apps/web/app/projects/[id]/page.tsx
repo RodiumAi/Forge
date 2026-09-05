@@ -13,7 +13,19 @@ import {
 import Link from "next/link";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ArrowUp, ListTodo, Pencil, Plus, Square } from "lucide-react";
-import { api, apiBase, getToken, logoutToHome } from "@/lib/api";
+import { api, apiBase, ApiError, getToken, logoutToHome, readApiError } from "@/lib/api";
+import {
+  classifyChatError,
+  isRecoverableStreamError,
+  type ChatErrorAction,
+  type ChatErrorLabelKey,
+} from "@/lib/chat-errors";
+import { ChatErrorActions } from "@/components/builder/ChatErrorActions";
+import {
+  buildAmbiguousEditPrompt,
+  extractCandidatePaths,
+} from "@/lib/visual-edit-chat";
+import { getMediaToken } from "@/lib/media-token";
 import {
   bootPromptKey,
   clearBootPrompt,
@@ -40,6 +52,7 @@ import { PromptAssetMention } from "@/components/PromptAssetMention";
 import { BuilderTopbar } from "@/components/builder/BuilderTopbar";
 import { CodePane } from "@/components/builder/CodePane";
 import { CommentsPanel } from "@/components/builder/CommentsPanel";
+import { ResizableChatPanel } from "@/components/builder/ResizableChatPanel";
 import { FilesPane } from "@/components/builder/FilesPane";
 import { ImageEditPanel } from "@/components/builder/ImageEditPanel";
 import { OptionsPane } from "@/components/builder/OptionsPane";
@@ -88,6 +101,7 @@ import {
   reduceStreamEvent,
   type ChatStreamState,
 } from "@/lib/chat-stream";
+import { failedTasksFromPlan, isPlanStopped, isResumableRunStatus } from "@/lib/plan-resume";
 
 type Project = {
   id: string;
@@ -113,7 +127,11 @@ type Message = {
   effort_label?: string | null;
   attachments?: MessageAttachment[] | null;
   kind?: "error";
+  /** Soft refusals (ambiguous visual edit) use warning styling. */
+  tone?: "error" | "warning";
   retryable?: boolean;
+  /** What the button under an error bubble offers (top up, reconnect, …). */
+  action?: ChatErrorAction;
 };
 
 type SendOpts = {
@@ -132,6 +150,35 @@ type AgentMode = "agent" | "plan";
 
 /** Survive React Strict Mode remounts for a given project boot. */
 const bootInFlight = new Set<string>();
+
+/**
+ * How long streamed tokens accumulate before reaching React state.
+ *
+ * Just under one frame at 12 fps: fast enough that typing still looks live,
+ * slow enough that a 30-token-per-second stream stops forcing 30 full renders
+ * of this component per second.
+ */
+const STREAM_FLUSH_MS = 80;
+
+/**
+ * Events that must reach React state without waiting for the 80ms flush timer.
+ * Everything else — token, thinking, step, plan_task, file_write, file_delete,
+ * warning, task_failed, route — piggybacks the timer. The immediate set covers
+ * cases where a delayed render would be a real bug: the composer stays locked
+ * while a clarify question is already answered in state, the plan-confirm
+ * dialog fails to unlock the send button, an error banner shows up 80ms after
+ * the final message it should replace, or a stream_reset would arrive AFTER
+ * the next token appends to a paragraph the server has already dropped.
+ */
+const STREAM_IMMEDIATE_EVENTS = new Set([
+  "stream_reset",
+  "user_message",
+  "plan",
+  "clarify",
+  "preview_refresh",
+  "done",
+  "error",
+]);
 
 function parseJsonArray<T>(raw: string | null | undefined): T[] {
   if (!raw) return [];
@@ -199,84 +246,49 @@ function dedupeMessages(msgs: Message[]): Message[] {
 }
 
 
-function friendlyStreamError(
+/**
+ * An SSE `error` frame, thrown so the caller's existing catch handles it.
+ *
+ * Carries the server's `code`: without it the frame's classification was
+ * re-derived from its English message downstream, which is exactly the guessing
+ * `lib/chat-errors.ts` exists to remove.
+ */
+class StreamFailure extends Error {
+  code?: string;
+
+  constructor(message: string, code?: string) {
+    super(message);
+    this.name = "StreamFailure";
+    this.code = code;
+  }
+}
+
+/**
+ * A failure, ready to render: the sentence, and the one button worth offering.
+ *
+ * The classification itself lives in `lib/chat-errors.ts`; this only turns its
+ * i18n key into text. Errors used to be classified here by matching English
+ * substrings, which meant a spent RODI wallet, a dead session and a dropped
+ * socket all read as "Connection interrupted" — and none of them offered a way
+ * out.
+ */
+function describeStreamError(
   err: unknown,
-  fallback: string,
-  rodiumExpired: string,
-  opts?: { imageTooLarge?: string; serviceError?: string },
-): string {
-  const raw = err instanceof Error ? err.message : String(err || fallback);
-  if (
-    /failed to fetch|networkerror|network request failed|load failed|network error|incomplete chunked|peer closed connection|connection reset|timed out|timeout/i.test(
-      raw,
-    )
-  ) {
-    return fallback;
-  }
-  if (
-    /rodiumai session expired|sign in with rodiumai again|account is not linked|invalid_grant|refresh token is invalid|session rodiumai expir/i.test(
-      raw,
-    )
-  ) {
-    return rodiumExpired;
-  }
-  if (/invalid or unauthorized rodiumai key|clé rodiumai invalide/i.test(raw)) {
-    return rodiumExpired;
-  }
-  if (
-    /entity too large|payload_too_large|payloadtoolarge|too large to send|trop volumineuse/i.test(
-      raw,
-    )
-  ) {
-    return opts?.imageTooLarge ?? fallback;
-  }
-  if (
-    /rodiumai error \(500\)|internal_error|unexpected error occurred|erreur rodiumai \(500\)/i.test(
-      raw,
-    )
-  ) {
-    return opts?.serviceError ?? fallback;
-  }
-  if (/^rodiumai error \(\d+\):\s*\{/i.test(raw)) {
-    return opts?.serviceError ?? fallback;
-  }
-  // Surface Rodium network codes as the friendly stream message.
-  if (/rodiumai error \(network\)/i.test(raw)) {
-    return fallback;
-  }
-  return raw || fallback;
+  t: (key: ChatErrorLabelKey) => string,
+  explicitCode?: string,
+): { text: string; action: ChatErrorAction; code?: string } {
+  const info = classifyChatError(err, explicitCode);
+  const text = info.labelKey ? t(info.labelKey) : info.message || t("streamError");
+  return { text, action: info.action, code: info.code };
 }
 
-type StreamErrorKey =
-  | "streamError"
-  | "rodiumSessionExpired"
-  | "imageTooLargeForAi"
-  | "generationServiceError";
-
-function streamErrorLabels(t: (key: StreamErrorKey) => string) {
-  return {
-    fallback: t("streamError"),
-    rodiumExpired: t("rodiumSessionExpired"),
-    imageTooLarge: t("imageTooLargeForAi"),
-    serviceError: t("generationServiceError"),
-  };
-}
-
-function formatStreamError(err: unknown, labels: ReturnType<typeof streamErrorLabels>): string {
-  return friendlyStreamError(err, labels.fallback, labels.rodiumExpired, {
-    imageTooLarge: labels.imageTooLarge,
-    serviceError: labels.serviceError,
-  });
-}
-
-/** Network-level stream failure (drop, reset, proxy timeout) — worth an
- *  automatic reconnect to the run's buffered event stream instead of an
- *  error bubble that resets the whole plan UI. */
+/** Worth silently reconnecting to the run's buffered events instead of showing
+ *  an error bubble that resets the whole plan UI. `aborted` is included because
+ *  a background tab suspending the fetch looks exactly like a network drop. */
 function isNetworkStreamError(err: unknown): boolean {
+  if (isRecoverableStreamError(err)) return true;
   const raw = err instanceof Error ? err.message : String(err || "");
-  return /failed to fetch|networkerror|network request failed|load failed|timed out|timeout|incomplete chunked|peer closed connection|connection reset|err_network|aborted/i.test(
-    raw,
-  );
+  return /aborted/i.test(raw);
 }
 
 /** Human label for the selection chip — never the raw CSS selector path.
@@ -297,7 +309,6 @@ export default function ProjectPage() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { t, locale } = useI18n();
-  const streamErrLabels = useMemo(() => streamErrorLabels(t), [t]);
 
   const initialUrl = parseBuilderUrlState(searchParams);
 
@@ -323,6 +334,12 @@ export default function ProjectPage() {
     initialBoot ? [{ id: "boot", label: "…", status: "running" }] : [],
   );
   const [streamOps, setStreamOps] = useState<FileOp[]>([]);
+  /** Steps the plan gave up on and carried past — offered back for a retry. */
+  const [failedTasks, setFailedTasks] = useState<{ id: string; label: string; code?: string }[]>(
+    [],
+  );
+  /** True when the plan halted on a structural task instead of degrading past it. */
+  const [planStopped, setPlanStopped] = useState(false);
   const [streamEffort, setStreamEffort] = useState<string | null>(null);
   const [streamSummary, setStreamSummary] = useState("");
   const [showJumpToBottom, setShowJumpToBottom] = useState(false);
@@ -334,9 +351,13 @@ export default function ProjectPage() {
   const dragDepth = useRef(0);
   const [hasUnread, setHasUnread] = useState(false);
   const [busy, setBusy] = useState(() => Boolean(initialBoot));
+  /** Read mid-await without putting `busy` in callback deps (avoids load storms). */
+  const busyRef = useRef(busy);
+  busyRef.current = busy;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [chatRetry, setChatRetry] = useState<ChatRetryAction | null>(null);
+  const [chatErrorAction, setChatErrorAction] = useState<ChatErrorAction>({ kind: "none" });
   const [mobilePane, setMobilePane] = useState<"chat" | "workspace">(
     initialUrl.pane ?? "chat",
   );
@@ -369,7 +390,25 @@ export default function ProjectPage() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const messagesRef = useRef<HTMLDivElement>(null);
   const stickToBottomRef = useRef(true);
+  /**
+   * Set to true just before we programmatically scroll the message log, cleared
+   * on the next frame. The onScroll listener uses it to skip its "user scrolled
+   * away" state updates for scrolls we caused ourselves — otherwise every flush
+   * triggered scrollTo → onScroll → setState → re-render, doubling the render
+   * count during generation.
+   */
+  const programmaticScrollRef = useRef(false);
+  /**
+   * Increments once per streaming state flush. The scroll-to-bottom effect
+   * watches this instead of the seven individual streaming state variables it
+   * used to depend on, so a single flush produces one scroll instead of many.
+   */
+  const [scrollTick, setScrollTick] = useState(0);
   const streamAbortRef = useRef<AbortController | null>(null);
+  /** In-flight route scan, so overlapping refreshes collapse into one. */
+  const routesInFlightRef = useRef<Promise<void> | null>(null);
+  /** Pending coalesced flush of streamed tokens into React state. */
+  const streamFlushTimer = useRef<number | null>(null);
   const activeRunIdRef = useRef<string | null>(null);
   const restoredBgRunRef = useRef<string | null>(null);
   /** Runs the user explicitly stopped — ignore Firestore "running" echoes for these. */
@@ -443,10 +482,12 @@ export default function ProjectPage() {
     previewUpdating,
     previewLiveStatus,
     startPreview,
+    ensurePreviewStarted,
     forcePreviewRefresh,
     schedulePreviewRefresh,
     repushPreview,
     renderNonce,
+    setUpdatingHold,
   } = usePreviewControl({
     projectId,
     loading,
@@ -464,17 +505,25 @@ export default function ProjectPage() {
       previewTool: PreviewTool | null;
       designOpen: boolean;
     }>) => {
+      // `??` treats explicit `null` as missing — deselecting the text tool
+      // (`previewTool: null`) used to rewrite `?tool=text` into the URL and the
+      // searchParams effect snapped the toolbar back on.
+      const pick = <T,>(key: string, fallback: T): T =>
+        overrides && Object.prototype.hasOwnProperty.call(overrides, key)
+          ? (overrides as Record<string, T>)[key]
+          : fallback;
+
       router.replace(
         builderUrlFromState(
           pathname,
           builderStateFromUi({
-            mainMode: overrides?.mainMode ?? mainMode,
-            optionsSection: overrides?.optionsSection ?? optionsSection,
-            mobilePane: overrides?.mobilePane ?? mobilePane,
-            viewport: overrides?.viewport ?? viewport,
-            previewPath: overrides?.previewPath ?? previewPath,
-            previewTool: overrides?.previewTool ?? previewTool,
-            designOpen: overrides?.designOpen ?? designOpen,
+            mainMode: pick("mainMode", mainMode),
+            optionsSection: pick("optionsSection", optionsSection),
+            mobilePane: pick("mobilePane", mobilePane),
+            viewport: pick("viewport", viewport),
+            previewPath: pick("previewPath", previewPath),
+            previewTool: pick("previewTool", previewTool),
+            designOpen: pick("designOpen", designOpen),
           }),
         ),
         { scroll: false },
@@ -510,29 +559,58 @@ export default function ProjectPage() {
     }
   }, [searchParams]);
 
+  /**
+   * Re-read the project's routes.
+   *
+   * Expensive: one tree fetch plus up to twenty file bodies. It used to run on
+   * every `file_write` with no debounce and no in-flight guard — roughly 880
+   * overlapping requests on a 40-write plan, resolving out of order. It is now
+   * called at task boundaries only, and coalesced on top of that.
+   */
   const refreshRoutes = useCallback(async () => {
-    try {
-      const tree = await api<FileNode[]>(`/projects/${projectId}/files`);
-      const candidates = routeSourceFiles(flattenFiles(tree));
-      const sources: Record<string, string> = {};
-      await Promise.all(
-        candidates.map(async (path) => {
-          try {
-            const res = await api<{ content: string }>(
-              `/projects/${projectId}/files/content?path=${encodeURIComponent(path)}`,
-            );
-            sources[path] = res.content;
-          } catch {
-            /* optional */
-          }
-        }),
-      );
-      const routes = detectRoutes(tree, sources);
-      setPages(routes);
-      setPreviewPath((prev) => (routes.includes(prev) ? prev : "/"));
-    } catch {
-      setPages(["/"]);
-    }
+    if (routesInFlightRef.current) return routesInFlightRef.current;
+
+    const run = (async () => {
+      try {
+        const tree = await api<FileNode[]>(`/projects/${projectId}/files`);
+        const candidates = routeSourceFiles(flattenFiles(tree));
+        const sources: Record<string, string> = {};
+        await Promise.all(
+          candidates.map(async (path) => {
+            try {
+              const res = await api<{ content: string }>(
+                `/projects/${projectId}/files/content?path=${encodeURIComponent(path)}`,
+              );
+              sources[path] = res.content;
+            } catch {
+              /* optional */
+            }
+          }),
+        );
+        const routes = detectRoutes(tree, sources);
+        // Keep the array identity when nothing changed: a fresh array on every
+        // call made `pages` look different to PreviewPane, which re-posted
+        // `forge-preview-routes` into the iframe each time.
+        setPages((prev) =>
+          prev.length === routes.length && prev.every((p, i) => p === routes[i]) ? prev : routes,
+        );
+        setPreviewPath((prev) => {
+          if (routes.includes(prev)) return prev;
+          // Mid-run, a route file being rewritten momentarily "loses" its
+          // route. Snapping back to "/" then made the iframe jump — six
+          // `forge-preview-navigate` retries — and jump back a second later.
+          if (streamAbortRef.current) return prev;
+          return "/";
+        });
+      } catch {
+        setPages(["/"]);
+      } finally {
+        routesInFlightRef.current = null;
+      }
+    })();
+
+    routesInFlightRef.current = run;
+    return run;
   }, [projectId]);
 
   const awaitingHitl = clarifyQuestions.length > 0 || planNeedsConfirm;
@@ -541,10 +619,42 @@ export default function ProjectPage() {
   // An open SSE connection is the honest signal that a run is in flight.
   const working = busy || streamActive;
   const composerInputLocked = working || awaitingHitl;
+  // There is something to pick up: a plan with unfinished steps and a run to
+  // re-arm. `confirm-plan` resets everything not already `done`, so resuming
+  // re-runs exactly the failed steps and skips the rest.
+  const resumablePlan =
+    Boolean(activeRunId) &&
+    planTasks.some((task) => task.status === "pending" || task.status === "error") &&
+    planTasks.some((task) => task.status === "done");
+
+  /**
+   * The message list with its JSON columns already parsed.
+   *
+   * These parses used to happen inside the render loop, so every streamed
+   * token re-parsed the whole conversation AND produced fresh array identities
+   * — which defeated the `useMemo` inside AgentActivityPanel and made it
+   * recompute step timings on every render too.
+   */
+  const decoratedMessages = useMemo(
+    () =>
+      messages.map((m) => ({
+        msg: m,
+        steps: parseJsonArray<AgentStep>(m.steps_json),
+        ops: parseJsonArray<FileOp>(m.file_ops_json),
+        msgPlan: parseJsonArray<PlanTask>(m.plan_json),
+      })),
+    [messages],
+  );
 
   useEffect(() => {
     activeRunIdRef.current = activeRunId;
   }, [activeRunId]);
+
+  // One steady "updating" indicator for the length of a run, instead of one
+  // 1.6s flash per completed task.
+  useEffect(() => {
+    setUpdatingHold(streamActive);
+  }, [streamActive, setUpdatingHold]);
 
   useEffect(() => {
     if (!bootPromptRef.current) return;
@@ -563,31 +673,39 @@ export default function ProjectPage() {
   }, []);
 
   const load = useCallback(async () => {
+    // Already attached to a live SSE run — a second load() mid-stream used to
+    // flip busy false→true across awaits, recreate pushChatError, re-enter this
+    // effect, abort/restart events?after=0, and flood Chrome
+    // (ERR_INSUFFICIENT_RESOURCES + plan panel flicker).
+    if (streamAbortRef.current || streamingRunIdRef.current) return;
+
     const p = await api<Project>(`/projects/${projectId}`);
+    if (streamAbortRef.current || streamingRunIdRef.current) return;
     setProject(p);
     const chats = await api<Chat[]>(`/projects/${projectId}/chats`);
+    if (streamAbortRef.current || streamingRunIdRef.current) return;
     const main = chats[0];
     if (!main) throw new Error(t("noChat"));
     setChatId(main.id);
     const msgs = await api<Message[]>(`/projects/${projectId}/chats/${main.id}/messages`);
+    if (streamAbortRef.current || streamingRunIdRef.current) return;
     const boot = bootPromptRef.current || peekBootPrompt(projectId)?.trim() || null;
+    // Defer busy/steps until after /runs/active — setting busy=false here used
+    // to flush between awaits and retrigger the mount load effect.
     if (msgs.length > 0) {
       setMessages(dedupeMessages(msgs));
       bootPromptRef.current = null;
       clearBootPrompt(projectId);
       bootSentRef.current = true;
-      setBusy(false);
-      setStreamSteps([]);
     } else if (boot) {
       bootPromptRef.current = boot;
       setMessages([{ id: "boot-user", role: "user", content: boot }]);
-      setBusy(true);
-      setStreamSteps([{ id: "boot", label: t("bootStarting"), status: "running" }]);
     } else {
       setMessages([]);
     }
 
     // Restore HITL plan / clarify after refresh.
+    let restoredRunning = false;
     try {
       const persistedPlan = latestPersistedPlan(msgs);
       const persistedComplete = isPlanComplete(persistedPlan);
@@ -599,6 +717,7 @@ export default function ProjectPage() {
         plan_meta?: PlanMeta | null;
         clarify: ClarifyQuestion[];
       } | null>(`/projects/${projectId}/chats/${main.id}/runs/active`);
+      if (streamAbortRef.current || streamingRunIdRef.current) return;
       if (active?.id) {
         const activeMeta =
           active.plan_meta && (active.plan_meta.title || active.plan_meta.summary)
@@ -610,19 +729,30 @@ export default function ProjectPage() {
           setPlanMeta(null);
           setPlanNeedsConfirm(false);
           setClarifyQuestions([]);
+          setFailedTasks([]);
+          setPlanStopped(false);
           setBusy(false);
+          setStreamSteps([]);
         } else if (active.status === "awaiting_clarify" && Array.isArray(active.clarify) && active.clarify.length) {
           setActiveRunId(active.id);
           setClarifyQuestions(active.clarify);
           setPlanNeedsConfirm(false);
           setPlanTasks([]);
           setPlanMeta(null);
+          setFailedTasks([]);
+          setPlanStopped(false);
           setBusy(false);
+          setStreamSteps([]);
         } else if (
-          (active.status === "awaiting_plan_confirm" || active.status === "error") &&
+          isResumableRunStatus(active.status) &&
+          active.status !== "awaiting_clarify" &&
+          active.status !== "running" &&
           Array.isArray(active.plan) &&
           active.plan.length
         ) {
+          // Covers `awaiting_plan_confirm`, `error` and `partial` — the last
+          // one is exactly the "N step(s) did not complete" case that used to
+          // vanish on refresh because it was not in this branch's status set.
           setActiveRunId(active.id);
           const mapped = mapActivePlanTasks(active.plan);
           const doneCount = mapped.filter((task) => task.status === "done").length;
@@ -631,13 +761,19 @@ export default function ProjectPage() {
           setPlanMeta(activeMeta);
           setPlanNeedsConfirm(active.status === "awaiting_plan_confirm" && !partialProgress);
           setClarifyQuestions([]);
+          setFailedTasks(failedTasksFromPlan(mapped));
+          setPlanStopped(isPlanStopped(mapped));
           setBusy(false);
+          setStreamSteps([]);
           setPlanMode(active.mode === "plan");
         } else if (active.status === "running" && Array.isArray(active.plan) && active.plan.length) {
+          restoredRunning = true;
           setActiveRunId(active.id);
           setPlanTasks(mapActivePlanTasks(active.plan));
           setPlanMeta(activeMeta);
           setPlanNeedsConfirm(false);
+          setFailedTasks([]);
+          setPlanStopped(false);
           setBusy(true);
           restoredBgRunRef.current = active.id;
         }
@@ -646,23 +782,43 @@ export default function ProjectPage() {
       /* no active run */
     }
 
+    if (!restoredRunning) {
+      if (msgs.length > 0) {
+        setBusy(false);
+        setStreamSteps([]);
+      } else if (boot) {
+        setBusy(true);
+        setStreamSteps([{ id: "boot", label: t("bootStarting"), status: "running" }]);
+      }
+    }
+
     const status = await api<{ running: boolean; url: string | null }>(
       `/projects/${projectId}/preview`,
     );
+    if (streamAbortRef.current || streamingRunIdRef.current) return;
     if (status.running && status.url) setPreviewUrl(status.url);
     void refreshRoutes();
   }, [projectId, t, refreshRoutes, setPreviewUrl]);
 
   const pushChatError = useCallback(
-    (message: string, retry: ChatRetryAction | null = null) => {
+    (
+      message: string,
+      retry: ChatRetryAction | null = null,
+      action: ChatErrorAction = { kind: "retry" },
+    ) => {
       const text = message.trim() || t("streamError");
       const inline =
-        busy ||
+        busyRef.current ||
         liveRef.current.planTasks.length > 0 ||
         liveRef.current.steps.length > 0 ||
         liveRef.current.clarify.length > 0;
+      // "retry" without something to re-run is not an offer, it is a dead
+      // button — fall back to no action at all.
+      const resolved: ChatErrorAction =
+        action.kind === "retry" && !retry ? { kind: "none" } : action;
       chatRetryRef.current = retry;
       setChatRetry(retry);
+      setChatErrorAction(resolved);
       setError(null);
       if (inline) {
         setStreamInlineError(text);
@@ -678,14 +834,26 @@ export default function ProjectPage() {
             id: `local-error-${Date.now()}`,
             role: "assistant",
             kind: "error",
+            tone: resolved.kind === "edit-in-chat" ? "warning" : "error",
             content: text,
             retryable: Boolean(retry),
+            action: resolved,
           },
         ];
       });
       stickToBottomRef.current = true;
     },
-    [busy, t],
+    [t],
+  );
+
+  /** Classify, then push — the path every generation failure takes. */
+  const pushStreamError = useCallback(
+    (err: unknown, retry: ChatRetryAction | null) => {
+      const code = err instanceof StreamFailure ? err.code : undefined;
+      const { text, action } = describeStreamError(err, t, code);
+      pushChatError(text, retry, action);
+    },
+    [pushChatError, t],
   );
 
   // Wire the preview hook's error channel now that pushChatError exists.
@@ -697,19 +865,28 @@ export default function ProjectPage() {
       router.replace("/");
       return;
     }
+    let cancelled = false;
     topProgressStart("project-load");
     load()
       .catch((err) => {
+        if (cancelled) return;
         if (err instanceof Error && /invalid token|not authenticated|unauthorized/i.test(err.message)) {
           return;
         }
         pushChatError(err.message, null);
       })
       .finally(() => {
+        if (cancelled) return;
         setLoading(false);
         topProgressDone("project-load");
       });
-  }, [load, pushChatError, router]);
+    return () => {
+      cancelled = true;
+    };
+    // `pushChatError` / `load` are stable for a given projectId; do not re-run
+    // on busy-driven identity churn (that caused the request storm).
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount/projectId only
+  }, [projectId, router]);
 
 
   useEffect(() => {
@@ -793,13 +970,19 @@ export default function ProjectPage() {
     if (!container) return;
 
     const onScroll = () => {
+      // The scroll listener also fires for our own programmatic scrollTo below.
+      // Skipping it there breaks the render → scrollTo → onScroll → setState →
+      // render feedback loop that used to double every flush's render count.
+      if (programmaticScrollRef.current) return;
       const distanceFromBottom =
         container.scrollHeight - container.scrollTop - container.clientHeight;
-      // Only keep auto-following while the user is near the bottom.
       const atBottom = distanceFromBottom < 80;
       stickToBottomRef.current = atBottom;
-      setShowJumpToBottom(!atBottom);
-      if (atBottom) setHasUnread(false);
+      // Guarded setState: `showJumpToBottom` and `hasUnread` used to flip on
+      // every scroll event even when the boolean was unchanged, forcing a
+      // full re-render mid-stream for no reason.
+      setShowJumpToBottom((prev) => (prev === !atBottom ? prev : !atBottom));
+      if (atBottom) setHasUnread((prev) => (prev ? false : prev));
     };
 
     container.addEventListener("scroll", onScroll, { passive: true });
@@ -811,22 +994,24 @@ export default function ProjectPage() {
     const container = messagesRef.current;
     if (!container) return;
     if (!stickToBottomRef.current) {
-      // Detached view: signal that something new landed instead of yanking
-      // the user back down mid-read.
-      setHasUnread(true);
+      setHasUnread((prev) => (prev ? prev : true));
       return;
     }
-    container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
-  }, [
-    messages,
-    streaming,
-    streamSteps,
-    streamThinking,
-    streamOps,
-    clarifyQuestions,
-    planTasks,
-    streamSummary,
-  ]);
+    // Programmatic scroll flag: cleared on the next animation frame so the
+    // onScroll listener above ignores our own scroll and does not schedule
+    // another render.
+    programmaticScrollRef.current = true;
+    container.scrollTo({
+      top: container.scrollHeight,
+      behavior: streamActive ? "auto" : "smooth",
+    });
+    requestAnimationFrame(() => {
+      programmaticScrollRef.current = false;
+    });
+    // Deliberately narrow deps: `scrollTick` is bumped by flushStreamState and
+    // by message list changes. Watching every streaming field individually
+    // caused this effect to fire 3-4 times per flush.
+  }, [messages, scrollTick, streamActive]);
 
   const jumpToBottom = useCallback(() => {
     const container = messagesRef.current;
@@ -942,6 +1127,51 @@ export default function ProjectPage() {
     if (e.dataTransfer.files?.length) addFiles(e.dataTransfer.files);
   }
 
+  /** Copy the accumulator into React state. One render, not nine. */
+  const flushStreamState = useCallback(
+    (state: ChatStreamState, before?: ChatStreamState) => {
+      setStreaming(state.streaming);
+      setStreamThinking(state.thinking);
+      setStreamSteps(state.steps);
+      setStreamOps(state.ops);
+      setFailedTasks(state.failedTasks);
+      setPlanStopped(state.stopped);
+      setStreamEffort(state.effort);
+      setPlanTasks(state.planTasks);
+      setPlanMeta(state.planMeta);
+      setPlanNeedsConfirm(state.planNeedsConfirm);
+      setClarifyQuestions(state.clarify);
+      setActiveRunId((prev) => (prev === state.activeRunId ? prev : state.activeRunId));
+      // One tick per flush drives the scroll-to-bottom effect. Batched with the
+      // rest of the setState calls above, so React commits a single render.
+      setScrollTick((n) => n + 1);
+      // The stream only ever releases the composer (clarify / plan awaiting
+      // confirmation); `busy` is otherwise owned by the callers.
+      if (before?.busy && !state.busy) setBusy(false);
+    },
+    [],
+  );
+
+  const scheduleStreamFlush = useCallback(
+    (stateRef: { current: ChatStreamState }) => {
+      if (streamFlushTimer.current !== null) return;
+      streamFlushTimer.current = window.setTimeout(() => {
+        streamFlushTimer.current = null;
+        flushStreamState(stateRef.current);
+      }, STREAM_FLUSH_MS);
+    },
+    [flushStreamState],
+  );
+
+  // A pending flush must never outlive the page, and must never land after a
+  // terminal event has already reset the panel.
+  useEffect(
+    () => () => {
+      if (streamFlushTimer.current !== null) window.clearTimeout(streamFlushTimer.current);
+    },
+    [],
+  );
+
   /**
    * Per-stream accumulator. The pure transitions live in `lib/chat-stream.ts`
    * (covered by tests); this only performs the side effects the reducer asks
@@ -965,27 +1195,29 @@ export default function ProjectPage() {
       session.stateRef.current = state;
 
       if (state !== before) {
-        setStreaming(state.streaming);
-        setStreamThinking(state.thinking);
-        setStreamSteps(state.steps);
-        setStreamOps(state.ops);
         // Repair-loop warnings (css orphans, brand lock...) are internal
         // machinery: the agent fixes them itself, end users only see progress.
         if (state.warnings.length > before.warnings.length) {
           console.debug("[forge] agent warning:", state.warnings.at(-1));
         }
-        setStreamEffort(state.effort);
-        setPlanTasks(state.planTasks);
-        setPlanMeta(state.planMeta);
-        setPlanNeedsConfirm(state.planNeedsConfirm);
-        setClarifyQuestions(state.clarify);
-        if (state.activeRunId !== before.activeRunId) setActiveRunId(state.activeRunId);
-        // The stream only ever releases the composer (clarify / plan awaiting
-        // confirmation); `busy` is otherwise owned by the callers.
-        if (before.busy && !state.busy) setBusy(false);
+        // Coalesce almost everything onto the 80ms flush timer. Only the events
+        // the user must see instantly — composer unlocks, run terminals, and
+        // stream rewinds — bypass it. A scaffold burst emits 5-20 file_write in
+        // one TCP chunk; letting each one render caused the whole panel to
+        // strobe. See handleStreamEvent history for the earlier per-event flush.
+        const type = String(payloadEvent.type || "");
+        if (STREAM_IMMEDIATE_EVENTS.has(type)) {
+          if (streamFlushTimer.current !== null) {
+            window.clearTimeout(streamFlushTimer.current);
+            streamFlushTimer.current = null;
+          }
+          flushStreamState(session.stateRef.current, before);
+        } else {
+          scheduleStreamFlush(session.stateRef);
+        }
       }
 
-      let failure: string | null = null;
+      let failure: StreamFailure | null = null;
 
       for (const effect of effects) {
         switch (effect.kind) {
@@ -1003,12 +1235,15 @@ export default function ProjectPage() {
             schedulePreviewRefresh();
             break;
           case "ensure-preview-started":
-            if (!previewUrl && !previewBusy) void startPreview({ quiet: true });
+            // Guarded on refs inside the hook, not on this closure's frozen
+            // `previewUrl` / `previewBusy` — that stale read is what turned one
+            // file write into one iframe reload for the whole run.
+            ensurePreviewStarted();
             break;
           case "cancelled":
             break;
           case "error":
-            failure = effect.message;
+            failure = new StreamFailure(effect.message, effect.code);
             break;
           case "finalize": {
             const { content, plan, planMeta: finalMeta, thinking, steps, ops, effort, applied } =
@@ -1069,16 +1304,20 @@ export default function ProjectPage() {
 
       // Thrown after the state sync so the plan checklist shows the failure,
       // then caught by the caller which renders the retryable error bubble.
-      if (failure) throw new Error(failure);
+      if (failure) throw failure;
     },
+    // No `previewUrl` / `previewBusy` here on purpose. A stream captures this
+    // callback once and holds it for the whole run, so anything that changes
+    // mid-run is read stale anyway; the preview guards moved behind refs
+    // (`ensurePreviewStarted`) and every dep left is stable for the run.
     [
+      ensurePreviewStarted,
+      flushStreamState,
       forcePreviewRefresh,
       locale,
-      previewBusy,
-      previewUrl,
       refreshRoutes,
+      scheduleStreamFlush,
       schedulePreviewRefresh,
-      startPreview,
       syncBuilderUrl,
       t,
     ],
@@ -1118,7 +1357,7 @@ export default function ProjectPage() {
               },
             );
             if (!res.ok || !res.body) {
-              throw new Error(res.statusText || t("streamError"));
+              throw await readApiError(res);
             }
             await readSseStream(res, async (payloadEvent) => {
               const type = String(payloadEvent.type || "");
@@ -1135,6 +1374,8 @@ export default function ProjectPage() {
                   if (!active?.id || !Array.isArray(active.plan) || !active.plan.length) {
                     setPlanTasks([]);
                     setPlanNeedsConfirm(false);
+                    setFailedTasks([]);
+                    setPlanStopped(false);
                     setBusy(false);
                     return;
                   }
@@ -1143,6 +1384,8 @@ export default function ProjectPage() {
                   const partialProgress = doneCount > 0 && doneCount < mapped.length;
                   setPlanTasks(mapped);
                   setPlanNeedsConfirm(active.status === "awaiting_plan_confirm" && !partialProgress);
+                  setFailedTasks(failedTasksFromPlan(mapped));
+                  setPlanStopped(isPlanStopped(mapped));
                   setBusy(active.status === "running");
                 } catch {
                   setPlanNeedsConfirm(true);
@@ -1175,7 +1418,7 @@ export default function ProjectPage() {
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") return;
         failedSubscribesRef.current.set(runId, Date.now());
-        pushChatError(formatStreamError(err, streamErrLabels), {
+        pushStreamError(err, {
           kind: "subscribe",
           runId,
         });
@@ -1193,13 +1436,19 @@ export default function ProjectPage() {
         void refreshRodiumWallet();
       }
     },
-    [chatId, handleStreamEvent, locale, projectId, pushChatError, seedStreamState, streamErrLabels, t],
+    [chatId, handleStreamEvent, locale, projectId, pushStreamError, seedStreamState],
   );
   subscribeRunEventsRef.current = subscribeRunEvents;
 
   useEffect(() => {
     const rid = restoredBgRunRef.current;
     if (!rid || rid !== activeRunId || !chatId) return;
+    // Already attached — clearing the ref without abort/restart avoids
+    // events?after=0 reconnect loops when subscribeRunEvents identity churns.
+    if (streamingRunIdRef.current === rid && streamAbortRef.current) {
+      restoredBgRunRef.current = null;
+      return;
+    }
     restoredBgRunRef.current = null;
     void subscribeRunEvents(rid);
   }, [activeRunId, chatId, subscribeRunEvents]);
@@ -1246,6 +1495,8 @@ export default function ProjectPage() {
     setPlanMeta(null);
     setPlanNeedsConfirm(false);
     setClarifyQuestions([]);
+    setFailedTasks([]);
+    setPlanStopped(false);
     setActiveRunId(null);
     setBusy(false);
     setError(null);
@@ -1297,6 +1548,8 @@ export default function ProjectPage() {
     setStreamThinking("");
     setStreamSteps([]);
     setStreamOps([]);
+    setFailedTasks([]);
+    setPlanStopped(false);
     setStreamEffort(null);
     setStreamInlineError(null);
     setPlanTasks((prev) =>
@@ -1362,6 +1615,11 @@ export default function ProjectPage() {
         return;
       }
       setElementSelection(null);
+      // Esc / auto-off: sending a prompt means we're done with Select/T overlay.
+      if (previewTool) {
+        setPreviewTool(null);
+        syncBuilderUrl({ previewTool: null });
+      }
 
       const displayAtts: MessageAttachment[] = uploaded.map((a) => ({
         name: attachmentName(a),
@@ -1396,13 +1654,18 @@ export default function ProjectPage() {
         setPlanMeta(null);
         setPlanNeedsConfirm(false);
         setActiveRunId(null);
+        setFailedTasks([]);
+        setPlanStopped(false);
       }
-      setStreamSteps(
-        opts.skipUserBubble
-          ? [{ id: "boot", label: t("bootStarting"), status: "running" }]
-          : [],
-      );
+      // Boot placeholder for BOTH first project prompt AND follow-up edits.
+      // Without it, the ~300-800ms between the POST and the first `step` event
+      // showed the composer as "Stop" with an empty panel — the user saw no
+      // sign the request was in flight. The first server `step` replaces it
+      // (chat-stream reducer strips id="boot" from the list).
+      setStreamSteps([{ id: "boot", label: t("bootStarting"), status: "running" }]);
       setStreamOps([]);
+      setFailedTasks([]);
+    setPlanStopped(false);
       setStreamEffort(null);
       setMessages((m) => {
         if (isBranch) {
@@ -1472,28 +1735,28 @@ export default function ProjectPage() {
           ),
         });
         if (!res.ok || !res.body) {
-          let detail = res.statusText;
-          try {
-            const data = await res.json();
-            detail = typeof data.detail === "string" ? data.detail : detail;
-          } catch {
-            const text = await res.text().catch(() => "");
-            if (text) detail = text;
-          }
+          // `readApiError` reads the body the same way `api()` does. The
+          // hand-rolled parser this replaces tested `typeof data.detail ===
+          // "string"`, which is false for the API's `{code, message}` shape —
+          // so an empty RODI wallet reached the chat as "Payment Required".
+          const apiErr = await readApiError(res);
           if (res.status === 401) {
             logoutToHome("expired");
             return;
           }
           if (
             res.status === 403 &&
-            /account is not linked|rodiumai session expired|sign in with rodiumai/i.test(detail)
+            (apiErr.code === "RODIUM_LINK_EXPIRED" ||
+              /account is not linked|rodiumai session expired|sign in with rodiumai/i.test(
+                apiErr.message,
+              ))
           ) {
             // Dead RodiumAI link: sign out so the next login re-links cleanly,
             // instead of a signed-in UI where every prompt fails.
             logoutToHome("expired");
             return;
           }
-          throw new Error(detail || res.statusText);
+          throw apiErr;
         }
 
         const stateRef = seedStreamState({ steps: [], ops: [], effort: null, planTasks: [], planNeedsConfirm: false, clarify: [] });
@@ -1507,13 +1770,22 @@ export default function ProjectPage() {
 
         setStreamActive(true);
 
+        let sawTerminal = false;
         await readSseStream(res, async (payloadEvent) => {
+          const type = String(payloadEvent.type || "");
+          if (type === "done" || type === "error") sawTerminal = true;
           handleStreamEvent(payloadEvent, {
             stateRef,
             userPayload: payload,
             clearBootOnce,
           });
         });
+        // A clean close with no `done` and no `error` means the connection was
+        // cut, not that the run finished — the server always sends one of the
+        // two. This path used to accept it silently and just stop, leaving the
+        // run executing server-side with nothing watching it. The reconnect
+        // path has always treated it as a failure; now both do.
+        if (!sawTerminal) throw new StreamFailure("stream ended early", "network");
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") {
           return;
@@ -1536,14 +1808,13 @@ export default function ProjectPage() {
               attachments: uploaded,
               opts: { ...opts, skipUserBubble: true },
             };
-        pushChatError(
-          formatStreamError(err, streamErrLabels),
-          retry,
-        );
+        pushStreamError(err, retry);
         setStreaming("");
         setStreamThinking("");
         setStreamSteps([]);
         setStreamOps([]);
+        setFailedTasks([]);
+    setPlanStopped(false);
         setStreamEffort(null);
         setClarifyQuestions([]);
       } finally {
@@ -1561,8 +1832,45 @@ export default function ProjectPage() {
         void refreshRodiumWallet();
       }
     },
-    [busy, chatId, editingMessageId, elementSelection, handleStreamEvent, locale, planMode, projectId, pushChatError, seedStreamState, streamErrLabels, subscribeRunEvents, t],
+    [busy, chatId, editingMessageId, elementSelection, handleStreamEvent, locale, planMode, previewTool, projectId, pushChatError, pushStreamError, seedStreamState, subscribeRunEvents, syncBuilderUrl, t],
   );
+
+  /** Ambiguous visual edit → clear the notice and send a chat prompt instead. */
+  const applyVisualEditViaChat = useCallback(
+    (prompt: string) => {
+      const text = prompt.trim();
+      if (!text) return;
+      setMessages((prev) => prev.filter((m) => m.kind !== "error"));
+      setStreamInlineError(null);
+      setChatErrorAction({ kind: "none" });
+      setChatRetry(null);
+      chatRetryRef.current = null;
+      setMobilePane("chat");
+      if (previewTool) {
+        setPreviewTool(null);
+        syncBuilderUrl({ previewTool: null });
+      }
+      void sendMessage(text);
+    },
+    [previewTool, sendMessage, syncBuilderUrl],
+  );
+
+  // Esc outside the iframe also clears the active preview tool.
+  useEffect(() => {
+    if (!previewTool) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key !== "Escape") return;
+      const el = e.target as HTMLElement | null;
+      if (!el) return;
+      const tag = el.tagName;
+      if (tag === "TEXTAREA" || tag === "INPUT" || el.isContentEditable) return;
+      if (el.closest?.("[role='dialog'], .publish-popover, .builder-page-menu")) return;
+      setPreviewTool(null);
+      syncBuilderUrl({ previewTool: null });
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [previewTool, syncBuilderUrl]);
 
   const submitClarify = useCallback(
     async (answers: Record<string, string>) => {
@@ -1583,7 +1891,7 @@ export default function ProjectPage() {
           },
         );
         if (!res.ok || !res.body) {
-          throw new Error(res.statusText);
+          throw await readApiError(res);
         }
         const stateRef = seedStreamState();
         setStreamActive(true);
@@ -1595,7 +1903,7 @@ export default function ProjectPage() {
           });
         });
       } catch (err) {
-        pushChatError(formatStreamError(err, streamErrLabels), {
+        pushStreamError(err, {
           kind: "clarify",
           answers,
         });
@@ -1605,7 +1913,7 @@ export default function ProjectPage() {
         void refreshRodiumWallet();
       }
     },
-    [activeRunId, chatId, handleStreamEvent, locale, projectId, pushChatError, seedStreamState, t],
+    [activeRunId, chatId, handleStreamEvent, locale, projectId, pushStreamError, seedStreamState],
   );
 
   const executePlan = useCallback(async (stepMode = false) => {
@@ -1647,13 +1955,7 @@ export default function ProjectPage() {
         },
       );
       if (!res.ok || !res.body) {
-        let detail = res.statusText;
-        try {
-          const data = (await res.json()) as { detail?: string };
-          detail = typeof data.detail === "string" ? data.detail : detail;
-        } catch {
-          /* ignore */
-        }
+        const apiErr = await readApiError(res);
         if (res.status === 400) {
           // "run_invalid_state" usually means the run is STILL EXECUTING and
           // the UI simply lost its stream: reattach instead of wiping the
@@ -1672,10 +1974,12 @@ export default function ProjectPage() {
           setPlanTasks([]);
           setPlanMeta(null);
           setPlanNeedsConfirm(false);
+          setFailedTasks([]);
+          setPlanStopped(false);
           setActiveRunId(null);
           throw new Error(t("planInvalid"));
         }
-        throw new Error(detail);
+        throw apiErr;
       }
       const stateRef = seedStreamState();
       setStreamActive(true);
@@ -1697,12 +2001,14 @@ export default function ProjectPage() {
         await subscribeRunEvents(dropRunId);
         return;
       }
-      pushChatError(formatStreamError(err, streamErrLabels), {
+      pushStreamError(err, {
         kind: "plan",
       });
       if (err instanceof Error && err.message === t("planInvalid")) {
         setPlanNeedsConfirm(false);
         setPlanTasks([]);
+        setFailedTasks([]);
+        setPlanStopped(false);
         setActiveRunId(null);
       } else {
         setPlanNeedsConfirm(true);
@@ -1721,7 +2027,7 @@ export default function ProjectPage() {
       }
       void refreshRodiumWallet();
     }
-  }, [activeRunId, chatId, handleStreamEvent, locale, planTasks, projectId, pushChatError, seedStreamState, streamErrLabels, subscribeRunEvents, t]);
+  }, [activeRunId, chatId, handleStreamEvent, locale, planTasks, projectId, pushStreamError, seedStreamState, subscribeRunEvents, t]);
 
   useEffect(() => {
     if (!chatId || loading || bootSentRef.current || bootInFlight.has(projectId)) return;
@@ -1917,7 +2223,7 @@ export default function ProjectPage() {
           // Standalone draft page: the runner shell with the bundle embedded.
           // Opening the bare runner URL showed an empty page (it waits for a
           // builder parent to postMessage the bundle, which a new tab lacks).
-          const token = getToken() || "";
+          const token = getMediaToken() || "";
           window.open(
             `${apiBase()}/projects/${projectId}/draft?access_token=${encodeURIComponent(token)}`,
             "_blank",
@@ -1960,7 +2266,7 @@ export default function ProjectPage() {
       ) : null}
 
       <div className={`builder-body builder-body-${mobilePane}`}>
-        <aside className="builder-sidebar">
+        <ResizableChatPanel>
           <div
             className="builder-messages"
             ref={messagesRef}
@@ -1975,31 +2281,29 @@ export default function ProjectPage() {
               <p className="builder-empty">{t("builderEmptyChat")}</p>
             )}
 
-            {messages.map((m) => {
+            {decoratedMessages.map(({ msg: m, steps, ops, msgPlan }) => {
               if (m.kind === "error") {
+                const isWarning = m.tone === "warning" || m.action?.kind === "edit-in-chat";
                 return (
                   <article
                     key={m.id}
-                    className="builder-msg builder-msg-assistant builder-msg-error"
+                    className={`builder-msg builder-msg-assistant builder-msg-error${isWarning ? " is-warning" : ""}`}
                   >
                     <header className="builder-msg-head">{t("roleAssistant")}</header>
                     <div className="builder-msg-error-body">
                       <p className="builder-msg-error-text">{m.content}</p>
-                      {m.retryable ? (
+                      <ChatErrorActions
+                        action={m.action ?? (m.retryable ? { kind: "retry" } : { kind: "none" })}
+                        busy={busy}
+                        onRetry={m.retryable ? () => void retryChatAction() : undefined}
+                        onResume={resumablePlan ? () => void executePlan() : undefined}
+                        onEditInChat={applyVisualEditViaChat}
+                      />
+                      {m.retryable && bootRetryPrompt ? (
                         <div className="builder-msg-error-actions">
-                          <button
-                            type="button"
-                            className="builder-msg-error-retry"
-                            disabled={busy}
-                            onClick={() => void retryChatAction()}
-                          >
-                            {t("retryAction")}
-                          </button>
-                          {bootRetryPrompt ? (
-                            <Link href="/settings?tab=generation" className="builder-msg-error-link">
-                              {t("openSettings")}
-                            </Link>
-                          ) : null}
+                          <Link href="/settings?tab=generation" className="builder-msg-error-link">
+                            {t("openSettings")}
+                          </Link>
                         </div>
                       ) : null}
                     </div>
@@ -2009,9 +2313,6 @@ export default function ProjectPage() {
               if (m.role === "user" && !m.content.trim()) return null;
               // AssistantBody splits forge tags into collapsible cards itself.
               const text = m.role === "assistant" ? m.content : m.content.trim();
-              const steps = parseJsonArray<AgentStep>(m.steps_json);
-              const ops = parseJsonArray<FileOp>(m.file_ops_json);
-              const msgPlan = parseJsonArray<PlanTask>(m.plan_json);
               if (
                 m.role === "assistant" &&
                 !text &&
@@ -2079,6 +2380,37 @@ export default function ProjectPage() {
               );
             })}
 
+            {/* The plan ran to the end but skipped steps. An offer, not a
+                gate: the composer stays usable, and "retry" sends exactly the
+                unfinished steps back through confirm-plan. */}
+            {!working && failedTasks.length > 0 && (
+              <article className="builder-msg builder-msg-assistant builder-msg-error">
+                <header className="builder-msg-head">{t("roleAssistant")}</header>
+                <div className="builder-msg-error-body">
+                  <p className="builder-msg-error-text">
+                    {planStopped
+                      ? t("planStoppedSteps").replace("{step}", failedTasks[0]?.label || "")
+                      : t("planFailedSteps").replace("{n}", String(failedTasks.length))}
+                  </p>
+                  <ul className="builder-msg-error-list">
+                    {failedTasks.map((task) => (
+                      <li key={task.id}>{task.label || task.id}</li>
+                    ))}
+                  </ul>
+                  <div className="builder-msg-error-actions">
+                    <button
+                      type="button"
+                      className="builder-msg-error-retry"
+                      disabled={busy}
+                      onClick={() => void executePlan()}
+                    >
+                      {t("planRetryFailed")}
+                    </button>
+                  </div>
+                </div>
+              </article>
+            )}
+
             {showLivePanel && (
               <article className="builder-msg builder-msg-assistant builder-msg-streaming">
                 <header className="builder-msg-head">{t("roleAssistantStreaming")}</header>
@@ -2112,20 +2444,21 @@ export default function ProjectPage() {
                   />
                 )}
                 {streamInlineError ? (
-                  <div className="builder-msg-error-body">
-                    <p className="builder-msg-error-text">{streamInlineError}</p>
-                    {chatRetry ? (
-                      <div className="builder-msg-error-actions">
-                        <button
-                          type="button"
-                          className="builder-msg-error-retry"
-                          disabled={busy}
-                          onClick={() => void retryChatAction()}
-                        >
-                          {t("retryAction")}
-                        </button>
-                      </div>
-                    ) : null}
+                  <div
+                    className={`builder-msg-error builder-msg-error-inline${
+                      chatErrorAction.kind === "edit-in-chat" ? " is-warning" : ""
+                    }`}
+                  >
+                    <div className="builder-msg-error-body">
+                      <p className="builder-msg-error-text">{streamInlineError}</p>
+                      <ChatErrorActions
+                        action={chatErrorAction}
+                        busy={busy}
+                        onRetry={chatRetry ? () => void retryChatAction() : undefined}
+                        onResume={resumablePlan ? () => void executePlan() : undefined}
+                        onEditInChat={applyVisualEditViaChat}
+                      />
+                    </div>
                   </div>
                 ) : null}
                 {clarifyQuestions.length > 0 && (
@@ -2262,17 +2595,32 @@ export default function ProjectPage() {
                 aria-busy={busy}
               />
               <div className="builder-composer-actions">
-                <button
-                  type="button"
-                  className={`builder-mode-toggle${planMode ? " active" : ""}`}
-                  title={t("planModeHint")}
-                  aria-pressed={planMode}
-                  onClick={() => setPlanMode((v) => !v)}
-                  disabled={busy}
+                <div
+                  className="builder-mode-segment"
+                  role="group"
+                  aria-label={t("agentModeGroup")}
                 >
-                  <Icon icon={ListTodo} className="ui-icon-sm" />
-                  {t("planMode")}
-                </button>
+                  <button
+                    type="button"
+                    className={`builder-mode-segment-btn${!planMode ? " active" : ""}`}
+                    aria-pressed={!planMode}
+                    disabled={busy}
+                    onClick={() => setPlanMode(false)}
+                  >
+                    {t("agentMode")}
+                  </button>
+                  <button
+                    type="button"
+                    className={`builder-mode-segment-btn${planMode ? " active" : ""}`}
+                    aria-pressed={planMode}
+                    title={t("planModeHint")}
+                    disabled={busy}
+                    onClick={() => setPlanMode(true)}
+                  >
+                    <Icon icon={ListTodo} className="ui-icon-sm" />
+                    {t("planMode")}
+                  </button>
+                </div>
                 <div className="builder-composer-actions-end">
                   {/* The file input must NOT live inside the button: nested
                       interactive controls are invalid HTML and the change
@@ -2323,7 +2671,7 @@ export default function ProjectPage() {
               </div>
             </div>
           </form>
-        </aside>
+        </ResizableChatPanel>
 
         {mainMode === "preview" && (
           <ErrorBoundary label="Preview" resetKey={previewKey}>
@@ -2333,7 +2681,6 @@ export default function ProjectPage() {
             pages={pages}
             previewLiveStatus={previewLiveStatus}
             viewport={viewport}
-            previewUpdating={previewUpdating}
             previewBusy={previewBusy}
             previewTool={previewTool}
             projectId={projectId}
@@ -2375,10 +2722,24 @@ export default function ProjectPage() {
                 // reload that flashed blank and lit the global loader.
                 repushPreview();
               } catch (err) {
-                pushChatError(
-                  err instanceof Error ? err.message : t("visualEditFailed"),
-                  null,
-                );
+                if (err instanceof ApiError && err.status === 409) {
+                  const paths = extractCandidatePaths(err.message);
+                  const notice = paths.length
+                    ? `${t("visualEditAmbiguous")}\n\n${t("visualEditAmbiguousFiles").replace("{files}", paths.join(", "))}`
+                    : t("visualEditAmbiguous");
+                  const prompt = buildAmbiguousEditPrompt(oldText, newText, paths, {
+                    template: t("visualEditAmbiguousPrompt"),
+                    filesClause: t("visualEditAmbiguousFilesClause"),
+                  });
+                  pushChatError(notice, null, { kind: "edit-in-chat", prompt });
+                } else {
+                  pushChatError(
+                    err instanceof Error ? err.message : t("visualEditFailed"),
+                    null,
+                  );
+                }
+                // Re-throw so PreviewPane can tell the bridge to restore markup.
+                throw err instanceof Error ? err : new Error(t("visualEditFailed"));
               }
             }}
             sidePanel={
@@ -2430,6 +2791,11 @@ export default function ProjectPage() {
               void refreshRoutes();
               void forcePreviewRefresh({ restart: true });
             }}
+            onGoToCode={() => {
+              setMainMode("code");
+              setMobilePane("workspace");
+              syncBuilderUrl({ mainMode: "code", mobilePane: "workspace" });
+            }}
           />
           </ErrorBoundary>
         )}
@@ -2473,6 +2839,9 @@ export default function ProjectPage() {
         onClose={() => {
           setDesignOpen(false);
           syncBuilderUrl({ designOpen: false });
+        }}
+        onColorsApplied={() => {
+          void forcePreviewRefresh({ softStart: true, remount: true, quiet: true });
         }}
       />
 

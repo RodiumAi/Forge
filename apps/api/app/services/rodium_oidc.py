@@ -35,17 +35,45 @@ def generate_pkce() -> tuple[str, str]:
     return verifier, challenge
 
 
-def create_oauth_state(code_verifier: str) -> str:
+def hash_state_binding(binding: str) -> str:
+    """sha256 of the browser's one-time binding secret."""
+    return hashlib.sha256(binding.encode("utf-8")).hexdigest()
+
+
+def create_oauth_state(code_verifier: str, binding: str | None = None) -> str:
+    """Sign the state that travels to the issuer and back.
+
+    The state carries the PKCE verifier, which is why it is signed rather than
+    random. On its own that proves nothing about *who* started the flow: anyone
+    holding the string holds the verifier, and nothing marked it used, so it was
+    replayable for its full ten minutes.
+
+    `binding` closes that. The browser mints a secret, keeps it in
+    `sessionStorage`, and sends only its hash here; the callback must present
+    the original. A state captured in transit is then useless to anyone else —
+    the classic login-CSRF that `state` is supposed to prevent.
+
+    Kept optional so a caller that predates the binding still works; the
+    callback enforces it whenever the state carries one.
+    """
     settings = get_settings()
     expire = datetime.now(UTC) + timedelta(minutes=10)
-    return jwt.encode(
-        {"v": code_verifier, "exp": expire, "n": secrets.token_urlsafe(8)},
-        settings.secret_key,
-        algorithm="HS256",
-    )
+    payload: dict[str, object] = {
+        "v": code_verifier,
+        "exp": expire,
+        "n": secrets.token_urlsafe(8),
+    }
+    if binding:
+        payload["b"] = binding
+    return jwt.encode(payload, settings.secret_key, algorithm="HS256")
 
 
-def parse_oauth_state(state: str) -> str:
+def parse_oauth_state(state: str, binding: str | None = None) -> str:
+    """Verify the state and return the PKCE verifier.
+
+    Refuses when the state was bound to a browser and the caller cannot
+    produce the matching secret.
+    """
     settings = get_settings()
     try:
         payload = jwt.decode(state, settings.secret_key, algorithms=["HS256"])
@@ -54,6 +82,14 @@ def parse_oauth_state(state: str) -> str:
     verifier = payload.get("v")
     if not isinstance(verifier, str) or not verifier:
         raise RodiumOidcError("Invalid OAuth state payload")
+
+    expected = payload.get("b")
+    bound = isinstance(expected, str) and bool(expected)
+    if bound and (
+        not binding
+        or not secrets.compare_digest(hash_state_binding(binding), expected)
+    ):
+        raise RodiumOidcError("OAuth state does not match this browser")
     return verifier
 
 
