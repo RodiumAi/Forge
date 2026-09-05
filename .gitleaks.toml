@@ -2,11 +2,14 @@ title = "RodiumAI Gitleaks — Forge"
 
 [allowlist]
 description = "Documented dev fixtures, CI placeholders, and env examples — not production secrets"
+# Keep these narrow. A whole-directory entry silently swallows any secret ever
+# committed there — `.github/workflows/*.yml` used to be allowlisted wholesale
+# and was removed: a full-history scan finds nothing without it, so the
+# exclusion bought no CI stability and cost real coverage.
 paths = [
   '''(?i)\.env\.example$''',
   '''(?i)\.env\.ecs\.example$''',
   '''(?i)\.env\.production\.example$''',
-  '''(?i)\.github/workflows/.*\.yml$''',
   '''(?i)infra/aws/ecs/task-definition\.example\.json$''',
 ]
 regexes = [

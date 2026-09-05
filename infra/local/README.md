@@ -36,13 +36,11 @@ Caddy reproduit le contrat de routage (`/_rodium/*` → API, le reste → MinIO)
 
 Aucun écart : la même implémentation Redis Streams tourne en local et en production.
 
-### Build worker (Node)
-
-Le service Compose `build-worker` consomme la file Valkey `sites:builds`. L'API enqueue (`BUILD_WORKER_ENABLED=true`) et n'exécute plus `vite build` dans le process FastAPI. Partage du volume `./data/projects`.
-
-### Preview Vite
+### Preview
 
 Le live preview dashboard reste sur `{slug}.lvh.me:3100` (middleware Next). Caddy `:8080` sert le contrat Sites Gateway (assets publiés + `/_rodium`).
+
+Les aperçus s'exécutent dans le navigateur via le runner Babel/ESM : l'API ne lance ni Vite ni npm. Le seul sous-processus est `git`, pour les snapshots par projet.
 
 ### Templates forkables
 

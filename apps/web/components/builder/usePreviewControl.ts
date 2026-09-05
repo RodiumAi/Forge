@@ -56,6 +56,17 @@ export function usePreviewControl({ projectId, loading, onError, previewFailedLa
   useEffect(() => {
     previewUrlRef.current = previewUrl;
   }, [previewUrl]);
+  // Same reason, for the busy flag: the SSE handler is captured once when a run
+  // opens and lives for its whole duration, so anything it reads from state is
+  // frozen at that instant.
+  const previewBusyRef = useRef(false);
+  useEffect(() => {
+    previewBusyRef.current = previewBusy;
+  }, [previewBusy]);
+  /** In-flight `POST /preview/start`, so concurrent callers share one request. */
+  const startInFlight = useRef<Promise<void> | null>(null);
+  /** While true, the "updating" badge stays lit instead of flashing per event. */
+  const holdUpdatingRef = useRef(false);
 
   /** Short "updating" flash after an optimistic in-place edit. */
   const flashUpdating = useCallback((ms = 1200) => {
@@ -76,25 +87,53 @@ export function usePreviewControl({ projectId, loading, onError, previewFailedLa
 
   const startPreview = useCallback(
     async (opts?: { quiet?: boolean }) => {
-      setPreviewBusy(true);
-      try {
-        const status = await api<PreviewStatusResponse>(`/projects/${projectId}/preview/start`, {
-          method: "POST",
-          timeoutMs: 45_000,
-        });
-        setPreviewUrl(status.runner_url || status.url);
-        remount();
-      } catch (err) {
-        // Background auto-starts (fired on agent file writes) must not spam
-        // the chat with "Request timed out after 90000ms" while the backend
-        // is busy generating.
-        if (!opts?.quiet) onError(err instanceof Error ? err.message : previewFailedLabel);
-      } finally {
-        setPreviewBusy(false);
-      }
+      // Single-flight. Without it, two callers arriving together each POST
+      // /preview/start and each resolve into a remount — two iframe
+      // navigations for one logical event.
+      if (startInFlight.current) return startInFlight.current;
+
+      const run = (async () => {
+        setPreviewBusy(true);
+        previewBusyRef.current = true;
+        try {
+          const status = await api<PreviewStatusResponse>(`/projects/${projectId}/preview/start`, {
+            method: "POST",
+            timeoutMs: 45_000,
+          });
+          const url = status.runner_url || status.url;
+          previewUrlRef.current = url;
+          setPreviewUrl(url);
+          remount();
+        } catch (err) {
+          // Background auto-starts (fired on agent file writes) must not spam
+          // the chat with "Request timed out after 90000ms" while the backend
+          // is busy generating.
+          if (!opts?.quiet) onError(err instanceof Error ? err.message : previewFailedLabel);
+        } finally {
+          setPreviewBusy(false);
+          previewBusyRef.current = false;
+          startInFlight.current = null;
+        }
+      })();
+
+      startInFlight.current = run;
+      return run;
     },
     [onError, previewFailedLabel, projectId, remount],
   );
+
+  /**
+   * Start the preview only if it is not already up or starting.
+   *
+   * Reads the REFS, never state. The builder's SSE handler calls this from a
+   * closure captured when the run opened; reading `previewUrl` from there saw
+   * whatever it was at that instant — usually null on a first generation — so
+   * the guard never fired and every file write remounted the iframe.
+   */
+  const ensurePreviewStarted = useCallback(() => {
+    if (previewUrlRef.current || previewBusyRef.current || startInFlight.current) return;
+    void startPreview({ quiet: true });
+  }, [startPreview]);
 
   const forcePreviewRefresh = useCallback(
     async (opts?: RefreshOptions) => {
@@ -154,12 +193,31 @@ export function usePreviewControl({ projectId, loading, onError, previewFailedLa
       refreshTimer.current = null;
       if (previewUrlRef.current) {
         setRenderNonce((n) => n + 1);
-        flashUpdating();
+        // No flash during a run: the caller holds the badge on for the whole
+        // run instead. Blinking it on and off once per task read as the page
+        // reloading over and over, which is exactly what it was not doing.
+        if (!holdUpdatingRef.current) flashUpdating();
       } else {
         void forcePreviewRefresh({ softStart: true, quiet: true });
       }
     }, 1200);
   }, [flashUpdating, forcePreviewRefresh]);
+
+  /**
+   * Hold the "updating" badge steady for the length of a run.
+   *
+   * Each `preview_refresh` used to light it for 1.2-1.6s, and a multi-task plan
+   * sends one per task — so it strobed. One steady indicator says the same
+   * thing and stops looking like a fault.
+   */
+  const setUpdatingHold = useCallback((held: boolean) => {
+    holdUpdatingRef.current = held;
+    if (updatingTimer.current) {
+      clearTimeout(updatingTimer.current);
+      updatingTimer.current = null;
+    }
+    setPreviewUpdating(held);
+  }, []);
 
   /** Soft sync after a visual edit: re-push the bundle, keep the iframe alive. */
   const repushPreview = useCallback(() => {
@@ -234,9 +292,11 @@ export function usePreviewControl({ projectId, loading, onError, previewFailedLa
     previewLiveStatus,
     renderNonce,
     startPreview,
+    ensurePreviewStarted,
     forcePreviewRefresh,
     schedulePreviewRefresh,
     flashUpdating,
     repushPreview,
+    setUpdatingHold,
   };
 }

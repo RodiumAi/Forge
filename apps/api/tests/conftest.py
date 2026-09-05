@@ -17,6 +17,24 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 os.environ.setdefault("ENVIRONMENT", "test")
 
 
+@pytest.fixture(autouse=True)
+def isolated_rate_limits(monkeypatch):
+    """Keep rate limiting deterministic and per-test.
+
+    Two problems otherwise: a developer with the stack running has Redis on
+    localhost, so counters survive between runs and tests start failing on the
+    second invocation; and within one run every test shares the same client IP,
+    so unrelated tests eat each other's budget. Force the in-process counter and
+    clear it around each test.
+    """
+    from app.services import rate_limit
+
+    monkeypatch.setattr(rate_limit, "_incr_redis", lambda *_a, **_k: None)
+    rate_limit._local_hits.clear()
+    yield
+    rate_limit._local_hits.clear()
+
+
 @pytest.fixture
 def project(tmp_path_factory, monkeypatch):
     """An isolated project id whose files live in a temp directory."""

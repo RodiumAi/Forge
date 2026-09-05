@@ -30,16 +30,27 @@ You **must not**:
 
 ### Cybersecurity
 
+**Test against your own local stack, not our production hosts.** `docker compose
+up` gives you the whole system; that is the supported target for security work.
+We do not operate a bug bounty, and we do not grant blanket permission to test
+`rodiumai.io` or any of its subdomains.
+
 You **may**:
 
-- Audit **`https://api-forge.rodiumai.io`** and **`https://forge.rodiumai.io`** (and published `*.forge.rodiumai.io` sites when relevant).
-- Report findings via **GitHub Security Advisories** (private) for confirmed vulnerabilities — see [SECURITY.md](SECURITY.md).
+- Audit **your own local deployment**, and any site you published yourself.
+- Review this repository's source for vulnerabilities — no permission needed.
+- Report confirmed vulnerabilities via **GitHub Security Advisories** (private), or by email to **forge@rodiumai.io** — see [SECURITY.md](SECURITY.md).
 - Open a **public issue** only for non-sensitive hardening ideas (headers, CSP suggestions, dependency hygiene) with a **written report** and **screenshots / proof-of-concept** where appropriate.
 
 You **must not**:
 
-- Perform intrusive testing (DoS, brute force, social engineering) without written approval from maintainers.
+- Test our hosted environments without **prior written authorisation**, which you can request at forge@rodiumai.io. Unauthorised testing against them may be unlawful in your jurisdiction, whatever your intent.
+- Perform intrusive testing (DoS, brute force, social engineering) — this is never in scope, even against a host you were authorised to test.
+- Access, modify or retain data that is not yours, and never use another user's account.
 - Disclose exploitable details publicly before a fix is released.
+
+Report in good faith, stay within the scope above, and we will not pursue legal
+action over your research.
 
 ### Frontend & backend developers
 
@@ -254,6 +265,6 @@ Fix CI failures on your branch before requesting review.
 
 ## Getting help
 
-- **Questions & ideas:** GitHub Issues / Discussions
-- **Security:** [SECURITY.md](SECURITY.md) — private advisories only for vulnerabilities
-- **Code of conduct:** [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+- **Questions & ideas:** open a GitHub Issue using one of the templates
+- **Security:** [SECURITY.md](SECURITY.md) — private advisories, or forge@rodiumai.io
+- **Code of conduct:** [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) — reports go privately to forge@rodiumai.io

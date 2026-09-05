@@ -10,8 +10,8 @@
         "s3:ListBucket"
       ],
       "Resource": [
-        "arn:aws:s3:::rodiumai-media-prod",
-        "arn:aws:s3:::rodiumai-media-prod/*"
+        "arn:aws:s3:::<MEDIA_BUCKET>",
+        "arn:aws:s3:::<MEDIA_BUCKET>/*"
       ]
     },
     {
@@ -23,12 +23,12 @@
         "s3:ListBucket"
       ],
       "Resource": [
-        "arn:aws:s3:::forge-assets-prod",
-        "arn:aws:s3:::forge-assets-prod/*",
-        "arn:aws:s3:::forge-runtime-prod",
-        "arn:aws:s3:::forge-runtime-prod/*",
-        "arn:aws:s3:::rodiumai-forge-uploads-prod",
-        "arn:aws:s3:::rodiumai-forge-uploads-prod/*"
+        "arn:aws:s3:::<ASSETS_BUCKET>",
+        "arn:aws:s3:::<ASSETS_BUCKET>/*",
+        "arn:aws:s3:::<RUNTIME_BUCKET>",
+        "arn:aws:s3:::<RUNTIME_BUCKET>/*",
+        "arn:aws:s3:::<UPLOADS_BUCKET>",
+        "arn:aws:s3:::<UPLOADS_BUCKET>/*"
       ]
     },
     {
@@ -44,7 +44,7 @@
       "Action": [
         "secretsmanager:GetSecretValue"
       ],
-      "Resource": "arn:aws:secretsmanager:eu-west-1:330990434320:secret:rodiumai/*"
+      "Resource": "arn:aws:secretsmanager:<REGION>:<ACCOUNT_ID>:secret:<SECRET_PREFIX>/*"
     }
   ]
 }

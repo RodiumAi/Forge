@@ -196,19 +196,89 @@ describe("file operations", () => {
     expect(state.ops[0].taskId).toBeUndefined();
   });
 
-  it("asks to refresh routes and start the preview only on writes — never a preview refresh per file", () => {
+  it("asks for nothing per file — a write must not touch the preview or the routes", () => {
+    // This is the flicker, in one assertion. Writes arrive in bursts of 5-20
+    // per task; anything scheduled here runs that many times. Route refresh
+    // costs ~21 requests a go, and `ensure-preview-started` used to remount the
+    // iframe — a real navigation with a white flash — on each one.
     const write = reduceStreamEvent(initialStreamState(), { type: "file_write", path: "a" }, OPTS);
-    expect(kinds(write.effects)).toEqual([
-      "refresh-routes",
-      "ensure-preview-started",
-    ]);
+    expect(kinds(write.effects)).toEqual([]);
 
     const del = reduceStreamEvent(initialStreamState(), { type: "file_delete", path: "a" }, OPTS);
     expect(kinds(del.effects)).toEqual([]);
+  });
 
-    // Preview refreshes are driven by explicit dispatcher events only.
+  it("does the preview and route work at task boundaries instead", () => {
+    // The dispatcher emits `preview_refresh` once per completed task: the only
+    // moment routes can really have changed, and rare enough to act on.
     const refresh = reduceStreamEvent(initialStreamState(), { type: "preview_refresh" }, OPTS);
-    expect(kinds(refresh.effects)).toEqual(["schedule-preview-refresh"]);
+    expect(kinds(refresh.effects)).toEqual([
+      "schedule-preview-refresh",
+      "refresh-routes",
+      "ensure-preview-started",
+    ]);
+  });
+
+  it("drops the partial answer when the server rewinds a failed attempt", () => {
+    // The server deletes the tokens of a failed attempt from its own buffer
+    // before retrying. Keeping ours would show the same paragraph twice.
+    const started = reduceStreamEvent(
+      initialStreamState(),
+      { type: "token", content: "half an ans" },
+      OPTS,
+    );
+    expect(started.state.streaming).toBe("half an ans");
+
+    const reset = reduceStreamEvent(started.state, { type: "stream_reset", reason: "network" }, OPTS);
+    expect(reset.state.streaming).toBe("");
+    expect(reset.state.thinking).toBe("");
+    expect(kinds(reset.effects)).toEqual([]);
+  });
+});
+
+describe("a task that fails for good", () => {
+  it("is recorded without ending the run", () => {
+    const { state } = run([
+      { type: "plan", tasks: [{ id: "a" }, { id: "b" }], needs_confirm: false },
+      { type: "task_failed", id: "a", label: "Architecture", code: "quota" },
+    ]);
+    expect(state.failedTasks).toEqual([{ id: "a", label: "Architecture", code: "quota" }]);
+    // Still running: only `done` or `error` end a run.
+    expect(state.busy).toBe(true);
+  });
+
+  it("records each task once, even if reported twice", () => {
+    const { state } = run([
+      { type: "task_failed", id: "a", label: "Architecture" },
+      { type: "task_failed", id: "a", label: "Architecture", code: "timeout" },
+    ]);
+    expect(state.failedTasks).toHaveLength(1);
+    expect(state.failedTasks[0].code).toBe("timeout");
+  });
+});
+
+describe("error codes from the server", () => {
+  it("passes the code through instead of leaving it to be guessed", () => {
+    const { effects } = reduceStreamEvent(
+      initialStreamState(),
+      { type: "error", code: "quota", message: "Insufficient RODI credits." },
+      OPTS,
+    );
+    const failure = effects.find((e) => e.kind === "error");
+    expect(failure).toMatchObject({ kind: "error", code: "quota" });
+  });
+
+  it("treats a cancellation code as a cancellation, not a failure", () => {
+    // The dispatcher signals cancellation through the same `error` frame. It
+    // used to be recognised only by the literal message "cancelled".
+    const { state, effects } = reduceStreamEvent(
+      initialStreamState(),
+      { type: "error", code: "cancelled", message: "Génération annulée" },
+      OPTS,
+    );
+    expect(kinds(effects)).toEqual(["cancelled"]);
+    expect(state.busy).toBe(false);
+    expect(state.planTasks).toEqual([]);
   });
 });
 
@@ -359,6 +429,34 @@ describe("done", () => {
       { id: "t2", status: "pending" },
     ]);
     expect(state.busy).toBe(false);
+  });
+
+  it("keeps the run resumable and marks it stopped when a structural task halted the plan", () => {
+    const { state } = run([
+      { type: "user_message", run_id: "run-7" },
+      {
+        type: "done",
+        summary: "stopped",
+        plan: [{ id: "architecture", status: "error" }, { id: "pages", status: "pending" }],
+        failed: [{ task_id: "architecture", title: "Architecture", code: "upstream" }],
+        stopped: true,
+      },
+    ]);
+    expect(state.activeRunId).toBe("run-7");
+    expect(state.stopped).toBe(true);
+    expect(state.failedTasks).toEqual([{ id: "architecture", label: "Architecture", code: "upstream" }]);
+    expect(state.busy).toBe(false);
+  });
+
+  it("defaults stopped to false for an ordinary skipped-step completion", () => {
+    const { state } = run([
+      {
+        type: "done",
+        plan: [{ id: "a", status: "error" }, { id: "b", status: "done" }],
+        failed: [{ task_id: "a", title: "A" }],
+      },
+    ]);
+    expect(state.stopped).toBe(false);
   });
 
   it("resets the stream state so the next run starts clean", () => {

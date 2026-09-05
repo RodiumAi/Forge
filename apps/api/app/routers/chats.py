@@ -23,12 +23,20 @@ from app.services.apply_writes import apply_validated_writes_async
 from app.services.attachments import extract_image_urls
 from app.services.capabilities import require_rodi_for_paid_capability
 from app.services.filesystem import delete_file
-from app.services.llm import RodiumError, stream_chat_completion
+from app.services.llm import (
+    RodiumError,
+    error_code_for,
+    is_transient_network_error,
+    stream_chat_completion,
+)
 from app.services.orchestration.cancel import clear_cancelled, is_cancelled, mark_cancelled
 from app.services.orchestration.context import build_llm_messages
 from app.services.orchestration.images import generate_project_image
 from app.services.orchestration.plan_persist import (
     persist_assistant as _persist_assistant,
+)
+from app.services.orchestration.plan_persist import (
+    record_run_outcome,
 )
 from app.services.orchestration.plan_worker import iter_run_event_sse, spawn_plan_job
 from app.services.orchestration.planner import (
@@ -40,9 +48,11 @@ from app.services.orchestration.planner import (
 )
 from app.services.orchestration.router import (
     classify_and_route,
+    fallback_model,
     has_reference_attachments,
     strip_attachment_noise,
 )
+from app.services.orchestration.stale_runs import expire_if_stale
 from app.services.rodium_generation import resolve_generation_auth
 from app.services.sse import with_sse_heartbeats
 from app.services.tags import parse_forge_tags
@@ -90,6 +100,64 @@ def _owned_run(
 
 def _sse(payload: dict) -> str:
     return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+
+
+def _error_sse(exc: BaseException, *, plan: list | None = None) -> str:
+    """Terminal error frame carrying a machine-readable `code`.
+
+    The browser maps the code to a translated sentence and, where one exists, a
+    button that resolves the situation. Without it, every cause — an empty
+    wallet, a dead session, a dropped socket — collapsed into one unhelpful
+    "Connection interrupted".
+    """
+    payload: dict = {
+        "type": "error",
+        "code": error_code_for(exc),
+        "message": str(exc)[:500],
+    }
+    if plan is not None:
+        payload["plan"] = plan
+    return _sse(payload)
+
+
+def _error_sse_code(code: str, message: str) -> str:
+    return _sse({"type": "error", "code": code, "message": message[:500]})
+
+
+def _generation_auth_resolver(user_id: UUID, locale: str):
+    """Resolve generation auth lazily, from inside the SSE generator.
+
+    This used to run before the `StreamingResponse` was returned, and it is the
+    slowest thing on the request path: it takes a per-user asyncio lock and can
+    round-trip the OIDC token endpoint. Until it finished, not one byte had left
+    the server — the response was outside `with_sse_heartbeats`, so a proxy or a
+    flaky connection could drop it silently. And because the client only learns
+    the `run_id` from the first SSE frame, a drop in that window left it with
+    nothing to reconnect to: it gave up with "Connection interrupted", even for
+    a one-line prompt.
+
+    Deferring it means the first frame goes out in milliseconds and every later
+    failure is recoverable. The cost is that an auth failure can no longer be an
+    HTTP status, so it is translated into the SSE error taxonomy instead — which
+    the client renders as an actionable message rather than a bare status line.
+    """
+
+    async def resolve():
+        with SessionLocal() as auth_db:
+            fresh = auth_db.get(User, user_id)
+            if fresh is None:
+                raise RodiumError(t("rodium_session_expired", locale), 401, "auth_expired")  # type: ignore[arg-type]
+            try:
+                return await resolve_generation_auth(auth_db, fresh)
+            except HTTPException as exc:
+                detail = exc.detail
+                message = detail if isinstance(detail, str) else str(detail)
+                code = "auth_expired" if exc.status_code == 403 else "network"
+                if exc.status_code not in (401, 403, 503):
+                    code = "internal"
+                raise RodiumError(message, exc.status_code, code) from exc
+
+    return resolve
 
 
 def _event_stream(source):
@@ -190,34 +258,72 @@ async def _iter_single_pass(
     yield push_step("select_files", t("step_select_files", locale), "done")
     yield push_step("generate", t("step_generate_code", locale), "running")
 
-    try:
-        async for chunk in stream_chat_completion(
-            auth=auth,
-            model=model,
-            messages=llm_messages,
-            locale=locale,  # type: ignore[arg-type]
-        ):
-            if is_cancelled(run_id_str):
-                yield push_step("generate", t("step_generate_code", locale), "error")
-                yield _sse({"type": "error", "message": "cancelled"})
-                live = db.get(AgentRun, run_pk)
-                if live is not None:
-                    live.status = "cancelled"
-                    db.commit()
-                clear_cancelled(run_id_str)
-                return
-            if chunk.kind == "thinking":
-                thinking_parts.append(chunk.content)
-                yield _sse({"type": "thinking", "delta": chunk.content})
-            else:
-                full.append(chunk.content)
-                yield _sse({"type": "token", "content": chunk.content})
-    except RodiumError as exc:
+    # Retry budget, mirroring the dispatcher's. `_stream_with_retries` in llm.py
+    # deliberately refuses to retry once a token has been emitted (it would
+    # duplicate output), so without this a single upstream blip after the first
+    # token ended the run — the 21s and 31s failures in production were all on
+    # this path, which had no retry of its own at all.
+    stream_model = model
+    network_retries = 0
+    model_retried = False
+    failure: Exception | None = None
+    cancelled = False
+    while True:
+        try:
+            async for chunk in stream_chat_completion(
+                auth=auth,
+                model=stream_model,
+                messages=llm_messages,
+                locale=locale,  # type: ignore[arg-type]
+            ):
+                if is_cancelled(run_id_str):
+                    cancelled = True
+                    break
+                if chunk.kind == "thinking":
+                    thinking_parts.append(chunk.content)
+                    yield _sse({"type": "thinking", "delta": chunk.content})
+                else:
+                    full.append(chunk.content)
+                    yield _sse({"type": "token", "content": chunk.content})
+            break
+        except Exception as exc:
+            code = error_code_for(exc)
+            retry = False
+            if network_retries < 2 and is_transient_network_error(exc):
+                network_retries += 1
+                retry = True
+            elif not model_retried:
+                alternate = fallback_model(stream_model)
+                if alternate:
+                    model_retried = True
+                    stream_model = alternate
+                    retry = True
+            if not retry:
+                failure = exc
+                break
+            # Tell the browser to discard the half-answer before we replace it.
+            full.clear()
+            yield _sse({"type": "stream_reset", "reason": code})
+            yield push_step("generate", t("step_generate_code", locale), "running")
+
+    if cancelled:
         yield push_step("generate", t("step_generate_code", locale), "error")
-        yield _sse({"type": "error", "message": str(exc)})
+        yield _sse({"type": "error", "code": "cancelled", "message": "cancelled"})
+        live = db.get(AgentRun, run_pk)
+        if live is not None:
+            live.status = "cancelled"
+            db.commit()
+        clear_cancelled(run_id_str)
+        return
+
+    if failure is not None:
+        code = error_code_for(failure)
+        yield push_step("generate", t("step_generate_code", locale), "error")
+        yield _sse({"type": "error", "code": code, "message": str(failure)[:500]})
         live = db.get(AgentRun, run_pk)
         if live is not None:
             live.status = "error"
+            record_run_outcome(live, code=code, message=str(failure))
             db.commit()
         return
 
@@ -257,7 +363,7 @@ async def _iter_single_pass(
             ):
                 if is_cancelled(run_id_str):
                     yield push_step("generate", t("step_generate_code", locale), "error")
-                    yield _sse({"type": "error", "message": "cancelled"})
+                    yield _error_sse_code("cancelled", "cancelled")
                     return
                 if chunk.kind == "thinking":
                     thinking_parts.append(chunk.content)
@@ -267,7 +373,7 @@ async def _iter_single_pass(
                     yield _sse({"type": "token", "content": chunk.content})
         except RodiumError as exc:
             yield push_step("generate", t("step_generate_code", locale), "error")
-            yield _sse({"type": "error", "message": str(exc)})
+            yield _error_sse(exc)
             return
         if empty_retry_full:
             full = empty_retry_full
@@ -275,7 +381,7 @@ async def _iter_single_pass(
         yield push_step("generate", t("step_generate_code", locale), "done")
         if not writes and not deletes and len("".join(full).strip()) < 40:
             yield push_step("apply_writes", t("step_apply_writes", locale), "error")
-            yield _sse({"type": "error", "message": t("empty_model_response", locale)})
+            yield _error_sse_code("empty_response", t("empty_model_response", locale))
             live = db.get(AgentRun, run_pk)
             if live is not None:
                 live.status = "error"
@@ -313,7 +419,7 @@ async def _iter_single_pass(
             ):
                 if is_cancelled(run_id_str):
                     yield push_step("generate", t("step_generate_code", locale), "error")
-                    yield _sse({"type": "error", "message": "cancelled"})
+                    yield _error_sse_code("cancelled", "cancelled")
                     return
                 if chunk.kind == "thinking":
                     thinking_parts.append(chunk.content)
@@ -323,7 +429,7 @@ async def _iter_single_pass(
                     yield _sse({"type": "token", "content": chunk.content})
         except RodiumError as exc:
             yield push_step("generate", t("step_generate_code", locale), "error")
-            yield _sse({"type": "error", "message": str(exc)})
+            yield _error_sse(exc)
             return
         if retry_full:
             full = retry_full
@@ -409,18 +515,29 @@ def get_active_run(
     """Restore HITL plan/clarify state after a page refresh."""
     locale = resolve_locale(request)
     _, chat = _owned_chat(db, user, project_id, chat_id, locale)
+    # The most recent run of the chat, full stop — not the most recent among
+    # resumable statuses. A `partial` run from an old attempt used to keep
+    # resurfacing its Resume button forever, even after a later run finished
+    # cleanly and superseded it.
     run = (
         db.query(AgentRun)
-        .filter(
-            AgentRun.chat_id == chat.id,
-            AgentRun.status.in_(
-                ("awaiting_plan_confirm", "awaiting_clarify", "running", "error"),
-            ),
-        )
+        .filter(AgentRun.chat_id == chat.id)
         .order_by(AgentRun.created_at.desc())
         .first()
     )
-    if run is None:
+    if run is None or run.status not in (
+        "awaiting_plan_confirm",
+        "awaiting_clarify",
+        "running",
+        "error",
+        "partial",
+    ):
+        return None
+
+    # An abandoned run is worse than no run: production had one sitting in
+    # `awaiting_plan_confirm` for thirty hours, offering the user a "resume"
+    # button for work whose context was long gone.
+    if expire_if_stale(db, run):
         return None
 
     def _plan_all_done(items: list) -> bool:
@@ -498,8 +615,11 @@ async def send_message(
 ) -> StreamingResponse:
     locale = resolve_locale(request)
     project, chat = _owned_chat(db, user, project_id, chat_id, locale)
+    # Ownership and wallet stay here: both are fast reads, and both need to be a
+    # real HTTP status (404 / 402) so the client can act on them before a stream
+    # even exists. Generation auth does NOT — see `_generation_auth_resolver`.
     require_rodi_for_paid_capability(user, db)
-    gen_auth = await resolve_generation_auth(db, user)
+    resolve_gen_auth = _generation_auth_resolver(user.id, locale)
 
     user_content = body.content.strip()
     mode = (body.mode or "agent").strip().lower()
@@ -586,6 +706,7 @@ async def send_message(
             )
             yield push_step("classify", t("step_classify", locale), "done")
             try:
+                gen_auth = await resolve_gen_auth()
                 yield push_step("generate_image", t("step_generate_image", locale), "running")
                 image_info = await generate_project_image(
                     auth=gen_auth,
@@ -682,7 +803,7 @@ async def send_message(
                     if live is not None:
                         live.status = "error"
                         stream_db.commit()
-                yield _sse({"type": "error", "message": str(exc)})
+                yield _error_sse(exc)
 
         return _event_stream(image_stream())
 
@@ -717,7 +838,7 @@ async def send_message(
                 questions = await build_clarify_questions_llm(
                     user_content,
                     locale,  # type: ignore[arg-type]
-                    auth=gen_auth,
+                    auth=await resolve_gen_auth(),
                     model=run_model,
                     force_scaffold=force_scaffold,
                 )
@@ -727,13 +848,13 @@ async def send_message(
                     if live is not None:
                         live.status = "error"
                         err_db.commit()
-                yield _sse({"type": "error", "message": str(exc)[:500]})
+                yield _error_sse(exc)
                 return
 
             with SessionLocal() as s:
                 live = s.get(AgentRun, run_pk)
                 if live is None:
-                    yield _sse({"type": "error", "message": t("run_invalid_state", locale)})
+                    yield _error_sse_code("internal", t("run_invalid_state", locale))
                     return
                 live.clarify_json = json.dumps(questions)
                 live.status = "awaiting_clarify"
@@ -857,6 +978,9 @@ async def send_message(
             for step_evt in _attachment_steps():
                 yield step_evt
 
+            # First frames are out; now the slow part can safely fail.
+            gen_auth = await resolve_gen_auth()
+
             if use_single_pass:
                 with SessionLocal() as stream_db:
                     async for chunk in _iter_single_pass(
@@ -895,7 +1019,7 @@ async def send_message(
             with SessionLocal() as stream_db:
                 live = stream_db.get(AgentRun, run_pk)
                 if live is None:
-                    yield _sse({"type": "error", "message": t("run_invalid_state", locale)})
+                    yield _error_sse_code("internal", t("run_invalid_state", locale))
                     return
                 live.plan_json = json.dumps(plan)
                 live.plan_meta_json = json.dumps(plan_meta, ensure_ascii=False) if plan_meta else None
@@ -948,7 +1072,7 @@ async def send_message(
                         err_db.commit()
             except Exception:
                 pass
-            yield _sse({"type": "error", "message": str(exc)[:500]})
+            yield _error_sse(exc)
 
     return _event_stream(plan_stream())
 
@@ -968,7 +1092,7 @@ async def submit_clarify(
     if run.status != "awaiting_clarify":
         raise HTTPException(status_code=400, detail=t("run_invalid_state", locale))  # type: ignore[arg-type]
     require_rodi_for_paid_capability(user, db)
-    gen_auth = await resolve_generation_auth(db, user)
+    resolve_gen_auth = _generation_auth_resolver(user.id, locale)
 
     # Snapshot before commit — StreamingResponse runs after ORM instances expire.
     run_pk = run.id
@@ -1007,13 +1131,13 @@ async def submit_clarify(
                 prompt=run_prompt,
                 answers=answers,
                 task_class=run_task_class,
-                auth=gen_auth,
+                auth=await resolve_gen_auth(),
                 model=run_model,
                 locale=locale,  # type: ignore[arg-type]
             )
             run_row = db.get(AgentRun, run_pk)
             if run_row is None:
-                yield _sse({"type": "error", "message": t("run_invalid_state", locale)})
+                yield _error_sse_code("internal", t("run_invalid_state", locale))
                 return
             run_row.plan_json = json.dumps(plan)
             run_row.plan_meta_json = json.dumps(plan_meta, ensure_ascii=False) if plan_meta else None
@@ -1063,7 +1187,7 @@ async def submit_clarify(
             if live is not None:
                 live.status = "error"
                 db.commit()
-            yield _sse({"type": "error", "message": str(exc)[:500]})
+            yield _error_sse(exc)
 
     return _event_stream(stream())
 
@@ -1080,16 +1204,22 @@ async def confirm_plan(
 ) -> StreamingResponse:
     locale = resolve_locale(request)
     project, chat, run = _owned_run(db, user, project_id, chat_id, run_id, locale)
-    if run.status not in ("awaiting_plan_confirm", "error"):
+    # "partial" is a plan that ran to the end with some steps skipped — exactly
+    # the case the Resume button exists for, so it has to be resumable too.
+    if run.status not in ("awaiting_plan_confirm", "error", "partial"):
         raise HTTPException(status_code=400, detail=t("run_invalid_state", locale))  # type: ignore[arg-type]
     require_rodi_for_paid_capability(user, db)
     # Called for its side effect: raises early if the account has no usable
-    # generation key, before we start mutating the run.
+    # generation key, before we start mutating the run. This one stays eager:
+    # confirm-plan streams nothing of its own, it hands off to the worker, so
+    # there is no first frame to protect and a real HTTP status is more useful.
     await resolve_generation_auth(db, user)
 
     plan = body.plan if body.plan else (json.loads(run.plan_json) if run.plan_json else [])
     if not plan:
         raise HTTPException(status_code=400, detail=t("plan_empty", locale))  # type: ignore[arg-type]
+    # Everything not already finished goes back in the queue — which, on a
+    # resume, is exactly the steps that failed.
     for task in plan:
         if isinstance(task, dict) and task.get("status") != "done":
             task["status"] = "pending"
@@ -1211,7 +1341,7 @@ async def branch_messages(
     anchor.content = user_content
     db.flush()
 
-    gen_auth = await resolve_generation_auth(db, user)
+    resolve_gen_auth = _generation_auth_resolver(user.id, locale)
     prior_count = db.query(Message).filter(Message.chat_id == chat.id).count()
     force_scaffold = prior_count == 0
     route = classify_and_route(user_content, force_scaffold=force_scaffold)
@@ -1252,18 +1382,10 @@ async def branch_messages(
     )
 
     if clarify:
-        questions = await build_clarify_questions_llm(
-            user_content,
-            locale,  # type: ignore[arg-type]
-            auth=gen_auth,
-            model=route.model,
-            force_scaffold=force_scaffold,
-        )
-        run.clarify_json = json.dumps(questions)
-        run.status = "awaiting_clarify"
-        db.commit()
 
         async def clarify_stream():
+            # Same rule as `send_message`: identify the run before doing any
+            # slow work, so a drop is reconnectable rather than terminal.
             yield _sse({"type": "user_message", "id": user_msg_id, "run_id": str(run_pk)})
             yield _sse(
                 {
@@ -1275,9 +1397,50 @@ async def branch_messages(
             )
             yield _sse(
                 {
+                    "type": "step",
+                    "id": "clarify",
+                    "label": t("step_clarify", locale),
+                    "status": "running",
+                }
+            )
+            try:
+                questions = await build_clarify_questions_llm(
+                    user_content,
+                    locale,  # type: ignore[arg-type]
+                    auth=await resolve_gen_auth(),
+                    model=route.model,
+                    force_scaffold=force_scaffold,
+                )
+            except Exception as exc:
+                live = db.get(AgentRun, run_pk)
+                if live is not None:
+                    live.status = "error"
+                    record_run_outcome(live, code=error_code_for(exc), message=str(exc))
+                    db.commit()
+                yield _error_sse(exc)
+                return
+
+            live = db.get(AgentRun, run_pk)
+            if live is None:
+                yield _error_sse_code("internal", t("run_invalid_state", locale))
+                return
+            live.clarify_json = json.dumps(questions)
+            live.status = "awaiting_clarify"
+            db.commit()
+
+            yield _sse(
+                {
                     "type": "clarify",
                     "run_id": str(run_pk),
                     "questions": questions,
+                }
+            )
+            yield _sse(
+                {
+                    "type": "step",
+                    "id": "clarify",
+                    "label": t("step_clarify", locale),
+                    "status": "done",
                 }
             )
 
@@ -1294,6 +1457,7 @@ async def branch_messages(
                     "tier": route.tier,
                 }
             )
+            gen_auth = await resolve_gen_auth()
             if use_single_pass:
                 async for chunk in _iter_single_pass(
                     db=db,
@@ -1330,7 +1494,7 @@ async def branch_messages(
             )
             live = db.get(AgentRun, run_pk)
             if live is None:
-                yield _sse({"type": "error", "message": t("run_invalid_state", locale)})
+                yield _error_sse_code("internal", t("run_invalid_state", locale))
                 return
             live.plan_json = json.dumps(plan)
             live.plan_meta_json = json.dumps(plan_meta, ensure_ascii=False) if plan_meta else None
@@ -1377,6 +1541,6 @@ async def branch_messages(
             if err_row is not None:
                 err_row.status = "error"
                 db.commit()
-            yield _sse({"type": "error", "message": str(exc)[:500]})
+            yield _error_sse(exc)
 
     return _event_stream(branch_stream())

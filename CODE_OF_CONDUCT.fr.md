@@ -32,7 +32,13 @@ Les mainteneurs du projet sont chargés de clarifier et de faire respecter ces c
 
 ## Signalement
 
-Signalez tout comportement inacceptable via les **GitHub Issues** de ce dépôt.
+Signalez tout comportement inacceptable en privé à **forge@rodiumai.io**. Les
+signalements sont traités de manière confidentielle, et la personne qui signale
+n'est jamais identifiée auprès de la personne mise en cause sans son accord.
+
+Merci de ne pas passer par les GitHub Issues publiques : un signalement de
+conduite ne doit être visible ni par la personne concernée, ni par qui que ce
+soit d'autre.
 
 ## Attribution
 

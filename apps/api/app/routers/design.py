@@ -8,13 +8,15 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from app.auth import get_current_user
+from app.auth import get_current_user, get_media_user
 from app.config import get_settings
 from app.db import get_db
 from app.i18n import resolve_locale, t
 from app.models import Project, User
 from app.services.attachments import ResolvedImage, resolve_image_part
 from app.services.capabilities import require_rodi_for_paid_capability
+from app.services import history
+from app.services.design_colors import apply_brand_color, merge_palettes, parse_palette
 from app.services.filesystem import project_dir, read_file, write_bytes, write_file
 from app.services.llm import RodiumError, complete_chat
 from app.services.orchestration.context import DESIGN_PATH
@@ -63,12 +65,30 @@ class DesignCharterResponse(BaseModel):
     logo_path: str | None = None
 
 
+class DesignPaletteColor(BaseModel):
+    name: str
+    hex: str
+
+
 class DesignCharterOut(BaseModel):
     path: str = DESIGN_PATH
     markdown: str | None = None
     brief: str | None = None
     exists: bool = False
     logo_path: str | None = None
+    palette: list[DesignPaletteColor] = Field(default_factory=list)
+
+
+class DesignColorUpdateRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=64)
+    hex: str = Field(min_length=4, max_length=9)
+
+
+class DesignColorUpdateResponse(BaseModel):
+    ok: bool = True
+    markdown: str
+    css_updated: bool = False
+    palette: list[DesignPaletteColor] = Field(default_factory=list)
 
 
 def _owned(db: Session, user: User, project_id: UUID, locale: str) -> Project:
@@ -146,7 +166,7 @@ def _existing_logo_disk(project_id: str):
 def get_design_logo(
     project_id: UUID,
     request: Request,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_media_user),
     db: Session = Depends(get_db),
 ) -> FileResponse:
     """Serve the locked project logo for the Design panel preview."""
@@ -180,16 +200,63 @@ def get_design_charter(
     locale = resolve_locale(request)
     project = _owned(db, user, project_id, locale)
     logo_path = _existing_logo_path(str(project.id))
+    css_text = ""
+    try:
+        css_text = read_file(str(project.id), "src/index.css")
+    except FileNotFoundError:
+        css_text = ""
     try:
         md = read_file(str(project.id), DESIGN_PATH)
+        palette = [
+            DesignPaletteColor(name=e.name, hex=e.hex)
+            for e in merge_palettes(parse_palette(md), parse_palette(css_text))
+        ]
         return DesignCharterOut(
             markdown=md,
             brief=project.design_brief,
             exists=True,
             logo_path=logo_path,
+            palette=palette,
         )
     except FileNotFoundError:
-        return DesignCharterOut(brief=project.design_brief, exists=False, logo_path=logo_path)
+        palette = [
+            DesignPaletteColor(name=e.name, hex=e.hex) for e in parse_palette(css_text)
+        ]
+        return DesignCharterOut(
+            brief=project.design_brief,
+            exists=False,
+            logo_path=logo_path,
+            palette=palette,
+        )
+
+
+@router.patch("/{project_id}/design-charter/colors", response_model=DesignColorUpdateResponse)
+def patch_design_color(
+    project_id: UUID,
+    body: DesignColorUpdateRequest,
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> DesignColorUpdateResponse:
+    """Update one brand token in DESIGN.md and src/index.css, then refreshable in preview."""
+    locale = resolve_locale(request)
+    project = _owned(db, user, project_id, locale)
+    history.snapshot(str(project.id), f"before brand color: --{body.name}")
+    try:
+        result = apply_brand_color(str(project.id), body.name, body.hex)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="DESIGN.md not found") from exc
+    except ValueError as exc:
+        code = str(exc)
+        detail = "Invalid color" if code in {"invalid_hex", "invalid_token"} else code
+        raise HTTPException(status_code=400, detail=detail) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail="Color token not found in charter or CSS") from exc
+    return DesignColorUpdateResponse(
+        markdown=result.markdown,
+        css_updated=result.css_updated,
+        palette=[DesignPaletteColor(name=e.name, hex=e.hex) for e in result.palette],
+    )
 
 
 @router.post("/{project_id}/design-charter", response_model=DesignCharterResponse)

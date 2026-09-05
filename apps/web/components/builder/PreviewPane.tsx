@@ -1,7 +1,8 @@
 "use client";
 
 import { ReactNode, useEffect, useRef, useState } from "react";
-import { api, apiBase, getToken } from "@/lib/api";
+import { api, apiBase } from "@/lib/api";
+import { getMediaToken } from "@/lib/media-token";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { PreviewToolbar } from "./PreviewToolbar";
 import type {
@@ -15,7 +16,6 @@ type Props = {
   previewSrc: string | null;
   previewPath?: string;
   viewport: ViewportMode;
-  previewUpdating: boolean;
   /**
    * Bump to re-post the source bundle into the live runner (soft sync after a
    * visual edit) — no iframe reload, no shell/Babel refetch, no blank flash.
@@ -35,6 +35,7 @@ type Props = {
   onStartPreview: () => void;
   onRefreshPreview?: () => void;
   onVisualEdit?: (oldText: string, newText: string) => void | Promise<void>;
+
   onElementSelect?: (sel: ElementSelection) => void;
   onCommentAnchor?: (sel: ElementSelection) => void;
   onImageSelect?: (sel: ImageSelection) => void;
@@ -74,7 +75,6 @@ export function PreviewPane({
   previewSrc,
   previewPath = "/",
   viewport,
-  previewUpdating,
   renderNonce = 0,
   pages,
   previewBusy,
@@ -148,7 +148,10 @@ export function PreviewPane({
             // folder; the runner rewrites them to this authenticated endpoint.
             assets: {
               base: `${apiBase().replace(/\/$/, "")}/projects/${projectId}/public`,
-              token: getToken() ?? "",
+              // The runner appends this to `<img src>` URLs, so it must be the
+              // read-only media token — a session token here would end up in
+              // the API's access logs on every asset the preview loads.
+              token: getMediaToken() ?? "",
               routerBase: "/runner",
             },
           },
@@ -394,11 +397,25 @@ export function PreviewPane({
         return;
       }
 
+      if (type === "forge-tool-escape") {
+        onPreviewToolChange(null);
+        return;
+      }
+
       if (type === "forge-visual-edit") {
         const oldText = typeof data.oldText === "string" ? data.oldText : "";
         const newText = typeof data.newText === "string" ? data.newText : "";
         if (!oldText || newText === oldText) return;
-        void onVisualEditRef.current?.(oldText, newText);
+        const win = frameRef.current?.contentWindow;
+        const target = trustedOrigin;
+        void (async () => {
+          try {
+            await onVisualEditRef.current?.(oldText, newText);
+            if (win && target) win.postMessage({ type: "forge-visual-edit-ok" }, target);
+          } catch {
+            if (win && target) win.postMessage({ type: "forge-visual-edit-failed" }, target);
+          }
+        })();
         return;
       }
 
@@ -448,11 +465,6 @@ export function PreviewPane({
     >
       <div className="builder-preview-layout">
         <div className={`builder-preview-stage viewport-${viewport}`}>
-          {previewUpdating && (
-            <div className="builder-preview-updating" aria-live="polite">
-              {t("previewUpdating")}
-            </div>
-          )}
           {editMissHint ? (
             <div className="builder-preview-edit-badge builder-preview-edit-miss" aria-live="polite">
               {editMissHint}

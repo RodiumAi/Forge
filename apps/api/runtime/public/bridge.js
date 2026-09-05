@@ -18,6 +18,7 @@
   var ORIG = "";
   var ORIG_HTML = "";
   var STYLE_BACKUP = null;
+  var PENDING_EDIT = null;
   var HOVER = null;
   var SELECTED = null;
   var STYLE_ID = "forge-edit-style";
@@ -84,7 +85,8 @@
       "body.forge-tool-select [data-forge-hover],body.forge-tool-comment [data-forge-hover],body.forge-tool-image [data-forge-hover]{outline:2px solid #3b82f6!important;outline-offset:2px;cursor:crosshair}" +
       "body.forge-tool-select [data-forge-selected],body.forge-tool-comment [data-forge-selected],body.forge-tool-image [data-forge-selected]{outline:2px solid #2563eb!important;outline-offset:2px}" +
       ".forge-sel-label{position:fixed;z-index:2147483646;background:#2563eb;color:#fff;font:11px/1.2 ui-sans-serif,system-ui,sans-serif;padding:2px 6px;border-radius:4px;pointer-events:none;transform:translateY(4px)}" +
-      "body.forge-tool-text [data-forge-editable]{outline:1px dashed rgba(242,98,10,.45);outline-offset:2px;cursor:text}" +
+      "body.forge-tool-text [data-forge-editable]{cursor:text}" +
+      "body.forge-tool-text [data-forge-editable]:hover{outline:1px dashed rgba(242,98,10,.55);outline-offset:2px}" +
       "body.forge-tool-text [data-forge-editing]{outline:2px solid #f2620a!important;outline-offset:2px;caret-color:currentColor!important}" +
       "body.forge-tool-image img{cursor:crosshair}";
     document.head.appendChild(s);
@@ -187,14 +189,28 @@
     "h1,h2,h3,h4,h5,h6,p,span,a,button,li,label,strong,em,b,i,small,div,figcaption," +
     "blockquote,td,th,article,section,nav,header,footer,main,hgroup";
 
+  function isSimpleTextHost(el) {
+    // Composite hosts (`The OS for<br/><span>…`) produce an innerText that
+    // never appears contiguously in JSX — only leaf text hosts are editable.
+    // Decorative SVG/IMG children (icons next to a label) are allowed.
+    if (!el || el.nodeType !== 1) return false;
+    for (var i = 0; i < el.childNodes.length; i++) {
+      var child = el.childNodes[i];
+      if (child.nodeType === 1 && !EXCLUDED_TAGS.test(child.tagName)) return false;
+    }
+    return true;
+  }
+
   function isEditableTarget(el) {
+    if (!el) return null;
+    if (el.nodeType === 3) el = el.parentElement;
     if (!el || el.nodeType !== 1) return null;
     if (EXCLUDED_TAGS.test(el.tagName)) return null;
     var cur = el;
     for (var i = 0; i < 8 && cur; i++) {
-      if (EDITABLE_TAGS.test(cur.tagName)) {
+      if (EDITABLE_TAGS.test(cur.tagName) && isSimpleTextHost(cur)) {
         var text = (cur.innerText || "").trim().replace(/\s+/g, " ");
-        if (text.length >= 1 && !/^\d+([.,]\d+)?%?$/.test(text) && cur.children.length <= 12) {
+        if (text.length >= 1 && !/^\d+([.,]\d+)?%?$/.test(text)) {
           return cur;
         }
       }
@@ -204,6 +220,8 @@
   }
 
   function pickTarget(el, tool) {
+    if (!el || (el.nodeType !== 1 && el.nodeType !== 3)) return null;
+    if (el.nodeType === 3) el = el.parentElement;
     if (!el || el.nodeType !== 1) return null;
     if (el.id === "forge-sel-label" || (el.closest && el.closest("#forge-sel-label"))) return null;
     if (tool === "image") {
@@ -220,6 +238,7 @@
     var nodes = document.querySelectorAll(CANDIDATE_QUERY);
     for (var i = 0; i < nodes.length; i++) {
       var n = nodes[i];
+      if (!isSimpleTextHost(n)) continue;
       if ((n.innerText || "").trim().length >= 1) n.setAttribute("data-forge-editable", "1");
     }
   }
@@ -314,12 +333,29 @@
     restoreStyle(el);
     EDITING = null;
     if (save && next && next !== ORIG) {
+      // Keep markup so a failed API write can restore without flattening.
+      PENDING_EDIT = { el: el, html: ORIG_HTML, oldText: ORIG, newText: next };
       post({ type: "forge-visual-edit", oldText: ORIG, newText: next });
     } else if (!save) {
       // Restore markup, not flattened text: `innerText = ORIG` destroyed nested
       // links, <strong> and icons on every cancel.
       el.innerHTML = ORIG_HTML;
+      PENDING_EDIT = null;
     }
+  }
+
+  function revertPendingEdit() {
+    if (!PENDING_EDIT) return;
+    try {
+      PENDING_EDIT.el.innerHTML = PENDING_EDIT.html;
+    } catch (err) {
+      /* ignore */
+    }
+    PENDING_EDIT = null;
+  }
+
+  function clearPendingEdit() {
+    PENDING_EDIT = null;
   }
 
   function placeCaretFromClick(target) {
@@ -450,13 +486,20 @@
   }, true);
 
   document.addEventListener("keydown", function (e) {
-    if (!EDITING) return;
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (EDITING) {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        finishEdit(true);
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        finishEdit(false);
+      }
+      return;
+    }
+    // Esc with no active edit clears the preview tool (parent turns it off).
+    if (e.key === "Escape" && TOOL) {
       e.preventDefault();
-      finishEdit(true);
-    } else if (e.key === "Escape") {
-      e.preventDefault();
-      finishEdit(false);
+      post({ type: "forge-tool-escape" });
     }
   }, true);
 
@@ -819,6 +862,10 @@
     if (!data || typeof data !== "object") return;
     if (data.type === "forge-tool-mode") {
       setTool(data.tool || null);
+    } else if (data.type === "forge-visual-edit-ok") {
+      clearPendingEdit();
+    } else if (data.type === "forge-visual-edit-failed") {
+      revertPendingEdit();
     } else if (data.type === "forge-tool-ping") {
       notifyReady();
       ackTool(TOOL);

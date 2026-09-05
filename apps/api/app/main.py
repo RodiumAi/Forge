@@ -1,3 +1,5 @@
+import asyncio
+import contextlib
 import logging
 from contextlib import asynccontextmanager
 
@@ -38,7 +40,20 @@ async def lifespan(_app: FastAPI):
     config.projects_path.mkdir(parents=True, exist_ok=True)
     config.templates_path.mkdir(parents=True, exist_ok=True)
     init_db()
+
+    # Any run still marked `running` at boot lost its worker when the process
+    # died: nothing else will ever close it, and the builder would keep
+    # offering to resume a plan whose context is gone.
+    from app.services.orchestration.stale_runs import stale_run_sweeper
+
+    sweeper = asyncio.create_task(stale_run_sweeper(), name="forge-stale-run-sweeper")
+
     yield
+
+    sweeper.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await sweeper
+
     # Shutdown: never leak child processes / thread pools across restarts.
     try:
         from app.services.cpu_pool import shutdown_cpu_pool

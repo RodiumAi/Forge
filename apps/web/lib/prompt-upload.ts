@@ -1,4 +1,5 @@
 import { apiBase, getToken } from "@/lib/api";
+import { getMediaToken } from "@/lib/media-token";
 
 export type UploadResponse = {
   object_id: string;
@@ -84,7 +85,7 @@ export async function uploadPromptAttachments(
     const data = JSON.parse(res.body) as UploadResponse;
     const durablePreview =
       data.object_id
-        ? `${apiBase().replace(/\/$/, "")}/projects/${projectId}/assets/${data.object_id}/content?access_token=${encodeURIComponent(getToken() || "")}`
+        ? `${apiBase().replace(/\/$/, "")}/projects/${projectId}/assets/${data.object_id}/content?access_token=${encodeURIComponent(getMediaToken() || "")}`
         : data.public_url;
     if (item.previewUrl?.startsWith("blob:")) {
       URL.revokeObjectURL(item.previewUrl);

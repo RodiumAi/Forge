@@ -11,11 +11,9 @@ import {
   ChevronRight,
   Home,
   LayoutTemplate,
-  Search,
   Settings,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 export const SIDEBAR_KEY = "forge_home_sidebar";
@@ -25,17 +23,14 @@ export type HomeNavItem = "projects" | "templates" | "settings";
 type HomeLayoutProps = {
   children: React.ReactNode;
   activeNav: HomeNavItem;
-  onSearchClick?: () => void;
   fillMain?: boolean;
 };
 
 export function HomeLayout({
   children,
   activeNav,
-  onSearchClick,
   fillMain = false,
 }: HomeLayoutProps) {
-  const router = useRouter();
   const { t } = useI18n();
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
@@ -51,14 +46,6 @@ export function HomeLayout({
   function setSidebar(next: boolean) {
     setSidebarOpen(next);
     localStorage.setItem(SIDEBAR_KEY, next ? "1" : "0");
-  }
-
-  function handleSearch() {
-    if (onSearchClick) {
-      onSearchClick();
-      return;
-    }
-    router.push("/dashboard");
   }
 
   return (
@@ -101,17 +88,6 @@ export function HomeLayout({
             </span>
             <span className="home-sidebar-label">{t("navTemplates")}</span>
           </Link>
-          <button
-            type="button"
-            className="home-sidebar-btn"
-            title={t("searchProjects")}
-            onClick={handleSearch}
-          >
-            <span className="home-sidebar-icon" aria-hidden>
-              <Icon icon={Search} />
-            </span>
-            <span className="home-sidebar-label">{t("searchProjects")}</span>
-          </button>
           <Link
             href="/settings"
             className={`home-sidebar-btn ${activeNav === "settings" ? "active" : ""}`}
