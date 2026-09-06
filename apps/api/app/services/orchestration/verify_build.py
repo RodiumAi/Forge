@@ -9,7 +9,7 @@ import uuid
 from dataclasses import asdict, dataclass
 from typing import Any, Literal
 
-from app.services.filesystem import list_files, rename_path
+from app.services.filesystem import list_files, rename_path, write_file
 
 Severity = Literal["critical", "warning"]
 
@@ -217,6 +217,152 @@ def fix_import_path_casing(project_id: str) -> list[tuple[str, str]]:
         except Exception:
             logger.exception("failed case rename %s → %s", src, dst)
     return applied
+
+
+_SCAFFOLD_ROOTS = ("src/pages/", "src/components/")
+_MAX_SCAFFOLDS = 12
+_DEFAULT_IMPORT_RE = re.compile(
+    r"""import\s+([A-Za-z_][\w]*)\s+from\s+["']([^"']+)["']""",
+)
+_NAMED_IMPORT_RE = re.compile(
+    r"""import\s*\{([^}]+)\}\s*from\s+["']([^"']+)["']""",
+)
+
+
+def _component_name_from_path(path: str) -> str:
+    stem = posixpath.splitext(posixpath.basename(path))[0]
+    if stem == "index":
+        stem = posixpath.basename(posixpath.dirname(path))
+    stem = re.sub(r"[^\w]", "", stem) or "Page"
+    if stem[0].isdigit():
+        stem = f"Page{stem}"
+    if stem[0].islower():
+        stem = stem[0].upper() + stem[1:]
+    return stem
+
+
+def _binding_for_spec(importer_content: str, spec: str) -> tuple[str, str] | None:
+    """Return ('default'|'named', ComponentName) for an import of ``spec``."""
+    for match in _DEFAULT_IMPORT_RE.finditer(importer_content):
+        if match.group(2) == spec:
+            return ("default", match.group(1))
+    for match in _NAMED_IMPORT_RE.finditer(importer_content):
+        if match.group(2) != spec:
+            continue
+        first = match.group(1).split(",")[0].strip()
+        if " as " in first:
+            first = first.split(" as ", 1)[1].strip()
+        first = re.sub(r"[^\w]", "", first)
+        if first:
+            return ("named", first)
+    return None
+
+
+def _stub_module_source(name: str, kind: str) -> str:
+    title = re.sub(r"(?<!^)(?=[A-Z])", " ", name).strip() or name
+    slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-") or "page"
+    if kind == "named":
+        return (
+            f"export function {name}() {{\n"
+            f"  return (\n"
+            f'    <main className="page page-{slug}">\n'
+            f"      <h1>{title}</h1>\n"
+            f"    </main>\n"
+            f"  );\n"
+            f"}}\n\n"
+            f"export default {name};\n"
+        )
+    return (
+        f"export default function {name}() {{\n"
+        f"  return (\n"
+        f'    <main className="page page-{slug}">\n'
+        f"      <h1>{title}</h1>\n"
+        f"    </main>\n"
+        f"  );\n"
+        f"}}\n"
+    )
+
+
+def scaffold_missing_local_modules(project_id: str) -> list[str]:
+    """Create stub modules for local imports that resolve to nothing.
+
+    The generator often wires ``App.tsx`` to ``./pages/Classes`` etc. before
+    (or without) writing those files — Linux preview then dies with
+    MODULE_NOT_FOUND. Case-only mismatches are handled by
+    ``fix_import_path_casing``; this covers the truly missing path under
+    ``src/pages/`` or ``src/components/``.
+
+    Returns the paths that were created (empty stubs — a follow-up repair
+    finding asks the LLM to fill them in).
+    """
+    files = list_files(project_id)
+    planned: dict[str, tuple[str, str]] = {}
+
+    for path, content in files.items():
+        if not path.endswith(_SOURCE_EXTS):
+            continue
+        for match in _LOCAL_IMPORT_RE.finditer(content):
+            spec = match.group(1) or match.group(2) or ""
+            if not spec or _local_import_exists(spec, path, files):
+                continue
+            base = _normalize_import_base(spec, path)
+            if not base or _casefold_file_match(base, files):
+                continue
+            expected = expected_module_path(spec, path)
+            if not expected or not any(expected.startswith(root) for root in _SCAFFOLD_ROOTS):
+                continue
+            if expected in files or expected in planned:
+                continue
+            binding = _binding_for_spec(content, spec)
+            if binding:
+                kind, name = binding
+            else:
+                kind, name = "default", _component_name_from_path(expected)
+            name = re.sub(r"[^\w]", "", name) or _component_name_from_path(expected)
+            if name[0].isdigit():
+                name = f"Page{name}"
+            planned[expected] = (kind, name)
+            if len(planned) >= _MAX_SCAFFOLDS:
+                break
+        if len(planned) >= _MAX_SCAFFOLDS:
+            break
+
+    created: list[str] = []
+    for dest, (kind, name) in planned.items():
+        try:
+            write_file(project_id, dest, _stub_module_source(name, kind))
+            created.append(dest)
+            logger.info("scaffolded missing module: %s (%s %s)", dest, kind, name)
+        except Exception:
+            logger.exception("failed to scaffold %s", dest)
+    return created
+
+
+def scaffold_fill_findings(paths: list[str]) -> list[VerifyFinding]:
+    """Critical findings so the repair pass rewrites auto-created stubs."""
+    findings: list[VerifyFinding] = []
+    for path in paths:
+        findings.append(
+            VerifyFinding(
+                code="import.scaffold_fill",
+                severity="critical",
+                path=path,
+                message=(
+                    f"Auto-created empty stub at {path} to unblock MODULE_NOT_FOUND. "
+                    "Rewrite this file as a complete page that matches the app's existing "
+                    "design system (reuse CSS tokens/classes from sibling pages; keep the "
+                    "same default/named export the importer expects)."
+                ),
+            )
+        )
+    return findings
+
+
+def autofix_local_imports(project_id: str) -> tuple[list[tuple[str, str]], list[str]]:
+    """Case-rename then scaffold missing page/component modules."""
+    casing = fix_import_path_casing(project_id)
+    stubs = scaffold_missing_local_modules(project_id)
+    return casing, stubs
 
 
 def _missing_import_findings(files: dict[str, str]) -> list[VerifyFinding]:
@@ -599,9 +745,14 @@ def repair_focus_paths(findings: list[VerifyFinding]) -> list[str] | None:
         focus.append("src/main.tsx")
     if any(f.code == "context.api_mismatch" for f in findings):
         focus.extend(["src/App.tsx", "src/context"])
+    if any(f.code == "import.scaffold_fill" for f in findings):
+        # Sibling pages + App give the model the design system to copy.
+        focus.extend(["src/App.tsx", "src/index.css", "src/pages"])
     for finding in findings:
         # Responsive findings name the exact file that holds the offending rule.
         if finding.code.startswith("responsive.") and finding.path:
+            focus.append(finding.path)
+        if finding.code == "import.scaffold_fill" and finding.path:
             focus.append(finding.path)
         if finding.code in ("import.module_not_found", "transform.error") and finding.path:
             focus.append(finding.path)
@@ -659,6 +810,12 @@ def format_findings_for_prompt(findings: list[VerifyFinding]) -> str:
             "file so its path casing matches the import exactly (case-sensitive). Do not "
             "invent a second module with a parallel name. If the module is truly missing, "
             "create it at the expected path with a matching default export."
+        )
+    if any(f.code == "import.scaffold_fill" for f in findings):
+        lines.append(
+            "For import.scaffold_fill: the listed stub files already exist on disk — "
+            "forge-write each one in full with a real page UI. Match sibling pages' layout, "
+            "CSS classes, and data patterns. Keep the same export style (default vs named)."
         )
     return "\n".join(lines)
 

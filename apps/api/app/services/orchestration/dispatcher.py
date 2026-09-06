@@ -732,14 +732,15 @@ async def run_plan_tasks(
         # Mid-plan CSS/build check — catch orphan classes before the next rewrite.
         if len(tasks) >= 2 and tid != "coherence":
             from app.services.orchestration.verify_build import (
-                fix_import_path_casing,
+                autofix_local_imports,
                 format_css_second_pass_prompt,
                 format_findings_for_prompt,
                 repair_focus_paths,
+                scaffold_fill_findings,
                 verify_project_build,
             )
 
-            casing_fixed = fix_import_path_casing(project_id)
+            casing_fixed, scaffolded = autofix_local_imports(project_id)
             if casing_fixed:
                 yield _sse(
                     {
@@ -750,7 +751,16 @@ async def run_plan_tasks(
                         ),
                     }
                 )
-            mid_findings = verify_project_build(project_id)
+            if scaffolded:
+                yield _sse(
+                    {
+                        "type": "warning",
+                        "message": (
+                            "[verify-mid:info] import.scaffolded: " + ", ".join(scaffolded[:8])
+                        ),
+                    }
+                )
+            mid_findings = verify_project_build(project_id) + scaffold_fill_findings(scaffolded)
             critical_mid = [
                 f
                 for f in mid_findings
@@ -761,6 +771,7 @@ async def run_plan_tasks(
                     "css.overflow_hidden_root",
                     "entry.createRoot",
                     "import.module_not_found",
+                    "import.scaffold_fill",
                 )
             ]
             for finding in critical_mid:
@@ -875,18 +886,19 @@ async def run_plan_tasks(
     from app.services.orchestration.page_visit_check import page_route_findings
     from app.services.orchestration.smoke_check import smoke_transform_findings
     from app.services.orchestration.verify_build import (
+        autofix_local_imports,
         css_critical_findings,
         findings_have_critical,
-        fix_import_path_casing,
         format_css_second_pass_prompt,
         format_findings_for_prompt,
         repair_focus_paths,
+        scaffold_fill_findings,
         verify_project_build,
     )
 
     yield push_step("verify_build", "Verifying build", "running")
     yield push_step("verify_pages", t("step_verify_pages", locale), "running")
-    casing_fixed = fix_import_path_casing(project_id)
+    casing_fixed, scaffolded = autofix_local_imports(project_id)
     if casing_fixed:
         yield _sse(
             {
@@ -897,9 +909,17 @@ async def run_plan_tasks(
                 ),
             }
         )
+    if scaffolded:
+        yield _sse(
+            {
+                "type": "warning",
+                "message": ("[verify:info] import.scaffolded: " + ", ".join(scaffolded[:8])),
+            }
+        )
     # Static heuristics + compile + named exports + route structure.
     findings = (
-        verify_project_build(project_id)
+        scaffold_fill_findings(scaffolded)
+        + verify_project_build(project_id)
         + await smoke_transform_findings(project_id)
         + page_route_findings(project_id)
     )
@@ -949,9 +969,10 @@ async def run_plan_tasks(
         ):
             yield chunk
 
-        fix_import_path_casing(project_id)
+        _, re_scaffolded = autofix_local_imports(project_id)
         findings = (
-            verify_project_build(project_id)
+            scaffold_fill_findings(re_scaffolded)
+            + verify_project_build(project_id)
             + await smoke_transform_findings(project_id)
             + page_route_findings(project_id)
         )
@@ -983,9 +1004,10 @@ async def run_plan_tasks(
                 extra_prompt=css_extra,
             ):
                 yield chunk
-            fix_import_path_casing(project_id)
+            _, re_scaffolded2 = autofix_local_imports(project_id)
             findings = (
-                verify_project_build(project_id)
+                scaffold_fill_findings(re_scaffolded2)
+                + verify_project_build(project_id)
                 + await smoke_transform_findings(project_id)
                 + page_route_findings(project_id)
             )

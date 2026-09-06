@@ -187,6 +187,49 @@ class TestMissingLocalImports:
         assert fix_import_path_casing(project) == []
         assert "import.module_not_found" not in codes(verify_project_build(project))
 
+    def test_scaffold_missing_pages_creates_stubs_and_clears_module_not_found(self, project):
+        from app.services.filesystem import list_files, read_file
+        from app.services.orchestration.verify_build import (
+            scaffold_fill_findings,
+            scaffold_missing_local_modules,
+        )
+
+        write_file(project, "src/index.css", self.CSS)
+        write_file(
+            project,
+            "src/App.tsx",
+            'import Classes from "./pages/Classes";\n'
+            'import Timetable from "./pages/Timetable";\n'
+            'import Notifications from "./pages/Notifications";\n'
+            "export default () => (<><Classes /><Timetable /><Notifications /></>);",
+        )
+        assert "import.module_not_found" in codes(verify_project_build(project))
+        created = scaffold_missing_local_modules(project)
+        assert set(created) == {
+            "src/pages/Classes.tsx",
+            "src/pages/Timetable.tsx",
+            "src/pages/Notifications.tsx",
+        }
+        files = list_files(project)
+        assert "src/pages/Classes.tsx" in files
+        assert "export default function Classes" in read_file(project, "src/pages/Classes.tsx")
+        assert "import.module_not_found" not in codes(verify_project_build(project))
+        fill = scaffold_fill_findings(created)
+        assert {f.code for f in fill} == {"import.scaffold_fill"}
+        assert findings_have_critical(fill)
+
+    def test_scaffold_skips_when_only_casing_differs(self, project):
+        from app.services.orchestration.verify_build import scaffold_missing_local_modules
+
+        write_file(project, "src/index.css", self.CSS)
+        write_file(project, "src/pages/classes.tsx", "export default () => null;")
+        write_file(
+            project,
+            "src/App.tsx",
+            'import Classes from "./pages/Classes";\nexport default () => <Classes />;',
+        )
+        assert scaffold_missing_local_modules(project) == []
+
     def test_bare_specifiers_are_left_to_the_ast_allowlist(self, project):
         write_file(project, "src/index.css", self.CSS)
         write_file(project, "src/App.tsx", 'import { useState } from "react";\nexport default () => null;')
@@ -265,3 +308,26 @@ class TestRepairHelpers:
         assert paths is not None
         assert "src/App.tsx" in paths
         assert "src/pages/SettingsPage.tsx" in paths
+
+    def test_repair_focus_paths_includes_scaffold_fill_stubs(self):
+        from app.services.orchestration.verify_build import (
+            VerifyFinding,
+            format_findings_for_prompt,
+            repair_focus_paths,
+        )
+
+        findings = [
+            VerifyFinding(
+                code="import.scaffold_fill",
+                severity="critical",
+                path="src/pages/Classes.tsx",
+                message="Auto-created empty stub",
+            ),
+        ]
+        paths = repair_focus_paths(findings)
+        assert paths is not None
+        assert "src/pages/Classes.tsx" in paths
+        assert "src/App.tsx" in paths
+        assert "scaffold_fill" in format_findings_for_prompt(findings) or "stub" in format_findings_for_prompt(
+            findings
+        ).lower()
