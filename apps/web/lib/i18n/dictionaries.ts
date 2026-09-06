@@ -105,7 +105,8 @@ export const dictionaries = {
     authVerifyOkTitle: "Email confirmed",
     authVerifyOkBody: "Your address is verified. Enjoy Forge.",
     authVerifyFailTitle: "This link is no longer valid",
-    authVerifyFailBody: "Verification links expire after 24 hours and work once. Request a new one from your account.",
+    authVerifyFailBody:
+      "Verification links expire after 24 hours and work once. Resend a fresh link below, or try signing in if you already confirmed.",
     authVerifyGoToForge: "Open Forge",
     authVerifyNetworkTitle: "Connection failed",
     authVerifyNetworkBody: "We could not reach the server. Check your connection and try again.",
@@ -773,7 +774,8 @@ export const dictionaries = {
     authVerifyOkTitle: "Email confirmé",
     authVerifyOkBody: "Votre adresse est vérifiée. Bonne création avec Forge.",
     authVerifyFailTitle: "Ce lien n’est plus valide",
-    authVerifyFailBody: "Les liens de vérification expirent au bout de 24 heures et ne servent qu’une fois. Demandez-en un nouveau depuis votre compte.",
+    authVerifyFailBody:
+      "Les liens de vérification expirent au bout de 24 heures et ne servent qu’une fois. Renvoyez un nouveau lien ci-dessous, ou connectez-vous si vous avez déjà confirmé.",
     authVerifyGoToForge: "Ouvrir Forge",
     authVerifyNetworkTitle: "Connexion échouée",
     authVerifyNetworkBody: "Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.",

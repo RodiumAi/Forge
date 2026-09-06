@@ -61,7 +61,10 @@ class VerifyEmailRequest(BaseModel):
 
 
 class ResendVerificationRequest(BaseModel):
-    email: EmailStr
+    """Either an email (inbox screen) or the expired link token (verify page)."""
+
+    email: EmailStr | None = None
+    token: str | None = Field(default=None, min_length=8, max_length=512)
 
 
 class ForgotPasswordRequest(BaseModel):

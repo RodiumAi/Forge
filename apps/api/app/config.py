@@ -56,7 +56,7 @@ class Settings(BaseSettings):
     #   ses      → AWS SES via boto3 (needs the AWS_* credentials below)
     #   disabled → send nothing (verification links become unobtainable)
     mail_transport: Literal["smtp", "ses", "console", "disabled"] = "smtp"
-    mail_from: str = "Forge <no-reply@rodiumai.io>"
+    mail_from: str = "Forge By RodiumAi <noreply@rodiumai.io>"
     smtp_host: str = "mailpit"
     smtp_port: int = 1025
     #: Mailpit wants neither; a real relay will.

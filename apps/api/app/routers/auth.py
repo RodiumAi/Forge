@@ -588,14 +588,29 @@ def resend_verification(
 ) -> SimpleOkResponse:
     """Re-send the verification link. Always reports success.
 
-    Answering differently for a known and an unknown address would turn this
-    into a membership oracle, and it is reachable without a session.
+    Accepts either the address (post-registration inbox screen) or the raw
+    token from an expired/used link (verify-email fail page), so the visitor
+    does not have to re-type their email. Answering differently for a known
+    and an unknown address/token would turn this into a membership oracle.
     """
     locale = resolve_locale(request)
-    email = body.email.strip().lower()
-    rate_limit.enforce(request, "verify-resend", limit=3, window_seconds=900, subject=email)
+    user: User | None = None
+    rate_subject: str
 
-    user = db.query(User).filter(User.email == email).first()
+    if body.token:
+        rate_subject = auth_tokens.hash_token(body.token)[:32]
+        rate_limit.enforce(request, "verify-resend", limit=3, window_seconds=900, subject=rate_subject)
+        user_id = auth_tokens.lookup_user_id(db, body.token, AuthToken.KIND_EMAIL_VERIFY)
+        if user_id is not None:
+            user = db.get(User, user_id)
+    elif body.email:
+        email = body.email.strip().lower()
+        rate_subject = email
+        rate_limit.enforce(request, "verify-resend", limit=3, window_seconds=900, subject=rate_subject)
+        user = db.query(User).filter(User.email == email).first()
+    else:
+        raise HTTPException(status_code=422, detail="email or token is required")
+
     if user is not None and user.email_verified_at is None:
         _send_verification_email(db, user, locale)
     return SimpleOkResponse(message=t("verify_email_sent", locale))

@@ -164,6 +164,26 @@ class TestAuthTokens:
 
         assert auth_tokens.consume(db, raw, AuthToken.KIND_EMAIL_VERIFY) is None
 
+    def test_lookup_finds_an_expired_token_for_resend(self):
+        db = _FakeSession()
+        user_id = uuid.uuid4()
+        raw = auth_tokens.issue_email_verify(db, user_id)
+        db.rows[0].expires_at = datetime.now(UTC) - timedelta(seconds=1)
+
+        assert auth_tokens.consume(db, raw, AuthToken.KIND_EMAIL_VERIFY) is None
+        assert auth_tokens.lookup_user_id(db, raw, AuthToken.KIND_EMAIL_VERIFY) == user_id
+
+    def test_lookup_finds_a_consumed_token_for_resend(self):
+        db = _FakeSession()
+        user_id = uuid.uuid4()
+        raw = auth_tokens.issue_email_verify(db, user_id)
+        assert auth_tokens.consume(db, raw, AuthToken.KIND_EMAIL_VERIFY) == user_id
+        assert auth_tokens.lookup_user_id(db, raw, AuthToken.KIND_EMAIL_VERIFY) == user_id
+
+    def test_lookup_rejects_unknown_tokens(self):
+        assert auth_tokens.lookup_user_id(_FakeSession(), "not-a-token", AuthToken.KIND_EMAIL_VERIFY) is None
+        assert auth_tokens.lookup_user_id(_FakeSession(), "", AuthToken.KIND_EMAIL_VERIFY) is None
+
     def test_a_reset_link_cannot_be_spent_as_a_verification_link(self):
         db = _FakeSession()
         raw = auth_tokens.issue_password_reset(db, uuid.uuid4())

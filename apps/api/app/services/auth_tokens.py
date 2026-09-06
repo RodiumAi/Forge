@@ -56,6 +56,23 @@ def issue_password_reset(db: Session, user_id: UUID) -> str:
     return issue(db, user_id, AuthToken.KIND_PASSWORD_RESET, PASSWORD_RESET_TTL)
 
 
+def lookup_user_id(db: Session, raw: str, kind: str) -> UUID | None:
+    """Return the user id for a token even if it is expired or already used.
+
+    Used by "resend from this link" so an expired verification mail can mint a
+    fresh one without asking the visitor to re-type their address. Unknown
+    tokens still return None — same silence as ``consume``.
+    """
+    if not raw:
+        return None
+    row = (
+        db.query(AuthToken)
+        .filter(AuthToken.token_hash == hash_token(raw), AuthToken.kind == kind)
+        .first()
+    )
+    return row.user_id if row is not None else None
+
+
 def consume(db: Session, raw: str, kind: str) -> UUID | None:
     """Validate and burn a token. Returns the user id, or None if unusable.
 

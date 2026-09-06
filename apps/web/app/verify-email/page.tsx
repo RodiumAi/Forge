@@ -7,6 +7,10 @@
  * opening it in a different browser than the one that signed up still leaves
  * the visitor signed in. The `startedRef` guard matters: React Strict Mode
  * runs effects twice in development and the link only works once.
+ *
+ * When the link is expired or already used, we keep the raw token and offer
+ * "Resend" — the API looks the address up from that token so the visitor does
+ * not bounce to login just to request another mail.
  */
 
 import { Suspense, useEffect, useRef, useState } from "react";
@@ -27,6 +31,8 @@ function VerifyEmailInner() {
   const token = params.get("token") ?? "";
   const [phase, setPhase] = useState<Phase>(token ? "working" : "failed");
   const [attempt, setAttempt] = useState(0);
+  const [resent, setResent] = useState(false);
+  const [resendBusy, setResendBusy] = useState(false);
   const startedRef = useRef(false);
 
   useEffect(() => {
@@ -50,6 +56,23 @@ function VerifyEmailInner() {
       }
     })();
   }, [token, attempt]);
+
+  async function resendFromToken() {
+    if (!token || resendBusy) return;
+    setResendBusy(true);
+    try {
+      await api("/auth/verify-email/resend", {
+        method: "POST",
+        body: JSON.stringify({ token }),
+      });
+    } catch {
+      // Endpoint always reports success for known/unknown; network blips still
+      // surface the optimistic "sent" state so the visitor checks their inbox.
+    } finally {
+      setResent(true);
+      setResendBusy(false);
+    }
+  }
 
   if (phase === "working") {
     return (
@@ -114,7 +137,23 @@ function VerifyEmailInner() {
           </button>
         </p>
       }
-    />
+    >
+      {resent ? (
+        <p className="auth-notice" role="status" style={{ marginBottom: 0 }}>
+          {t("authVerifyResendDone")}
+        </p>
+      ) : token ? (
+        <button
+          className="btn"
+          type="button"
+          style={{ width: "100%" }}
+          disabled={resendBusy}
+          onClick={() => void resendFromToken()}
+        >
+          {resendBusy ? t("authWorking") : t("authVerifyResend")}
+        </button>
+      ) : null}
+    </AuthCard>
   );
 }
 
