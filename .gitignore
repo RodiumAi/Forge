@@ -52,7 +52,7 @@ task-definition-deploy.json
 
 
 
-# Secrets & credentials � never commit
+# Secrets & credentials - never commit
 *.pem
 *.key
 *.p12

@@ -150,7 +150,7 @@ FastAPI + SQLAlchemy + Postgres.
 ```bash
 cd apps/api
 python -m venv .venv && .venv/Scripts/activate   # or source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements-dev.txt              # runtime deps + ruff + pytest
 uvicorn app.main:app --reload --port 8100
 ```
 
