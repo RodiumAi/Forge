@@ -732,18 +732,36 @@ async def run_plan_tasks(
         # Mid-plan CSS/build check — catch orphan classes before the next rewrite.
         if len(tasks) >= 2 and tid != "coherence":
             from app.services.orchestration.verify_build import (
+                fix_import_path_casing,
                 format_css_second_pass_prompt,
                 format_findings_for_prompt,
                 repair_focus_paths,
                 verify_project_build,
             )
 
+            casing_fixed = fix_import_path_casing(project_id)
+            if casing_fixed:
+                yield _sse(
+                    {
+                        "type": "warning",
+                        "message": (
+                            "[verify-mid:info] import.casing_fixed: "
+                            + ", ".join(f"{a} → {b}" for a, b in casing_fixed[:8])
+                        ),
+                    }
+                )
             mid_findings = verify_project_build(project_id)
             critical_mid = [
                 f
                 for f in mid_findings
                 if f.severity == "critical"
-                and f.code in ("css.orphan_classes", "css.overflow_hidden_root", "entry.createRoot")
+                and f.code
+                in (
+                    "css.orphan_classes",
+                    "css.overflow_hidden_root",
+                    "entry.createRoot",
+                    "import.module_not_found",
+                )
             ]
             for finding in critical_mid:
                 yield _sse(
@@ -859,6 +877,7 @@ async def run_plan_tasks(
     from app.services.orchestration.verify_build import (
         css_critical_findings,
         findings_have_critical,
+        fix_import_path_casing,
         format_css_second_pass_prompt,
         format_findings_for_prompt,
         repair_focus_paths,
@@ -867,6 +886,17 @@ async def run_plan_tasks(
 
     yield push_step("verify_build", "Verifying build", "running")
     yield push_step("verify_pages", t("step_verify_pages", locale), "running")
+    casing_fixed = fix_import_path_casing(project_id)
+    if casing_fixed:
+        yield _sse(
+            {
+                "type": "warning",
+                "message": (
+                    "[verify:info] import.casing_fixed: "
+                    + ", ".join(f"{a} → {b}" for a, b in casing_fixed[:8])
+                ),
+            }
+        )
     # Static heuristics + compile + named exports + route structure.
     findings = (
         verify_project_build(project_id)
@@ -919,6 +949,7 @@ async def run_plan_tasks(
         ):
             yield chunk
 
+        fix_import_path_casing(project_id)
         findings = (
             verify_project_build(project_id)
             + await smoke_transform_findings(project_id)
@@ -952,6 +983,7 @@ async def run_plan_tasks(
                 extra_prompt=css_extra,
             ):
                 yield chunk
+            fix_import_path_casing(project_id)
             findings = (
                 verify_project_build(project_id)
                 + await smoke_transform_findings(project_id)

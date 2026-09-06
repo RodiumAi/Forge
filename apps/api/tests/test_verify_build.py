@@ -112,6 +112,8 @@ class TestMissingLocalImports:
         found = verify_project_build(project)
         assert "import.module_not_found" in codes(found)
         assert findings_have_critical(found)
+        msg = next(f.message for f in found if f.code == "import.module_not_found")
+        assert "Expected path" in msg
 
     def test_alias_relative_and_index_resolutions_pass(self, project):
         write_file(project, "src/index.css", self.CSS)
@@ -135,7 +137,55 @@ class TestMissingLocalImports:
             "src/App.tsx",
             'import KanbanBoard from "@/components/kanbanboard";\nexport default () => <KanbanBoard />;',
         )
+        found = verify_project_build(project)
+        assert "import.module_not_found" in codes(found)
+        msg = next(f.message for f in found if f.code == "import.module_not_found")
+        assert "Did you mean" in msg
+
+    def test_fix_import_path_casing_renames_case_only_mismatch(self, project):
+        from app.services.filesystem import list_files
+        from app.services.orchestration.verify_build import fix_import_path_casing
+
+        write_file(project, "src/index.css", self.CSS)
+        write_file(project, "src/pages/settingsPage.tsx", "export default () => null;")
+        write_file(
+            project,
+            "src/App.tsx",
+            'import SettingsPage from "./pages/SettingsPage";\nexport default () => <SettingsPage />;',
+        )
         assert "import.module_not_found" in codes(verify_project_build(project))
+        applied = fix_import_path_casing(project)
+        assert applied == [("src/pages/settingsPage.tsx", "src/pages/SettingsPage.tsx")]
+        files = list_files(project)
+        assert "src/pages/SettingsPage.tsx" in files
+        assert "src/pages/settingsPage.tsx" not in files
+        assert "import.module_not_found" not in codes(verify_project_build(project))
+
+    def test_fix_import_path_casing_noop_when_stem_differs(self, project):
+        from app.services.orchestration.verify_build import fix_import_path_casing
+
+        write_file(project, "src/index.css", self.CSS)
+        write_file(project, "src/pages/Settings.tsx", "export default () => null;")
+        write_file(
+            project,
+            "src/App.tsx",
+            'import SettingsPage from "./pages/SettingsPage";\nexport default () => <SettingsPage />;',
+        )
+        assert fix_import_path_casing(project) == []
+        assert "import.module_not_found" in codes(verify_project_build(project))
+
+    def test_fix_import_path_casing_noop_when_already_correct(self, project):
+        from app.services.orchestration.verify_build import fix_import_path_casing
+
+        write_file(project, "src/index.css", self.CSS)
+        write_file(project, "src/pages/SettingsPage.tsx", "export default () => null;")
+        write_file(
+            project,
+            "src/App.tsx",
+            'import SettingsPage from "./pages/SettingsPage";\nexport default () => <SettingsPage />;',
+        )
+        assert fix_import_path_casing(project) == []
+        assert "import.module_not_found" not in codes(verify_project_build(project))
 
     def test_bare_specifiers_are_left_to_the_ast_allowlist(self, project):
         write_file(project, "src/index.css", self.CSS)
@@ -170,3 +220,48 @@ class TestRepairHelpers:
         prompt = format_css_second_pass_prompt(findings)
         assert "SECOND CSS REPAIR PASS" in prompt
         assert "css.orphan_classes" in prompt
+
+    def test_repair_focus_paths_includes_missing_import_importer_and_target(self):
+        from app.services.orchestration.verify_build import (
+            VerifyFinding,
+            format_findings_for_prompt,
+            repair_focus_paths,
+        )
+
+        findings = [
+            VerifyFinding(
+                code="import.module_not_found",
+                severity="critical",
+                path="src/App.tsx",
+                message=(
+                    'imports "./pages/SettingsPage" but no matching file exists '
+                    "(resolution is case-sensitive). Expected path: "
+                    '"src/pages/SettingsPage.tsx".'
+                ),
+            ),
+        ]
+        paths = repair_focus_paths(findings)
+        assert paths is not None
+        assert "src/App.tsx" in paths
+        assert "src/pages/SettingsPage.tsx" in paths
+        prompt = format_findings_for_prompt(findings)
+        assert "prefer renaming the existing file" in prompt
+
+    def test_repair_focus_paths_includes_transform_module_not_found(self):
+        from app.services.orchestration.verify_build import VerifyFinding, repair_focus_paths
+
+        findings = [
+            VerifyFinding(
+                code="transform.error",
+                severity="critical",
+                path="src/App.tsx",
+                message=(
+                    "The app does not compile: MODULE_NOT_FOUND: ./pages/SettingsPage "
+                    "(case-sensitive) — the preview WILL be blank until this is fixed."
+                ),
+            ),
+        ]
+        paths = repair_focus_paths(findings)
+        assert paths is not None
+        assert "src/App.tsx" in paths
+        assert "src/pages/SettingsPage.tsx" in paths

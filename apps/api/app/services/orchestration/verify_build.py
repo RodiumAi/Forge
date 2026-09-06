@@ -2,13 +2,18 @@
 
 from __future__ import annotations
 
+import logging
+import posixpath
 import re
+import uuid
 from dataclasses import asdict, dataclass
 from typing import Any, Literal
 
-from app.services.filesystem import list_files
+from app.services.filesystem import list_files, rename_path
 
 Severity = Literal["critical", "warning"]
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -63,26 +68,155 @@ _HERO_LAYOUT_CLASS_RE = re.compile(
 _LOCAL_IMPORT_RE = re.compile(
     r"""(?:import|export)\s+[^;]*?from\s+["']([^"']+)["']|import\s*\(\s*["']([^"']+)["']\s*\)""",
 )
+_IMPORT_SPEC_FROM_MSG_RE = re.compile(
+    r"""imports\s+"([^"]+)"|MODULE_NOT_FOUND:\s*([^\s(]+)""",
+)
 _SOURCE_EXTS = (".tsx", ".ts", ".jsx", ".js")
 _RESOLVE_EXTS = (".tsx", ".ts", ".jsx", ".js", ".css", ".json")
 
 
-def _local_import_exists(spec: str, importer: str, files: dict[str, str]) -> bool:
-    """Mirror the runner's case-sensitive module resolution for local imports."""
-    import posixpath
-
+def _normalize_import_base(spec: str, importer: str) -> str | None:
+    """Return the path base the runner would resolve (no extension yet)."""
     if spec.startswith("@/"):
-        base = "src/" + spec[2:]
-    elif spec.startswith("."):
-        base = posixpath.normpath(posixpath.join(posixpath.dirname(importer), spec))
-    else:
-        return True  # bare specifier — validated by the AST allowlist
+        return "src/" + spec[2:]
+    if spec.startswith("."):
+        return posixpath.normpath(posixpath.join(posixpath.dirname(importer), spec))
+    return None
+
+
+def _resolved_path_exact(base: str, files: dict[str, str]) -> str | None:
     if base in files:
-        return True
+        return base
     for ext in _RESOLVE_EXTS:
         if base + ext in files:
-            return True
-    return any(f"{base}/index{ext}" in files for ext in _SOURCE_EXTS)
+            return base + ext
+    for ext in _SOURCE_EXTS:
+        index = f"{base}/index{ext}"
+        if index in files:
+            return index
+    return None
+
+
+def _local_import_exists(spec: str, importer: str, files: dict[str, str]) -> bool:
+    """Mirror the runner's case-sensitive module resolution for local imports."""
+    base = _normalize_import_base(spec, importer)
+    if base is None:
+        return True  # bare specifier — validated by the AST allowlist
+    return _resolved_path_exact(base, files) is not None
+
+
+def expected_module_path(spec: str, importer: str) -> str | None:
+    """Canonical path the import should resolve to (prefer .tsx when absent)."""
+    base = _normalize_import_base(spec, importer)
+    if base is None:
+        return None
+    if base.endswith(_RESOLVE_EXTS):
+        return base
+    return base + ".tsx"
+
+
+def _casefold_file_match(base: str, files: dict[str, str]) -> str | None:
+    """Unique existing file that matches base (+ext/index) case-insensitively."""
+    if _resolved_path_exact(base, files) is not None:
+        return None
+    wanted_cf = {base.casefold()}
+    for ext in _RESOLVE_EXTS:
+        wanted_cf.add((base + ext).casefold())
+    for ext in _SOURCE_EXTS:
+        wanted_cf.add(f"{base}/index{ext}".casefold())
+    matches = [path for path in files if path.casefold() in wanted_cf]
+    if len(matches) == 1:
+        return matches[0]
+    return None
+
+
+def _canonical_target(base: str, actual: str) -> str:
+    """Rewrite `actual` to the casing implied by `base`, keeping the same pattern."""
+    actual_cf = actual.casefold()
+    if actual_cf == base.casefold():
+        return base
+    for ext in _RESOLVE_EXTS:
+        if actual_cf == (base + ext).casefold():
+            return base + ext
+    for ext in _SOURCE_EXTS:
+        index = f"{base}/index{ext}"
+        if actual_cf == index.casefold():
+            return index
+    return actual
+
+
+def _rename_case_safe(project_id: str, src: str, dst: str) -> None:
+    """Rename including case-only changes (Windows needs a two-step move)."""
+    if src == dst:
+        return
+    if src.casefold() == dst.casefold():
+        parent = posixpath.dirname(src)
+        suffix = posixpath.splitext(src)[1]
+        tmp = f"{parent}/.forge-case-{uuid.uuid4().hex[:8]}{suffix}"
+        rename_path(project_id, src, tmp)
+        try:
+            rename_path(project_id, tmp, dst)
+        except Exception:
+            # Best effort restore so we do not leave a temp name on disk.
+            try:
+                rename_path(project_id, tmp, src)
+            except Exception:
+                logger.exception("failed to restore %s after case rename abort", src)
+            raise
+        return
+    rename_path(project_id, src, dst)
+
+
+def fix_import_path_casing(project_id: str) -> list[tuple[str, str]]:
+    """Deterministically rename files whose casing alone breaks imports.
+
+    Prefer renaming the file to match the import (bindings / JSX stay valid).
+    Returns ``(from, to)`` pairs actually applied.
+    """
+    files = list_files(project_id)
+    planned: dict[str, str] = {}
+    for path, content in files.items():
+        if not path.endswith(_SOURCE_EXTS):
+            continue
+        for match in _LOCAL_IMPORT_RE.finditer(content):
+            spec = match.group(1) or match.group(2) or ""
+            if not spec or _local_import_exists(spec, path, files):
+                continue
+            base = _normalize_import_base(spec, path)
+            if not base:
+                continue
+            near = _casefold_file_match(base, files)
+            if not near:
+                continue
+            target = _canonical_target(base, near)
+            if near == target:
+                continue
+            previous = planned.get(near)
+            if previous and previous != target:
+                logger.warning(
+                    "skipping case rename %s: conflicting targets %s vs %s",
+                    near,
+                    previous,
+                    target,
+                )
+                continue
+            planned[near] = target
+
+    applied: list[tuple[str, str]] = []
+    targets = set(planned.values())
+    for src, dst in planned.items():
+        # Refuse to clobber a distinct existing file (different casefold path).
+        if dst in files and src.casefold() != dst.casefold():
+            continue
+        if dst in targets and sum(1 for t in planned.values() if t == dst) > 1:
+            continue
+        try:
+            _rename_case_safe(project_id, src, dst)
+            applied.append((src, dst))
+            logger.info("fixed import casing: %s → %s", src, dst)
+        except Exception:
+            logger.exception("failed case rename %s → %s", src, dst)
+    return applied
 
 
 def _missing_import_findings(files: dict[str, str]) -> list[VerifyFinding]:
@@ -98,6 +232,21 @@ def _missing_import_findings(files: dict[str, str]) -> list[VerifyFinding]:
             spec = match.group(1) or match.group(2) or ""
             if not spec or _local_import_exists(spec, path, files):
                 continue
+            base = _normalize_import_base(spec, path) or ""
+            near = _casefold_file_match(base, files) if base else None
+            if near:
+                expected = _canonical_target(base, near)
+                detail = (
+                    f'Did you mean "{near}"? Prefer renaming that file to "{expected}" '
+                    "to match the import casing (do not invent a second module)."
+                )
+            else:
+                expected = expected_module_path(spec, path)
+                detail = (
+                    "Create that module with a matching default/named export, "
+                    "or fix the import path/casing."
+                    + (f' Expected path: "{expected}".' if expected else "")
+                )
             findings.append(
                 VerifyFinding(
                     code="import.module_not_found",
@@ -105,8 +254,7 @@ def _missing_import_findings(files: dict[str, str]) -> list[VerifyFinding]:
                     path=path,
                     message=(
                         f'imports "{spec}" but no matching file exists (resolution is '
-                        "case-sensitive). Create that module with a matching default/named "
-                        "export, or fix the import path/casing."
+                        f"case-sensitive). {detail}"
                     ),
                 )
             )
@@ -455,6 +603,17 @@ def repair_focus_paths(findings: list[VerifyFinding]) -> list[str] | None:
         # Responsive findings name the exact file that holds the offending rule.
         if finding.code.startswith("responsive.") and finding.path:
             focus.append(finding.path)
+        if finding.code in ("import.module_not_found", "transform.error") and finding.path:
+            focus.append(finding.path)
+            if finding.code == "transform.error" and "MODULE_NOT_FOUND" not in finding.message:
+                continue
+            match = _IMPORT_SPEC_FROM_MSG_RE.search(finding.message)
+            if not match:
+                continue
+            spec = match.group(1) or match.group(2) or ""
+            expected = expected_module_path(spec, finding.path)
+            if expected:
+                focus.append(expected)
     seen: set[str] = set()
     out: list[str] = []
     for path in focus:
@@ -489,6 +648,17 @@ def format_findings_for_prompt(findings: list[VerifyFinding]) -> str:
         lines.append(
             "For route findings: ensure every <Route path=... element={<Page />} /> points "
             "to an existing src/pages/Page.tsx (or equivalent) module."
+        )
+    if any(
+        f.code == "import.module_not_found"
+        or (f.code == "transform.error" and "MODULE_NOT_FOUND" in f.message)
+        for f in findings
+    ):
+        lines.append(
+            "For MODULE_NOT_FOUND / import.module_not_found: prefer renaming the existing "
+            "file so its path casing matches the import exactly (case-sensitive). Do not "
+            "invent a second module with a parallel name. If the module is truly missing, "
+            "create it at the expected path with a matching default export."
         )
     return "\n".join(lines)
 
