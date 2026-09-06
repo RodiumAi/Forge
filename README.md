@@ -4,6 +4,10 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
+<p align="center">
+  <img src="sc/home.png" alt="Forge by RodiumAI — landing" width="900" />
+</p>
+
 Forge is an open-source, AI-powered website builder. Describe your site in a chat and the agent generates a frontend-only React app, previewed instantly in the browser — no node_modules, no Vite — and published as a static ESM site.
 
 ## Architecture
@@ -31,6 +35,10 @@ Supporting services: **MinIO** (S3 uploads), **Valkey** (run queue / cancellatio
 - **ZIP export**: a real, runnable Vite project.
 - **24 templates**: see [docs/TEMPLATES.md](docs/TEMPLATES.md).
 - **Runtime manifest**: `packages.json` is the single source of truth for the import map, the AST allowlist, and Monaco types.
+
+<p align="center">
+  <img src="sc/preview.png" alt="Forge builder — chat and live preview" width="900" />
+</p>
 
 ## Prerequisites
 
