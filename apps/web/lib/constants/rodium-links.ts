@@ -25,7 +25,14 @@ export function rodiumUserAppOrigin(): string {
   const raw =
     process.env.NEXT_PUBLIC_RODIUM_USER_APP_URL?.trim() ||
     "http://localhost:3000";
-  return raw.replace(/\/$/, "");
+  let origin = raw.replace(/\/$/, "");
+  // Apex `rodiumai.io` is fronted by LiteSpeed (N0C) which 301s to
+  // `https://www.rodiumai.io/` and drops the path — `/pay?…` becomes `/?…`.
+  // Always prefer www so the detached pay funnel stays on Amplify/CloudFront.
+  if (origin === "https://rodiumai.io" || origin === "http://rodiumai.io") {
+    origin = "https://www.rodiumai.io";
+  }
+  return origin;
 }
 
 /**
