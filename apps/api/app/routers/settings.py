@@ -154,9 +154,7 @@ async def get_rodium_wallet_by_key(
     return RodiumWalletByKeyOut(
         balance_rodi=str(raw.get("balance_rodi")) if raw.get("balance_rodi") is not None else None,
         provided_total_rodi=(
-            str(raw.get("provided_total_rodi"))
-            if raw.get("provided_total_rodi") is not None
-            else None
+            str(raw.get("provided_total_rodi")) if raw.get("provided_total_rodi") is not None else None
         ),
         reserved_rodi=str(raw.get("reserved_rodi")) if raw.get("reserved_rodi") is not None else None,
     )
