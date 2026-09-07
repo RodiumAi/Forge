@@ -84,6 +84,7 @@ import {
   createProjectRefAttachment,
   parseUserMessageContent,
   revokePromptAttachment,
+  selectionChipLabel,
 } from "@/lib/prompt-attachments";
 import { PAYLOAD_MAX_CHARS, PROMPT_MAX_CHARS } from "@/lib/constants/prompt";
 import { uploadPromptAttachments } from "@/lib/prompt-upload";
@@ -144,6 +145,8 @@ type SendOpts = {
    * Prefer over `editingMessageId` so "Relancer" can fire in the same tick.
    */
   branchFromId?: string | null;
+  /** Explicit selection (resend/edit) — wins over composer state when set. */
+  selection?: ElementSelection | null;
 };
 
 type ChatRetryAction =
@@ -296,17 +299,6 @@ function isNetworkStreamError(err: unknown): boolean {
   if (isRecoverableStreamError(err)) return true;
   const raw = err instanceof Error ? err.message : String(err || "");
   return /aborted/i.test(raw);
-}
-
-/** Human label for the selection chip — never the raw CSS selector path.
- *  Prefers #id, then tag + a short text excerpt (e.g. `nav · “PromptVault”`). */
-function selectionChipLabel(sel: ElementSelection): string {
-  if (sel.id) return `#${sel.id}`;
-  const tag = (sel.tag || "element").toLowerCase();
-  const text = (sel.text || "").trim().replace(/\s+/g, " ");
-  if (!text) return tag;
-  const excerpt = text.length > 28 ? `${text.slice(0, 28)}…` : text;
-  return `${tag} · “${excerpt}”`;
 }
 
 export default function ProjectPage() {
@@ -1416,6 +1408,9 @@ export default function ProjectPage() {
             if (abortCtrl.signal.aborted || (err instanceof Error && err.name === "AbortError")) {
               return;
             }
+            // Terminal SSE error is rethrown by handleStreamEvent after
+            // sawTerminal=true — surface it, do not retry the empty buffer.
+            if (sawTerminal || detached) throw err;
             attempts += 1;
             if (attempts > 5) throw err;
             await new Promise((resolve) => setTimeout(resolve, Math.min(8_000, 500 * 2 ** attempts)));
@@ -1492,6 +1487,17 @@ export default function ProjectPage() {
       setInput(parsed.text);
       setEditingMessageId(messageId);
       setAttachments(restorePromptAttachments(content, messageAttachments));
+      setElementSelection(
+        parsed.selection
+          ? {
+              tag: parsed.selection.tag,
+              id: parsed.selection.id ?? null,
+              className: parsed.selection.className ?? null,
+              selector: parsed.selection.selector || "",
+              text: parsed.selection.text || "",
+            }
+          : null,
+      );
       setError(null);
       textareaRef.current?.focus();
     },
@@ -1502,6 +1508,7 @@ export default function ProjectPage() {
     setEditingMessageId(null);
     setInput("");
     setAttachments([]);
+    setElementSelection(null);
   }, []);
 
   const dismissPlan = useCallback(async () => {
@@ -1626,9 +1633,13 @@ export default function ProjectPage() {
         return;
       }
 
-      const withSelection = elementSelection
-        ? `${formatElementSelectionMarker(elementSelection, t("selectionMarker"))}\n\n${content}`.trim()
-        : content;
+      const withSelection = (() => {
+        const sel =
+          opts.selection !== undefined ? opts.selection : elementSelection;
+        return sel
+          ? `${formatElementSelectionMarker(sel, t("selectionMarker"))}\n\n${content}`.trim()
+          : content;
+      })();
       const built = await buildPromptWithAttachments(withSelection, uploaded, {
         importFiles: t("importFiles"),
         imageAttached: t("promptImageAttached"),
@@ -1748,6 +1759,9 @@ export default function ProjectPage() {
       streamAbortRef.current?.abort();
       const abortCtrl = new AbortController();
       streamAbortRef.current = abortCtrl;
+      // Hoisted so the catch can tell a real transport drop apart from an SSE
+      // `error` frame that handleStreamEvent rethrows as StreamFailure.
+      let sawTerminal = false;
 
       try {
         const endpoint = isBranch
@@ -1803,7 +1817,6 @@ export default function ProjectPage() {
 
         setStreamActive(true);
 
-        let sawTerminal = false;
         await readSseStream(res, async (payloadEvent) => {
           const type = String(payloadEvent.type || "");
           if (type === "done" || type === "error") sawTerminal = true;
@@ -1825,8 +1838,12 @@ export default function ProjectPage() {
         }
         // Network drop mid-run: the backend keeps executing and buffers every
         // event — reattach to the run stream instead of erroring + resetting.
+        // Only when we never saw a terminal SSE frame. handleStreamEvent throws
+        // StreamFailure on `type:error` (sawTerminal already true); treating that
+        // as a transport drop reconnected to /events for single-pass runs that
+        // never publish a buffer — UI stuck on "Analyse de la demande".
         const dropRunId = streamingRunIdRef.current;
-        if (dropRunId && isNetworkStreamError(err)) {
+        if (dropRunId && !sawTerminal && isNetworkStreamError(err)) {
           await subscribeRunEvents(dropRunId);
           return;
         }
@@ -1879,7 +1896,20 @@ export default function ProjectPage() {
       setEditingMessageId(null);
       setInput("");
       setAttachments([]);
-      void sendMessage(parsed.text, restored, { branchFromId: messageId });
+      setElementSelection(null);
+      const selection = parsed.selection
+        ? {
+            tag: parsed.selection.tag,
+            id: parsed.selection.id ?? null,
+            className: parsed.selection.className ?? null,
+            selector: parsed.selection.selector || "",
+            text: parsed.selection.text || "",
+          }
+        : null;
+      void sendMessage(parsed.text, restored, {
+        branchFromId: messageId,
+        selection,
+      });
     },
     [busy, restorePromptAttachments, sendMessage],
   );
@@ -1989,6 +2019,7 @@ export default function ProjectPage() {
     streamAbortRef.current?.abort();
     const abortCtrl = new AbortController();
     streamAbortRef.current = abortCtrl;
+    let sawTerminal = false;
     try {
       const res = await fetch(
         `${apiBase()}/projects/${projectId}/chats/${chatId}/runs/${activeRunId}/confirm-plan`,
@@ -2033,6 +2064,8 @@ export default function ProjectPage() {
       const stateRef = seedStreamState();
       setStreamActive(true);
       await readSseStream(res, async (payloadEvent) => {
+        const type = String(payloadEvent.type || "");
+        if (type === "done" || type === "error") sawTerminal = true;
         handleStreamEvent(payloadEvent, {
           stateRef,
           userPayload: "",
@@ -2045,8 +2078,9 @@ export default function ProjectPage() {
       }
       // Network drop mid-plan: the run keeps going server-side — reattach to
       // the buffered event stream instead of flipping tasks back to pending.
+      // Skip when we already got a terminal SSE error (see sendMessage).
       const dropRunId = streamingRunIdRef.current || activeRunId;
-      if (dropRunId && isNetworkStreamError(err)) {
+      if (dropRunId && !sawTerminal && isNetworkStreamError(err)) {
         await subscribeRunEvents(dropRunId);
         return;
       }
@@ -2609,7 +2643,7 @@ export default function ProjectPage() {
                   >
                     <span className="selection-chip-count">1</span>
                     <span>
-                      {t("selectionBadge")}
+                      {t("selectionMarker")}
                       {` · ${selectionChipLabel(elementSelection)}`}
                     </span>
                     <span aria-hidden>×</span>

@@ -6,8 +6,10 @@ import { Icon } from "@/components/ui/icon";
 import { FileTypeIcon } from "@/components/builder/file-icons";
 import { assetContentUrl, isPrivateUploadUrl, projectPublicUrl } from "@/lib/asset-url";
 import { useMediaToken } from "@/lib/media-token";
+import { useI18n } from "@/lib/i18n/I18nProvider";
 import {
   parseUserMessageContent,
+  selectionChipLabel,
   type MessageAttachment,
 } from "@/lib/prompt-attachments";
 
@@ -121,6 +123,7 @@ function AttachmentThumb({
 export function UserMessageBody({ content, attachments, previewBase, projectId }: Props) {
   // Re-render when the read-only media token arrives so public/ thumbs resolve.
   useMediaToken();
+  const { t } = useI18n();
   const parsed = parseUserMessageContent(content);
   // Prefer parsed (durable object ids / public paths from content) over stale blobs.
   const files =
@@ -144,6 +147,18 @@ export function UserMessageBody({ content, attachments, previewBase, projectId }
 
   return (
     <div className="builder-msg-body builder-msg-user-body">
+      {parsed.selection ? (
+        <div
+          className="builder-msg-selection"
+          title={parsed.selection.selector || undefined}
+        >
+          <span className="builder-msg-selection-count">1</span>
+          <span>
+            {t("selectionMarker")}
+            {` · ${selectionChipLabel(parsed.selection)}`}
+          </span>
+        </div>
+      ) : null}
       {parsed.text ? <div className="builder-msg-text">{parsed.text}</div> : null}
       {files.length > 0 ? (
         <ul className="builder-msg-attachments">
