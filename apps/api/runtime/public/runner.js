@@ -50,12 +50,16 @@ const sendThumb = (payload) => {
       target = "";
     }
   }
-  if (!target) return;
-  try {
-    parent.postMessage(payload, target);
-  } catch {
-    /* ignore */
-  }
+  const tryPost = (origin) => {
+    try {
+      parent.postMessage(payload, origin);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  if (target && tryPost(target)) return;
+  tryPost("*");
 };
 
 window.onerror = (message, source, line, column, error) => {
@@ -447,7 +451,7 @@ let previousBlobs = null;
  * because forge:mounted fired on that empty frame. Wait until the tree has
  * content and at least one paint has committed.
  */
-async function waitForFirstPaint(timeoutMs = 8000) {
+async function waitForFirstPaint(timeoutMs = 4000) {
   const root = document.getElementById("root");
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
@@ -458,7 +462,13 @@ async function waitForFirstPaint(timeoutMs = 8000) {
     requestAnimationFrame(() => requestAnimationFrame(resolve));
   });
   try {
-    if (document.fonts && document.fonts.ready) await document.fonts.ready;
+    if (document.fonts && document.fonts.ready) {
+      // Unbounded fonts.ready hung dashboard thumbs when a webfont never loaded.
+      await Promise.race([
+        document.fonts.ready,
+        new Promise((resolve) => setTimeout(resolve, 400)),
+      ]);
+    }
   } catch {
     /* ignore */
   }
@@ -476,7 +486,7 @@ async function waitForFirstPaint(timeoutMs = 8000) {
             }),
         ),
       ),
-      new Promise((resolve) => setTimeout(resolve, 2500)),
+      new Promise((resolve) => setTimeout(resolve, 1200)),
     ]);
   }
 }
@@ -504,31 +514,71 @@ async function captureThumbSnapshot() {
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
 
-  try {
-    // Dynamic import only in thumb mode — never ship html2canvas to builder preview.
-    const mod = await import("https://esm.sh/html2canvas@1.4.1");
-    const html2canvas = mod.default || mod;
-    const shot = await html2canvas(document.body, {
-      width: w,
-      height: h,
-      windowWidth: w,
-      windowHeight: h,
-      scale,
-      useCORS: true,
-      allowTaint: true,
-      logging: false,
-      backgroundColor: "#111111",
-    });
-    return shot.toDataURL("image/jpeg", 0.7);
-  } catch {
-    // Fallback: solid frame so the parent can still release the live iframe.
+  const solid = () => {
     ctx.fillStyle = "#111111";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Hint of brand orange so "empty" thumbs are distinguishable from loading.
+    ctx.fillStyle = "rgba(242, 98, 10, 0.35)";
+    ctx.fillRect(0, 0, canvas.width, Math.round(canvas.height * 0.28));
     return canvas.toDataURL("image/jpeg", 0.7);
+  };
+
+  try {
+    // Cap the import+capture — esm.sh or a huge DOM must not block the parent
+    // grace timer (and leave dashboard cards stuck on shimmer).
+    const mod = await Promise.race([
+      import("https://esm.sh/html2canvas@1.4.1"),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("html2canvas-import-timeout")), 5000),
+      ),
+    ]);
+    const html2canvas = mod.default || mod;
+    const shot = await Promise.race([
+      html2canvas(document.body, {
+        width: w,
+        height: h,
+        windowWidth: w,
+        windowHeight: h,
+        scale,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        backgroundColor: "#111111",
+      }),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("html2canvas-timeout")), 6000),
+      ),
+    ]);
+    return shot.toDataURL("image/jpeg", 0.7);
+  } catch {
+    return solid();
   }
 }
 
 async function mount(files, entry, tokensCss, assets) {
+  // Thumb mode: hard deadline so a hung Babel/import still releases the
+  // dashboard card (parent grace alone left cards on shimmer forever).
+  let thumbWatchdog = 0;
+  let thumbSent = false;
+  const emitThumb = async () => {
+    if (!isThumbMode() || thumbSent) return;
+    thumbSent = true;
+    if (thumbWatchdog) window.clearTimeout(thumbWatchdog);
+    try {
+      const dataUrl = await captureThumbSnapshot();
+      if (dataUrl) sendThumb({ type: "forge:thumb-snapshot", dataUrl });
+    } catch {
+      /* ignore */
+    }
+    const rootClear = document.getElementById("root");
+    if (rootClear) rootClear.innerHTML = "";
+  };
+  if (isThumbMode()) {
+    thumbWatchdog = window.setTimeout(() => {
+      void emitThumb();
+    }, 12000);
+  }
+  try {
   if (assets && typeof assets.base === "string" && assets.base) ASSETS = assets;
   if (assets && typeof assets.routerBase === "string" && assets.routerBase) {
     window.__FORGE_PREVIEW_SHELL_BASE__ = assets.routerBase;
@@ -659,13 +709,6 @@ async function mount(files, entry, tokensCss, assets) {
       });
     }
     send({ type: "forge:mounted", entry });
-    if (isThumbMode()) {
-      const dataUrl = await captureThumbSnapshot();
-      if (dataUrl) sendThumb({ type: "forge:thumb-snapshot", dataUrl });
-      // Drop the live tree so the iframe is cheap until the parent removes it.
-      const rootClear = document.getElementById("root");
-      if (rootClear) rootClear.innerHTML = "";
-    }
   } catch (e) {
     send({
       type: "forge:error",
@@ -673,15 +716,6 @@ async function mount(files, entry, tokensCss, assets) {
       message: String(e?.message || e),
       stack: e?.stack,
     });
-    if (isThumbMode()) {
-      // Still release the dashboard slot with a placeholder frame.
-      try {
-        const dataUrl = await captureThumbSnapshot();
-        if (dataUrl) sendThumb({ type: "forge:thumb-snapshot", dataUrl });
-      } catch {
-        /* ignore */
-      }
-    }
     // Keep previous blobs if mount failed
     for (const url of blobUrls.values()) {
       try {
@@ -690,6 +724,11 @@ async function mount(files, entry, tokensCss, assets) {
         /* ignore */
       }
     }
+  }
+  } finally {
+    // Always notify the dashboard in thumb mode — early transform returns used
+    // to skip this and leave cards stuck on the loading shimmer forever.
+    await emitThumb();
   }
 }
 
@@ -700,6 +739,17 @@ window.addEventListener("message", (e) => {
   if (!data || typeof data !== "object") return;
   if (data.type === "forge:render") {
     void mount(data.files || {}, data.entry || "src/main.tsx", data.tokens || "", data.assets || null);
+  }
+  if (data.type === "forge:capture-thumb") {
+    // Builder asks for a persistent dashboard JPEG after an agent run.
+    void (async () => {
+      try {
+        const dataUrl = await captureThumbSnapshot();
+        if (dataUrl) sendThumb({ type: "forge:thumb-snapshot", dataUrl });
+      } catch {
+        /* ignore */
+      }
+    })();
   }
 });
 
