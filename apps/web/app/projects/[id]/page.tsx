@@ -50,6 +50,7 @@ import { PlanPanel, type PlanMeta, type PlanTask } from "@/components/PlanPanel"
 import { PromptFileChips } from "@/components/PromptFileChips";
 import { PromptAssetMention } from "@/components/PromptAssetMention";
 import { BuilderTopbar } from "@/components/builder/BuilderTopbar";
+import { BUILDER_SIDEBAR_KEY, HomeShell } from "@/components/HomeLayout";
 import { CodePane } from "@/components/builder/CodePane";
 import { CommentsPanel } from "@/components/builder/CommentsPanel";
 import { ResizableChatPanel } from "@/components/builder/ResizableChatPanel";
@@ -2198,6 +2199,13 @@ export default function ProjectPage() {
     Boolean(streamInlineError);
 
   return (
+    <HomeShell
+      activeNav={null}
+      fillMain
+      showTopbar={false}
+      storageKey={BUILDER_SIDEBAR_KEY}
+      defaultOpen={false}
+    >
     <div className="builder">
       <BuilderTopbar
         projectName={project?.name || ""}
@@ -2928,5 +2936,6 @@ export default function ProjectPage() {
         }}
       />
     </div>
+    </HomeShell>
   );
 }

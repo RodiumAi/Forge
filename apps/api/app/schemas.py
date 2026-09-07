@@ -192,6 +192,12 @@ class RodiumTestResponse(BaseModel):
     message: str
 
 
+class RodiumWalletByKeyOut(BaseModel):
+    balance_rodi: str | None = None
+    provided_total_rodi: str | None = None
+    reserved_rodi: str | None = None
+
+
 class PluginOut(BaseModel):
     id: str
     family: str

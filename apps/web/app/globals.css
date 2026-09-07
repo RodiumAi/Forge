@@ -6841,6 +6841,173 @@ body:has(.home) [data-next-mark] {
   margin-top: auto;
 }
 
+.home-sidebar-divider {
+  border: 0;
+  border-top: 1px solid var(--home-border-strong);
+  margin: 0.65rem 0.85rem 0.35rem;
+  opacity: 0.7;
+}
+
+.home-sidebar-key-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.25rem 0.85rem 0.5rem;
+  min-width: 0;
+}
+
+.home-sidebar-key-head {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--home-text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.home-sidebar-key-icon {
+  display: grid;
+  place-items: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  flex-shrink: 0;
+}
+
+.home-sidebar-key-label {
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.home-sidebar-key-hint {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--home-text-muted);
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-sidebar-key-select,
+.home-sidebar-key-input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--home-border-strong);
+  background: var(--home-chip);
+  color: var(--home-text);
+  border-radius: 8px;
+  padding: 0.35rem 0.45rem;
+  font-size: 0.78rem;
+}
+
+.home-sidebar-key-paste {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.home-sidebar-key-btn,
+.home-sidebar-key-link {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--home-text);
+  font-size: 0.75rem;
+  text-align: left;
+  cursor: pointer;
+  padding: 0.2rem 0;
+}
+
+.home-sidebar-key-btn {
+  border: 1px solid var(--home-border-strong);
+  background: var(--home-chip);
+  border-radius: 8px;
+  padding: 0.35rem 0.5rem;
+  text-align: center;
+}
+
+.home-sidebar-key-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.home-sidebar-key-link {
+  color: var(--home-text-muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.home-sidebar-key-error {
+  margin: 0;
+  font-size: 0.7rem;
+  color: #c44;
+}
+
+.home-sidebar-wallet {
+  padding: 0.15rem 0.85rem 0.55rem;
+  min-width: 0;
+}
+
+.home-sidebar-wallet .rodium-wallet-wrap {
+  width: 100%;
+  justify-content: space-between;
+}
+
+.home-sidebar-collapsed .home-sidebar-divider,
+.home-sidebar-collapsed .home-sidebar-key-label,
+.home-sidebar-collapsed .home-sidebar-key-hint,
+.home-sidebar-collapsed .home-sidebar-key-select,
+.home-sidebar-collapsed .home-sidebar-key-paste,
+.home-sidebar-collapsed .home-sidebar-key-btn,
+.home-sidebar-collapsed .home-sidebar-key-link,
+.home-sidebar-collapsed .home-sidebar-key-error {
+  display: none;
+}
+
+.home-sidebar-collapsed .home-sidebar-key-block {
+  align-items: center;
+  padding: 0.25rem 0;
+}
+
+.home-sidebar-collapsed .home-sidebar-wallet {
+  padding: 0.15rem 0;
+  display: flex;
+  justify-content: center;
+}
+
+.home-sidebar-collapsed .rodium-wallet-wrap-compact .rodium-wallet-main span,
+.home-sidebar-collapsed .rodium-wallet-provided {
+  display: none;
+}
+
+.home-sidebar-collapsed .rodium-wallet-connect-compact {
+  font-size: 0;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+}
+
+.home-sidebar-collapsed .rodium-wallet-connect-compact::before {
+  content: "+";
+  font-size: 0.95rem;
+  color: var(--home-text-muted);
+}
+
+.home-scroll-fill > .builder {
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
+}
+
+.home-scroll-fill {
+  display: flex;
+  flex-direction: column;
+}
+
 .home-sidebar-toggle:hover {
   border-color: var(--home-border-strong);
   color: var(--home-text);
