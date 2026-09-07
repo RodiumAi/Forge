@@ -47,7 +47,7 @@ function initialFromCache() {
   };
 }
 
-export function RodiumWalletBadge() {
+export function RodiumWalletBadge({ compact = false }: { compact?: boolean }) {
   const { t, locale } = useI18n();
   const [wallet, setWallet] = useState<SessionWallet | null>(() => initialFromCache().wallet);
   const [linked, setLinked] = useState(() => initialFromCache().linked);
@@ -77,7 +77,6 @@ export function RodiumWalletBadge() {
       void refreshRodiumWallet();
     };
 
-    // Always fresh on mount — soft TTL previously froze the login-time balance.
     pull();
 
     const onFocus = () => pull();
@@ -96,17 +95,33 @@ export function RodiumWalletBadge() {
     };
   }, []);
 
-  // Avoid flashing the connect CTA before session cache has spoken.
-  if (!hydrated && !linked) return null;
+  const hasWallet =
+    wallet != null &&
+    (wallet.balance_rodi != null || wallet.provided_total_rodi != null);
 
-  if (!linked) {
+  // Avoid flashing the connect CTA before session cache has spoken.
+  if (!hydrated && !linked && !hasWallet) return null;
+
+  if (!hasWallet && !linked) {
     return (
       <Link
         href="/settings?tab=generation"
-        className="rodium-wallet-connect"
+        className={`rodium-wallet-connect${compact ? " rodium-wallet-connect-compact" : ""}`}
         title={t("connectRodiumAiHint")}
       >
-        {t("connectRodiumAi")}
+        {compact ? t("connectRodiumAiShort") : t("connectRodiumAi")}
+      </Link>
+    );
+  }
+
+  if (!hasWallet) {
+    return (
+      <Link
+        href="/settings?tab=generation"
+        className={`rodium-wallet-connect${compact ? " rodium-wallet-connect-compact" : ""}`}
+        title={t("connectRodiumAiHint")}
+      >
+        {compact ? "RODI" : t("connectRodiumAi")}
       </Link>
     );
   }
@@ -117,7 +132,7 @@ export function RodiumWalletBadge() {
   const showProvided = Number.isFinite(providedNum) && providedNum > 0;
 
   return (
-    <div className="rodium-wallet-wrap">
+    <div className={`rodium-wallet-wrap${compact ? " rodium-wallet-wrap-compact" : ""}`}>
       <Link
         href="/settings?tab=generation"
         className="rodium-wallet-badge"
@@ -131,7 +146,7 @@ export function RodiumWalletBadge() {
           <strong>{balance}</strong>
           <span>RODI</span>
         </span>
-        {showProvided ? (
+        {showProvided && !compact ? (
           <span className="rodium-wallet-provided">
             {provided} {t("walletProvidedShort")}
           </span>

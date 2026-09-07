@@ -214,6 +214,9 @@ let walletFlight: Promise<SessionWallet | null> | null = null;
 /**
  * Always re-fetch RodiumAi wallet (bypasses soft TTL). Use after generation
  * or when the badge becomes visible again.
+ *
+ * Prefers OIDC Nest wallet when linked; falls back to pasted API key via
+ * GET /settings/rodium/wallet (gateway /v1/wallet/balance).
  */
 export async function refreshRodiumWallet(): Promise<SessionWallet | null> {
   const token = getToken();
@@ -225,35 +228,59 @@ export async function refreshRodiumWallet(): Promise<SessionWallet | null> {
 
   walletFlight = (async () => {
     try {
-      const acc = await api<{
-        linked: boolean;
-        wallet?: SessionWallet | null;
-        name?: string | null;
-        avatar_url?: string | null;
-        email?: string;
-      }>("/auth/rodium/account?fresh=1");
-
       const prev = getSessionSnapshot();
-      const profile: SessionProfile | null = prev?.profile
-        ? {
-            ...prev.profile,
-            email: acc.email || prev.profile.email,
-            name: acc.name ?? prev.profile.name,
-            avatar_url: acc.avatar_url ?? prev.profile.avatar_url,
-            rodium_linked: Boolean(acc.linked),
-          }
-        : acc.email
+      let wallet: SessionWallet | null = prev?.rodium?.wallet ?? null;
+      let linked = Boolean(prev?.rodium?.linked || prev?.profile?.rodium_linked);
+      let profile = prev?.profile ?? null;
+
+      try {
+        const acc = await api<{
+          linked: boolean;
+          wallet?: SessionWallet | null;
+          name?: string | null;
+          avatar_url?: string | null;
+          email?: string;
+          rodium_sub?: string | null;
+        }>("/auth/rodium/account?fresh=1");
+
+        linked = Boolean(acc.linked);
+        if (acc.wallet) wallet = acc.wallet;
+        profile = profile
           ? {
-              email: acc.email,
-              name: acc.name,
-              avatar_url: acc.avatar_url,
-              rodium_linked: Boolean(acc.linked),
+              ...profile,
+              email: acc.email || profile.email,
+              name: acc.name ?? profile.name,
+              avatar_url: acc.avatar_url ?? profile.avatar_url,
+              rodium_linked: linked,
+              rodium_sub: acc.rodium_sub ?? profile.rodium_sub ?? null,
             }
-          : prev?.profile ?? null;
+          : acc.email
+            ? {
+                email: acc.email,
+                name: acc.name,
+                avatar_url: acc.avatar_url,
+                rodium_linked: linked,
+                rodium_sub: acc.rodium_sub ?? null,
+              }
+            : profile;
+      } catch {
+        /* OIDC account may be unavailable — try key path below */
+      }
+
+      if (!wallet) {
+        try {
+          const byKey = await api<SessionWallet>("/settings/rodium/wallet");
+          if (byKey && (byKey.balance_rodi != null || byKey.provided_total_rodi != null)) {
+            wallet = byKey;
+          }
+        } catch {
+          /* no pasted key / gateway error */
+        }
+      }
 
       const rodium: SessionRodium = {
-        linked: Boolean(acc.linked),
-        wallet: acc.wallet ?? null,
+        linked,
+        wallet,
       };
       const snap: SessionSnapshot = {
         tokenFp: tokenFingerprint(token),
@@ -263,7 +290,7 @@ export async function refreshRodiumWallet(): Promise<SessionWallet | null> {
       };
       writeStorage(snap);
       notify(snap);
-      return rodium.wallet ?? null;
+      return wallet;
     } catch {
       return getSessionSnapshot()?.rodium?.wallet ?? null;
     } finally {

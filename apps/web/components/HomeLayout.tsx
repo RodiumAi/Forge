@@ -3,6 +3,7 @@
 import { BrandLogo } from "@/components/BrandLogo";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import { RodiumWalletBadge } from "@/components/RodiumWalletBadge";
+import { SidebarApiKeyBlock } from "@/components/SidebarApiKeyBlock";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { Icon } from "@/components/ui/icon";
 import { LocaleSwitch, useI18n } from "@/lib/i18n/I18nProvider";
@@ -17,35 +18,46 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 export const SIDEBAR_KEY = "forge_home_sidebar";
+export const BUILDER_SIDEBAR_KEY = "forge_builder_sidebar";
 
-export type HomeNavItem = "projects" | "templates" | "settings";
+export type HomeNavItem = "projects" | "templates" | "settings" | null;
 
-type HomeLayoutProps = {
+type HomeShellProps = {
   children: React.ReactNode;
   activeNav: HomeNavItem;
   fillMain?: boolean;
+  showTopbar?: boolean;
+  storageKey?: string;
+  defaultOpen?: boolean;
 };
 
-export function HomeLayout({
+export function HomeShell({
   children,
   activeNav,
   fillMain = false,
-}: HomeLayoutProps) {
+  showTopbar = true,
+  storageKey = SIDEBAR_KEY,
+  defaultOpen = true,
+}: HomeShellProps) {
   const { t } = useI18n();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(defaultOpen);
 
   useEffect(() => {
-    const stored = localStorage.getItem(SIDEBAR_KEY);
+    const stored = localStorage.getItem(storageKey);
     if (stored !== null) {
       setSidebarOpen(stored === "1");
       return;
     }
-    setSidebarOpen(window.innerWidth > 900);
-  }, []);
+    if (defaultOpen) {
+      setSidebarOpen(window.innerWidth > 900);
+    } else {
+      setSidebarOpen(false);
+    }
+  }, [storageKey, defaultOpen]);
 
   function setSidebar(next: boolean) {
     setSidebarOpen(next);
-    localStorage.setItem(SIDEBAR_KEY, next ? "1" : "0");
+    localStorage.setItem(storageKey, next ? "1" : "0");
   }
 
   return (
@@ -99,6 +111,13 @@ export function HomeLayout({
             <span className="home-sidebar-label">{t("settings")}</span>
           </Link>
         </nav>
+
+        <hr className="home-sidebar-divider" />
+        <SidebarApiKeyBlock />
+        <div className="home-sidebar-wallet">
+          <RodiumWalletBadge compact />
+        </div>
+
         <button
           type="button"
           className="home-sidebar-toggle"
@@ -115,20 +134,39 @@ export function HomeLayout({
       </aside>
 
       <div className={`home-main ${fillMain ? "home-main-fill" : ""}`}>
-        <header className="home-topbar">
-          <div className="home-topbar-spacer" />
-          <div className="home-topbar-actions">
-            <RodiumWalletBadge />
-            <ThemeSwitch />
-            <LocaleSwitch />
-            <ProfileMenu />
-          </div>
-        </header>
+        {showTopbar ? (
+          <header className="home-topbar">
+            <div className="home-topbar-spacer" />
+            <div className="home-topbar-actions">
+              <ThemeSwitch />
+              <LocaleSwitch />
+              <ProfileMenu />
+            </div>
+          </header>
+        ) : null}
 
         <div className={`home-scroll ${fillMain ? "home-scroll-fill" : ""}`}>
           {children}
         </div>
       </div>
     </div>
+  );
+}
+
+type HomeLayoutProps = {
+  children: React.ReactNode;
+  activeNav: Exclude<HomeNavItem, null>;
+  fillMain?: boolean;
+};
+
+export function HomeLayout({
+  children,
+  activeNav,
+  fillMain = false,
+}: HomeLayoutProps) {
+  return (
+    <HomeShell activeNav={activeNav} fillMain={fillMain} showTopbar>
+      {children}
+    </HomeShell>
   );
 }

@@ -12,11 +12,12 @@ from app.schemas import (
     RodiumKeyUpdate,
     RodiumTestRequest,
     RodiumTestResponse,
+    RodiumWalletByKeyOut,
     SettingsOut,
     SettingsUpdate,
 )
 from app.services.llm import RodiumError
-from app.services.rodium import verify_rodium_api_key
+from app.services.rodium import fetch_wallet_balance_by_api_key, verify_rodium_api_key
 from app.services.rodium_generation import has_generation_key
 
 router = APIRouter(prefix="/settings", tags=["settings"])
@@ -127,6 +128,38 @@ def update_rodium_key(
     db.commit()
     db.refresh(row)
     return _rodium_key_out(db, user, row)
+
+
+@router.get("/rodium/wallet", response_model=RodiumWalletByKeyOut)
+async def get_rodium_wallet_by_key(
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> RodiumWalletByKeyOut:
+    """Balance via stored pasted API key (main + provided). Hidden gateway route."""
+    locale = resolve_locale(request)
+    row = _get_or_create_settings(db, user)
+    if not row.rodium_api_key_encrypted:
+        raise HTTPException(status_code=400, detail=t("rodium_key_required", locale))
+    try:
+        api_key = decrypt_secret(row.rodium_api_key_encrypted)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=t("rodium_key_unreadable", locale)) from exc
+
+    try:
+        raw = await fetch_wallet_balance_by_api_key(api_key, locale)
+    except RodiumError as exc:
+        raise HTTPException(status_code=exc.status_code or 502, detail=str(exc)) from exc
+
+    return RodiumWalletByKeyOut(
+        balance_rodi=str(raw.get("balance_rodi")) if raw.get("balance_rodi") is not None else None,
+        provided_total_rodi=(
+            str(raw.get("provided_total_rodi"))
+            if raw.get("provided_total_rodi") is not None
+            else None
+        ),
+        reserved_rodi=str(raw.get("reserved_rodi")) if raw.get("reserved_rodi") is not None else None,
+    )
 
 
 @router.post("/rodium/test", response_model=RodiumTestResponse)
