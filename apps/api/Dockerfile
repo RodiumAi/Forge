@@ -1,7 +1,7 @@
 # Build from repository root (Forge monorepo):
 #   docker build --platform linux/amd64 -f apps/api/Dockerfile -t forge-api .
 #
-# Local compose still uses context apps/api — see docker-compose.yml.
+# docker-compose.yml uses the same root context + this Dockerfile.
 
 FROM python:3.12-slim
 
@@ -22,7 +22,11 @@ COPY apps/api/runtime ./runtime
 COPY data/templates ./data/templates
 
 WORKDIR /app/runtime
-RUN npm ci --omit=dev
+# Preview iframe loads /runner/babel.min.js — vendor file is not committed
+# (~3MB). Copy from the already-pinned @babel/standalone install instead.
+RUN npm ci --omit=dev \
+  && cp node_modules/@babel/standalone/babel.min.js public/babel.min.js \
+  && test -s public/babel.min.js
 WORKDIR /app
 
 ENV PYTHONUNBUFFERED=1 \

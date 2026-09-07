@@ -5,6 +5,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
+    "postinstall": "node scripts/ensure-babel-standalone.mjs",
     "test": "node --test tests/*.test.mjs",
     "transform": "node cli.mjs"
   },
