@@ -12,7 +12,7 @@ import {
 } from "react";
 import Link from "next/link";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ArrowUp, ListTodo, Pencil, Plus, Square } from "lucide-react";
+import { ArrowUp, ListTodo, Pencil, Plus, RotateCcw, Square, X } from "lucide-react";
 import { api, apiBase, ApiError, getToken, logoutToHome, readApiError } from "@/lib/api";
 import {
   classifyChatError,
@@ -138,6 +138,11 @@ type Message = {
 type SendOpts = {
   bootKey?: string;
   skipUserBubble?: boolean;
+  /**
+   * Re-run from this user message (truncate later turns).
+   * Prefer over `editingMessageId` so "Relancer" can fire in the same tick.
+   */
+  branchFromId?: string | null;
 };
 
 type ChatRetryAction =
@@ -1454,19 +1459,15 @@ export default function ProjectPage() {
     void subscribeRunEvents(rid);
   }, [activeRunId, chatId, subscribeRunEvents]);
 
-  const startEditMessage = useCallback(
-    (messageId: string, content: string, messageAttachments?: MessageAttachment[] | null) => {
-      if (busy) return;
-      if (messageId.startsWith("local") || messageId === "boot-user") return;
+  const restorePromptAttachments = useCallback(
+    (content: string, messageAttachments?: MessageAttachment[] | null) => {
       const parsed = parseUserMessageContent(content);
-      setInput(parsed.text);
-      setEditingMessageId(messageId);
       // Prefer structured message attachments; fall back to markers in content.
       const sources =
         messageAttachments && messageAttachments.length > 0
           ? messageAttachments
           : parsed.attachments;
-      const restored = sources
+      return sources
         .map((a) => {
           const url = (a.publicUrl || a.publicPath || a.previewUrl || "").trim();
           if (!url) return null;
@@ -1478,11 +1479,22 @@ export default function ProjectPage() {
           });
         })
         .filter((a): a is NonNullable<typeof a> => a != null);
-      setAttachments(restored);
+    },
+    [],
+  );
+
+  const startEditMessage = useCallback(
+    (messageId: string, content: string, messageAttachments?: MessageAttachment[] | null) => {
+      if (busy) return;
+      if (messageId.startsWith("local") || messageId === "boot-user") return;
+      const parsed = parseUserMessageContent(content);
+      setInput(parsed.text);
+      setEditingMessageId(messageId);
+      setAttachments(restorePromptAttachments(content, messageAttachments));
       setError(null);
       textareaRef.current?.focus();
     },
-    [busy],
+    [busy, restorePromptAttachments],
   );
 
   const cancelEditMessage = useCallback(() => {
@@ -1650,7 +1662,8 @@ export default function ProjectPage() {
       }));
 
       const mode: AgentMode = planMode ? "plan" : "agent";
-      const branchFromId = editingMessageId;
+      const branchFromId =
+        opts.branchFromId !== undefined ? opts.branchFromId : editingMessageId;
       const isBranch = Boolean(
         branchFromId &&
           !branchFromId.startsWith("local") &&
@@ -1852,6 +1865,22 @@ export default function ProjectPage() {
       }
     },
     [busy, chatId, editingMessageId, elementSelection, handleStreamEvent, locale, planMode, previewTool, projectId, pushChatError, pushStreamError, seedStreamState, subscribeRunEvents, syncBuilderUrl, t],
+  );
+
+  /** Re-run a user prompt as a branch without opening the editor. */
+  const resendMessage = useCallback(
+    (messageId: string, content: string, messageAttachments?: MessageAttachment[] | null) => {
+      if (busy) return;
+      if (messageId.startsWith("local") || messageId === "boot-user") return;
+      const parsed = parseUserMessageContent(content);
+      const restored = restorePromptAttachments(content, messageAttachments);
+      // Drop any in-progress edit draft — resend is an immediate branch.
+      setEditingMessageId(null);
+      setInput("");
+      setAttachments([]);
+      void sendMessage(parsed.text, restored, { branchFromId: messageId });
+    },
+    [busy, restorePromptAttachments, sendMessage],
   );
 
   /** Ambiguous visual edit → clear the notice and send a chat prompt instead. */
@@ -2375,15 +2404,26 @@ export default function ProjectPage() {
                       {!busy &&
                       !m.id.startsWith("local") &&
                       m.id !== "boot-user" ? (
-                        <button
-                          type="button"
-                          className="builder-msg-edit"
-                          title={t("editMessage")}
-                          aria-label={t("editMessage")}
-                          onClick={() => startEditMessage(m.id, m.content, m.attachments)}
-                        >
-                          <Icon icon={Pencil} className="ui-icon-sm" />
-                        </button>
+                        <div className="builder-msg-actions">
+                          <button
+                            type="button"
+                            className="builder-msg-action"
+                            title={t("resendMessage")}
+                            aria-label={t("resendMessage")}
+                            onClick={() => resendMessage(m.id, m.content, m.attachments)}
+                          >
+                            <Icon icon={RotateCcw} className="ui-icon-sm" />
+                          </button>
+                          <button
+                            type="button"
+                            className="builder-msg-action"
+                            title={t("editMessage")}
+                            aria-label={t("editMessage")}
+                            onClick={() => startEditMessage(m.id, m.content, m.attachments)}
+                          >
+                            <Icon icon={Pencil} className="ui-icon-sm" />
+                          </button>
+                        </div>
                       ) : null}
                       <UserMessageBody
                         content={m.content}
@@ -2571,7 +2611,19 @@ export default function ProjectPage() {
               {fileNotice && <p className="landing-file-notice">{fileNotice}</p>}
               {fileError && <p className="landing-file-error">{fileError}</p>}
               {editingMessageId ? (
-                <p className="builder-editing-hint">{t("editingMessage")}</p>
+                <div className="builder-editing-hint" role="status">
+                  <span>{t("editingMessage")}</span>
+                  <button
+                    type="button"
+                    className="builder-editing-cancel"
+                    title={t("cancelEdit")}
+                    aria-label={t("cancelEdit")}
+                    onClick={cancelEditMessage}
+                  >
+                    <Icon icon={X} className="ui-icon-sm" />
+                    <span>{t("cancelEdit")}</span>
+                  </button>
+                </div>
               ) : null}
               {input.length > PROMPT_MAX_CHARS - 1000 ? (
                 <p

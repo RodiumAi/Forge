@@ -3,12 +3,14 @@
 import { useEffect, useState } from "react";
 import { FileText, X } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
-import { assetContentUrl, isPrivateUploadUrl } from "@/lib/asset-url";
+import { assetContentUrl, isPrivateUploadUrl, projectPublicUrl } from "@/lib/asset-url";
 import { useI18n } from "@/lib/i18n/I18nProvider";
+import { useMediaToken } from "@/lib/media-token";
 import {
   attachmentName,
   attachmentObjectId,
   attachmentPreviewUrl,
+  attachmentPublicUrl,
   type PromptAttachment,
 } from "@/lib/prompt-attachments";
 
@@ -30,6 +32,11 @@ function resolveChipThumb(
     const durable = assetContentUrl(projectId, objectId);
     if (durable) return durable;
   }
+  const publicUrl = attachmentPublicUrl(item);
+  if (publicUrl && projectId && !/^https?:\/\//i.test(publicUrl) && !publicUrl.startsWith("blob:")) {
+    const viaPublic = projectPublicUrl(projectId, publicUrl);
+    if (viaPublic) return viaPublic;
+  }
   const preview = attachmentPreviewUrl(item);
   if (preview && !isPrivateUploadUrl(preview)) {
     return preview;
@@ -41,6 +48,7 @@ function resolveChipThumb(
 
 export function PromptFileChips({ items, onRemove, projectId, progress }: PromptFileChipsProps) {
   const { t } = useI18n();
+  useMediaToken();
   const [preview, setPreview] = useState<{ src: string; name: string } | null>(null);
 
   useEffect(() => {
