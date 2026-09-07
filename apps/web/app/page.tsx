@@ -217,6 +217,7 @@ export default function LandingPage() {
     return {
       importFiles: t("importFiles"),
       imageAttached: t("promptImageAttached"),
+      assetAttached: t("promptSiteAsset"),
       mdSection: t("promptMdSection"),
       txtSection: t("promptTxtSection"),
       pdfSection: t("promptPdfSection"),

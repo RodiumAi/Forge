@@ -52,9 +52,7 @@ class TestTokenVersion:
         db = MagicMock()
         db.get.return_value = user
 
-        resolved = auth_mod.get_current_user(
-            _request_with_bearer(token), _credentials(token), db
-        )
+        resolved = auth_mod.get_current_user(_request_with_bearer(token), _credentials(token), db)
         assert resolved is user
 
     def test_a_password_change_kills_outstanding_tokens(self):
@@ -76,9 +74,7 @@ class TestTokenVersion:
         db = MagicMock()
         db.get.return_value = user
 
-        assert auth_mod.get_current_user(
-            _request_with_bearer(legacy), _credentials(legacy), db
-        ) is user
+        assert auth_mod.get_current_user(_request_with_bearer(legacy), _credentials(legacy), db) is user
 
         user.token_version = 1
         with pytest.raises(HTTPException):
@@ -105,9 +101,7 @@ class _FakeTokenQuery:
         self._rows = rows
 
     def filter(self, *predicates):
-        return _FakeTokenQuery(
-            [row for row in self._rows if all(_matches(row, p) for p in predicates)]
-        )
+        return _FakeTokenQuery([row for row in self._rows if all(_matches(row, p) for p in predicates)])
 
     def first(self):
         return self._rows[0] if self._rows else None

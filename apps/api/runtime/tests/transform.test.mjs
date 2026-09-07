@@ -74,6 +74,35 @@ test("collectImports finds bare and relative", () => {
   assert.ok(imps.some((i) => i.specifier === "./X.js" && i.kind === "relative"));
 });
 
+test("collectImports ignores 'from' inside string literals after export", () => {
+  // Regression: Babel output of `children: "or start from"` was matched by a
+  // loose `export … from "…"` regex and reported as IMPORT_NOT_IN_MANIFEST
+  // with a garbage specifier containing /*#__PURE__*/_jsxs.
+  const src = `
+export function PromptHero({ onOpenStartFrom }) {
+  return (
+    <div>
+      <span>or start from</span>
+      <button type="button" onClick={() => onOpenStartFrom("Figma")}>Figma</button>
+    </div>
+  );
+}
+`;
+  const r = transform(src, "src/components/PromptHero.tsx");
+  assert.equal(r.error, null, JSON.stringify(r.error));
+  const imps = collectImports(r.code);
+  const bare = imps.filter((i) => i.kind === "bare").map((i) => i.specifier);
+  assert.ok(bare.every((s) => !s.includes("PURE") && !s.includes("jsxs")));
+  assert.ok(bare.includes("react/jsx-runtime"));
+});
+
+test("collectImports still finds re-exports", () => {
+  const code = `export { Button } from "./Button";\nexport * from "./icons";\n`;
+  const imps = collectImports(code);
+  assert.ok(imps.some((i) => i.specifier === "./Button"));
+  assert.ok(imps.some((i) => i.specifier === "./icons"));
+});
+
 test("IMPORT_NOT_IN_MANIFEST rejects unknown bare package", () => {
   const files = {
     "src/main.tsx": `import lodash from "lodash";\nexport const x = lodash;\n`,

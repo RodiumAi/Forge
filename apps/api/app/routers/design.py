@@ -13,9 +13,9 @@ from app.config import get_settings
 from app.db import get_db
 from app.i18n import resolve_locale, t
 from app.models import Project, User
+from app.services import history
 from app.services.attachments import ResolvedImage, resolve_image_part
 from app.services.capabilities import require_rodi_for_paid_capability
-from app.services import history
 from app.services.design_colors import apply_brand_color, merge_palettes, parse_palette
 from app.services.filesystem import project_dir, read_file, write_bytes, write_file
 from app.services.llm import RodiumError, complete_chat
@@ -219,9 +219,7 @@ def get_design_charter(
             palette=palette,
         )
     except FileNotFoundError:
-        palette = [
-            DesignPaletteColor(name=e.name, hex=e.hex) for e in parse_palette(css_text)
-        ]
+        palette = [DesignPaletteColor(name=e.name, hex=e.hex) for e in parse_palette(css_text)]
         return DesignCharterOut(
             brief=project.design_brief,
             exists=False,

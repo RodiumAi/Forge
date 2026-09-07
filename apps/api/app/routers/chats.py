@@ -57,6 +57,7 @@ from app.services.rodium_generation import resolve_generation_auth
 from app.services.sse import with_sse_heartbeats
 from app.services.tags import parse_forge_tags
 from app.services.text_plain import build_run_summary, to_plain_text
+from app.services.url_capture import enrich_prompt_with_site_url_captures
 
 router = APIRouter(tags=["chats"])
 
@@ -519,12 +520,7 @@ def get_active_run(
     # resumable statuses. A `partial` run from an old attempt used to keep
     # resurfacing its Resume button forever, even after a later run finished
     # cleanly and superseded it.
-    run = (
-        db.query(AgentRun)
-        .filter(AgentRun.chat_id == chat.id)
-        .order_by(AgentRun.created_at.desc())
-        .first()
-    )
+    run = db.query(AgentRun).filter(AgentRun.chat_id == chat.id).order_by(AgentRun.created_at.desc()).first()
     if run is None or run.status not in (
         "awaiting_plan_confirm",
         "awaiting_clarify",
@@ -625,6 +621,18 @@ async def send_message(
     mode = (body.mode or "agent").strip().lower()
     if mode not in ("agent", "plan"):
         mode = "agent"
+
+    try:
+        user_content = await enrich_prompt_with_site_url_captures(
+            project_id=str(project.id),
+            user_content=user_content,
+            locale=locale,
+        )
+    except RodiumError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail={"code": getattr(exc, "code", None) or "upstream", "message": str(exc)[:500]},
+        ) from exc
 
     prior_count = db.query(Message).filter(Message.chat_id == chat.id).count()
     force_scaffold = prior_count == 0
@@ -1015,6 +1023,7 @@ async def send_message(
                 auth=gen_auth,
                 model=route_model,
                 locale=locale,  # type: ignore[arg-type]
+                project_id=project_id_str,
             )
             with SessionLocal() as stream_db:
                 live = stream_db.get(AgentRun, run_pk)
@@ -1028,9 +1037,7 @@ async def send_message(
                 needs_confirm = _plan_requires_confirm(mode, route_task_class, plan)
                 live.status = "awaiting_plan_confirm" if needs_confirm else "running"
                 stream_db.commit()
-                history = (
-                    _history(stream_db, chat_id_pk) if not needs_confirm else []
-                )
+                history = _history(stream_db, chat_id_pk) if not needs_confirm else []
             yield _sse(
                 {
                     "type": "step",
@@ -1134,6 +1141,7 @@ async def submit_clarify(
                 auth=await resolve_gen_auth(),
                 model=run_model,
                 locale=locale,  # type: ignore[arg-type]
+                project_id=project_id_str,
             )
             run_row = db.get(AgentRun, run_pk)
             if run_row is None:
@@ -1338,6 +1346,18 @@ async def branch_messages(
     if mode not in ("agent", "plan"):
         mode = "agent"
 
+    try:
+        user_content = await enrich_prompt_with_site_url_captures(
+            project_id=str(project.id),
+            user_content=user_content,
+            locale=locale,
+        )
+    except RodiumError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail={"code": getattr(exc, "code", None) or "upstream", "message": str(exc)[:500]},
+        ) from exc
+
     anchor.content = user_content
     db.flush()
 
@@ -1491,6 +1511,7 @@ async def branch_messages(
                 auth=gen_auth,
                 model=route.model,
                 locale=locale,  # type: ignore[arg-type]
+                project_id=project_id_str,
             )
             live = db.get(AgentRun, run_pk)
             if live is None:

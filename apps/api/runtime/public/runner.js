@@ -234,8 +234,10 @@ const PRESETS = [
 const EXTENSIONS = [".tsx", ".ts", ".jsx", ".js"];
 const STATEMENT_IMPORT_RES = [
   /\bimport\s*["']([^"']+)["']\s*;?/g,
-  /\bimport\s+(?:type\s+)?[\s\S]*?\s+from\s*["']([^"']+)["']/g,
-  /\bexport\s+[\s\S]*?\s+from\s*["']([^"']+)["']/g,
+  // No quotes between `import` and `from` — avoids spanning into string
+  // literals like children: "or start from" after an `export function`.
+  /\bimport\s+(?:type\s+)?(?:[^"'`;]+?)\s+from\s*["']([^"']+)["']/g,
+  /\bexport\s+(?:type\s+)?(?:\*(?:\s+as\s+\w+)?|\{[^}]*\})\s+from\s*["']([^"']+)["']/g,
   /\bimport\s*\(\s*["']([^"']+)["']/g,
 ];
 
@@ -243,6 +245,13 @@ function classifySpecifier(specifier) {
   if (specifier.startsWith("./") || specifier.startsWith("../")) return "relative";
   if (specifier.startsWith("@/") || specifier.startsWith("/")) return "alias";
   return "bare";
+}
+
+function isPlausibleModuleSpecifier(specifier) {
+  if (!specifier || specifier.length > 200) return false;
+  if (/[\s\r\n{},;()]/.test(specifier)) return false;
+  if (/\/\*|\*\/|#__PURE__|_jsxs?/.test(specifier)) return false;
+  return true;
 }
 
 function collectImports(code) {
@@ -253,7 +262,7 @@ function collectImports(code) {
     let m;
     while ((m = re.exec(code))) {
       const specifier = m[1];
-      if (!specifier) continue;
+      if (!specifier || !isPlausibleModuleSpecifier(specifier)) continue;
       const absStart = m.index + m[0].lastIndexOf(specifier);
       const key = `${absStart}:${specifier}`;
       if (seen.has(key)) continue;

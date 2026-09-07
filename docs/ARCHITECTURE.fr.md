@@ -139,18 +139,48 @@ Dans l'iframe (`apps/api/runtime/`) :
 
 1. `transform.mjs` — Babel avec les presets React (runtime automatique) + TypeScript.
 2. Les specifiers nus sont vérifiés contre l'import map du document → `IMPORT_NOT_IN_MANIFEST`.
+   La collecte d'imports utilise des regex strictes (pas de guillemets entre
+   `import`/`export` et `from`) plus un filtre de plausibilité, pour qu'un
+   fragment Babel du type `/*#__PURE__*/_jsxs` ou le mot `from` dans une chaîne
+   (`"or start from"`) ne soit jamais pris pour un package.
 3. `topo.mjs` — tri topologique, levant `CIRCULAR_DEPENDENCY` avec le cycle.
 4. `rewrite.mjs` + `resolve.mjs` — chaque specifier est réécrit vers l'URL `blob:` déjà créée de sa dépendance. La résolution est **sensible à la casse** et comprend `@/` → `src/`.
 5. `await import(entryBlobUrl)`. Les anciens blobs sont révoqués en cas de succès, conservés en cas d'échec pour que l'erreur reste inspectable.
 
 L'import map n'est pas modifiable après chargement : c'est pourquoi les
 dépendances propres au projet doivent être injectées au rendu de la coquille
-(`?p=<uuid>`).
+(`?p=<uuid>`). Incrémentez le `?v=` de `runner.js` / `bridge.js` dans
+`preview_babel.py` quand le contrat du runner change, sinon le navigateur
+conserve un transform obsolète.
+
+**Pendant la génération, le builder masque l'overlay Babel bloquant**
+(`PreviewPane` `suppressErrorOverlay` tant que `busy || streamActive`). Les
+fichiers mid-plan sont souvent brièvement incohérents ; l'overlay revient une
+fois le run terminé si la preview est encore cassée.
 
 **L'épinglage d'origine est strict dans les deux sens.**
 `RUNNER_PARENT_ORIGINS` construit une liste blanche ; le runner refuse d'émettre
 ailleurs. Le code note que cela a été durci après qu'accepter n'importe quel port
 localhost eut permis à une page locale malveillante de lire le contenu de l'app.
+
+## Pièces jointes, logos et clonage d'URL
+
+Les images du prompt portent une **intention** (`apps/web/lib/prompt-attachments.ts`
++ `apps/api/app/services/attachments.py`) :
+
+| Intention | Label UI | Effet |
+|---|---|---|
+| `reference` | Capture de référence | Vision seule ; plans multi-pages si ≥2 références |
+| `asset` | Asset joint | Matérialisé sous `public/` (logo → `public/logo.*`) ; l'agent doit utiliser ces chemins et ne pas redessiner le logo |
+
+`reference` et `asset` **coexistent** sur le même message — une capture
+n'écrase plus un logo.
+
+Si l'utilisateur colle une URL de site public sans assez de captures de
+référence, l'API prend des screenshots desktop + mobile avec Playwright
+(`apps/api/app/services/url_capture.py`, branché dans `routers/chats.py`) et les
+ajoute en markers `intent:reference` avant le routage. Chromium est installé
+dans l'image API (`playwright install --with-deps chromium`).
 
 ## Publication
 

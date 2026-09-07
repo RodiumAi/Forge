@@ -80,6 +80,7 @@ import {
   formatElementSelectionMarker,
   insertMentionInTextarea,
   mergePromptAttachments,
+  createProjectRefAttachment,
   parseUserMessageContent,
   revokePromptAttachment,
 } from "@/lib/prompt-attachments";
@@ -1454,13 +1455,30 @@ export default function ProjectPage() {
   }, [activeRunId, chatId, subscribeRunEvents]);
 
   const startEditMessage = useCallback(
-    (messageId: string, content: string) => {
+    (messageId: string, content: string, messageAttachments?: MessageAttachment[] | null) => {
       if (busy) return;
       if (messageId.startsWith("local") || messageId === "boot-user") return;
       const parsed = parseUserMessageContent(content);
       setInput(parsed.text);
       setEditingMessageId(messageId);
-      setAttachments([]);
+      // Prefer structured message attachments; fall back to markers in content.
+      const sources =
+        messageAttachments && messageAttachments.length > 0
+          ? messageAttachments
+          : parsed.attachments;
+      const restored = sources
+        .map((a) => {
+          const url = (a.publicUrl || a.publicPath || a.previewUrl || "").trim();
+          if (!url) return null;
+          return createProjectRefAttachment({
+            id: a.objectId || a.name,
+            name: a.name,
+            public_url: url,
+            content_type: a.kind === "image" ? "image/*" : undefined,
+          });
+        })
+        .filter((a): a is NonNullable<typeof a> => a != null);
+      setAttachments(restored);
       setError(null);
       textareaRef.current?.focus();
     },
@@ -1601,6 +1619,7 @@ export default function ProjectPage() {
       const built = await buildPromptWithAttachments(withSelection, uploaded, {
         importFiles: t("importFiles"),
         imageAttached: t("promptImageAttached"),
+        assetAttached: t("promptSiteAsset"),
         mdSection: t("promptMdSection"),
         txtSection: t("promptTxtSection"),
         pdfSection: t("promptPdfSection"),
@@ -2361,7 +2380,7 @@ export default function ProjectPage() {
                           className="builder-msg-edit"
                           title={t("editMessage")}
                           aria-label={t("editMessage")}
-                          onClick={() => startEditMessage(m.id, m.content)}
+                          onClick={() => startEditMessage(m.id, m.content, m.attachments)}
                         >
                           <Icon icon={Pencil} className="ui-icon-sm" />
                         </button>
@@ -2686,6 +2705,7 @@ export default function ProjectPage() {
             projectId={projectId}
             remountKey={previewKey}
             renderNonce={renderNonce}
+            suppressErrorOverlay={working}
             onPreviewToolChange={(tool) => {
               setPreviewTool(tool);
               syncBuilderUrl({ previewTool: tool });

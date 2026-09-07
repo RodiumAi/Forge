@@ -116,9 +116,7 @@ def _raise_rodium_error(response: httpx.Response, locale: Locale) -> None:
                 "sign in with rodiumai",
             )
         ):
-            raise RodiumError(
-                t("rodium_session_expired", locale), response.status_code, ERR_AUTH_EXPIRED
-            )
+            raise RodiumError(t("rodium_session_expired", locale), response.status_code, ERR_AUTH_EXPIRED)
 
         raise RodiumError(t("rodium_invalid_key", locale), response.status_code, ERR_INVALID_KEY)
 

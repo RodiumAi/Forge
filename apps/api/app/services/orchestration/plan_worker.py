@@ -60,9 +60,7 @@ async def _execute_plan_job(
     with SessionLocal() as db:
         user = db.get(User, user_id)
         if user is None:
-            run_queue.publish_run_event(
-                rid, {"type": "error", "message": "User not found", "plan": tasks}
-            )
+            run_queue.publish_run_event(rid, {"type": "error", "message": "User not found", "plan": tasks})
             run_queue.release_run(rid)
             _running_tasks.pop(rid, None)
             return
@@ -122,9 +120,7 @@ async def _execute_plan_job(
                     # after the fact.
                     row.plan_meta_json = json.dumps(
                         {
-                            "failures": [
-                                {"code": code, "message": str(exc)[:300], "scope": "job"}
-                            ],
+                            "failures": [{"code": code, "message": str(exc)[:300], "scope": "job"}],
                             "model": model,
                             "finished_at": datetime.now(UTC).isoformat(),
                         },

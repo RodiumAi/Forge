@@ -44,6 +44,7 @@ Supporting services: **MinIO** (S3 uploads), **Valkey** (run queue / cancellatio
 - **ZIP export**: a real, runnable Vite project.
 - **24 templates**: see [docs/TEMPLATES.md](docs/TEMPLATES.md).
 - **Runtime manifest**: `packages.json` is the single source of truth for the import map, the AST allowlist, and Monaco types.
+- **Asset vs reference attachments**: logos land in `public/`; screenshots guide layout (and multi-page plans). Paste a site URL to auto-capture desktop/mobile references (Playwright).
 
 <p align="center">
   <img src="sc/preview.png" alt="Forge builder — chat and live preview" width="900" />

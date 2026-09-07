@@ -233,6 +233,8 @@ function unescapePdfString(value: string): string {
 export type PromptLabels = {
   importFiles: string;
   imageAttached: string;
+  /** Label for intent:asset markers (logo/favicon). Falls back to "Site asset". */
+  assetAttached?: string;
   mdSection: string;
   pdfSection: string;
   pdfEmpty: string;
@@ -240,7 +242,7 @@ export type PromptLabels = {
 };
 
 export const ATTACH_IMAGE_RE =
-  /\[(?:Reference screenshot|Capture de référence|Image attached|Image jointe):\s*([^\]]+)\]/gi;
+  /\[(?:Reference screenshot|Capture de référence|Image attached|Image jointe|Site asset|Asset joint):\s*([^\]]+)\]/gi;
 export const ATTACH_FILES_RE = /\[(?:Files|Fichiers):\s*([^\]]+)\]/gi;
 export const ATTACH_DOC_RE =
   /###\s+(?:Markdown file|Fichier Markdown|PDF content|Contenu PDF|Text file|Fichier texte|PDF attached[^:]*):\s*([^\n]+)\n+/gi;
@@ -264,16 +266,13 @@ function parseImageMarkerBody(body: string): {
   return { name, url, objectId };
 }
 
-function isAssetIntent(prompt: string, images: PromptAttachment[]): boolean {
-  // An explicit instruction ("use this as the logo/icon/…") always wins over
-  // the filename heuristic: ChatGPT/screenshot-style names ("Capture d'écran…",
-  // "ChatGPT Image…") used to force reference intent, so the asset was never
-  // materialized into public/ and the site shipped a private S3 URL.
-  if (EXPLICIT_ASSET_USE_RE.test(prompt)) return true;
-  if (images.some((img) => REFERENCE_FILENAME_RE.test(attachmentName(img)))) {
-    return false;
-  }
-  return images.some((img) => ASSET_FILENAME_RE.test(attachmentName(img)));
+function intentForImage(prompt: string, name: string): "asset" | "reference" {
+  // Per-file intent: a screenshot in the same message must not force the logo
+  // into reference mode (that caused the model to redraw the mark in SVG/CSS).
+  if (REFERENCE_FILENAME_RE.test(name)) return "reference";
+  if (ASSET_FILENAME_RE.test(name)) return "asset";
+  if (EXPLICIT_ASSET_USE_RE.test(prompt)) return "asset";
+  return "reference";
 }
 
 export function parseUserMessageContent(raw: string): {
@@ -362,7 +361,6 @@ export async function buildPromptWithAttachments(
 
   const images = attachments.filter((a) => a.kind === "image");
   const docs = attachments.filter((a) => a.kind === "md" || a.kind === "pdf" || a.kind === "txt");
-  const assetMode = isAssetIntent(trimmed, images);
 
   if (images.length) {
     // Structured markers only — vision/asset instructions are injected server-side
@@ -373,9 +371,14 @@ export async function buildPromptWithAttachments(
       const objectId = attachmentObjectId(img);
       const urlPart = url ? ` | url:${url}` : "";
       const objectPart = objectId ? ` | object:${objectId}` : "";
-      const intentPart = ` | intent:${assetMode ? "asset" : "reference"}`;
       const name = attachmentName(img);
-      chunks.push(`[${labels.imageAttached}: ${name}${urlPart}${objectPart}${intentPart}]`);
+      const intent = intentForImage(trimmed, name);
+      const intentPart = ` | intent:${intent}`;
+      const label =
+        intent === "asset"
+          ? labels.assetAttached || "Site asset"
+          : labels.imageAttached;
+      chunks.push(`[${label}: ${name}${urlPart}${objectPart}${intentPart}]`);
     }
   }
 

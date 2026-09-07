@@ -44,6 +44,7 @@ Services d'appui : **MinIO** (uploads S3), **Valkey** (file de runs / annulation
 - **Export ZIP** : un vrai projet Vite exécutable.
 - **24 templates** : voir [docs/TEMPLATES.md](docs/TEMPLATES.md).
 - **Manifest du runtime** : `packages.json` est la source unique de l'import map, de l'allowlist AST et des types Monaco.
+- **Assets vs captures** : les logos vont dans `public/` ; les captures guident la mise en page (et les plans multi-pages). Collez une URL de site pour capturer automatiquement desktop/mobile (Playwright).
 
 <p align="center">
   <img src="sc/preview.png" alt="Forge builder — chat et preview live" width="900" />

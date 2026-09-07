@@ -42,6 +42,12 @@ type Props = {
   /** Fired when the preview app navigates (hash / history) so the page picker can sync. */
   onPreviewPathChange?: (path: string) => void;
   sidePanel?: ReactNode;
+  /**
+   * While the agent is generating / repairing, hide the blocking Babel overlay
+   * so mid-run broken imports (IMPORT_NOT_IN_MANIFEST, etc.) don't interrupt UX.
+   * Errors still log to the console; the overlay returns once this is false.
+   */
+  suppressErrorOverlay?: boolean;
 };
 
 const WIDTH: Record<ViewportMode, string> = {
@@ -91,6 +97,7 @@ export function PreviewPane({
   onImageSelect,
   onPreviewPathChange,
   sidePanel,
+  suppressErrorOverlay = false,
 }: Props) {
   const { t } = useI18n();
   const [loadError, setLoadError] = useState(false);
@@ -110,6 +117,7 @@ export function PreviewPane({
   const onImageSelectRef = useRef(onImageSelect);
   const onPreviewPathChangeRef = useRef(onPreviewPathChange);
   const previewPathRef = useRef(previewPath);
+  const suppressErrorOverlayRef = useRef(suppressErrorOverlay);
   const navigateRetryTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   onVisualEditRef.current = onVisualEdit;
   onElementSelectRef.current = onElementSelect;
@@ -117,6 +125,7 @@ export function PreviewPane({
   onImageSelectRef.current = onImageSelect;
   onPreviewPathChangeRef.current = onPreviewPathChange;
   previewPathRef.current = previewPath;
+  suppressErrorOverlayRef.current = suppressErrorOverlay;
   desiredToolRef.current = previewTool;
 
   const runnerReadyRef = useRef(false);
@@ -192,7 +201,10 @@ export function PreviewPane({
         // Runtime error AFTER a successful mount: the site is still rendered —
         // opening the same app in a new tab shows no blocking overlay either.
         const afterMount = data.type === "forge:error" && appMountedRef.current;
-        if (benign || afterMount) {
+        // During agent generation / mid-plan repair the bundle is often briefly
+        // inconsistent (IMPORT_NOT_IN_MANIFEST, half-written files). Keep the
+        // canvas quiet and let verify/repair finish behind the scenes.
+        if (benign || afterMount || suppressErrorOverlayRef.current) {
           console.debug("[forge] preview runtime error (non-blocking):", msg);
           return;
         }
@@ -224,6 +236,14 @@ export function PreviewPane({
     appMountedRef.current = false;
     runnerReadyRef.current = false;
   }, [previewSrc]);
+
+  // Clear any stale blocking overlay when a run starts (or resumes).
+  useEffect(() => {
+    if (suppressErrorOverlay) {
+      setLoadError(false);
+      setBabelError(null);
+    }
+  }, [suppressErrorOverlay]);
 
   function clearNavigateRetries() {
     for (const id of navigateRetryTimers.current) clearTimeout(id);

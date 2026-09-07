@@ -328,6 +328,7 @@ class TestRepairHelpers:
         assert paths is not None
         assert "src/pages/Classes.tsx" in paths
         assert "src/App.tsx" in paths
-        assert "scaffold_fill" in format_findings_for_prompt(findings) or "stub" in format_findings_for_prompt(
-            findings
-        ).lower()
+        assert (
+            "scaffold_fill" in format_findings_for_prompt(findings)
+            or "stub" in format_findings_for_prompt(findings).lower()
+        )

@@ -498,12 +498,8 @@ def _send_verification_email(db: Session, user: User, locale: str) -> None:
     mail.send(mail.build_verify_email(user.email, url, locale))
 
 
-@router.post(
-    "/register", response_model=RegistrationResponse, status_code=status.HTTP_201_CREATED
-)
-def register(
-    body: RegisterRequest, request: Request, db: Session = Depends(get_db)
-) -> RegistrationResponse:
+@router.post("/register", response_model=RegistrationResponse, status_code=status.HTTP_201_CREATED)
+def register(body: RegisterRequest, request: Request, db: Session = Depends(get_db)) -> RegistrationResponse:
     """Create a local account. Returns no session — the address comes first.
 
     Signing someone in before they confirm would drop them into an empty
@@ -528,9 +524,7 @@ def register(
         db.flush()
     except IntegrityError as exc:  # lost a race on the unique index
         db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail=t("email_taken", locale)
-        ) from exc
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=t("email_taken", locale)) from exc
     db.add(UserSettings(user_id=user.id, default_model=get_settings().effective_default_model))
     db.commit()
     db.refresh(user)
@@ -700,9 +694,7 @@ async def oauth_firebase(
         if reason == "email_required":
             raise HTTPException(status_code=400, detail=t("oauth_email_required", locale)) from exc
         if reason == "unsupported_provider":
-            raise HTTPException(
-                status_code=400, detail=t("oauth_provider_unsupported", locale)
-            ) from exc
+            raise HTTPException(status_code=400, detail=t("oauth_provider_unsupported", locale)) from exc
         if reason == "firebase_not_configured":
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -743,9 +735,7 @@ async def oauth_firebase(
             )
             db.add(user)
             db.flush()
-            db.add(
-                UserSettings(user_id=user.id, default_model=get_settings().effective_default_model)
-            )
+            db.add(UserSettings(user_id=user.id, default_model=get_settings().effective_default_model))
 
     if link is None:
         db.add(

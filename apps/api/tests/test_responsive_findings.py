@@ -29,7 +29,9 @@ class TestViewportMeta:
         assert _codes(findings) == ["responsive.missing_viewport_meta"]
 
     def test_a_present_tag_passes(self):
-        html = '<html><head><meta name="viewport" content="width=device-width, initial-scale=1" /></head></html>'
+        html = (
+            '<html><head><meta name="viewport" content="width=device-width, initial-scale=1" /></head></html>'
+        )
         assert responsive_findings({"index.html": html}) == []
 
     def test_quoting_and_case_do_not_matter(self):

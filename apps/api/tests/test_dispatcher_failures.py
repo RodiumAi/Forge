@@ -256,7 +256,9 @@ class TestRetryBudget:
         assert _types(events, "done")[-1]["failed"][0]["attempts"] == 3
 
     def test_a_non_transient_error_is_tried_once_on_another_model(self, monkeypatch, stub_dispatcher):
-        monkeypatch.setattr(dispatcher, "fallback_model", lambda m: None if m == "other/model" else "other/model")
+        monkeypatch.setattr(
+            dispatcher, "fallback_model", lambda m: None if m == "other/model" else "other/model"
+        )
         tasks = _plan("refused")
         models: list[str] = []
 
@@ -367,7 +369,11 @@ class TestStructuralFailureStopsThePlan:
         monkeypatch.setattr(
             verify_build,
             "verify_project_build",
-            lambda _p: [VerifyFinding(code="entry.createRoot", severity="critical", path="src/main.tsx", message="boom")],
+            lambda _p: [
+                VerifyFinding(
+                    code="entry.createRoot", severity="critical", path="src/main.tsx", message="boom"
+                )
+            ],
         )
         tasks = _plan("architecture", "pages")
 

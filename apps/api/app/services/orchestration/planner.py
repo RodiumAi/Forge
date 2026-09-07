@@ -7,11 +7,13 @@ import logging
 import re
 from typing import Any
 
+from app.db import SessionLocal
 from app.i18n import Locale, t
+from app.services.attachments import count_markers_by_intent, enrich_user_message_with_vision
 from app.services.llm import RodiumError, complete_chat
+from app.services.rodium_generation import RodiumGenerationAuth
 
 logger = logging.getLogger("planner")
-from app.services.rodium_generation import RodiumGenerationAuth
 
 _VAGUE_RE = re.compile(
     r"\b(truc|machin|quelque\s*chose|something|stuff|nice|beau|moderne|cool|joli|"
@@ -412,25 +414,47 @@ async def build_plan(
     auth: RodiumGenerationAuth,
     model: str,
     locale: Locale = "en",
+    project_id: str | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, str]]:
     """Build a short task plan plus display meta (title/summary).
 
     Returns ``(tasks, meta)`` where ``meta`` is ``{"title","summary"}`` (either
-    key may be missing when the LLM answer lacks them or the fallback is used).
-    Falls back to templates if the LLM fails.
+    key may be missing when the LLM answer lacks them).
+
+    On LLM / parse failure this **raises** ``RodiumError`` so the chat stream
+    can surface the error instead of silently substituting a static template
+    that looks like a real plan.
+
+    When ``project_id`` is set, attached images are resolved via a short-lived
+    DB session and sent as multimodal ``image_url`` parts (same path as
+    execution).
     """
     if task_class.startswith(("code.scaffold", "plan.scaffold")):
-        fallback = _default_scaffold_plan(locale)
         max_tasks = 8
         min_tasks = 2
     else:
-        fallback = _default_edit_plan(locale)
         max_tasks = 3
         min_tasks = 1
+
+    ref_count = count_markers_by_intent(prompt, "reference")
+    # Multiple reference screenshots ⇒ one page/route each (plus foundation tasks).
+    if ref_count >= 2 and task_class.startswith(("code.scaffold", "plan.scaffold", "code.edit")):
+        max_tasks = max(max_tasks, min(8, ref_count + 3))
+        min_tasks = max(min_tasks, min(ref_count + 1, max_tasks))
 
     answers_txt = ""
     if answers:
         answers_txt = "User clarifications:\n" + "\n".join(f"- {k}: {v}" for k, v in answers.items())
+
+    multi_page_rule = ""
+    if ref_count >= 2:
+        multi_page_rule = (
+            f" MULTI-PAGE REFERENCES: the user attached {ref_count} reference screenshots. "
+            "Plan ONE distinct page/route per screenshot (navigable), deriving route names "
+            "from filenames when possible (home→/, pricing→/pricing, about→/about). "
+            "Do NOT collapse them into a single long scrolling landing unless the user "
+            "explicitly asks for one page only. "
+        )
 
     system = (
         "You are Forge planner in PLAN MODE. Output ONLY valid JSON object: "
@@ -443,7 +467,8 @@ async def build_plan(
         + f"Prefer 1 to {max_tasks} tasks for edits (max {max_tasks}). "
         "Do not invent redesign/polish tasks unless the user explicitly asks for a full redesign. "
         "For scoped requests, tasks must name the target section/file only. "
-        "For scaffolds, use this ORDER: "
+        + multi_page_rule
+        + "For scaffolds, use this ORDER: "
         "(1) architecture — App/Context/shell, "
         "(2) styles_foundation — complete index.css tokens/layout/navbar base BEFORE content, "
         "(3) home / primary_sections / flows — each page brings its OWN src/styles/<page>.css "
@@ -454,7 +479,18 @@ async def build_plan(
         "Frontend-only prototype: no backend connector tasks. "
         "Each task needs a clear acceptance criterion."
     )
-    user = f"Request:\n{prompt}\n\n{answers_txt}".strip()
+    request_body = f"{prompt}\n\n{answers_txt}".strip() if answers_txt else prompt
+    user: str | list[dict[str, Any]] = f"Request:\n{request_body}".strip()
+    if project_id:
+        with SessionLocal() as vision_db:
+            user = await enrich_user_message_with_vision(
+                vision_db, project_id, f"Request:\n{request_body}".strip()
+            )
+            vision_db.commit()
+    plan_failed_en = "Planning failed. Check your generation key and try again."
+    plan_failed_fr = "Échec du plan. Vérifie ta clé de génération et réessaie."
+    plan_unusable_en = "Planning failed — the model returned an unusable response. Try again."
+    plan_unusable_fr = "Échec du plan — la réponse du modèle est inutilisable. Réessaie."
     try:
         raw = await complete_chat(
             auth=auth,
@@ -482,7 +518,7 @@ async def build_plan(
                 meta["summary"] = summary
             parsed = parsed.get("tasks")
         if not isinstance(parsed, list) or not parsed:
-            return fallback, meta
+            raise RodiumError(plan_unusable_fr if locale == "fr" else plan_unusable_en)
         out: list[dict[str, Any]] = []
         for i, item in enumerate(parsed[:max_tasks]):
             if not isinstance(item, dict):
@@ -505,53 +541,53 @@ async def build_plan(
                     "status": "pending",
                 }
             )
-        if len(out) >= min_tasks:
-            out = out[:max_tasks]
-            if len(out) >= 2 and not any(str(t.get("id")) == "coherence" for t in out):
-                if locale == "fr":
-                    out.append(
-                        {
-                            "id": "coherence",
-                            "title": "Passe cohérence finale App + CSS + DESIGN + Context API",
-                            "acceptance": (
-                                "Provider keys = consumers; classes TSX↔CSS; createRoot; mount sans throw"
-                            ),
-                            "files": [
-                                "src/context",
-                                "src/App.tsx",
-                                "src/main.tsx",
-                                "src/index.css",
-                                "DESIGN.md",
-                            ],
-                            "status": "pending",
-                        }
-                    )
-                else:
-                    out.append(
-                        {
-                            "id": "coherence",
-                            "title": "Final coherence pass App + CSS + DESIGN + Context API",
-                            "acceptance": (
-                                "Provider keys match consumers; TSX↔CSS; named createRoot; mounts"
-                            ),
-                            "files": [
-                                "src/context",
-                                "src/App.tsx",
-                                "src/main.tsx",
-                                "src/index.css",
-                                "DESIGN.md",
-                            ],
-                            "status": "pending",
-                        }
-                    )
-            return out, meta
-        return fallback, meta
-    except (RodiumError, json.JSONDecodeError, TypeError, ValueError) as exc:
-        logger.warning("planner LLM failed, using static template: %s", exc)
-        return fallback, {}
-    except Exception:
-        logger.warning("planner LLM failed (unexpected), using static template", exc_info=True)
-        return fallback, {}
+        if len(out) < min_tasks:
+            raise RodiumError(plan_unusable_fr if locale == "fr" else plan_unusable_en)
+        out = out[:max_tasks]
+        if len(out) >= 2 and not any(str(t.get("id")) == "coherence" for t in out):
+            if locale == "fr":
+                out.append(
+                    {
+                        "id": "coherence",
+                        "title": "Passe cohérence finale App + CSS + DESIGN + Context API",
+                        "acceptance": (
+                            "Provider keys = consumers; classes TSX↔CSS; createRoot; mount sans throw"
+                        ),
+                        "files": [
+                            "src/context",
+                            "src/App.tsx",
+                            "src/main.tsx",
+                            "src/index.css",
+                            "DESIGN.md",
+                        ],
+                        "status": "pending",
+                    }
+                )
+            else:
+                out.append(
+                    {
+                        "id": "coherence",
+                        "title": "Final coherence pass App + CSS + DESIGN + Context API",
+                        "acceptance": ("Provider keys match consumers; TSX↔CSS; named createRoot; mounts"),
+                        "files": [
+                            "src/context",
+                            "src/App.tsx",
+                            "src/main.tsx",
+                            "src/index.css",
+                            "DESIGN.md",
+                        ],
+                        "status": "pending",
+                    }
+                )
+        return out, meta
+    except RodiumError:
+        raise
+    except (json.JSONDecodeError, TypeError, ValueError) as exc:
+        logger.warning("planner LLM response unusable: %s", exc)
+        raise RodiumError(plan_unusable_fr if locale == "fr" else plan_unusable_en) from exc
+    except Exception as exc:
+        logger.warning("planner LLM failed (unexpected)", exc_info=True)
+        raise RodiumError(plan_failed_fr if locale == "fr" else plan_failed_en) from exc
 
 
 def format_answers_for_prompt(answers: dict[str, str] | None, questions: list[dict] | None) -> str:

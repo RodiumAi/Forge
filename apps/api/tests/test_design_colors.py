@@ -13,9 +13,7 @@ def test_normalize_hex_expands_short():
 
 def test_replace_token_hex_updates_aliases():
     src = "--accent: #7c3aed;\n--color-accent: #7c3aed;"
-    assert replace_token_hex(src, "accent", "#ff5500") == (
-        "--accent: #ff5500;\n--color-accent: #ff5500;"
-    )
+    assert replace_token_hex(src, "accent", "#ff5500") == ("--accent: #ff5500;\n--color-accent: #ff5500;")
 
 
 def test_parse_and_merge_palette():

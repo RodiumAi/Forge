@@ -91,8 +91,8 @@ def render_runner_shell(
 </head>
 <body>
   <div id="root"></div>
-  <script src="/runner/bridge.js?v=nav7"></script>
-  <script type="module" src="/runner/runner.js?v=nav7"></script>
+  <script src="/runner/bridge.js?v=imports-fix1"></script>
+  <script type="module" src="/runner/runner.js?v=imports-fix1"></script>
 </body>
 </html>
 """

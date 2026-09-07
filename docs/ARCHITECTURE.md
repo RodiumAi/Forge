@@ -134,17 +134,47 @@ Inside the iframe (`apps/api/runtime/`):
 
 1. `transform.mjs` — Babel with the React automatic runtime + TypeScript presets.
 2. Bare specifiers are checked against the document's own import map → `IMPORT_NOT_IN_MANIFEST`.
+   Specifiers are collected with tight regexes (no quotes between `import`/`export`
+   and `from`) plus a plausibility filter so Babel output fragments such as
+   `/*#__PURE__*/_jsxs` or the word `from` inside a string like `"or start from"`
+   are never treated as packages.
 3. `topo.mjs` — topological sort, raising `CIRCULAR_DEPENDENCY` with the cycle.
 4. `rewrite.mjs` + `resolve.mjs` — each specifier is rewritten to the dependency's already-created `blob:` URL. Resolution is **case-sensitive** and understands `@/` → `src/`.
 5. `await import(entryBlobUrl)`. Old blobs are revoked on success, kept on failure so the error stays inspectable.
 
 The import map is not mutable after load, which is why the project's own extra
-dependencies must be injected at shell-render time (`?p=<uuid>`).
+dependencies must be injected at shell-render time (`?p=<uuid>`). Bump the
+`?v=` query on `runner.js` / `bridge.js` in `preview_babel.py` whenever the
+runner contract changes, or browsers keep a stale transform.
+
+**During generation the builder hides the blocking Babel overlay**
+(`PreviewPane` `suppressErrorOverlay` while `busy || streamActive`). Mid-plan
+files are often briefly inconsistent; the overlay returns once the run settles
+if the preview is still broken.
 
 **Origin pinning is strict in both directions.** `RUNNER_PARENT_ORIGINS` builds
 an allowlist; the runner refuses to send to anything else. The code notes this
 was tightened after accepting any localhost port let a rogue local page read app
 content.
+
+## Attachments, logos, and URL cloning
+
+Prompt images carry an **intent** (`apps/web/lib/prompt-attachments.ts` +
+`apps/api/app/services/attachments.py`):
+
+| Intent | UI label (FR) | Effect |
+|---|---|---|
+| `reference` | Capture de référence | Vision-only; multi-page plans when ≥2 references |
+| `asset` | Asset joint | Materialized under `public/` (logo → `public/logo.*`); the agent must use those paths and must not redraw the logo |
+
+`reference` and `asset` **coexist** on the same message — a screenshot no longer
+overwrites a logo.
+
+If the user pastes a public site URL without enough reference shots, the API
+captures desktop + mobile screenshots with Playwright
+(`apps/api/app/services/url_capture.py`, wired in `routers/chats.py`) and appends
+them as `intent:reference` markers before routing. Chromium is installed in the
+API image (`playwright install --with-deps chromium`).
 
 ## Publishing
 

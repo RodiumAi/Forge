@@ -36,3 +36,7 @@ sous-processus lancé par l'API est `git`, pour les snapshots par projet.
 **Windows** — pour une boucle locale plus confortable, lancez l'API sur l'hôte
 (`uvicorn app.main:app --reload --port 8100`) avec seulement les services
 d'infrastructure dans Docker : `docker compose up -d postgres valkey minio`.
+
+## Extras image API
+
+Le Dockerfile API installe **Playwright Chromium** (`playwright install --with-deps chromium`) pour capturer les URLs de sites collées comme screenshots de référence pendant la génération (`apps/api/app/services/url_capture.py`). Reconstruisez le service `api` après un pull qui touche cette dépendance.
