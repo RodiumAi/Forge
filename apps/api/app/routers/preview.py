@@ -30,7 +30,7 @@ _DRAFT_THUMB_CACHE: dict[str, tuple[float, str]] = {}
 _DRAFT_THUMB_TTL_S = 90.0
 _DRAFT_THUMB_CACHE_MAX = 40
 # Bump when runner shell / basename injection changes — avoids stale thumb HTML.
-_DRAFT_THUMB_CACHE_VERSION = 2
+_DRAFT_THUMB_CACHE_VERSION = 3
 
 
 class SourceBundle(BaseModel):
