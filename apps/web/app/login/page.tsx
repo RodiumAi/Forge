@@ -5,7 +5,7 @@
  *
  * "Continue with RodiumAi" stays the primary action — on the hosted instance
  * it is the path that brings a wallet and a generation key with it. Below it
- * sit the options that work without RodiumAi at all: Google, GitHub, and
+ * sit the options that work without RodiumAi at all: Google and
  * email/password. On a clone the RodiumAi button is hidden (the API answers
  * 503 without an OIDC client id), so the local options become the whole page.
  *
