@@ -1,0 +1,14 @@
+# Forge security policy — https://forge.rodiumai.io
+# RFC 9116 (https://www.rfc-editor.org/rfc/rfc9116)
+
+# Preferred: private GitHub Security Advisory ("Report a vulnerability").
+Contact: https://github.com/RodiumAi/Forge/security/advisories/new
+# Fallback if you cannot use GitHub.
+Contact: mailto:forge@rodiumai.io
+
+Policy: https://github.com/RodiumAi/Forge/blob/main/SECURITY.md
+Preferred-Languages: en, fr
+Canonical: https://forge.rodiumai.io/.well-known/security.txt
+
+# Update this before the date below (RFC 9116 requires a value < 1 year out).
+Expires: 2027-09-06T00:00:00.000Z

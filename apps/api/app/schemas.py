@@ -240,6 +240,7 @@ class ProjectOut(BaseModel):
     published_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
+    has_thumbnail: bool = False
 
     model_config = {"from_attributes": True}
 

@@ -14,6 +14,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Plus, Search } from "lucide-react";
 import { apiBase, getToken } from "@/lib/api";
 import { useMediaToken } from "@/lib/media-token";
+import { projectThumbnailUrl } from "@/lib/project-thumbnail";
 import { VerifyEmailBanner } from "@/components/auth/VerifyEmailBanner";
 import { HomeLayout } from "@/components/HomeLayout";
 import { PromptFileChips } from "@/components/PromptFileChips";
@@ -60,6 +61,7 @@ type Project = {
   template_id?: string | null;
   preview_running?: boolean;
   public_url?: string | null;
+  has_thumbnail?: boolean;
 };
 
 type Tab = "mine" | "recent" | "templates";
@@ -92,6 +94,11 @@ function DashboardInner() {
   const [fileError, setFileError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [tab, setTab] = useState<Tab>("mine");
+  // Render the grid in windows: mounting every card at once instantiates a
+  // ResizeObserver + IntersectionObserver per SiteThumb and a large DOM, which
+  // is heavy for accounts with many projects. "Load more" reveals the rest.
+  const PAGE_SIZE = 24;
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -124,6 +131,12 @@ function DashboardInner() {
     if (creating || forkingId) topProgressStart("dashboard-create");
     else topProgressDone("dashboard-create");
   }, [creating, forkingId]);
+
+  // Filtering/switching tabs changes which projects show — reset the window so
+  // we never keep a large render (and its thumbnails) mounted after a filter.
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [query, tab]);
 
   useEffect(() => {
     return () => {
@@ -373,26 +386,48 @@ function DashboardInner() {
   const mediaToken = useMediaToken();
 
   function projectThumb(p: Project) {
-    // Live render of the actual site via the standalone draft route. The old
-    // card-preview served a static "Forge" placeholder for every generated
-    // project (nothing writes a preview.html for them), and the template
-    // preview showed the kit's mockup — not what the user built on top of it.
-    // Thumbnails are iframe loads, so their credential rides the query
-    // string — it must be the read-only media token, not the session.
+    // Prefer the persisted JPEG from the API. Old projects without a file
+    // backfill once via live draft capture, then PUT so the next visit is cheap.
+    if (p.has_thumbnail) {
+      const imageSrc = projectThumbnailUrl(p.id, p.updated_at);
+      if (imageSrc) {
+        return {
+          imageSrc,
+          frameSrc: null as string | null,
+          src: null as string | null,
+          authPath: null as string | null,
+          persistProjectId: null as string | null,
+        };
+      }
+    }
     const token = mediaToken;
     if (token) {
       const base = apiBase().replace(/\/$/, "");
       const parent = encodeURIComponent(window.location.origin);
       return {
+        imageSrc: null as string | null,
         frameSrc: `${base}/projects/${p.id}/draft?access_token=${encodeURIComponent(token)}&parent_origin=${parent}&thumb=1`,
         src: null as string | null,
         authPath: null as string | null,
+        persistProjectId: p.id,
       };
     }
     if (p.template_id) {
-      return { frameSrc: null, src: `/templates/${p.template_id}/preview`, authPath: null as string | null };
+      return {
+        imageSrc: null,
+        frameSrc: null,
+        src: `/templates/${p.template_id}/preview`,
+        authPath: null as string | null,
+        persistProjectId: null,
+      };
     }
-    return { frameSrc: null, src: null, authPath: `/projects/${p.id}/card-preview` };
+    return {
+      imageSrc: null,
+      frameSrc: null,
+      src: null,
+      authPath: `/projects/${p.id}/card-preview`,
+      persistProjectId: null,
+    };
   }
 
   return (
@@ -555,7 +590,7 @@ function DashboardInner() {
         ) : (
           <>
             <div className="home-grid home-grid-3">
-              {filteredProjects.map((p) => {
+              {filteredProjects.slice(0, visibleCount).map((p) => {
                 const thumb = projectThumb(p);
                 return (
                   <button
@@ -565,9 +600,24 @@ function DashboardInner() {
                     onClick={() => router.push(`/projects/${p.id}`)}
                   >
                     <SiteThumb
+                      imageSrc={thumb.imageSrc}
                       frameSrc={thumb.frameSrc}
                       src={thumb.src}
                       authPath={thumb.authPath}
+                      persistProjectId={thumb.persistProjectId}
+                      onThumbPersisted={(info) => {
+                        setProjects((prev) =>
+                          prev.map((row) =>
+                            row.id === p.id
+                              ? {
+                                  ...row,
+                                  has_thumbnail: true,
+                                  updated_at: info?.updated_at || row.updated_at,
+                                }
+                              : row,
+                          ),
+                        );
+                      }}
                       cacheKey={`${p.id}:${p.updated_at || p.created_at}`}
                       title={p.name}
                       className="home-card-thumb"
@@ -584,6 +634,17 @@ function DashboardInner() {
             </div>
             {filteredProjects.length === 0 && (
               <p className="home-panel-empty">{t("noProjects")}</p>
+            )}
+            {filteredProjects.length > visibleCount && (
+              <div className="home-panel-more">
+                <button
+                  type="button"
+                  className="home-load-more"
+                  onClick={() => setVisibleCount((n) => n + PAGE_SIZE)}
+                >
+                  {t("loadMore")}
+                </button>
+              </div>
             )}
           </>
         )}

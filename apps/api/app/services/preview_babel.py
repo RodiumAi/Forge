@@ -87,12 +87,12 @@ def render_runner_shell(
   <style id="forge-app-css"></style>
   <script>window.__FORGE_PARENT_ORIGINS = {origins};</script>
   <script>(function(){{var m=location.pathname.match(/^(\\/projects\\/[0-9a-f-]{{36}}\\/draft)/i);if(m)window.__FORGE_PREVIEW_SHELL_BASE__=m[1];}})();</script>
-  {thumb_css}{draft}<script src="https://unpkg.com/@babel/standalone@7.26.9/babel.min.js"></script>
+  {thumb_css}{draft}<script src="/runner/babel.min.js?v=7.26.9"></script>
 </head>
 <body>
   <div id="root"></div>
-  <script src="/runner/bridge.js?v=thumb-snap1"></script>
-  <script type="module" src="/runner/runner.js?v=thumb-snap1"></script>
+  <script src="/runner/bridge.js?v=thumb-persist1"></script>
+  <script type="module" src="/runner/runner.js?v=thumb-persist1"></script>
 </body>
 </html>
 """

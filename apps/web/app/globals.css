@@ -7402,6 +7402,29 @@ body:has(.home) [data-next-mark] {
   margin: 1.5rem 0 0;
 }
 
+.home-panel-more {
+  display: flex;
+  justify-content: center;
+  margin: 1.25rem 0 0.25rem;
+}
+
+.home-load-more {
+  appearance: none;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.5rem 1.2rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--home-text);
+  background: var(--home-chip-strong);
+  box-shadow: inset 0 0 0 1px var(--home-border-strong);
+  cursor: pointer;
+}
+
+.home-load-more:hover {
+  background: var(--home-border-strong);
+}
+
 .home-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -7501,6 +7524,13 @@ body:has(.home) [data-next-mark] {
   pointer-events: none;
 }
 
+/* Live capture host: keep the iframe layouted & unthrottled (opacity, not
+   visibility:hidden) while the painted fallback sits on top. */
+.site-thumb-scaler--capture {
+  opacity: 0;
+  z-index: 0;
+}
+
 .site-thumb-snap {
   position: absolute;
   inset: 0;
@@ -7511,6 +7541,7 @@ body:has(.home) [data-next-mark] {
   display: block;
   pointer-events: none;
   background: #111;
+  z-index: 1;
 }
 
 .site-thumb-host {
@@ -7542,6 +7573,7 @@ body:has(.home) [data-next-mark] {
 .site-thumb-fallback {
   position: absolute;
   inset: 0;
+  z-index: 1;
   background: linear-gradient(
     135deg,
     rgba(242, 98, 10, 0.35),

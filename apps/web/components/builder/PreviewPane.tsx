@@ -3,6 +3,7 @@
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { api, apiBase } from "@/lib/api";
 import { getMediaToken } from "@/lib/media-token";
+import { uploadProjectThumbnail } from "@/lib/project-thumbnail";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { PreviewToolbar } from "./PreviewToolbar";
 import type {
@@ -118,6 +119,11 @@ export function PreviewPane({
   const onPreviewPathChangeRef = useRef(onPreviewPathChange);
   const previewPathRef = useRef(previewPath);
   const suppressErrorOverlayRef = useRef(suppressErrorOverlay);
+  const pendingThumbRef = useRef(false);
+  const thumbUploadingRef = useRef(false);
+  const wasWorkingRef = useRef(suppressErrorOverlay);
+  const projectIdRef = useRef(projectId);
+  projectIdRef.current = projectId;
   const navigateRetryTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   onVisualEditRef.current = onVisualEdit;
   onElementSelectRef.current = onElementSelect;
@@ -133,6 +139,45 @@ export function PreviewPane({
   // slam the blocking "Restart preview" overlay over a site that still works.
   const appMountedRef = useRef(false);
   const [babelError, setBabelError] = useState<string | null>(null);
+  const thumbCaptureTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function requestThumbCapture() {
+    const win = frameRef.current?.contentWindow;
+    const target = previewOrigin(previewSrc);
+    const pid = projectIdRef.current;
+    if (!win || !target || !pid || thumbUploadingRef.current) return;
+    pendingThumbRef.current = true;
+    try {
+      win.postMessage({ type: "forge:capture-thumb" }, target);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  // After an agent run (working → idle), ask the runner for a JPEG and persist it.
+  useEffect(() => {
+    const was = wasWorkingRef.current;
+    wasWorkingRef.current = suppressErrorOverlay;
+    if (thumbCaptureTimerRef.current) {
+      clearTimeout(thumbCaptureTimerRef.current);
+      thumbCaptureTimerRef.current = null;
+    }
+    if (!(was && !suppressErrorOverlay && projectId)) return;
+    // Debounce: mid-plan verify can flicker working; wait for a settled idle.
+    thumbCaptureTimerRef.current = setTimeout(() => {
+      thumbCaptureTimerRef.current = null;
+      if (suppressErrorOverlayRef.current) return;
+      pendingThumbRef.current = true;
+      if (appMountedRef.current) requestThumbCapture();
+    }, 1200);
+    return () => {
+      if (thumbCaptureTimerRef.current) {
+        clearTimeout(thumbCaptureTimerRef.current);
+        thumbCaptureTimerRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- capture uses refs + previewSrc at call time
+  }, [suppressErrorOverlay, projectId]);
 
   // Babel runner: push source bundle into the iframe (origin = API).
   useEffect(() => {
@@ -188,6 +233,21 @@ export function PreviewPane({
         appMountedRef.current = true;
         setLoadError(false);
         setBabelError(null);
+        if (pendingThumbRef.current) requestThumbCapture();
+      }
+      if (
+        data.type === "forge:thumb-snapshot" &&
+        typeof data.dataUrl === "string" &&
+        pendingThumbRef.current &&
+        projectIdRef.current
+      ) {
+        pendingThumbRef.current = false;
+        if (thumbUploadingRef.current) return;
+        thumbUploadingRef.current = true;
+        const pid = projectIdRef.current;
+        void uploadProjectThumbnail(pid, data.dataUrl).finally(() => {
+          thumbUploadingRef.current = false;
+        });
       }
       if (data.type === "forge:transform-error" || data.type === "forge:error") {
         const err = data.error && typeof data.error === "object" ? data.error : data;

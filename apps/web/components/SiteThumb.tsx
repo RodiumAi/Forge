@@ -1,7 +1,8 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { apiBase, getToken } from "@/lib/api";
+import { uploadProjectThumbnail } from "@/lib/project-thumbnail";
 
 type Props = {
   /** Absolute or API-relative URL for HTML preview */
@@ -14,6 +15,18 @@ type Props = {
    * site of a generated project, which has no static preview.html.
    */
   frameSrc?: string | null;
+  /**
+   * Persisted JPEG from GET /projects/{id}/thumbnail — preferred over live
+   * draft capture when the API already has a file.
+   */
+  imageSrc?: string | null;
+  /**
+   * When set, a successful live backfill capture is PUT to
+   * `/projects/{id}/thumbnail` so the next visit is a cheap img.
+   */
+  persistProjectId?: string | null;
+  /** Fired after a successful persist upload (dashboard flips has_thumbnail). */
+  onThumbPersisted?: ((info?: { updated_at?: string }) => void) | null;
   /**
    * Stable id for snapshot reuse across dashboard navigations
    * (e.g. project id + updated_at). Volatile query params (token) are ignored.
@@ -46,6 +59,17 @@ const SNAP_STORAGE_PREFIX = "forge_thumb_snap_v1:";
 /** At most one live draft iframe on the whole page (OOM guard). */
 let liveSlotBusy = false;
 const liveWaiters: Array<() => void> = [];
+
+/**
+ * Cap concurrent *successful* live captures per page session. Failed / timed
+ * out attempts are refunded so a slow Babel compile does not permanently
+ * starve the rest of the grid. Cached snapshots are unaffected.
+ */
+const MAX_LIVE_CAPTURES = 12;
+let liveCapturesUsed = 0;
+
+/** Babel + first paint + html2canvas regularly exceeds 8s on large projects. */
+const CAPTURE_GRACE_MS = 28000;
 
 function acquireLiveSlot(): Promise<void> {
   if (!liveSlotBusy) {
@@ -259,6 +283,9 @@ export function SiteThumb({
   src,
   authPath,
   frameSrc,
+  imageSrc,
+  persistProjectId,
+  onThumbPersisted,
   cacheKey: warmCacheKey,
   viewportWidth = 1280,
   viewportHeight = 800,
@@ -272,10 +299,24 @@ export function SiteThumb({
   const [visible, setVisible] = useState(false);
   const [html, setHtml] = useState<string | null>(() => (key ? readCache(key) : null));
   const [failed, setFailed] = useState(false);
+  const [imageFailed, setImageFailed] = useState(false);
   const [scale, setScale] = useState(0.25);
   const [snapshot, setSnapshot] = useState<string | null>(() =>
     frameSrc && keySnap ? readSnap(keySnap) : null,
   );
+  // Live-capture budget exhausted for this card: show the static branded
+  // fallback rather than mounting another heavy live iframe.
+  const [capped, setCapped] = useState(false);
+  /** Bumps when the host ref was missing so the capture effect re-runs. */
+  const [hostKick, setHostKick] = useState(0);
+  const persistIdRef = useRef(persistProjectId);
+  persistIdRef.current = persistProjectId;
+  const onPersistedRef = useRef(onThumbPersisted);
+  onPersistedRef.current = onThumbPersisted;
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [imageSrc]);
 
   useEffect(() => {
     const el = shellRef.current;
@@ -310,16 +351,46 @@ export function SiteThumb({
     return () => io.disconnect();
   }, []);
 
-  // Live draft → one-at-a-time capture → static image.
+  const usePersistedImage = Boolean(imageSrc && !imageFailed);
+
+  // Live draft → one-at-a-time capture → static image (backfill only).
   useLayoutEffect(() => {
-    if (!frameSrc || !visible || snapshot) return;
+    if (usePersistedImage) return;
+    if (!frameSrc || !visible || snapshot || capped) return;
+
+    // Host mounts in the same commit as `visible`; if the ref is still null
+    // (edge timing), kick a re-run on the next frame instead of giving up.
     const host = hostRef.current;
-    if (!host) return;
+    if (!host) {
+      const raf = window.requestAnimationFrame(() => setHostKick((k) => k + 1));
+      return () => window.cancelAnimationFrame(raf);
+    }
+
+    // A cached snapshot may already exist (another mount, or a prior session
+    // via sessionStorage) — use it instead of spending budget on a live render.
+    const cached = keySnap ? readSnap(keySnap) : null;
+    if (cached) {
+      setSnapshot(cached);
+      const pid = persistIdRef.current;
+      if (pid) {
+        void uploadProjectThumbnail(pid, cached).then((res) => {
+          if (res.ok) onPersistedRef.current?.({ updated_at: res.updated_at });
+        });
+      }
+      return;
+    }
+
+    // Budget exhausted: stop rendering live iframes to avoid OOM.
+    if (liveCapturesUsed >= MAX_LIVE_CAPTURES) {
+      setCapped(true);
+      return;
+    }
 
     let cancelled = false;
     let iframe: HTMLIFrameElement | null = null;
     let graceTimer = 0;
     let slotHeld = false;
+    let budgetTaken = false;
     let onMessage: ((e: MessageEvent) => void) | null = null;
 
     const dropLive = () => {
@@ -343,8 +414,16 @@ export function SiteThumb({
       }
     };
 
+    const refundBudget = () => {
+      if (!budgetTaken) return;
+      budgetTaken = false;
+      liveCapturesUsed = Math.max(0, liveCapturesUsed - 1);
+    };
+
     void (async () => {
       await acquireLiveSlot();
+      // Mark held immediately — a Strict Mode cleanup between await and this
+      // line used to leak liveSlotBusy=true forever (thumbs stuck loading).
       slotHeld = true;
       if (cancelled) {
         dropLive();
@@ -359,6 +438,15 @@ export function SiteThumb({
         return;
       }
 
+      // Budget may have been spent by other cards while we queued.
+      if (liveCapturesUsed >= MAX_LIVE_CAPTURES) {
+        setCapped(true);
+        dropLive();
+        return;
+      }
+      liveCapturesUsed += 1;
+      budgetTaken = true;
+
       iframe = createLiveIframe(frameSrc, title);
       host.replaceChildren(iframe);
 
@@ -368,26 +456,39 @@ export function SiteThumb({
         if (type === "forge:thumb-snapshot" && typeof e.data.dataUrl === "string") {
           writeSnap(keySnap, e.data.dataUrl);
           setSnapshot(e.data.dataUrl);
+          // Keep the budget charge — capture succeeded.
+          budgetTaken = false;
           dropLive();
+          const pid = persistIdRef.current;
+          if (pid) {
+            void uploadProjectThumbnail(pid, e.data.dataUrl).then((res) => {
+              if (res.ok) onPersistedRef.current?.({ updated_at: res.updated_at });
+            });
+          }
         }
       };
       window.addEventListener("message", onMessage);
 
-      // If capture never arrives, drop the live frame so we don't OOM.
+      // If capture never arrives, drop the live frame, refund budget, and exit
+      // the infinite loading shimmer (previous bug: grace cleared the iframe
+      // but left snapshot=null forever because the effect did not re-run).
       graceTimer = window.setTimeout(() => {
+        refundBudget();
         dropLive();
-      }, 20000);
+        if (!cancelled) setCapped(true);
+      }, CAPTURE_GRACE_MS);
     })();
 
     return () => {
       cancelled = true;
+      refundBudget();
       dropLive();
     };
-  }, [frameSrc, visible, snapshot, keySnap, title]);
+  }, [frameSrc, visible, snapshot, capped, keySnap, title, hostKick, usePersistedImage]);
 
   useEffect(() => {
     let alive = true;
-    if (frameSrc) return;
+    if (usePersistedImage || frameSrc) return;
     if (!key) {
       setHtml(null);
       setFailed(true);
@@ -419,9 +520,11 @@ export function SiteThumb({
     return () => {
       alive = false;
     };
-  }, [src, authPath, key, visible, frameSrc]);
+  }, [src, authPath, key, visible, frameSrc, usePersistedImage]);
 
-  const showLiveCapture = Boolean(frameSrc && !snapshot && visible);
+  const showLiveCapture = Boolean(
+    !usePersistedImage && frameSrc && !snapshot && visible && !capped,
+  );
 
   return (
     <div
@@ -434,15 +537,30 @@ export function SiteThumb({
         ["--thumb-vh" as string]: `${viewportHeight}px`,
       }}
     >
-      {frameSrc ? (
+      {usePersistedImage ? (
+        // eslint-disable-next-line @next/next/no-img-element -- authenticated API JPEG
+        <img
+          className="site-thumb-snap"
+          src={imageSrc!}
+          alt=""
+          draggable={false}
+          onError={() => setImageFailed(true)}
+        />
+      ) : frameSrc ? (
         <>
           {snapshot ? (
             // eslint-disable-next-line @next/next/no-img-element -- data-URL snapshot, not a remote asset
             <img className="site-thumb-snap" src={snapshot} alt="" draggable={false} />
+          ) : capped ? (
+            // Budget spent — static branded placeholder, no pulse (final state).
+            <div className="site-thumb-fallback" />
           ) : (
             <>
               {showLiveCapture && (
-                <div className="site-thumb-scaler" style={{ visibility: "hidden" }}>
+                // Do NOT use visibility:hidden — Chromium throttles (or freezes)
+                // timers/rAF inside such iframes, so Babel + html2canvas never
+                // finish and cards sit on the shimmer until the grace timeout.
+                <div className="site-thumb-scaler site-thumb-scaler--capture">
                   <div className="site-thumb-host" ref={hostRef} />
                 </div>
               )}

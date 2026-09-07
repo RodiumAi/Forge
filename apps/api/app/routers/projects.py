@@ -11,7 +11,7 @@ from fastapi.responses import FileResponse, HTMLResponse
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.auth import get_current_user
+from app.auth import get_current_user, get_media_user
 from app.config import get_settings
 from app.db import get_db
 from app.i18n import resolve_locale, t
@@ -25,7 +25,7 @@ from app.schemas import (
     ProjectUpdate,
 )
 from app.services import preview_babel
-from app.services.filesystem import list_files, project_dir
+from app.services.filesystem import list_files, project_dir, write_bytes
 from app.services.posthog_client import capture_for_user
 from app.services.project_delete import delete_project_full
 from app.services.project_naming import suggest_project_name
@@ -35,6 +35,19 @@ from app.services.templates import fork_template, get_template, preview_path
 logger = logging.getLogger("projects")
 
 router = APIRouter(prefix="/projects", tags=["projects"])
+
+THUMBNAIL_FILENAME = "thumbnail.jpg"
+THUMBNAIL_MAX_BYTES = 800_000
+# Minimal valid 1x1 JPEG (JFIF) used only as a size/type reference in tests.
+_JPEG_MAGIC = b"\xff\xd8\xff"
+
+
+def _thumbnail_path(project_id: str | UUID) -> Path:
+    return project_dir(str(project_id)) / THUMBNAIL_FILENAME
+
+
+def _has_thumbnail(project_id: str | UUID) -> bool:
+    return _thumbnail_path(project_id).is_file()
 
 
 def _project_out(project: Project) -> ProjectOut:
@@ -62,6 +75,7 @@ def _project_out(project: Project) -> ProjectOut:
         published_at=getattr(project, "published_at", None),
         created_at=project.created_at,
         updated_at=project.updated_at,
+        has_thumbnail=_has_thumbnail(project.id),
     )
 
 
@@ -361,6 +375,52 @@ h1{margin:0;font-size:2rem} .a{color:#f2620a}
 </style></head><body><h1><span class="a">F</span>orge</h1></body></html>""",
         headers=headers,
     )
+
+
+@router.get("/{project_id}/thumbnail", include_in_schema=False)
+def get_project_thumbnail(
+    project_id: UUID,
+    request: Request,
+    user: User = Depends(get_media_user),
+    db: Session = Depends(get_db),
+):
+    """Persisted JPEG card thumb — browser loads via media `?access_token=`."""
+    locale = resolve_locale(request)
+    _owned_project(db, user, project_id, locale)
+    path = _thumbnail_path(project_id)
+    if not path.is_file():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="thumbnail_missing")
+    return FileResponse(
+        path,
+        media_type="image/jpeg",
+        headers={"Cache-Control": "private, max-age=300"},
+    )
+
+
+@router.put("/{project_id}/thumbnail", include_in_schema=False)
+async def put_project_thumbnail(
+    project_id: UUID,
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Replace the dashboard JPEG thumbnail (builder / dashboard backfill)."""
+    locale = resolve_locale(request)
+    project = _owned_project(db, user, project_id, locale)
+
+    data = await request.body()
+    if not data:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="thumbnail_empty")
+    if len(data) > THUMBNAIL_MAX_BYTES:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="thumbnail_too_large")
+    if not data.startswith(_JPEG_MAGIC):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="thumbnail_not_jpeg")
+
+    write_bytes(str(project.id), THUMBNAIL_FILENAME, data)
+    project.updated_at = datetime.now(UTC)
+    db.commit()
+    db.refresh(project)
+    return {"ok": True, "has_thumbnail": True, "updated_at": project.updated_at.isoformat()}
 
 
 @router.post("/{project_id}/security-review")
