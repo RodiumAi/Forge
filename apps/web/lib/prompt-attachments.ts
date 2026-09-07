@@ -1,3 +1,5 @@
+import { isStoredObjectId } from "@/lib/asset-url";
+
 export const MAX_PROMPT_FILES = 5;
 
 export const PROMPT_FILE_ACCEPT =
@@ -65,7 +67,7 @@ export function attachmentName(item: PromptAttachment): string {
 }
 
 export function attachmentObjectId(item: PromptAttachment): string | null {
-  return item.objectId || null;
+  return isStoredObjectId(item.objectId) ? item.objectId!.trim() : null;
 }
 
 export function attachmentPreviewUrl(item: PromptAttachment): string | null {
@@ -148,7 +150,9 @@ export function createProjectRefAttachment(asset: {
     kind,
     name: asset.name,
     publicUrl: asset.public_url,
-    objectId: asset.id,
+    // Only persist real StoredObject UUIDs — filenames used as fallback ids
+    // must not become `object:…` markers (that breaks chat thumbs).
+    objectId: isStoredObjectId(asset.id) ? asset.id : null,
     previewUrl: null,
     publicPath: asset.public_url,
   };
@@ -283,8 +287,9 @@ export function parseUserMessageContent(raw: string): {
   let text = raw || "";
 
   for (const match of raw.matchAll(ATTACH_IMAGE_RE)) {
-    const { name, url, objectId } = parseImageMarkerBody(match[1] || "");
+    const { name, url, objectId: rawObjectId } = parseImageMarkerBody(match[1] || "");
     if (!name) continue;
+    const objectId = isStoredObjectId(rawObjectId) ? rawObjectId : null;
     const existing = attachments.find((a) => a.name === name);
     if (existing) {
       if (url && !existing.publicUrl) {

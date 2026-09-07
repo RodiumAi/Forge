@@ -12,6 +12,14 @@ function mediaToken(): string | null {
   return token;
 }
 
+/** True when `id` is a real StoredObject UUID (not a filename fallback). */
+const STORED_OBJECT_ID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function isStoredObjectId(value: string | null | undefined): boolean {
+  return Boolean(value && STORED_OBJECT_ID_RE.test(value.trim()));
+}
+
 /** Private uploads bucket URLs (S3/MinIO) — never usable as <img src>. */
 export function isPrivateUploadUrl(url: string | null | undefined): boolean {
   const value = (url || "").trim();
@@ -26,7 +34,7 @@ export function isPrivateUploadUrl(url: string | null | undefined): boolean {
 
 /** Durable authenticated URL for chat thumbs (<img src>). */
 export function assetContentUrl(projectId: string, objectId: string): string | null {
-  if (!projectId || !objectId) return null;
+  if (!projectId || !isStoredObjectId(objectId)) return null;
   const token = mediaToken();
   if (!token) return null;
   const base = apiBase().replace(/\/$/, "");

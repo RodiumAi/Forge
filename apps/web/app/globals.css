@@ -1104,6 +1104,25 @@ button.builder-msg-error-link:disabled {
   color: var(--muted);
 }
 
+.builder-msg-attach-placeholder {
+  height: 96px;
+  background: rgba(12, 12, 14, 0.72);
+  border-color: rgba(255, 122, 26, 0.28);
+}
+
+.builder-msg-attach-placeholder-icon {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.4rem;
+  object-fit: cover;
+  display: block;
+}
+
+html[data-theme="light"] .builder-msg-attach-placeholder {
+  background: rgba(246, 246, 248, 0.95);
+  border-color: rgba(255, 122, 26, 0.35);
+}
+
 .builder-msg-attach-name {
   font-size: 0.72rem;
   color: var(--muted);
@@ -2209,9 +2228,32 @@ button.builder-msg-error-link:disabled {
 }
 
 .builder-editing-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
   margin: 0 0 0.35rem;
   font-size: 0.75rem;
   color: #93c5fd;
+}
+
+.builder-editing-cancel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+  padding: 0.15rem 0.45rem;
+  border-radius: 6px;
+  border: 1px solid rgba(147, 197, 253, 0.35);
+  background: rgba(59, 130, 246, 0.12);
+  color: #bfdbfe;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.builder-editing-cancel:hover {
+  background: rgba(59, 130, 246, 0.22);
+  color: #eff6ff;
 }
 
 /* Live char counter shown near the composer limit (all prompt inputs). */
@@ -2233,6 +2275,42 @@ button.builder-msg-error-link:disabled {
   position: relative;
 }
 
+.builder-msg-actions {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.builder-msg-user-wrap:hover .builder-msg-actions,
+.builder-msg-user-wrap:focus-within .builder-msg-actions {
+  opacity: 1;
+}
+
+.builder-msg-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.2rem 0.45rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.builder-msg-action:hover {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(0, 0, 0, 0.55);
+}
+
+/* Legacy single-edit class kept for any leftover refs */
 .builder-msg-edit {
   position: absolute;
   top: 0.35rem;
