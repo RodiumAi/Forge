@@ -213,7 +213,7 @@ export const dictionaries = {
     streamErrorAuth:
       "Your RodiumAi connection has expired. Reconnect to keep generating.",
     streamErrorInvalidKey:
-      "The RodiumAi API key is invalid or has been revoked. Pick another one in settings.",
+      "The RodiumAi API key is missing, invalid, or revoked. Open settings to pick or refresh a key.",
     streamErrorTimeout:
       "The model stopped responding. The work already done is saved — you can pick up where it stopped.",
     streamErrorTooLarge:
@@ -883,7 +883,7 @@ export const dictionaries = {
     streamErrorAuth:
       "Votre connexion RodiumAi a expiré. Reconnectez-vous pour continuer à générer.",
     streamErrorInvalidKey:
-      "La clé API RodiumAi est invalide ou a été révoquée. Choisissez-en une autre dans les réglages.",
+      "La clé API RodiumAi est absente, invalide ou révoquée. Ouvrez les réglages pour en choisir ou en rafraîchir une.",
     streamErrorTimeout:
       "Le modèle a cessé de répondre. Le travail déjà fait est conservé — vous pouvez reprendre où ça s'est arrêté.",
     streamErrorTooLarge:
