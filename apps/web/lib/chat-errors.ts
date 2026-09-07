@@ -121,7 +121,9 @@ function codeFromLooseMessage(raw: string): string | null {
   ) {
     return "auth_expired";
   }
-  if (/invalid or unauthorized rodiumai key|clé rodiumai invalide/i.test(raw)) return "invalid_key";
+  if (/invalid or unauthorized rodiumai key|clé rodiumai invalide|api key not found|key not found/i.test(raw)) {
+    return "invalid_key";
+  }
   if (/entity too large|payload_too_large|payloadtoolarge|too large to send|trop volumineuse/i.test(raw)) {
     return "payload_too_large";
   }

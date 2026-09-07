@@ -120,6 +120,20 @@ def _raise_rodium_error(response: httpx.Response, locale: Locale) -> None:
 
         raise RodiumError(t("rodium_invalid_key", locale), response.status_code, ERR_INVALID_KEY)
 
+    # Nest/playground returns 404 {"message":"API key not found."} when the
+    # linked key id was deleted or never provisioned — that is a key problem,
+    # not a generic upstream outage (which used to show "Retry" forever).
+    if response.status_code == 404 and (
+        "api key not found" in lower
+        or "key not found" in lower
+        or ("api key" in lower and "not found" in lower)
+        or ("apikey" in lower and "not found" in lower)
+        or ("api_key" in lower and "not found" in lower)
+        or ("clé" in lower and "introuvable" in lower)
+        or ("cle " in lower and "introuvable" in lower)
+    ):
+        raise RodiumError(t("rodium_invalid_key", locale), response.status_code, ERR_INVALID_KEY)
+
     if response.status_code == 402 or "quota" in text.lower() or "balance" in text.lower():
         raise RodiumError(t("rodium_quota", locale), response.status_code, ERR_QUOTA)
 

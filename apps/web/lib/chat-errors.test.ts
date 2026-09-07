@@ -85,6 +85,18 @@ describe("classifying a failure", () => {
     expect(info.action).toEqual({ kind: "open-settings" });
   });
 
+  it("treats Nest 'API key not found' prose as an invalid key, not a Retry outage", () => {
+    // Older API builds mapped 404 key-not-found to upstream → generic
+    // "Generation failed on our side" with Retry. The user just linked their
+    // account and needs settings, not another attempt with the same dead id.
+    const info = classifyChatError(
+      new Error('RodiumAi error (404): {"message":"API key not found.","error":"Not Found","statusCode":404}'),
+    );
+    expect(info.code).toBe("invalid_key");
+    expect(info.labelKey).toBe("streamErrorInvalidKey");
+    expect(info.action).toEqual({ kind: "open-settings" });
+  });
+
   it("offers to resume after a dropped connection — the work survived", () => {
     expect(classifyChatError(new Error("…"), "network").action).toEqual({ kind: "resume-plan" });
     expect(classifyChatError(new Error("…"), "timeout").action).toEqual({ kind: "resume-plan" });
