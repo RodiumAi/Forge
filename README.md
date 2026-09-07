@@ -62,7 +62,7 @@ CI runs on exactly these versions. Older runtimes may build locally and still
 fail CI — `ruff` targets `py312` and several dependencies are version-sensitive.
 
 > **Sign-in works out of the box.** Forge has its own accounts —
-> email/password, plus optional Google and GitHub. Nothing in this repository
+> email/password, plus optional Google. Nothing in this repository
 > depends on a service you cannot run. "Continue with RodiumAI" is an extra
 > that appears only when you configure the OIDC client; with
 > `RODIUM_OIDC_CLIENT_ID` empty (the default) the button is simply hidden.
@@ -116,9 +116,12 @@ field confirms it before you rely on it.
 `https://api.rodiumai.io/v1`, is right for a key from rodiumai.io; change it
 only if you run your own gateway.
 
-Google and GitHub sign-in are optional: fill in the `FIREBASE_*` and
-`NEXT_PUBLIC_FIREBASE_*` values to enable them. Leave them empty and the
-buttons are not rendered.
+Google sign-in is optional: fill in the `FIREBASE_*` (API) and
+`NEXT_PUBLIC_FIREBASE_*` (web build) values to enable the Google button on
+`/login` and `/register`. Leave them empty and the button is not rendered.
+Reuse the same Firebase web app as the RodiumAI user dashboard; enable
+**Google** only in the Firebase console and add `forge.rodiumai.io` under
+Authorized domains. GitHub is not offered in the Forge UI.
 
 ## Hybrid development (Docker infra + local api/web)
 

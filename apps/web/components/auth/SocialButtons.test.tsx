@@ -10,7 +10,7 @@ vi.mock("@/lib/firebase", () => ({
   get firebaseEnabled() {
     return state.enabled;
   },
-  signInWithProvider: vi.fn(async () => "id-token"),
+  signInWithGoogle: vi.fn(async () => "id-token"),
   socialErrorKey: (error: unknown) =>
     (error as { code?: string })?.code === "auth/popup-closed-by-user"
       ? null
@@ -28,7 +28,7 @@ const apiModule = await import("@/lib/api");
 beforeEach(() => {
   state.enabled = true;
   vi.mocked(apiModule.api).mockResolvedValue({ access_token: "jwt" });
-  vi.mocked(firebase.signInWithProvider).mockResolvedValue("id-token");
+  vi.mocked(firebase.signInWithGoogle).mockResolvedValue("id-token");
 });
 
 describe("SocialButtons", () => {
@@ -41,10 +41,10 @@ describe("SocialButtons", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("offers Google and GitHub once configured", () => {
+  it("offers Google only once configured", () => {
     renderWithProviders(<SocialButtons onSuccess={vi.fn()} onError={vi.fn()} />);
     expect(screen.getByText(/google/i)).toBeInTheDocument();
-    expect(screen.getByText(/github/i)).toBeInTheDocument();
+    expect(screen.queryByText(/github/i)).not.toBeInTheDocument();
   });
 
   it("exchanges the ID token and stores the session", async () => {
@@ -63,14 +63,14 @@ describe("SocialButtons", () => {
 
   it("stays silent when the user just closes the popup", async () => {
     const onError = vi.fn();
-    vi.mocked(firebase.signInWithProvider).mockRejectedValue({
+    vi.mocked(firebase.signInWithGoogle).mockRejectedValue({
       code: "auth/popup-closed-by-user",
     });
 
     renderWithProviders(<SocialButtons onSuccess={vi.fn()} onError={onError} />);
-    fireEvent.click(screen.getByText(/github/i));
+    fireEvent.click(screen.getByText(/google/i));
 
-    await waitFor(() => expect(firebase.signInWithProvider).toHaveBeenCalled());
+    await waitFor(() => expect(firebase.signInWithGoogle).toHaveBeenCalled());
     expect(onError).not.toHaveBeenCalled();
   });
 
