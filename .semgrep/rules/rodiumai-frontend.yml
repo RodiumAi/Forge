@@ -13,6 +13,8 @@ rules:
       exclude:
         - "**/components/landing/LandingJsonLd.tsx"
         - "**/app/layout.tsx"
+        # Same trusted THEME_INIT_SCRIPT as layout.tsx (no user HTML).
+        - "**/app/global-error.tsx"
     patterns:
       - pattern-regex: dangerouslySetInnerHTML=\{\{\s*__html
       - pattern-not-regex: from ['\"]sanitize-html['\"]
