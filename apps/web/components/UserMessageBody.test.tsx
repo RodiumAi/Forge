@@ -9,6 +9,17 @@ vi.mock("@/lib/media-token", () => ({
   MEDIA_TOKEN_EVENT: "forge:mediatoken",
 }));
 
+vi.mock("@/lib/i18n/I18nProvider", () => ({
+  useI18n: () => ({
+    t: (key: string) =>
+      ({
+        selectionBadge: "1 sélection",
+        selectionMarker: "Sélection",
+      })[key] || key,
+    locale: "fr",
+  }),
+}));
+
 vi.mock("@/lib/api", () => ({
   apiBase: () => "http://localhost:8100",
 }));
@@ -104,5 +115,22 @@ describe("UserMessageBody url-capture thumbs", () => {
     ) as HTMLImageElement | null;
     expect(icon).toBeTruthy();
     expect(icon!.getAttribute("src")).toBe("/favicon.png");
+  });
+
+  it("shows a selection chip parsed from the stored marker", () => {
+    const content = [
+      '[Sélection: div | selector:body > main > .phone | text:"9:41 Good morning"]',
+      "",
+      "change the phone color to pink",
+    ].join("\n");
+    const { container, getByText } = render(
+      <UserMessageBody content={content} projectId="proj-1" />,
+    );
+    expect(container.querySelector(".builder-msg-selection")).toBeTruthy();
+    expect(getByText(/Sélection/i)).toBeTruthy();
+    expect(getByText(/div · “9:41 Good morning”/i)).toBeTruthy();
+    expect(getByText("change the phone color to pink")).toBeTruthy();
+    expect(container.textContent).not.toMatch(/selector:body/);
+    expect(container.textContent).not.toMatch(/11/);
   });
 });

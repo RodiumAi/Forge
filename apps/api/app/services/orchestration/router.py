@@ -76,6 +76,9 @@ def strip_attachment_noise(user_text: str) -> str:
         flags=re.I,
     )
     text = re.sub(r"\[Connector:\s*[^\]]+\]", " ", text, flags=re.I)
+    # Preview element-selection chips: long CSS selectors must not push a
+    # one-line visual edit out of the single-pass path (len >= 180 → full plan).
+    text = re.sub(r"\[(?:Sélection|Selection):\s*[^\]]*\]", " ", text, flags=re.I)
     return re.sub(r"\s+", " ", text).strip()
 
 

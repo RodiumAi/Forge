@@ -153,8 +153,14 @@ def _generation_auth_resolver(user_id: UUID, locale: str):
             except HTTPException as exc:
                 detail = exc.detail
                 message = detail if isinstance(detail, str) else str(detail)
-                code = "auth_expired" if exc.status_code == 403 else "network"
-                if exc.status_code not in (401, 403, 503):
+                if exc.status_code in (401, 403):
+                    code = "auth_expired"
+                elif exc.status_code == 503:
+                    # Transient Rodium gateway blip — not a dropped Forge socket.
+                    # Mapping this to "network" made the browser reconnect to
+                    # /events for single-pass runs (no buffer) and hang on Analyse.
+                    code = "upstream"
+                else:
                     code = "internal"
                 raise RodiumError(message, exc.status_code, code) from exc
 
@@ -1076,6 +1082,11 @@ async def send_message(
                     err_row = err_db.get(AgentRun, run_pk)
                     if err_row is not None:
                         err_row.status = "error"
+                        record_run_outcome(
+                            err_row,
+                            code=error_code_for(exc),
+                            message=str(exc),
+                        )
                         err_db.commit()
             except Exception:
                 pass

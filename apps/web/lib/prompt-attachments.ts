@@ -279,11 +279,59 @@ function intentForImage(prompt: string, name: string): "asset" | "reference" {
   return "reference";
 }
 
+export type ElementSelectionMarker = {
+  tag: string;
+  id?: string | null;
+  className?: string | null;
+  selector: string;
+  text?: string;
+};
+
+const SELECTION_MARKER_RE = /\[(?:Sélection|Selection):\s*[^\]]*\]/gi;
+const SELECTION_MARKER_CAPTURE_RE = /\[(?:Sélection|Selection):\s*([^\]]*)\]/i;
+
+/** Parse the first `[Sélection|Selection: …]` chip embedded in a stored user message. */
+export function parseElementSelectionMarker(raw: string): ElementSelectionMarker | null {
+  const match = (raw || "").match(SELECTION_MARKER_CAPTURE_RE);
+  if (!match) return null;
+  const parts = (match[1] || "")
+    .split(/\s*\|\s*/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  if (!parts.length) return null;
+  const tag = parts[0] || "element";
+  let selector = "";
+  let text: string | undefined;
+  for (const part of parts.slice(1)) {
+    if (/^selector:/i.test(part)) {
+      selector = part.replace(/^selector:/i, "").trim();
+    } else if (/^text:/i.test(part)) {
+      text = part
+        .replace(/^text:/i, "")
+        .trim()
+        .replace(/^"|"$/g, "");
+    }
+  }
+  return { tag, selector, text };
+}
+
+/** Short human label for a selection chip — never the raw CSS path. */
+export function selectionChipLabel(sel: Pick<ElementSelectionMarker, "tag" | "id" | "text">): string {
+  if (sel.id) return `#${sel.id}`;
+  const tag = (sel.tag || "element").toLowerCase();
+  const text = (sel.text || "").trim().replace(/\s+/g, " ");
+  if (!text) return tag;
+  const excerpt = text.length > 28 ? `${text.slice(0, 28)}…` : text;
+  return `${tag} · “${excerpt}”`;
+}
+
 export function parseUserMessageContent(raw: string): {
   text: string;
   attachments: MessageAttachment[];
+  selection: ElementSelectionMarker | null;
 } {
   const attachments: MessageAttachment[] = [];
+  const selection = parseElementSelectionMarker(raw);
   let text = raw || "";
 
   for (const match of raw.matchAll(ATTACH_IMAGE_RE)) {
@@ -342,15 +390,15 @@ export function parseUserMessageContent(raw: string): {
     .replace(ATTACH_FILES_RE, "")
     .replace(ATTACH_PUBLIC_HINT_RE, "")
     .replace(ATTACH_INSTRUCTION_RE, "")
-    // Legacy prose instructions (older messages) + selection markers stay out of the UI.
-    .replace(/\[(?:Sélection|Selection):\s*[^\]]*\]/gi, "")
+    // Selection is rendered as its own chip — strip the raw marker from the prose.
+    .replace(SELECTION_MARKER_RE, "")
     .replace(/\[Connector:\s*[^\]]+\]/gi, "")
     .replace(/###\s+(?:Markdown file|Fichier Markdown|PDF content|Contenu PDF|Text file|Fichier texte)[^\n]*\n+[\s\S]*?(?=\n###|\n\[|\s*$)/gi, "")
     .replace(/\[(?:PDF attached|PDF joint)[^\]]*\]/gi, "")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 
-  return { text, attachments };
+  return { text, attachments, selection };
 }
 
 export async function buildPromptWithAttachments(
@@ -428,14 +476,6 @@ export function insertMentionInTextarea(
   const needsSpace = tail && !tail.startsWith("\n");
   return `${head}${head ? " " : ""}${mention}${needsSpace ? " " : ""}${tail}`;
 }
-
-export type ElementSelectionMarker = {
-  tag: string;
-  id?: string | null;
-  className?: string | null;
-  selector: string;
-  text?: string;
-};
 
 export function formatElementSelectionMarker(sel: ElementSelectionMarker, label = "Sélection"): string {
   const parts = [
