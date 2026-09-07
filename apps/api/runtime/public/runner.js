@@ -39,6 +39,25 @@ const send = (payload) => {
   }
 };
 
+/** Thumb snapshots must reach the dashboard even if RUNNER_PARENT_ORIGINS
+ *  was misconfigured in prod — the embedder already passed parent_origin. */
+const sendThumb = (payload) => {
+  let target = PARENT_ORIGIN;
+  if (!target) {
+    try {
+      target = new URLSearchParams(location.search).get("parent_origin") || "";
+    } catch {
+      target = "";
+    }
+  }
+  if (!target) return;
+  try {
+    parent.postMessage(payload, target);
+  } catch {
+    /* ignore */
+  }
+};
+
 window.onerror = (message, source, line, column, error) => {
   send({
     type: "forge:error",
@@ -443,6 +462,70 @@ async function waitForFirstPaint(timeoutMs = 8000) {
   } catch {
     /* ignore */
   }
+  // Give remote images a short window; don't block forever (dashboard OOM risk).
+  const imgs = [...document.images];
+  if (imgs.length) {
+    await Promise.race([
+      Promise.all(
+        imgs.map(
+          (img) =>
+            img.complete ||
+            new Promise((resolve) => {
+              img.addEventListener("load", resolve, { once: true });
+              img.addEventListener("error", resolve, { once: true });
+            }),
+        ),
+      ),
+      new Promise((resolve) => setTimeout(resolve, 2500)),
+    ]);
+  }
+}
+
+function isThumbMode() {
+  try {
+    return new URLSearchParams(location.search).get("thumb") === "1";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Dashboard cards must not keep a live React tree. Capture a small JPEG and
+ * post it to the parent so the iframe can be destroyed (prevents Chrome OOM
+ * when many project thumbs mount at once).
+ */
+async function captureThumbSnapshot() {
+  const w = Math.min(window.innerWidth || 1280, 1280);
+  const h = Math.min(window.innerHeight || 800, 800);
+  const scale = 0.4;
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(w * scale));
+  canvas.height = Math.max(1, Math.round(h * scale));
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+
+  try {
+    // Dynamic import only in thumb mode — never ship html2canvas to builder preview.
+    const mod = await import("https://esm.sh/html2canvas@1.4.1");
+    const html2canvas = mod.default || mod;
+    const shot = await html2canvas(document.body, {
+      width: w,
+      height: h,
+      windowWidth: w,
+      windowHeight: h,
+      scale,
+      useCORS: true,
+      allowTaint: true,
+      logging: false,
+      backgroundColor: "#111111",
+    });
+    return shot.toDataURL("image/jpeg", 0.7);
+  } catch {
+    // Fallback: solid frame so the parent can still release the live iframe.
+    ctx.fillStyle = "#111111";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL("image/jpeg", 0.7);
+  }
 }
 
 async function mount(files, entry, tokensCss, assets) {
@@ -576,6 +659,13 @@ async function mount(files, entry, tokensCss, assets) {
       });
     }
     send({ type: "forge:mounted", entry });
+    if (isThumbMode()) {
+      const dataUrl = await captureThumbSnapshot();
+      if (dataUrl) sendThumb({ type: "forge:thumb-snapshot", dataUrl });
+      // Drop the live tree so the iframe is cheap until the parent removes it.
+      const rootClear = document.getElementById("root");
+      if (rootClear) rootClear.innerHTML = "";
+    }
   } catch (e) {
     send({
       type: "forge:error",
@@ -583,6 +673,15 @@ async function mount(files, entry, tokensCss, assets) {
       message: String(e?.message || e),
       stack: e?.stack,
     });
+    if (isThumbMode()) {
+      // Still release the dashboard slot with a placeholder frame.
+      try {
+        const dataUrl = await captureThumbSnapshot();
+        if (dataUrl) sendThumb({ type: "forge:thumb-snapshot", dataUrl });
+      } catch {
+        /* ignore */
+      }
+    }
     // Keep previous blobs if mount failed
     for (const url of blobUrls.values()) {
       try {

@@ -568,6 +568,7 @@ function DashboardInner() {
                       frameSrc={thumb.frameSrc}
                       src={thumb.src}
                       authPath={thumb.authPath}
+                      cacheKey={`${p.id}:${p.updated_at || p.created_at}`}
                       title={p.name}
                       className="home-card-thumb"
                     />
