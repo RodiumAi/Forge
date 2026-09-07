@@ -135,8 +135,7 @@ class _LinkQuery:
             (
                 link
                 for link in self.links
-                if link.provider == self._provider
-                and link.provider_account_id == self._account
+                if link.provider == self._provider and link.provider_account_id == self._account
             ),
             None,
         )
@@ -337,15 +336,11 @@ class TestVerificationGate:
     which is what this rule prevents.
     """
 
-    def test_a_social_account_with_an_unverified_address_gets_no_session(
-        self, monkeypatch
-    ):
+    def test_a_social_account_with_an_unverified_address_gets_no_session(self, monkeypatch):
         # GitHub accounts with a hidden address land here.
         db = _FakeDb()
         sent: list = []
-        monkeypatch.setattr(
-            auth_mod, "_send_verification_email", lambda *a, **k: sent.append(a)
-        )
+        monkeypatch.setattr(auth_mod, "_send_verification_email", lambda *a, **k: sent.append(a))
 
         with pytest.raises(HTTPException) as exc:
             _run_firebase(db, monkeypatch, identity=_identity(verified=False))

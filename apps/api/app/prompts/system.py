@@ -176,6 +176,8 @@ that only works at 1440px is not finished.
 28. If a project logo already exists at `/logo.png` (or the path in DESIGN.md), keep
     using that path. Never discard the project logo to invent a new brand mark.
 29. Never substitute a placeholder for a user-uploaded or project logo asset.
+    Never recreate an uploaded logo as SVG paths, CSS shapes, emoji, icon fonts, or
+    stylized text — always use `<img src="/images/...">` or `/logo.png` from the markers.
 
 ## Plugins & prototype mode (frontend-only)
 

@@ -88,8 +88,7 @@ def _note_failure() -> None:
         _breaker_open_until = time.monotonic() + _BREAKER_COOLDOWN_S
         _client = None  # drop the pool; a fresh one is built after the cooldown
         logger.warning(
-            "redis unhealthy after %d failures — falling back to the in-process "
-            "event mirror for %.0fs",
+            "redis unhealthy after %d failures — falling back to the in-process event mirror for %.0fs",
             _fail_count,
             _BREAKER_COOLDOWN_S,
         )

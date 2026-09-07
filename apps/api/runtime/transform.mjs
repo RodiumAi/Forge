@@ -26,12 +26,22 @@ const STATEMENT_IMPORT_RES = [
   // Side-effect: import "./x.css";
   /\bimport\s*["']([^"']+)["']\s*;?/g,
   // Named/default: import X from "y";
-  /\bimport\s+(?:type\s+)?[\s\S]*?\s+from\s*["']([^"']+)["']/g,
-  // Re-export: export ... from "y";
-  /\bexport\s+[\s\S]*?\s+from\s*["']([^"']+)["']/g,
+  // No quotes between `import` and `from` so we never span into string literals
+  // (e.g. children: "or start from" after `export function …`).
+  /\bimport\s+(?:type\s+)?(?:[^"'`;]+?)\s+from\s*["']([^"']+)["']/g,
+  // Re-export only — never bare `export function` / `export const`.
+  /\bexport\s+(?:type\s+)?(?:\*(?:\s+as\s+\w+)?|\{[^}]*\})\s+from\s*["']([^"']+)["']/g,
   // Dynamic: import("y")
   /\bimport\s*\(\s*["']([^"']+)["']/g,
 ];
+
+/** Reject regex false-positives that look like Babel/JSX fragments, not packages. */
+export function isPlausibleModuleSpecifier(specifier) {
+  if (!specifier || specifier.length > 200) return false;
+  if (/[\s\r\n{},;()]/.test(specifier)) return false;
+  if (/\/\*|\*\/|#__PURE__|_jsxs?/.test(specifier)) return false;
+  return true;
+}
 
 /**
  * @param {string} code
@@ -47,7 +57,7 @@ export function collectImports(code) {
     let m;
     while ((m = re.exec(code))) {
       const specifier = m[1];
-      if (!specifier) continue;
+      if (!specifier || !isPlausibleModuleSpecifier(specifier)) continue;
       const absStart = m.index + m[0].lastIndexOf(specifier);
       const key = `${absStart}:${specifier}`;
       if (seen.has(key)) continue;

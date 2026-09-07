@@ -14,7 +14,8 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 COPY apps/api/requirements.txt ./requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt \
+  && playwright install --with-deps chromium
 
 COPY apps/api/app ./app
 COPY apps/api/runtime ./runtime

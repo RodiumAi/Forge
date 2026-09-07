@@ -78,39 +78,27 @@ describe("file operations", () => {
     { op: "delete", path: "src/Old.tsx" },
   ];
 
-  it("distinguishes writes from deletes by class, not just by sign", () => {
+  // File paths stay in props/state for applied/preview refresh, but the panel
+  // no longer lists them (Replit/Lovable-style: progress, not paths).
+  it("does not render file paths (kept under the hood)", () => {
     const { container } = renderWithProviders(<AgentActivityPanel fileOps={OPS} />);
-    expect(container.querySelector(".file-op-write")).toHaveTextContent("src/App.tsx");
-    expect(container.querySelector(".file-op-delete")).toHaveTextContent("src/Old.tsx");
+    expect(container).toBeEmptyDOMElement();
+    expect(screen.queryByText("src/App.tsx")).not.toBeInTheDocument();
+    expect(screen.queryByText("src/Old.tsx")).not.toBeInTheDocument();
   });
 
-  it("opens a file when the path is clicked", async () => {
-    const onOpenFile = vi.fn();
-    const { user } = renderWithProviders(
-      <AgentActivityPanel fileOps={OPS} onOpenFile={onOpenFile} />,
+  it("still accepts a legacy array of plain paths without rendering them", () => {
+    const { container } = renderWithProviders(
+      <AgentActivityPanel fileOps={["src/Legacy.tsx"]} />,
     );
-    await user.click(screen.getByRole("button", { name: "src/App.tsx" }));
-    expect(onOpenFile).toHaveBeenCalledWith("src/App.tsx");
+    expect(container).toBeEmptyDOMElement();
+    expect(screen.queryByText("src/Legacy.tsx")).not.toBeInTheDocument();
   });
 
-  it("renders plain text when no handler is provided", () => {
-    renderWithProviders(<AgentActivityPanel fileOps={OPS} />);
-    expect(screen.queryByRole("button", { name: "src/App.tsx" })).not.toBeInTheDocument();
-    expect(screen.getByText("src/App.tsx")).toBeInTheDocument();
-  });
-
-  it("groups the list beyond six entries", async () => {
-    const many = Array.from({ length: 9 }, (_, i) => ({ op: "write", path: `src/F${i}.tsx` }));
-    const { user } = renderWithProviders(<AgentActivityPanel fileOps={many} />);
-
-    expect(screen.queryByText("src/F8.tsx")).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /\+3 autres/ }));
-    expect(screen.getByText("src/F8.tsx")).toBeInTheDocument();
-  });
-
-  it("accepts a legacy array of plain paths", () => {
-    renderWithProviders(<AgentActivityPanel fileOps={["src/Legacy.tsx"]} />);
-    expect(screen.getByText("src/Legacy.tsx")).toBeInTheDocument();
+  it("does not call onOpenFile when only fileOps are present", () => {
+    const onOpenFile = vi.fn();
+    renderWithProviders(<AgentActivityPanel fileOps={OPS} onOpenFile={onOpenFile} />);
+    expect(onOpenFile).not.toHaveBeenCalled();
   });
 });
 

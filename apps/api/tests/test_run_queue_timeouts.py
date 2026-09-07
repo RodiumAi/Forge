@@ -66,13 +66,17 @@ def fake_redis(monkeypatch):
         holder["client"] = client
         return client
 
-    module = type("redis", (), {"Redis": type("Redis", (), {"from_url": staticmethod(
-        lambda url, **kwargs: _factory(url=url, **kwargs)
-    )})})
-    monkeypatch.setitem(__import__("sys").modules, "redis", module)
-    monkeypatch.setattr(
-        run_queue, "get_settings", lambda: type("S", (), {"redis_url": "redis://x"})()
+    module = type(
+        "redis",
+        (),
+        {
+            "Redis": type(
+                "Redis", (), {"from_url": staticmethod(lambda url, **kwargs: _factory(url=url, **kwargs))}
+            )
+        },
     )
+    monkeypatch.setitem(__import__("sys").modules, "redis", module)
+    monkeypatch.setattr(run_queue, "get_settings", lambda: type("S", (), {"redis_url": "redis://x"})())
     return holder
 
 

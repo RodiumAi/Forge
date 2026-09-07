@@ -24,7 +24,8 @@ from app.services.asset_storage import (
 from app.services.filesystem import project_dir
 
 _IMAGE_MARKER_RE = re.compile(
-    r"\[(?:Reference screenshot|Capture de référence|Image attached|Image jointe):\s*"
+    r"\[(?:Reference screenshot|Capture de référence|Image attached|Image jointe|"
+    r"Site asset|Asset joint):\s*"
     r"[^\]]+\]",
     re.I,
 )
@@ -46,7 +47,10 @@ _REFERENCE_FILENAME_RE = re.compile(
 REFERENCE_VISION_INSTRUCTION = (
     "This is a REFERENCE screenshot/mockup for visual inspiration. "
     "Match its layout, hierarchy and style in the app. "
-    "Do NOT call image generation / do NOT invent a new stock photo — implement UI in code."
+    "Do NOT call image generation / do NOT invent a new stock photo — implement UI in code. "
+    "Each reference screenshot maps to one screen/route when several are attached; "
+    "derive route names from filenames when possible (home, pricing, about). "
+    "Do NOT collapse multiple screenshots into one long scrolling page unless the user asks."
 )
 
 ASSET_VISION_INSTRUCTION = (
@@ -54,7 +58,9 @@ ASSET_VISION_INSTRUCTION = (
     "Use the relative path from the markers (e.g. /images/...) in generated code "
     '(<img src="/images/..."> or CSS url(/images/...)). '
     "Never use raw S3 or object-store URLs — they are private and return AccessDenied. "
-    "Do NOT generate a new image. Do NOT use a placeholder path."
+    "Do NOT generate a new image. Do NOT use a placeholder path. "
+    "Do NOT recreate the logo/mark as SVG paths, CSS shapes, emoji, Lucide/icon fonts, "
+    "or stylized text — always reference the uploaded file via <img> / url()."
 )
 
 MAX_VISION_IMAGES = 5
@@ -133,7 +139,8 @@ def extract_image_urls(user_text: str) -> list[ResolvedImage]:
     for match in _IMAGE_MARKER_RE.finditer(text):
         marker = match.group(0)
         name_match = re.search(
-            r"\[(?:Reference screenshot|Capture de référence|Image attached|Image jointe):\s*([^\|\]]+)",
+            r"\[(?:Reference screenshot|Capture de référence|Image attached|Image jointe|"
+            r"Site asset|Asset joint):\s*([^\|\]]+)",
             marker,
             re.I,
         )
@@ -323,6 +330,8 @@ def materialize_asset_markers(db: Session, project_id: str, user_text: str) -> s
     except ValueError:
         return text
 
+    from app.services.filesystem import write_bytes
+
     def replacer(match: re.Match[str]) -> str:
         marker = match.group(0)
         obj_m = _OBJECT_IN_MARKER_RE.search(marker)
@@ -332,7 +341,8 @@ def materialize_asset_markers(db: Session, project_id: str, user_text: str) -> s
         # the private uploads bucket: a raw private S3 URL written into JSX is
         # always broken (AccessDenied), whatever the declared intent. Copying a
         # reference screenshot into public/images/ is harmless by comparison.
-        if _intent_for_marker(marker) != "asset":
+        intent = _intent_for_marker(marker)
+        if intent != "asset":
             url_m = _URL_IN_MARKER_RE.search(marker) or _PUBLIC_IN_MARKER_RE.search(marker)
             if not url_m or not is_private_upload_url(url_m.group(1).strip()):
                 return marker
@@ -345,6 +355,27 @@ def materialize_asset_markers(db: Session, project_id: str, user_text: str) -> s
         except Exception:
             return marker
 
+        # Align brand lock path: logo-like assets also land at /logo.{ext}.
+        name_match = re.search(
+            r"\[(?:Reference screenshot|Capture de référence|Image attached|Image jointe|"
+            r"Site asset|Asset joint):\s*([^\|\]]+)",
+            marker,
+            re.I,
+        )
+        display_name = (name_match.group(1) if name_match else "").strip()
+        if intent == "asset" and (
+            _ASSET_FILENAME_RE.search(display_name) or re.search(r"logo", display_name, re.I)
+        ):
+            try:
+                disk = project_dir(project_id) / "public" / web_path.lstrip("/")
+                if disk.is_file():
+                    ext = disk.suffix.lower() or ".png"
+                    if ext not in (".png", ".jpg", ".jpeg", ".webp", ".svg", ".gif", ".ico"):
+                        ext = ".png"
+                    write_bytes(project_id, f"public/logo{ext}", disk.read_bytes())
+            except Exception:
+                pass
+
         updated = marker
         replaced = False
         for pat in (_URL_IN_MARKER_RE, _PUBLIC_IN_MARKER_RE):
@@ -354,10 +385,42 @@ def materialize_asset_markers(db: Session, project_id: str, user_text: str) -> s
                 replaced = True
                 break
         if not replaced:
-            updated = updated[:-1] + f" | url:{web_path}]"
+            # Prefer rewriting any existing url: to the public path for assets.
+            if intent == "asset" and _URL_IN_MARKER_RE.search(updated):
+                updated = _URL_IN_MARKER_RE.sub(f"| url:{web_path}", updated, count=1)
+            else:
+                updated = updated[:-1] + f" | url:{web_path}]"
         return updated
 
     return _IMAGE_MARKER_RE.sub(replacer, text)
+
+
+def count_markers_by_intent(user_text: str, intent: str) -> int:
+    """How many image markers declare the given intent (asset|reference)."""
+    want = (intent or "").lower().strip()
+    if not want:
+        return 0
+    n = 0
+    for match in _IMAGE_MARKER_RE.finditer(user_text or ""):
+        if _intent_for_marker(match.group(0)) == want:
+            n += 1
+    return n
+
+
+def list_materialized_asset_paths(user_text: str) -> list[str]:
+    """Relative /images/... paths from asset-intent markers (after materialize)."""
+    paths: list[str] = []
+    for match in _IMAGE_MARKER_RE.finditer(user_text or ""):
+        marker = match.group(0)
+        if _intent_for_marker(marker) != "asset":
+            continue
+        url_m = _URL_IN_MARKER_RE.search(marker) or _PUBLIC_IN_MARKER_RE.search(marker)
+        if not url_m:
+            continue
+        url = url_m.group(1).strip()
+        if url.startswith(("/images/", "/logo")) and url not in paths:
+            paths.append(url)
+    return paths
 
 
 def vision_instruction_for_message(user_text: str) -> str | None:
@@ -365,25 +428,37 @@ def vision_instruction_for_message(user_text: str) -> str | None:
     if not _IMAGE_MARKER_RE.search(user_text or ""):
         return None
     intents = _marker_intents(user_text)
-    if "asset" in intents and "reference" not in intents:
-        return ASSET_VISION_INSTRUCTION
+    blocks: list[str] = []
+
+    # Infer when markers lack intent: —
+    if not intents:
+        names = []
+        for match in _IMAGE_MARKER_RE.finditer(user_text or ""):
+            body = match.group(0)
+            name = re.split(r"\s*\|\s*", body.split(":", 1)[-1], maxsplit=1)[0].strip(" []")
+            names.append(name)
+        if names and all(_REFERENCE_FILENAME_RE.search(n) for n in names):
+            intents = ["reference"]
+        elif (
+            names
+            and any(_ASSET_FILENAME_RE.search(n) for n in names)
+            and not any(_REFERENCE_FILENAME_RE.search(n) for n in names)
+        ):
+            intents = ["asset"]
+        else:
+            intents = ["reference"]
+
+    # Both can apply in one message (screenshot + logo) — never let reference wipe asset.
     if "reference" in intents:
+        blocks.append(REFERENCE_VISION_INSTRUCTION)
+    if "asset" in intents:
+        blocks.append(ASSET_VISION_INSTRUCTION)
+        asset_paths = list_materialized_asset_paths(user_text)
+        if asset_paths:
+            blocks.append("Must use these asset paths exactly (do not redraw): " + ", ".join(asset_paths))
+    if not blocks:
         return REFERENCE_VISION_INSTRUCTION
-    # Legacy markers without intent: — infer from filenames.
-    names = []
-    for match in _IMAGE_MARKER_RE.finditer(user_text or ""):
-        body = match.group(0)
-        name = re.split(r"\s*\|\s*", body.split(":", 1)[-1], maxsplit=1)[0].strip(" []")
-        names.append(name)
-    if names and all(_REFERENCE_FILENAME_RE.search(n) for n in names):
-        return REFERENCE_VISION_INSTRUCTION
-    if (
-        names
-        and any(_ASSET_FILENAME_RE.search(n) for n in names)
-        and not any(_REFERENCE_FILENAME_RE.search(n) for n in names)
-    ):
-        return ASSET_VISION_INSTRUCTION
-    return REFERENCE_VISION_INSTRUCTION
+    return "\n\n".join(blocks)
 
 
 async def enrich_user_message_with_vision(

@@ -8,6 +8,7 @@ import time
 from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import Any
 
+from app.db import SessionLocal
 from app.i18n import Locale, t
 from app.services.apply_writes import apply_validated_writes_async
 from app.services.filesystem import delete_file
@@ -56,9 +57,7 @@ async def _stream_within_budget(
     classifies as `timeout` and treats like any other task failure.
     """
     deadline = time.monotonic() + budget_s
-    agen = stream_chat_completion(
-        auth=auth, model=model, messages=messages, locale=locale
-    ).__aiter__()
+    agen = stream_chat_completion(auth=auth, model=model, messages=messages, locale=locale).__aiter__()
     try:
         while True:
             remaining = deadline - time.monotonic()
@@ -130,22 +129,18 @@ def _failures_summary(failures: list[dict[str, Any]], locale: Locale, *, stopped
             head = f"Le plan s'est arrêté à l'étape « {stop_title} » :"
             tail = "Les étapes suivantes en dépendent et n'ont pas été lancées. Vous pouvez les relancer depuis le plan."
         else:
-            head = f"The plan stopped at step \"{stop_title}\":"
-            tail = "The remaining steps depend on it and were never started. You can re-run them from the plan."
+            head = f'The plan stopped at step "{stop_title}":'
+            tail = (
+                "The remaining steps depend on it and were never started. You can re-run them from the plan."
+            )
         return "\n".join([head, tail])
     if locale == "fr":
         head = (
-            "Une étape n'a pas abouti :"
-            if len(titles) == 1
-            else f"{len(titles)} étapes n'ont pas abouti :"
+            "Une étape n'a pas abouti :" if len(titles) == 1 else f"{len(titles)} étapes n'ont pas abouti :"
         )
         tail = "Vous pouvez les relancer depuis le plan."
     else:
-        head = (
-            "One step did not complete:"
-            if len(titles) == 1
-            else f"{len(titles)} steps did not complete:"
-        )
+        head = "One step did not complete:" if len(titles) == 1 else f"{len(titles)} steps did not complete:"
         tail = "You can re-run them from the plan."
     return "\n".join([head, *(f"- {title}" for title in titles), tail])
 
@@ -352,9 +347,7 @@ async def _stream_verify_repair(
         ):
             if run_id and is_cancelled(run_id):
                 yield push_step(step_id, step_label, "error")
-                yield _sse(
-                    {"type": "error", "code": "cancelled", "message": "cancelled", "plan": tasks}
-                )
+                yield _sse({"type": "error", "code": "cancelled", "message": "cancelled", "plan": tasks})
                 return
             if chunk.kind == "thinking":
                 thinking_parts.append(chunk.content)
@@ -449,9 +442,7 @@ async def run_plan_tasks(
         if run_id and is_cancelled(run_id):
             task["status"] = "error"
             await emit_progress(idx)
-            yield _sse(
-                {"type": "error", "code": "cancelled", "message": "cancelled", "plan": tasks}
-            )
+            yield _sse({"type": "error", "code": "cancelled", "message": "cancelled", "plan": tasks})
             return
 
         if str(task.get("status") or "") == "done":
@@ -476,6 +467,13 @@ async def run_plan_tasks(
             f"{_task_prompt_block(task, idx=idx, total=len(tasks))}"
         ).strip()
 
+        if "intent:asset" in (user_prompt or ""):
+            task_prompt += (
+                "\n\nASSET RULE: Uploaded logos/icons with intent:asset must be used via "
+                '<img src="/images/..."> or /logo.png from the markers — '
+                "never redraw as SVG/CSS/emoji/icons."
+            )
+
         surgical = _is_surgical_task(task, total_tasks=len(tasks))
         if surgical:
             task_prompt += (
@@ -485,11 +483,14 @@ async def run_plan_tasks(
             )
 
         yield push_step("select_files", t("step_select_files", locale), "running")
-        llm_messages = await build_llm_messages(
+        # Vision/asset materialization needs a DB session (S3 object rows).
+        # plan_worker intentionally passes db=None so we never pin a connection
+        # across the multi-minute LLM stream — open a short-lived session only
+        # around message construction, then close before streaming.
+        msg_kwargs = dict(
             project_id=project_id,
             history=[*history, ("user", task_prompt)],
             user_query=task_prompt,
-            db=db,
             user_id=user_id,
             locale=locale,
             auth=auth,
@@ -500,10 +501,15 @@ async def run_plan_tasks(
             # from stale conversation memory.
             focus_paths=[str(f) for f in (task.get("files") or []) if isinstance(f, str)],
         )
-        # End the read transaction: the LLM stream below can run for minutes
-        # and must not pin a pooled DB connection the whole time.
         if db is not None:
+            llm_messages = await build_llm_messages(db=db, **msg_kwargs)
+            # End the read transaction: the LLM stream below can run for minutes
+            # and must not pin a pooled DB connection the whole time.
             db.commit()
+        else:
+            with SessionLocal() as vision_db:
+                llm_messages = await build_llm_messages(db=vision_db, **msg_kwargs)
+                vision_db.commit()
         yield push_step("select_files", t("step_select_files", locale), "done")
         yield push_step("generate", t("step_generate", locale), "running")
 
@@ -672,9 +678,7 @@ async def run_plan_tasks(
             if retry_cancelled:
                 task["status"] = "error"
                 await emit_progress(idx)
-                yield _sse(
-                    {"type": "error", "code": "cancelled", "message": "cancelled", "plan": tasks}
-                )
+                yield _sse({"type": "error", "code": "cancelled", "message": "cancelled", "plan": tasks})
                 return
             yield push_step("generate", t("step_generate", locale), "done")
             if retry_buf:
@@ -755,9 +759,7 @@ async def run_plan_tasks(
                 yield _sse(
                     {
                         "type": "warning",
-                        "message": (
-                            "[verify-mid:info] import.scaffolded: " + ", ".join(scaffolded[:8])
-                        ),
+                        "message": ("[verify-mid:info] import.scaffolded: " + ", ".join(scaffolded[:8])),
                     }
                 )
             mid_findings = verify_project_build(project_id) + scaffold_fill_findings(scaffolded)

@@ -85,10 +85,7 @@ def parse_oauth_state(state: str, binding: str | None = None) -> str:
 
     expected = payload.get("b")
     bound = isinstance(expected, str) and bool(expected)
-    if bound and (
-        not binding
-        or not secrets.compare_digest(hash_state_binding(binding), expected)
-    ):
+    if bound and (not binding or not secrets.compare_digest(hash_state_binding(binding), expected)):
         raise RodiumOidcError("OAuth state does not match this browser")
     return verifier
 

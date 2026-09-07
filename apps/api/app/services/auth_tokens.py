@@ -65,11 +65,7 @@ def lookup_user_id(db: Session, raw: str, kind: str) -> UUID | None:
     """
     if not raw:
         return None
-    row = (
-        db.query(AuthToken)
-        .filter(AuthToken.token_hash == hash_token(raw), AuthToken.kind == kind)
-        .first()
-    )
+    row = db.query(AuthToken).filter(AuthToken.token_hash == hash_token(raw), AuthToken.kind == kind).first()
     return row.user_id if row is not None else None
 
 
@@ -82,11 +78,7 @@ def consume(db: Session, raw: str, kind: str) -> UUID | None:
     """
     if not raw:
         return None
-    row = (
-        db.query(AuthToken)
-        .filter(AuthToken.token_hash == hash_token(raw), AuthToken.kind == kind)
-        .first()
-    )
+    row = db.query(AuthToken).filter(AuthToken.token_hash == hash_token(raw), AuthToken.kind == kind).first()
     if row is None or row.consumed_at is not None:
         return None
 

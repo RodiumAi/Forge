@@ -52,9 +52,7 @@ def test_callback_critical_path_skips_keys_and_wallet(monkeypatch: pytest.Monkey
         calls.append("wallet")
         return {"balanceRodi": "42"}
 
-    monkeypatch.setattr(
-        auth_mod, "parse_oauth_state", lambda _state, _binding=None: "verifier"
-    )
+    monkeypatch.setattr(auth_mod, "parse_oauth_state", lambda _state, _binding=None: "verifier")
     monkeypatch.setattr(auth_mod, "exchange_code", fake_exchange)
     monkeypatch.setattr(auth_mod, "fetch_userinfo", fake_userinfo)
     monkeypatch.setattr(auth_mod, "fetch_api_keys", fake_keys)

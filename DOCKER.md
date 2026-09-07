@@ -36,3 +36,7 @@ for per-project snapshots.
 **Windows** — for a smoother local loop, run the API on the host
 (`uvicorn app.main:app --reload --port 8100`) with just the backing services in
 Docker: `docker compose up -d postgres valkey minio`.
+
+## API image extras
+
+The API Dockerfile installs **Playwright Chromium** (`playwright install --with-deps chromium`) so pasted site URLs can be captured as reference screenshots during generation (`apps/api/app/services/url_capture.py`). Rebuild the `api` service after pulling changes that touch that dependency.

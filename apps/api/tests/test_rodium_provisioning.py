@@ -60,9 +60,7 @@ class TestProvisionService:
         clear_settings_cache()
         calls = _patch_post(monkeypatch, _response(201))
         try:
-            result = asyncio.run(
-                rodium_provisioning.provision(email="a@b.co", full_name="A")
-            )
+            result = asyncio.run(rodium_provisioning.provision(email="a@b.co", full_name="A"))
         finally:
             clear_settings_cache()
 
@@ -85,9 +83,7 @@ class TestProvisionService:
             ),
         )
 
-        result = asyncio.run(
-            rodium_provisioning.provision(email="a@b.co", full_name="Ada")
-        )
+        result = asyncio.run(rodium_provisioning.provision(email="a@b.co", full_name="Ada"))
 
         assert result is not None
         assert result.user_id == "p6jerdk3zhm3z788ab9t6vj8"
@@ -111,23 +107,17 @@ class TestProvisionService:
         # being down must not fail the request.
         _patch_post(monkeypatch, httpx.ConnectError("refused"))
 
-        assert asyncio.run(
-            rodium_provisioning.provision(email="a@b.co", full_name="A")
-        ) is None
+        assert asyncio.run(rodium_provisioning.provision(email="a@b.co", full_name="A")) is None
 
     def test_a_server_error_returns_none(self, monkeypatch, provisioning_enabled):
         _patch_post(monkeypatch, _response(500, {"message": "boom"}))
 
-        assert asyncio.run(
-            rodium_provisioning.provision(email="a@b.co", full_name="A")
-        ) is None
+        assert asyncio.run(rodium_provisioning.provision(email="a@b.co", full_name="A")) is None
 
     def test_a_malformed_response_returns_none(self, monkeypatch, provisioning_enabled):
         _patch_post(monkeypatch, _response(201, {"unexpected": "shape"}))
 
-        assert asyncio.run(
-            rodium_provisioning.provision(email="a@b.co", full_name="A")
-        ) is None
+        assert asyncio.run(rodium_provisioning.provision(email="a@b.co", full_name="A")) is None
 
 
 class TestLinkRodiumAccount:
@@ -151,9 +141,7 @@ class TestLinkRodiumAccount:
             rodium_token_expires_at=None,
         )
         db = MagicMock()
-        db.get.side_effect = lambda model, _key: (
-            settings_row if model is UserSettings else None
-        )
+        db.get.side_effect = lambda model, _key: settings_row if model is UserSettings else None
         return db
 
     def test_it_stores_the_link_and_returns_the_access_token(self, monkeypatch):

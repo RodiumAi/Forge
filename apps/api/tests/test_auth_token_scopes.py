@@ -57,9 +57,7 @@ class TestSessionTokensAreHeaderOnly:
         user = _user()
         token = auth_mod.token_for_user(user)
 
-        resolved = auth_mod.get_current_user(
-            _request(), SimpleNamespace(credentials=token), _db(user)
-        )
+        resolved = auth_mod.get_current_user(_request(), SimpleNamespace(credentials=token), _db(user))
         assert resolved is user
 
     def test_a_session_token_in_the_query_string_is_refused(self):
@@ -69,9 +67,7 @@ class TestSessionTokensAreHeaderOnly:
         token = auth_mod.token_for_user(user)
 
         with pytest.raises(HTTPException) as exc:
-            auth_mod.get_current_user(
-                _request({"access_token": token}), None, _db(user)
-            )
+            auth_mod.get_current_user(_request({"access_token": token}), None, _db(user))
         assert exc.value.status_code == 401
 
     def test_even_the_media_routes_refuse_a_session_token_in_the_query(self):
@@ -88,19 +84,14 @@ class TestMediaTokens:
         user = _user()
         token = auth_mod.media_token_for_user(user)
 
-        assert (
-            auth_mod.get_media_user(_request({"access_token": token}), None, _db(user))
-            is user
-        )
+        assert auth_mod.get_media_user(_request({"access_token": token}), None, _db(user)) is user
 
     def test_the_legacy_token_query_key_is_still_accepted(self):
         # The runner builds `?token=` for preview assets.
         user = _user()
         token = auth_mod.media_token_for_user(user)
 
-        assert (
-            auth_mod.get_media_user(_request({"token": token}), None, _db(user)) is user
-        )
+        assert auth_mod.get_media_user(_request({"token": token}), None, _db(user)) is user
 
     def test_a_media_token_cannot_stand_in_for_a_session(self):
         # Otherwise a leaked log line would grant writes, not just reads.
@@ -108,9 +99,7 @@ class TestMediaTokens:
         token = auth_mod.media_token_for_user(user)
 
         with pytest.raises(HTTPException) as exc:
-            auth_mod.get_current_user(
-                _request(), SimpleNamespace(credentials=token), _db(user)
-            )
+            auth_mod.get_current_user(_request(), SimpleNamespace(credentials=token), _db(user))
         assert exc.value.status_code == 401
 
     def test_a_media_token_is_revoked_by_a_password_change(self):

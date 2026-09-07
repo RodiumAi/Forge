@@ -390,8 +390,7 @@ def _missing_import_findings(files: dict[str, str]) -> list[VerifyFinding]:
                 expected = expected_module_path(spec, path)
                 detail = (
                     "Create that module with a matching default/named export, "
-                    "or fix the import path/casing."
-                    + (f' Expected path: "{expected}".' if expected else "")
+                    "or fix the import path/casing." + (f' Expected path: "{expected}".' if expected else "")
                 )
             findings.append(
                 VerifyFinding(
@@ -695,7 +694,7 @@ def responsive_findings(files: dict[str, str]) -> list[VerifyFinding]:
                 severity="warning",
                 path="index.html",
                 message=(
-                    "index.html has no <meta name=\"viewport\">. Without it a phone "
+                    'index.html has no <meta name="viewport">. Without it a phone '
                     "renders the desktop layout scaled down. Add "
                     '<meta name="viewport" content="width=device-width, initial-scale=1" />.'
                 ),
@@ -719,8 +718,7 @@ def responsive_findings(files: dict[str, str]) -> list[VerifyFinding]:
                     path=path,
                     message=(
                         "Fixed pixel widths overflow a phone viewport. Replace with "
-                        "max-width + width:100% (or min()/clamp()): "
-                        + "; ".join(offenders[:6])
+                        "max-width + width:100% (or min()/clamp()): " + "; ".join(offenders[:6])
                     ),
                 )
             )
