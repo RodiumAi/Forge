@@ -22,6 +22,7 @@ from app.services.asset_storage import (
     repair_private_upload_urls_in_project,
 )
 from app.services.filesystem import project_dir
+from app.services.net_guard import BlockedURLError, validate_public_url_async
 
 _IMAGE_MARKER_RE = re.compile(
     r"\[(?:Reference screenshot|Capture de référence|Image attached|Image jointe|"
@@ -197,18 +198,36 @@ def _read_local_public(project_id: str, web_path: str) -> tuple[bytes, str] | No
     return body, ctype
 
 
+_MAX_FETCH_REDIRECTS = 5
+
+
 async def _fetch_url(url: str) -> tuple[bytes, str] | None:
+    # Validate every hop ourselves instead of letting httpx follow redirects
+    # blindly — a public URL can 3xx to an internal host.
     try:
-        async with httpx.AsyncClient(timeout=20.0, follow_redirects=True) as client:
-            resp = await client.get(url)
-        if resp.status_code >= 400:
+        async with httpx.AsyncClient(timeout=20.0, follow_redirects=False) as client:
+            current = url
+            for _ in range(_MAX_FETCH_REDIRECTS + 1):
+                await validate_public_url_async(current)
+                resp = await client.get(current)
+                if resp.is_redirect:
+                    location = resp.headers.get("location")
+                    if not location:
+                        return None
+                    current = str(httpx.URL(str(resp.url)).join(location))
+                    continue
+                if resp.status_code >= 400:
+                    return None
+                body = resp.content
+                if len(body) > MAX_IMAGE_BYTES:
+                    # A truncated binary is a corrupt image; skip vision rather than send garbage.
+                    return None
+                ctype = (resp.headers.get("content-type") or "image/png").split(";")[0].strip()
+                return body, ctype
+            # Too many redirects.
             return None
-        body = resp.content
-        if len(body) > MAX_IMAGE_BYTES:
-            # A truncated binary is a corrupt image; skip vision rather than send garbage.
-            return None
-        ctype = (resp.headers.get("content-type") or "image/png").split(";")[0].strip()
-        return body, ctype
+    except BlockedURLError:
+        return None
     except Exception:
         return None
 

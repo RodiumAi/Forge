@@ -97,6 +97,12 @@ class Settings(BaseSettings):
     # Parent origins allowed to talk to the preview runner (comma-separated)
     runner_parent_origins: str = "http://localhost:3100,http://127.0.0.1:3100"
 
+    # Outbound URL guard (app/services/net_guard.py): when False (default),
+    # fetches of user-supplied URLs (website capture, image markers) refuse any
+    # host resolving to a private/loopback/link-local/reserved address or a
+    # cloud-metadata endpoint. Set True only for local dev/tests reaching 127.0.0.1.
+    url_fetch_allow_private: bool = False
+
     # Object store (MinIO local / S3 or R2 in production)
     object_store_provider: Literal["s3_compatible"] = "s3_compatible"
     object_store_endpoint: str | None = "http://127.0.0.1:9000"

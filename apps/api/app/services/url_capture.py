@@ -10,6 +10,11 @@ from urllib.parse import urlparse
 from app.services.attachments import count_markers_by_intent
 from app.services.filesystem import write_bytes
 from app.services.llm import RodiumError
+from app.services.net_guard import (
+    BlockedURLError,
+    validate_public_url,
+    validate_public_url_async,
+)
 
 logger = logging.getLogger("url_capture")
 
@@ -73,12 +78,25 @@ def _capture_sync(url: str) -> list[tuple[str, bytes]]:
             "upstream",
         ) from exc
 
+    def _guard_route(route) -> None:
+        # Re-validate every request (initial navigation, redirects, subresources)
+        # so a redirect to an internal host is aborted mid-flight.
+        try:
+            validate_public_url(route.request.url)
+        except BlockedURLError:
+            with contextlib.suppress(Exception):
+                route.abort()
+            return
+        with contextlib.suppress(Exception):
+            route.continue_()
+
     shots: list[tuple[str, bytes]] = []
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         try:
             for label, width, height in _VIEWPORTS:
                 page = browser.new_page(viewport={"width": width, "height": height})
+                page.route("**/*", _guard_route)
                 try:
                     page.goto(url, wait_until="domcontentloaded", timeout=_NAV_TIMEOUT_MS)
                     with contextlib.suppress(Exception):
@@ -105,6 +123,18 @@ async def capture_site_screenshots(
 ) -> list[dict[str, str]]:
     """Write desktop+mobile PNGs under public/images/; return marker metadata."""
     import asyncio
+
+    try:
+        await validate_public_url_async(url)
+    except BlockedURLError as exc:
+        # Don't leak *why* (internal host, metadata, etc.) — same message as an
+        # unreachable public site.
+        msg = (
+            f"Impossible de capturer {url}. Vérifie que le site est public et réessaie."
+            if locale == "fr"
+            else f"Could not capture {url}. Check the site is public and try again."
+        )
+        raise RodiumError(msg, None, "upstream") from exc
 
     try:
         shots = await asyncio.to_thread(_capture_sync, url)
