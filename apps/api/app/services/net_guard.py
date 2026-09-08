@@ -25,8 +25,8 @@ _METADATA_IPS = frozenset(
     {
         "169.254.169.254",  # AWS / GCP / Azure IMDS
         "100.100.100.200",  # Alibaba Cloud
-        "192.0.0.192",      # Oracle Cloud
-        "fd00:ec2::254",    # AWS IMDS over IPv6
+        "192.0.0.192",  # Oracle Cloud
+        "fd00:ec2::254",  # AWS IMDS over IPv6
     }
 )
 
