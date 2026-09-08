@@ -539,7 +539,6 @@ export function SiteThumb({
       }}
     >
       {usePersistedImage ? (
-        // eslint-disable-next-line @next/next/no-img-element -- authenticated API JPEG
         <img
           className="site-thumb-snap"
           src={imageSrc!}
@@ -550,7 +549,6 @@ export function SiteThumb({
       ) : frameSrc ? (
         <>
           {snapshot ? (
-            // eslint-disable-next-line @next/next/no-img-element -- data-URL snapshot, not a remote asset
             <img className="site-thumb-snap" src={snapshot} alt="" draggable={false} />
           ) : capped ? (
             // Budget spent — static branded placeholder, no pulse (final state).

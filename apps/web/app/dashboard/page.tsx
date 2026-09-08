@@ -656,7 +656,6 @@ function DashboardInner() {
                     <div className="home-card-body">
                       <span className="home-card-avatar" aria-hidden>
                         {avatarUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element -- session avatar URL, may be data/http
                           <img src={avatarUrl} alt="" />
                         ) : (
                           <span>{projectInitials(ownerLabel)}</span>
