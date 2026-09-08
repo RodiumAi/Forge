@@ -28,12 +28,12 @@ from app.services import preview_babel
 from app.services.filesystem import list_files, project_dir, write_bytes
 from app.services.posthog_client import capture_for_user
 from app.services.project_delete import delete_project_full
+from app.services.project_naming import suggest_project_name
 from app.services.scaffold import (
     brand_placeholder_html,
     is_text_brand_placeholder,
+    scaffold_vite_react,
 )
-from app.services.project_naming import suggest_project_name
-from app.services.scaffold import scaffold_vite_react
 from app.services.templates import fork_template, get_template, preview_path
 
 logger = logging.getLogger("projects")
