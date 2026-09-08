@@ -42,6 +42,11 @@ import {
 import { topProgressDone, topProgressStart } from "@/lib/top-progress";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import {
+  getSessionSnapshot,
+  subscribeSession,
+  type SessionProfile,
+} from "@/lib/session-cache";
+import {
   PROMPT_FILE_ACCEPT,
   PromptAttachment,
   createPromptAttachment,
@@ -83,6 +88,13 @@ function formatProjectMeta(iso: string, locale: string): string {
   }
 }
 
+function projectInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "F";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0] || ""}${parts[1][0] || ""}`.toUpperCase();
+}
+
 function DashboardInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -104,6 +116,9 @@ function DashboardInner() {
   const [creating, setCreating] = useState(false);
   const [forkingId, setForkingId] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [profile, setProfile] = useState<SessionProfile | null>(() =>
+    typeof window !== "undefined" ? getSessionSnapshot()?.profile ?? null : null,
+  );
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -111,6 +126,11 @@ function DashboardInner() {
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    setProfile(getSessionSnapshot()?.profile ?? null);
+    return subscribeSession((snap) => setProfile(snap?.profile ?? null));
   }, []);
 
   useEffect(() => {
@@ -592,6 +612,12 @@ function DashboardInner() {
             <div className="home-grid home-grid-3">
               {filteredProjects.slice(0, visibleCount).map((p) => {
                 const thumb = projectThumb(p);
+                const isPublished = Boolean(p.public_url);
+                const relative = mounted
+                  ? formatProjectMeta(p.updated_at || p.created_at, locale)
+                  : "…";
+                const avatarUrl = profile?.avatar_url?.trim() || "";
+                const ownerLabel = profile?.name?.trim() || profile?.email || p.name;
                 return (
                   <button
                     key={p.id}
@@ -599,34 +625,49 @@ function DashboardInner() {
                     className="home-card"
                     onClick={() => router.push(`/projects/${p.id}`)}
                   >
-                    <SiteThumb
-                      imageSrc={thumb.imageSrc}
-                      frameSrc={thumb.frameSrc}
-                      src={thumb.src}
-                      authPath={thumb.authPath}
-                      persistProjectId={thumb.persistProjectId}
-                      onThumbPersisted={(info) => {
-                        setProjects((prev) =>
-                          prev.map((row) =>
-                            row.id === p.id
-                              ? {
-                                  ...row,
-                                  has_thumbnail: true,
-                                  updated_at: info?.updated_at || row.updated_at,
-                                }
-                              : row,
-                          ),
-                        );
-                      }}
-                      cacheKey={`${p.id}:${p.updated_at || p.created_at}`}
-                      title={p.name}
-                      className="home-card-thumb"
-                    />
+                    <div className="home-card-media">
+                      <SiteThumb
+                        imageSrc={thumb.imageSrc}
+                        frameSrc={thumb.frameSrc}
+                        src={thumb.src}
+                        authPath={thumb.authPath}
+                        persistProjectId={thumb.persistProjectId}
+                        onThumbPersisted={(info) => {
+                          setProjects((prev) =>
+                            prev.map((row) =>
+                              row.id === p.id
+                                ? {
+                                    ...row,
+                                    has_thumbnail: true,
+                                    updated_at: info?.updated_at || row.updated_at,
+                                  }
+                                : row,
+                            ),
+                          );
+                        }}
+                        cacheKey={`${p.id}:${p.updated_at || p.created_at}`}
+                        title={p.name}
+                        className="home-card-thumb"
+                      />
+                      {isPublished ? (
+                        <span className="home-card-badge">{t("projectPublishedBadge")}</span>
+                      ) : null}
+                    </div>
                     <div className="home-card-body">
-                      <strong title={p.name}>{p.name}</strong>
-                      <span title={p.slug}>
-                        {mounted ? formatProjectMeta(p.updated_at || p.created_at, locale) : "…"}
+                      <span className="home-card-avatar" aria-hidden>
+                        {avatarUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element -- session avatar URL, may be data/http
+                          <img src={avatarUrl} alt="" />
+                        ) : (
+                          <span>{projectInitials(ownerLabel)}</span>
+                        )}
                       </span>
+                      <div className="home-card-meta">
+                        <strong title={p.name}>{p.name}</strong>
+                        <span title={p.slug}>
+                          {t("projectModifiedPrefix")} {relative}
+                        </span>
+                      </div>
                     </div>
                   </button>
                 );

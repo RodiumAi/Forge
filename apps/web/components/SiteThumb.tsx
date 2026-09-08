@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { BrandLogo } from "@/components/BrandLogo";
 import { apiBase, getToken } from "@/lib/api";
 import { uploadProjectThumbnail } from "@/lib/project-thumbnail";
 
@@ -553,7 +554,9 @@ export function SiteThumb({
             <img className="site-thumb-snap" src={snapshot} alt="" draggable={false} />
           ) : capped ? (
             // Budget spent — static branded placeholder, no pulse (final state).
-            <div className="site-thumb-fallback" />
+            <div className="site-thumb-fallback">
+              <BrandLogo alt="" width={132} height={38} className="site-thumb-brand" />
+            </div>
           ) : (
             <>
               {showLiveCapture && (
@@ -564,7 +567,9 @@ export function SiteThumb({
                   <div className="site-thumb-host" ref={hostRef} />
                 </div>
               )}
-              <div className="site-thumb-fallback is-loading" />
+              <div className="site-thumb-fallback is-loading">
+                <BrandLogo alt="" width={132} height={38} className="site-thumb-brand" />
+              </div>
             </>
           )}
         </>
@@ -580,7 +585,9 @@ export function SiteThumb({
           />
         </div>
       ) : (
-        <div className={`site-thumb-fallback ${failed ? "is-failed" : "is-loading"}`} />
+        <div className={`site-thumb-fallback ${failed ? "is-failed" : "is-loading"}`}>
+          <BrandLogo alt="" width={132} height={38} className="site-thumb-brand" />
+        </div>
       )}
     </div>
   );

@@ -1,16 +1,68 @@
 from __future__ import annotations
 
+import base64
+from functools import lru_cache
 from pathlib import Path
 
 from app.services.ai_rules import ensure_ai_rules_md
 from app.services.filesystem import project_dir, write_bytes, write_file
 
 _FORGE_FAVICON = Path(__file__).resolve().parent.parent / "assets" / "forge-favicon.png"
+_FORGE_LOGO = Path(__file__).resolve().parent.parent / "assets" / "forge-logo.png"
+
+# Legacy text watermark ("F" orange + "orge") — replaced by the real wordmark.
+_TEXT_BRAND_MARKERS = (
+    '<span className="accent">F</span>orge',
+    '<span class="accent">F</span>orge',
+    '<span class="a">F</span>orge',
+)
 
 
 def forge_favicon_bytes() -> bytes:
     """Default Forge brand icon for generated projects."""
     return _FORGE_FAVICON.read_bytes()
+
+
+def forge_logo_bytes() -> bytes:
+    """Forge wordmark (dark UI) used for empty preview / card placeholders."""
+    return _FORGE_LOGO.read_bytes()
+
+
+@lru_cache(maxsize=1)
+def forge_logo_data_uri() -> str:
+    """Self-contained logo for static HTML (card-preview / preview.html)."""
+    raw = forge_logo_bytes()
+    return "data:image/png;base64," + base64.b64encode(raw).decode("ascii")
+
+
+def is_text_brand_placeholder(html: str) -> bool:
+    """True when HTML still uses the old orange-F wordmark text."""
+    return any(marker in html for marker in _TEXT_BRAND_MARKERS)
+
+
+def brand_placeholder_html(*, subtitle: str | None = None) -> str:
+    """Centered Forge logo placeholder (dashboard cards + static preview)."""
+    sub = subtitle or "Describe what you want to build in the chat. Forge will update this preview."
+    logo = forge_logo_data_uri()
+    return f"""<!doctype html>
+<html lang="en"><head><meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Forge</title>
+<style>
+html,body{{margin:0;min-height:100vh;overflow:hidden;background:#0a0a0a;color:#9a9a9a;
+font-family:"Segoe UI",system-ui,sans-serif}}
+.page{{min-height:100vh;display:grid;place-content:center;gap:0.85rem;padding:2rem;text-align:center}}
+.brand-logo{{width:min(220px,58vw);height:auto;display:block;margin:0 auto}}
+p{{margin:0;max-width:28rem;font-size:0.95rem;line-height:1.45}}
+a,button{{pointer-events:none}}
+</style></head>
+<body>
+<main class="page">
+  <img class="brand-logo" src="{logo}" alt="Forge" width="220" height="64" />
+  <p>{sub}</p>
+</main>
+</body></html>
+"""
 
 
 def install_default_favicon(project_id: str) -> None:
@@ -24,6 +76,61 @@ def install_default_favicon(project_id: str) -> None:
     if any(p.is_file() for p in existing):
         return
     write_bytes(project_id, "public/favicon.png", forge_favicon_bytes())
+
+
+def install_default_logo(project_id: str) -> None:
+    """Write public/forge-logo.png (wordmark) unless already present."""
+    root = project_dir(project_id)
+    dest = root / "public" / "forge-logo.png"
+    if dest.is_file():
+        return
+    write_bytes(project_id, "public/forge-logo.png", forge_logo_bytes())
+
+
+_BRAND_LOGO_CSS = """
+.brand-logo {
+  width: min(220px, 58vw);
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+""".strip()
+
+
+def upgrade_text_brand_placeholder(project_id: str) -> None:
+    """Replace legacy orange-F text watermark with the Forge wordmark (idempotent).
+
+    Touches only projects still on the default scaffold placeholder — real apps
+    that happen to mention Forge are left alone unless they use the exact marker.
+    """
+    root = project_dir(project_id)
+    install_default_logo(project_id)
+
+    app_path = root / "src" / "App.tsx"
+    if app_path.is_file():
+        try:
+            app_src = app_path.read_text(encoding="utf-8")
+        except OSError:
+            app_src = ""
+        if app_src and is_text_brand_placeholder(app_src):
+            write_file(project_id, "src/App.tsx", APP_TSX)
+            css_path = root / "src" / "index.css"
+            if css_path.is_file():
+                try:
+                    css = css_path.read_text(encoding="utf-8")
+                except OSError:
+                    css = ""
+                if css and ".brand-logo" not in css:
+                    write_file(project_id, "src/index.css", css.rstrip() + "\n\n" + _BRAND_LOGO_CSS + "\n")
+
+    preview_path = root / "preview.html"
+    if preview_path.is_file():
+        try:
+            preview_src = preview_path.read_text(encoding="utf-8")
+        except OSError:
+            preview_src = ""
+        if preview_src and is_text_brand_placeholder(preview_src):
+            write_file(project_id, "preview.html", brand_placeholder_html())
 
 
 def ensure_favicon_link(html: str) -> str:
@@ -139,9 +246,13 @@ APP_TSX = """import { Sparkles } from "lucide-react";
 export default function App() {
   return (
     <main className="page">
-      <h1>
-        <span className="accent">F</span>orge
-      </h1>
+      <img
+        className="brand-logo"
+        src="/forge-logo.png"
+        alt="Forge"
+        width={220}
+        height={64}
+      />
       <p>
         <Sparkles size={18} strokeWidth={2} className="accent-icon" aria-hidden />
         {" "}
@@ -179,11 +290,11 @@ body {
   text-align: center;
 }
 
-h1 {
-  margin: 0;
-  font-size: clamp(2.5rem, 8vw, 4rem);
-  font-weight: 700;
-  letter-spacing: -0.03em;
+.brand-logo {
+  width: min(220px, 58vw);
+  height: auto;
+  display: block;
+  margin: 0 auto;
 }
 
 .accent { color: var(--accent); }
@@ -250,22 +361,11 @@ def scaffold_vite_react(project_id: str, app_name: str) -> None:
     )
     ensure_ai_rules_md(project_id)
     install_default_favicon(project_id)
+    install_default_logo(project_id)
     write_file(
         project_id,
         "preview.html",
-        f"""<!doctype html>
-<html lang="en"><head><meta charset="UTF-8" /><link rel="icon" type="image/png" href="/favicon.png" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>{app_name}</title>
-<style>{INDEX_CSS}
-html,body{{overflow:hidden}} a,button{{pointer-events:none}}
-</style></head>
-<body>
-<main class="page">
-  <h1><span class="accent">F</span>orge</h1>
-  <p>Describe what you want to build in the chat. Forge will update this preview.</p>
-</main>
-</body></html>
-""",
+        brand_placeholder_html(),
     )
     # Baseline checkpoint: the user can always roll back to the pristine scaffold.
     try:

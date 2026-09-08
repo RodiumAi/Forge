@@ -76,7 +76,18 @@ export function HomeShell({
             className="home-sidebar-logo"
             title={t("projects")}
           >
-            <BrandLogo alt={t("brandAlt")} width={165} height={55} priority />
+            {sidebarOpen ? (
+              <BrandLogo alt={t("brandAlt")} width={165} height={55} priority />
+            ) : (
+              <BrandLogo
+                alt={t("brandAlt")}
+                width={32}
+                height={32}
+                variant="mark"
+                priority
+                className="home-sidebar-mark"
+              />
+            )}
           </Link>
         </div>
         <nav className="home-sidebar-nav">
@@ -115,7 +126,7 @@ export function HomeShell({
         <hr className="home-sidebar-divider" />
         <SidebarApiKeyBlock />
         <div className="home-sidebar-wallet">
-          <RodiumWalletBadge compact />
+          <RodiumWalletBadge compact collapsed={!sidebarOpen} />
         </div>
 
         <button
