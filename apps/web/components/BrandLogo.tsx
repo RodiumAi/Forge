@@ -9,12 +9,26 @@ type Props = {
   height: number;
   priority?: boolean;
   className?: string;
+  /** `mark` = favicon / icône carrée (sidebar réduite). */
+  variant?: "wordmark" | "mark";
 };
 
-/** Theme-aware Forge wordmark: dark UI → logo-dark, light UI → logo-light. */
-export function BrandLogo({ alt, width, height, priority = false, className }: Props) {
+/** Theme-aware Forge brand: wordmark or compact mark. */
+export function BrandLogo({
+  alt,
+  width,
+  height,
+  priority = false,
+  className,
+  variant = "wordmark",
+}: Props) {
   const { theme } = useTheme();
-  const src = theme === "light" ? "/logo-light.png" : "/logo-dark.png";
+  const src =
+    variant === "mark"
+      ? "/favicon.png"
+      : theme === "light"
+        ? "/logo-light.png"
+        : "/logo-dark.png";
   return (
     <Image
       src={src}

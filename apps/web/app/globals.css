@@ -6799,7 +6799,7 @@ body:has(.home) [data-next-mark] {
 
 .home-sidebar-collapsed .home-sidebar {
   width: 64px;
-  padding: 1rem 0.45rem;
+  padding: 1rem 0;
   align-items: center;
 }
 
@@ -6839,10 +6839,15 @@ body:has(.home) [data-next-mark] {
 }
 
 .home-sidebar-collapsed .home-sidebar-logo img {
-  width: 36px;
-  height: 36px;
-  max-width: 36px;
+  width: 32px;
+  height: 32px;
+  max-width: 32px;
   object-fit: contain;
+  border-radius: 8px;
+}
+
+.home-sidebar-mark {
+  border-radius: 8px;
 }
 
 .home-sidebar-brand {
@@ -7005,13 +7010,73 @@ body:has(.home) [data-next-mark] {
 
 .home-sidebar-collapsed .home-sidebar-key-block {
   align-items: center;
+  justify-content: center;
+  align-self: center;
   padding: 0.25rem 0;
+  width: max-content;
+  max-width: 100%;
+  margin-inline: auto;
+}
+
+.home-sidebar-collapsed .home-sidebar-key-head {
+  justify-content: center;
+  width: auto;
+  margin: 0;
 }
 
 .home-sidebar-collapsed .home-sidebar-wallet {
   padding: 0.15rem 0;
   display: flex;
   justify-content: center;
+  align-self: center;
+  width: max-content;
+  max-width: 100%;
+  margin-inline: auto;
+}
+
+.home-sidebar-collapsed .home-sidebar-toggle {
+  width: 2rem;
+  height: 2rem;
+  align-self: center;
+  margin-inline: auto;
+}
+
+.home-sidebar-collapsed .rodium-wallet-wrap-rail {
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  width: max-content;
+  margin-inline: auto;
+}
+
+.home-sidebar-collapsed .rodium-wallet-badge-rail {
+  width: 2rem;
+  min-width: 2rem;
+  max-width: 100%;
+  height: 2rem;
+  padding: 0 0.12rem;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+}
+
+.home-sidebar-collapsed .rodium-wallet-rail-amount {
+  font-size: 0.55rem;
+  font-weight: 750;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: var(--home-text);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-sidebar-collapsed .rodium-wallet-wrap-rail .rodium-wallet-recharge {
+  width: 2rem;
+  min-width: 2rem;
+  height: 2rem;
+  border-radius: 10px;
 }
 
 .home-sidebar-collapsed .rodium-wallet-wrap-compact .rodium-wallet-main span,
@@ -7021,11 +7086,12 @@ body:has(.home) [data-next-mark] {
 
 .home-sidebar-collapsed .rodium-wallet-connect-compact {
   font-size: 0;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 8px;
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 10px;
   display: grid;
   place-items: center;
+  padding: 0;
 }
 
 .home-sidebar-collapsed .rodium-wallet-connect-compact::before {
@@ -7065,7 +7131,20 @@ body:has(.home) [data-next-mark] {
 }
 
 .home-sidebar-collapsed .home-sidebar-nav {
-  align-items: center;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  align-self: center !important;
+  justify-content: flex-start !important;
+  gap: 0.35rem;
+  width: max-content !important;
+  max-width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-inline: auto !important;
+  scrollbar-gutter: unset !important;
+  overflow: visible !important;
+  padding: 0 !important;
 }
 
 .home-sidebar-btn {
@@ -7088,9 +7167,15 @@ body:has(.home) [data-next-mark] {
 }
 
 .home-sidebar-collapsed .home-sidebar-btn {
-  width: 2.5rem;
-  justify-content: center;
-  padding: 0.45rem 0;
+  display: grid !important;
+  place-items: center !important;
+  width: 2rem !important;
+  min-width: 2rem !important;
+  height: 2rem !important;
+  min-height: 2rem !important;
+  padding: 0 !important;
+  gap: 0 !important;
+  margin: 0 !important;
 }
 
 .home-sidebar-icon {
@@ -7099,6 +7184,14 @@ body:has(.home) [data-next-mark] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+.home-sidebar-collapsed .home-sidebar-icon {
+  width: auto;
+  height: auto;
+  margin: 0;
+  display: grid;
+  place-items: center;
 }
 
 .home-sidebar-label {
@@ -7111,8 +7204,7 @@ body:has(.home) [data-next-mark] {
 }
 
 .home-sidebar-collapsed .home-sidebar-label {
-  max-width: 0;
-  opacity: 0;
+  display: none !important;
 }
 
 .home-sidebar-btn:hover,
@@ -7378,17 +7470,40 @@ body:has(.home) [data-next-mark] {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  flex: 1;
-  min-width: 180px;
-  max-width: 280px;
-  padding: 0.45rem 0.75rem;
-  border-radius: 10px;
+  flex: 0 0 auto;
+  min-width: 0;
+  max-width: none;
+  width: 2.4rem;
+  height: 2.4rem;
+  justify-content: center;
+  padding: 0;
+  border-radius: 999px;
   border: 1px solid var(--home-border);
-  background: var(--home-input-bg);
+  background: var(--home-chip);
   color: var(--home-text-soft);
 }
 
 .home-search input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.home-search:focus-within {
+  width: min(240px, 55vw);
+  padding: 0 0.85rem;
+  justify-content: flex-start;
+  gap: 0.45rem;
+}
+
+.home-search:focus-within input {
+  position: static;
+  width: auto;
+  height: auto;
+  opacity: 1;
+  pointer-events: auto;
   flex: 1;
   border: 0;
   outline: none;
@@ -7493,20 +7608,42 @@ body:has(.home) [data-next-mark] {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  border: 1px solid var(--home-border);
-  border-radius: 16px;
-  background: var(--home-chip);
+  border: none;
+  border-radius: 18px;
+  background: transparent;
   padding: 0;
-  overflow: hidden;
+  overflow: visible;
   cursor: pointer;
   text-align: left;
   color: var(--home-text);
-  transition: border-color 0.15s ease, transform 0.15s ease;
+  transition: transform 0.15s ease;
+  gap: 0.65rem;
 }
 
 .home-card:hover {
-  border-color: rgba(242, 98, 10, 0.35);
   transform: translateY(-2px);
+}
+
+.home-card-media {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #1a1a1a;
+  border: 1px solid color-mix(in srgb, var(--home-border) 80%, transparent);
+  aspect-ratio: 16 / 10;
+}
+
+.home-card-badge {
+  position: absolute;
+  left: 0.7rem;
+  bottom: 0.65rem;
+  z-index: 2;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+  pointer-events: none;
 }
 
 .home-card-preview {
@@ -7516,25 +7653,57 @@ body:has(.home) [data-next-mark] {
 }
 
 .home-card-body {
-  padding: 0.55rem 0.7rem 0.65rem;
-  display: grid;
-  gap: 0.2rem;
+  padding: 0 0.15rem 0.15rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
 }
 
+.home-card-avatar {
+  flex: 0 0 auto;
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 999px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #f2620a, #7c3aed);
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.home-card-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.home-card-meta {
+  min-width: 0;
+  display: grid;
+  gap: 0.12rem;
+}
+
+.home-card-meta strong,
 .home-card-body strong {
-  font-size: 0.88rem;
+  font-size: 0.92rem;
   line-height: 1.25;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
   white-space: normal;
   color: var(--home-text);
+  font-weight: 600;
 }
 
-.home-card-body span {
+.home-card-meta span,
+.home-card-body span:not(.home-card-avatar):not(.home-card-badge) {
   color: var(--home-text-muted);
-  font-size: 0.75rem;
+  font-size: 0.78rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -7611,15 +7780,24 @@ body:has(.home) [data-next-mark] {
   position: absolute;
   inset: 0;
   z-index: 1;
-  background: linear-gradient(
-    135deg,
-    rgba(242, 98, 10, 0.35),
-    color-mix(in srgb, var(--home-panel) 90%, transparent)
-  );
+  display: grid;
+  place-items: center;
+  background: #141414;
+}
+
+.site-thumb-brand {
+  width: min(42%, 9.5rem) !important;
+  height: auto !important;
+  opacity: 0.92;
+  pointer-events: none;
 }
 
 .site-thumb-fallback.is-loading {
   animation: siteThumbPulse 1.2s ease-in-out infinite;
+}
+
+.site-thumb-fallback.is-loading .site-thumb-brand {
+  opacity: 0.75;
 }
 
 @keyframes siteThumbPulse {
@@ -7636,8 +7814,11 @@ body:has(.home) [data-next-mark] {
 .home-card .site-thumb,
 .tpl-card-thumb.site-thumb,
 .tpl-card .site-thumb {
-  height: auto;
-  border-bottom: 1px solid var(--home-border);
+  height: 100%;
+  max-height: none;
+  aspect-ratio: auto;
+  border-bottom: none;
+  background: #141414;
 }
 
 /* Lovable-style templates panel */

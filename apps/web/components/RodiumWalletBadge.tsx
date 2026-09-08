@@ -30,6 +30,21 @@ function formatRodi(value: string | null | undefined, locale: string): string {
   }
 }
 
+/** Short balance for the 64px rail (e.g. 7.7k, 1.2M). */
+function formatRodiCompact(value: string | null | undefined): string {
+  if (value == null || value === "") return "—";
+  const asNumber = Number(String(value).replace(",", "."));
+  if (!Number.isFinite(asNumber)) return "—";
+  const abs = Math.abs(asNumber);
+  const trim = (n: number) =>
+    n
+      .toFixed(n >= 10 || Number.isInteger(n) ? 0 : 1)
+      .replace(/\.0$/, "");
+  if (abs >= 1_000_000) return `${trim(asNumber / 1_000_000)}M`;
+  if (abs >= 1_000) return `${trim(asNumber / 1_000)}k`;
+  return trim(asNumber);
+}
+
 function initialFromCache() {
   if (typeof window === "undefined") {
     return {
@@ -47,7 +62,14 @@ function initialFromCache() {
   };
 }
 
-export function RodiumWalletBadge({ compact = false }: { compact?: boolean }) {
+export function RodiumWalletBadge({
+  compact = false,
+  collapsed = false,
+}: {
+  compact?: boolean;
+  /** Narrow rail: icon + recharge only (full balance stays in title). */
+  collapsed?: boolean;
+}) {
   const { t, locale } = useI18n();
   const [wallet, setWallet] = useState<SessionWallet | null>(() => initialFromCache().wallet);
   const [linked, setLinked] = useState(() => initialFromCache().linked);
@@ -106,10 +128,10 @@ export function RodiumWalletBadge({ compact = false }: { compact?: boolean }) {
     return (
       <Link
         href="/settings?tab=generation"
-        className={`rodium-wallet-connect${compact ? " rodium-wallet-connect-compact" : ""}`}
+        className={`rodium-wallet-connect${compact || collapsed ? " rodium-wallet-connect-compact" : ""}`}
         title={t("connectRodiumAiHint")}
       >
-        {compact ? t("connectRodiumAiShort") : t("connectRodiumAi")}
+        {collapsed ? null : compact ? t("connectRodiumAiShort") : t("connectRodiumAi")}
       </Link>
     );
   }
@@ -118,10 +140,10 @@ export function RodiumWalletBadge({ compact = false }: { compact?: boolean }) {
     return (
       <Link
         href="/settings?tab=generation"
-        className={`rodium-wallet-connect${compact ? " rodium-wallet-connect-compact" : ""}`}
+        className={`rodium-wallet-connect${compact || collapsed ? " rodium-wallet-connect-compact" : ""}`}
         title={t("connectRodiumAiHint")}
       >
-        {compact ? "RODI" : t("connectRodiumAi")}
+        {collapsed ? null : compact ? "RODI" : t("connectRodiumAi")}
       </Link>
     );
   }
@@ -130,17 +152,42 @@ export function RodiumWalletBadge({ compact = false }: { compact?: boolean }) {
   const provided = formatRodi(wallet?.provided_total_rodi, locale);
   const providedNum = Number(String(wallet?.provided_total_rodi ?? "").replace(",", "."));
   const showProvided = Number.isFinite(providedNum) && providedNum > 0;
+  const balanceTitle = showProvided
+    ? `${t("balanceRodi")}: ${balance} · ${t("providedRodi")}: ${provided}`
+    : `${t("balanceRodi")}: ${balance}`;
+
+  if (collapsed) {
+    const compactBalance = formatRodiCompact(wallet?.balance_rodi);
+    return (
+      <div className="rodium-wallet-wrap rodium-wallet-wrap-compact rodium-wallet-wrap-rail">
+        <Link
+          href="/settings?tab=generation"
+          className="rodium-wallet-badge rodium-wallet-badge-rail"
+          title={balanceTitle}
+          aria-label={balanceTitle}
+        >
+          <strong className="rodium-wallet-rail-amount">{compactBalance}</strong>
+        </Link>
+        <a
+          href={rodiumRechargeUrl(rodiumSub)}
+          className="rodium-wallet-recharge"
+          title={t("rechargeRodi")}
+          aria-label={t("rechargeRodi")}
+          target="_blank"
+          rel="noreferrer"
+        >
+          <Icon icon={Plus} className="ui-icon-sm" />
+        </a>
+      </div>
+    );
+  }
 
   return (
     <div className={`rodium-wallet-wrap${compact ? " rodium-wallet-wrap-compact" : ""}`}>
       <Link
         href="/settings?tab=generation"
         className="rodium-wallet-badge"
-        title={
-          showProvided
-            ? `${t("balanceRodi")}: ${balance} · ${t("providedRodi")}: ${provided}`
-            : `${t("balanceRodi")}: ${balance}`
-        }
+        title={balanceTitle}
       >
         <span className="rodium-wallet-main">
           <strong>{balance}</strong>

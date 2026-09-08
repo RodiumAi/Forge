@@ -112,6 +112,14 @@ def stop_babel_preview(project_id: str) -> None:
 
 def collect_project_source_files(project_id: str) -> dict[str, str]:
     """Text source files for the runner (tsx/ts/jsx/js/css + html shells)."""
+    from app.services.scaffold import upgrade_text_brand_placeholder
+
+    # Soft-migrate default scaffold watermark → real Forge wordmark.
+    try:
+        upgrade_text_brand_placeholder(project_id)
+    except Exception:  # pragma: no cover - best effort
+        logger.exception("brand placeholder upgrade failed for %s", project_id)
+
     files = list_files(project_id)
     out: dict[str, str] = {}
     for path, content in files.items():
@@ -125,6 +133,13 @@ def collect_project_source_files(project_id: str) -> dict[str, str]:
 
 def ensure_babel_project_layout(project_id: str) -> None:
     """Ensure entry exists; no npm install."""
+    from app.services.scaffold import upgrade_text_brand_placeholder
+
+    try:
+        upgrade_text_brand_placeholder(project_id)
+    except Exception:  # pragma: no cover
+        logger.exception("brand placeholder upgrade failed for %s", project_id)
+
     root = project_dir(project_id)
     main = root / "src" / "main.tsx"
     if not main.is_file():

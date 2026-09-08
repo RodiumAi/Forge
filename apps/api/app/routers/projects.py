@@ -28,6 +28,10 @@ from app.services import preview_babel
 from app.services.filesystem import list_files, project_dir, write_bytes
 from app.services.posthog_client import capture_for_user
 from app.services.project_delete import delete_project_full
+from app.services.scaffold import (
+    brand_placeholder_html,
+    is_text_brand_placeholder,
+)
 from app.services.project_naming import suggest_project_name
 from app.services.scaffold import scaffold_vite_react
 from app.services.templates import fork_template, get_template, preview_path
@@ -363,18 +367,19 @@ def project_card_preview(
     headers = {"Cache-Control": "private, max-age=120"}
     local = settings.projects_path / str(project.id) / "preview.html"
     if local.is_file():
-        return FileResponse(local, media_type="text/html; charset=utf-8", headers=headers)
+        try:
+            html = local.read_text(encoding="utf-8")
+        except OSError:
+            html = ""
+        if html and not is_text_brand_placeholder(html):
+            return FileResponse(local, media_type="text/html; charset=utf-8", headers=headers)
+        # Old orange-"F"orge watermark → real wordmark (also covers empty/corrupt files).
+        return HTMLResponse(brand_placeholder_html(), headers=headers)
     if project.template_id:
         tpl = preview_path(project.template_id)
         if tpl is not None:
             return FileResponse(tpl, media_type="text/html; charset=utf-8", headers=headers)
-    return HTMLResponse(
-        """<!doctype html><html><head><meta charset="utf-8"/><style>
-body{margin:0;min-height:100vh;display:grid;place-content:center;background:#0a0a0a;color:#f5f5f5;font-family:system-ui,sans-serif}
-h1{margin:0;font-size:2rem} .a{color:#f2620a}
-</style></head><body><h1><span class="a">F</span>orge</h1></body></html>""",
-        headers=headers,
-    )
+    return HTMLResponse(brand_placeholder_html(), headers=headers)
 
 
 @router.get("/{project_id}/thumbnail", include_in_schema=False)
