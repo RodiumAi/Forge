@@ -174,6 +174,10 @@ export function RodiumGenerationPanel() {
       if (result.reason === "oidc_unavailable") {
         setError(t("rodiumManualKeyHelp"));
         setShowManualPaste(true);
+      } else if (result.reason === "popup_blocked") {
+        setError(t("authSocialPopupBlocked"));
+      } else if (result.reason === "cancelled") {
+        // User closed the window.
       } else if (result.error instanceof Error) {
         setError(result.error.message);
       } else {
