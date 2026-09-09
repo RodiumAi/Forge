@@ -1,5 +1,10 @@
 /**
  * The open-redirect guard behind post-auth landing + RodiumAi popup kick-off.
+ *
+ * `land()` on login/register and the OAuth return-to both feed a caller-supplied
+ * `next` into `window.location.assign`. Anything that is not a same-origin path
+ * must be dropped, or `?next=https://evil.example` turns the trusted auth page
+ * into a redirector.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
