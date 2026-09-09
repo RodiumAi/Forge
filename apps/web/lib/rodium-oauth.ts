@@ -12,7 +12,7 @@ import { createStateBinding } from "@/lib/oauth-state";
 const RETURN_TO_KEY = "forge_oauth_return_to";
 
 /** Only allow same-origin paths (open-redirect guard). */
-function sanitizeReturnTo(value: string | undefined | null): string | null {
+export function sanitizeReturnTo(value: string | undefined | null): string | null {
   if (!value) return null;
   const trimmed = value.trim();
   // Preferred form: relative path.

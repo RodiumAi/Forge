@@ -134,6 +134,36 @@ class TestPublicAssets:
         assert target.relative_to(root)
 
 
+class TestReadLocalPublic:
+    """Image markers can carry a `public:` path that we read off disk.
+
+    The path comes from user content, so a `../` must never let it read a file
+    outside the project (build secrets, other tenants, /etc/passwd).
+    """
+
+    def test_reads_a_public_asset(self, project):
+        from app.services.attachments import _read_local_public
+
+        write_bytes(project, "public/logo.png", b"\x89PNG\r\n\x1a\n")
+        result = _read_local_public(project, "/logo.png")
+        assert result is not None
+        body, ctype = result
+        assert body.startswith(b"\x89PNG")
+        assert ctype == "image/png"
+
+    @pytest.mark.parametrize(
+        "web_path",
+        ["/../../../etc/passwd", "../secret.env", "/public/../../escape.txt"],
+    )
+    def test_refuses_paths_escaping_the_project(self, project, web_path):
+        from app.services.attachments import _read_local_public
+
+        # A real file just outside the project root — a naive join would reach it.
+        outside = project_dir(project).parent / "escape.txt"
+        outside.write_bytes(b"\x89PNG top secret")
+        assert _read_local_public(project, web_path) is None
+
+
 class TestRename:
     def test_renames_a_file(self, project):
         write_file(project, "src/Old.tsx", "x")

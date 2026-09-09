@@ -23,6 +23,7 @@ import { PasswordField } from "@/components/auth/PasswordField";
 import { SocialButtons } from "@/components/auth/SocialButtons";
 import { ApiError, api, getToken, setToken } from "@/lib/api";
 import { createStateBinding } from "@/lib/oauth-state";
+import { sanitizeReturnTo } from "@/lib/rodium-oauth";
 import { firebaseEnabled } from "@/lib/firebase";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 
@@ -53,7 +54,7 @@ function LoginInner() {
   const startedRef = useRef(false);
 
   function land() {
-    window.location.assign(params.get("next") || "/dashboard");
+    window.location.assign(sanitizeReturnTo(params.get("next")) || "/dashboard");
   }
 
   async function loginWithRodium() {

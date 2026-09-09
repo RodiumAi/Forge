@@ -328,27 +328,40 @@ def _is_placeholder_secret(value: str | None) -> bool:
 @lru_cache
 def get_settings() -> Settings:
     s = Settings()
-    # Garde-fou anti pied de biche : interdire les providers de développement en production.
-    if s.environment == "production":
-        assert s.key_provider == "kms", "KEY_PROVIDER doit être kms en production"
-        assert s.secret_provider == "aws_secrets_manager", "SECRET_PROVIDER invalide en production"
-        assert s.dev_master_key is None, "DEV_MASTER_KEY doit être absente en production"
-        assert not s.object_store_endpoint or "minio" not in (s.object_store_endpoint or ""), (
-            "OBJECT_STORE_ENDPOINT MinIO interdit en production"
-        )
+    # Garde-fous exprimés en `raise` (pas `assert`) pour survivre à `python -O`.
+    #
+    # Hygiène des secrets sur toute cible exposée (non-locale) : un JWT de session
+    # forgeable ou une clé de chiffrement au repos faible est exploitable en
+    # staging comme en production, pas seulement en prod.
+    if not s.is_local:
         # Le JWT de session ne doit jamais être signé avec une clé de développement.
-        assert s.secret_key not in _DEV_SECRET_KEYS, "SECRET_KEY de développement interdite en production"
-        assert len(s.secret_key) >= 32, "SECRET_KEY doit faire au moins 32 caractères en production"
-        assert not _is_placeholder_secret(s.secret_key), (
-            "SECRET_KEY ressemble à un placeholder de .env.example — générez une vraie clé aléatoire"
-        )
-        # ENCRYPTION_KEY doit être distincte : sinon compromettre le JWT compromet
-        # aussi les clés API RodiumAi et les refresh tokens chiffrés au repos.
-        assert s.encryption_key, "ENCRYPTION_KEY est obligatoire en production"
-        assert s.encryption_key != s.secret_key, "ENCRYPTION_KEY doit différer de SECRET_KEY"
-        assert not _is_placeholder_secret(s.encryption_key), (
-            "ENCRYPTION_KEY ressemble à un placeholder — générez une vraie clé aléatoire"
-        )
+        if s.secret_key in _DEV_SECRET_KEYS:
+            raise RuntimeError("SECRET_KEY de développement interdite hors environnement local")
+        if len(s.secret_key) < 32:
+            raise RuntimeError("SECRET_KEY doit faire au moins 32 caractères hors local")
+        if _is_placeholder_secret(s.secret_key):
+            raise RuntimeError(
+                "SECRET_KEY ressemble à un placeholder de .env.example — générez une vraie clé aléatoire"
+            )
+        # ENCRYPTION_KEY doit être présente et distincte : sinon compromettre le JWT
+        # compromet aussi les clés API RodiumAi et les refresh tokens chiffrés au repos.
+        if not s.encryption_key:
+            raise RuntimeError("ENCRYPTION_KEY est obligatoire hors local")
+        if s.encryption_key == s.secret_key:
+            raise RuntimeError("ENCRYPTION_KEY doit différer de SECRET_KEY")
+        if _is_placeholder_secret(s.encryption_key):
+            raise RuntimeError("ENCRYPTION_KEY ressemble à un placeholder — générez une vraie clé aléatoire")
+
+    # Durcissement propre à l'infrastructure de production.
+    if s.environment == "production":
+        if s.key_provider != "kms":
+            raise RuntimeError("KEY_PROVIDER doit être kms en production")
+        if s.secret_provider != "aws_secrets_manager":
+            raise RuntimeError("SECRET_PROVIDER invalide en production")
+        if s.dev_master_key is not None:
+            raise RuntimeError("DEV_MASTER_KEY doit être absente en production")
+        if s.object_store_endpoint and "minio" in s.object_store_endpoint:
+            raise RuntimeError("OBJECT_STORE_ENDPOINT MinIO interdit en production")
     return s
 
 

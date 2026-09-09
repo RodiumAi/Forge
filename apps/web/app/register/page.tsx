@@ -23,6 +23,7 @@ import { PasswordField } from "@/components/auth/PasswordField";
 import { SocialButtons } from "@/components/auth/SocialButtons";
 import { api, getToken } from "@/lib/api";
 import { firebaseEnabled } from "@/lib/firebase";
+import { sanitizeReturnTo } from "@/lib/rodium-oauth";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 
 type RegistrationResponse = { email: string; message?: string | null };
@@ -47,7 +48,7 @@ function RegisterInner() {
   function land() {
     // Hard navigation: the landing page stashed a pending prompt in
     // sessionStorage and the dashboard replays it on mount.
-    window.location.assign(params.get("next") || "/dashboard");
+    window.location.assign(sanitizeReturnTo(params.get("next")) || "/dashboard");
   }
 
   async function submit(event: React.FormEvent) {
