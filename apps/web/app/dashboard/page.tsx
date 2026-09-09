@@ -579,29 +579,39 @@ function DashboardInner() {
         ) : showTemplates ? (
           <>
             <div className="home-grid home-grid-3">
-              {filteredTemplates.map((tpl) => (
-                <button
-                  key={tpl.id}
-                  type="button"
-                  className="home-card"
-                  disabled={Boolean(forkingId) || creating}
-                  onClick={() => void forkTemplate(tpl)}
-                >
-                  <SiteThumb
-                    src={tpl.preview_url || `/templates/${tpl.id}/preview`}
-                    viewportWidth={480}
-                    viewportHeight={300}
-                    title={tpl.title}
-                    className="home-card-thumb"
-                  />
-                  <div className="home-card-body">
-                    <strong>{tpl.title}</strong>
-                    <span>
-                      {forkingId === tpl.id ? t("forkingTemplate") : tpl.description}
-                    </span>
-                  </div>
-                </button>
-              ))}
+              {filteredTemplates.map((tpl) => {
+                const tag = tpl.tags?.[0]?.trim() || t("tabTemplates");
+                return (
+                  <button
+                    key={tpl.id}
+                    type="button"
+                    className="home-card"
+                    disabled={Boolean(forkingId) || creating}
+                    onClick={() => void forkTemplate(tpl)}
+                  >
+                    <div className="home-card-media">
+                      <SiteThumb
+                        src={tpl.preview_url || `/templates/${tpl.id}/preview`}
+                        viewportWidth={480}
+                        viewportHeight={300}
+                        title={tpl.title}
+                        className="home-card-thumb"
+                      />
+                    </div>
+                    <div className="home-card-body">
+                      <span className="home-card-avatar" aria-hidden>
+                        <span>{projectInitials(tpl.title)}</span>
+                      </span>
+                      <div className="home-card-meta">
+                        <strong title={tpl.title}>{tpl.title}</strong>
+                        <span className="home-card-desc" title={tpl.description}>
+                          {forkingId === tpl.id ? t("forkingTemplate") : tpl.description || tag}
+                        </span>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
             {filteredTemplates.length === 0 && (
               <p className="home-panel-empty">{t("noTemplates")}</p>

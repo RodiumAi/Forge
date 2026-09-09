@@ -7709,6 +7709,16 @@ body:has(.home) [data-next-mark] {
   text-overflow: ellipsis;
 }
 
+.home-card-meta .home-card-desc {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* Scaled homepage thumbnails (srcDoc + ResizeObserver scale) */
 .site-thumb {
   position: relative;
@@ -7905,7 +7915,14 @@ body:has(.home) [data-next-mark] {
   gap: 0.9rem;
 }
 
-.tpl-card {
+.home-card.tpl-card {
+  border: none;
+  background: transparent;
+  overflow: visible;
+  border-radius: 18px;
+}
+
+.tpl-card:not(.home-card) {
   appearance: none;
   display: flex;
   flex-direction: column;
