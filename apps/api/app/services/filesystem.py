@@ -18,7 +18,9 @@ def project_dir(project_id: str) -> Path:
 def safe_resolve(project_id: str, relative: str) -> Path:
     base = project_dir(project_id).resolve()
     target = (base / relative).resolve()
-    if not str(target).startswith(str(base)):
+    # Containment on path components, not string prefix: a sibling dir whose name
+    # merely starts with the project id (e.g. "<id>extra") must not pass.
+    if target != base and base not in target.parents:
         raise ValueError("Path escapes project root")
     return target
 

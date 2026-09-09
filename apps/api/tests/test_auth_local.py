@@ -292,6 +292,9 @@ class TestMail:
 
         monkeypatch.setenv("MAIL_TRANSPORT", "smtp")
         monkeypatch.setenv("ENVIRONMENT", "staging")
+        # A non-local environment requires real secrets to boot.
+        monkeypatch.setenv("SECRET_KEY", "s3cret-key-for-staging-tests-0123456789")
+        monkeypatch.setenv("ENCRYPTION_KEY", "enc-key-for-staging-tests-9876543210abcd")
         clear_settings_cache()
         monkeypatch.setattr(mail, "_send_smtp", MagicMock(side_effect=OSError("no host")))
         console = MagicMock()

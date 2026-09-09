@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hmac
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
@@ -22,7 +23,7 @@ def _require_admin_secret(x_forge_admin_secret: str | None = Header(default=None
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail={"code": "forge_admin_unconfigured", "message": "ADMIN_SECRET is not set."},
         )
-    if not x_forge_admin_secret or x_forge_admin_secret != expected:
+    if not x_forge_admin_secret or not hmac.compare_digest(x_forge_admin_secret, expected):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail={"code": "forge_admin_unauthorized", "message": "Invalid admin secret."},
