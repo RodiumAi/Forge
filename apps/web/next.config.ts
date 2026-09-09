@@ -46,6 +46,39 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: s3RemotePatterns(),
   },
+  // Let Firebase / RodiumAi OAuth popups keep `window.opener` when possible.
+  // Storage-event fallback still works if a hop clears the opener.
+  async headers() {
+    return [
+      {
+        source: "/login",
+        headers: [
+          {
+            key: "Cross-Origin-Opener-Policy",
+            value: "same-origin-allow-popups",
+          },
+        ],
+      },
+      {
+        source: "/register",
+        headers: [
+          {
+            key: "Cross-Origin-Opener-Policy",
+            value: "same-origin-allow-popups",
+          },
+        ],
+      },
+      {
+        source: "/auth/:path*",
+        headers: [
+          {
+            key: "Cross-Origin-Opener-Policy",
+            value: "same-origin-allow-popups",
+          },
+        ],
+      },
+    ];
+  },
   webpack: (config) => {
     if (useStandaloneOutput) {
       const fallbackFonts = path.join(configDir, "lib/fonts.fallback.ts");

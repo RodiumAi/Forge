@@ -5,7 +5,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { AuthCallbackScreen } from "@/components/auth/AuthCallbackScreen";
 import { api, setToken } from "@/lib/api";
 import { consumeStateBinding } from "@/lib/oauth-state";
-import { consumeOAuthReturnTo } from "@/lib/rodium-oauth";
+import {
+  consumeOAuthReturnTo,
+  finishOAuthPopup,
+  isOAuthPopupWindow,
+} from "@/lib/rodium-oauth";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 
 function CallbackInner() {
@@ -32,6 +36,7 @@ function CallbackInner() {
     startedRef.current = true;
 
     let cancelled = false;
+    const asPopup = isOAuthPopupWindow();
     // Burn the secret this browser stashed before the redirect. The server
     // refuses the state unless its hash matches, which is what stops someone
     // else's captured state from completing a sign-in here.
@@ -49,10 +54,13 @@ function CallbackInner() {
         } catch {
           // Session hydrate is best-effort; dashboard will refresh again.
         }
-        if (!cancelled) {
-          const returnTo = consumeOAuthReturnTo();
-          router.replace(returnTo || "/dashboard");
+        if (cancelled) return;
+        if (asPopup) {
+          finishOAuthPopup();
+          return;
         }
+        const returnTo = consumeOAuthReturnTo();
+        router.replace(returnTo || "/dashboard");
       })
       .catch((err) => {
         if (cancelled) return;
@@ -67,7 +75,17 @@ function CallbackInner() {
   return (
     <AuthCallbackScreen
       error={error}
-      onRetry={error ? () => router.push("/login") : undefined}
+      onRetry={
+        error
+          ? () => {
+              if (isOAuthPopupWindow()) {
+                window.close();
+                return;
+              }
+              router.push("/login");
+            }
+          : undefined
+      }
     />
   );
 }
