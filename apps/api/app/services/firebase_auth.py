@@ -53,21 +53,33 @@ def _get_app():
         settings = get_settings()
         if not settings.firebase_enabled:
             raise FirebaseAuthError("firebase_not_configured")
-        import firebase_admin
-        from firebase_admin import credentials
+        try:
+            import firebase_admin
+            from firebase_admin import credentials
+        except ImportError as exc:
+            # Misbuilt image (dep missing from requirements) must not 500 the
+            # login route — surface the same "not configured" path as empty env.
+            logger.error("firebase_admin package is not installed")
+            raise FirebaseAuthError("firebase_not_configured") from exc
 
-        cred = credentials.Certificate(
-            {
-                "type": "service_account",
-                "project_id": settings.firebase_project_id,
-                "client_email": settings.firebase_client_email,
-                "private_key": settings.firebase_private_key_pem,
-                "token_uri": "https://oauth2.googleapis.com/token",
-            }
-        )
-        # Named so we never collide with an app another part of the process
-        # may have initialised.
-        _app = firebase_admin.initialize_app(cred, name="forge-auth")
+        try:
+            cred = credentials.Certificate(
+                {
+                    "type": "service_account",
+                    "project_id": settings.firebase_project_id,
+                    "client_email": settings.firebase_client_email,
+                    "private_key": settings.firebase_private_key_pem,
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                }
+            )
+            # Named so we never collide with an app another part of the process
+            # may have initialised.
+            _app = firebase_admin.initialize_app(cred, name="forge-auth")
+        except FirebaseAuthError:
+            raise
+        except Exception as exc:
+            logger.exception("firebase admin SDK failed to initialise")
+            raise FirebaseAuthError("firebase_not_configured") from exc
         return _app
 
 
@@ -81,11 +93,13 @@ def _map_provider(raw: str | None) -> str:
 
 def verify_id_token(id_token: str) -> FederatedIdentity:
     """Verify and unpack an ID token, or raise `FirebaseAuthError`."""
-    app = _get_app()
-    from firebase_admin import auth as fb_auth
-
     try:
+        app = _get_app()
+        from firebase_admin import auth as fb_auth
+
         claims = fb_auth.verify_id_token(id_token, app=app)
+    except FirebaseAuthError:
+        raise
     except Exception as exc:
         raise FirebaseAuthError("invalid_id_token") from exc
 

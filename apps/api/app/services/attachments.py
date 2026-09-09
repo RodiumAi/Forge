@@ -21,7 +21,7 @@ from app.services.asset_storage import (
     materialize_asset_to_public,
     repair_private_upload_urls_in_project,
 )
-from app.services.filesystem import project_dir
+from app.services.filesystem import project_dir, safe_resolve
 from app.services.net_guard import BlockedURLError, validate_public_url_async
 
 _IMAGE_MARKER_RE = re.compile(
@@ -177,10 +177,18 @@ def _read_local_public(project_id: str, web_path: str) -> tuple[bytes, str] | No
     rel = web_path.lstrip("/")
     if not rel:
         return None
-    disk = project_dir(project_id) / "public" / rel
-    if not disk.is_file():
-        disk = project_dir(project_id) / rel
-    if not disk.is_file():
+    # The marker path comes from user content; route every candidate through
+    # safe_resolve so a "../" cannot escape the project into an arbitrary file.
+    disk = None
+    for candidate in (f"public/{rel}", rel):
+        try:
+            resolved = safe_resolve(project_id, candidate)
+        except ValueError:
+            continue
+        if resolved.is_file():
+            disk = resolved
+            break
+    if disk is None:
         return None
     body = disk.read_bytes()
     if len(body) > MAX_IMAGE_BYTES:

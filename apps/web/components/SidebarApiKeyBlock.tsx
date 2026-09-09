@@ -172,6 +172,10 @@ export function SidebarApiKeyBlock() {
       if (result.reason === "oidc_unavailable") {
         setShowPaste(true);
         setError(t("rodiumManualKeyHelp"));
+      } else if (result.reason === "popup_blocked") {
+        setError(t("authSocialPopupBlocked"));
+      } else if (result.reason === "cancelled") {
+        // User closed the window.
       } else if (result.error instanceof Error) {
         setError(result.error.message);
       } else {

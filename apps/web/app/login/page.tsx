@@ -11,6 +11,7 @@
  *
  * `?autostart=1` skips straight to the RodiumAi redirect — that is how the
  * "Forge" card on the RodiumAi dashboard opens the builder in one click.
+ * Manual clicks use a centered popup (same shape as Google/Firebase).
  */
 
 import { Suspense, useEffect, useRef, useState } from "react";
@@ -22,7 +23,7 @@ import { CheckInboxNotice } from "@/components/auth/CheckInboxNotice";
 import { PasswordField } from "@/components/auth/PasswordField";
 import { SocialButtons } from "@/components/auth/SocialButtons";
 import { ApiError, api, getToken, setToken } from "@/lib/api";
-import { createStateBinding } from "@/lib/oauth-state";
+import { sanitizeReturnTo, startRodiumOAuth } from "@/lib/rodium-oauth";
 import { firebaseEnabled } from "@/lib/firebase";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 
@@ -53,34 +54,34 @@ function LoginInner() {
   const startedRef = useRef(false);
 
   function land() {
-    window.location.assign(params.get("next") || "/dashboard");
+    window.location.assign(sanitizeReturnTo(params.get("next")) || "/dashboard");
   }
 
   async function loginWithRodium() {
     setRedirecting(true);
     setError(null);
-    try {
-      // Bind the OAuth flow to this browser. PKCE protects the code, but the
-      // `state` protected nothing: it carries the verifier and anyone holding
-      // the string held it too. We keep a one-time secret here and send only
-      // its hash; the callback proves possession by returning the original.
-      const binding = await createStateBinding();
-      const data = await api<{ authorize_url: string }>(
-        `/auth/rodium/start?state_binding=${encodeURIComponent(binding)}`,
-      );
-      window.location.href = data.authorize_url;
-    } catch (err) {
-      // 503 means this instance has no OIDC client configured. That is the
-      // normal state of a clone, not a failure worth an alarming message.
-      if (err instanceof ApiError && err.status === 503) {
-        setRodiumAvailable(false);
-        if (!autostart) setError(null);
-        else setError(err.message);
-      } else {
-        setError(err instanceof Error ? err.message : t("errorGeneric"));
-      }
-      setRedirecting(false);
+    const result = await startRodiumOAuth({
+      returnTo: sanitizeReturnTo(params.get("next")),
+      unavailableHref: null,
+      mode: autostart ? "redirect" : "popup",
+    });
+    if (result.ok) {
+      // Popup mode navigates the opener; redirect mode leaves this page.
+      return;
     }
+    if (result.reason === "oidc_unavailable") {
+      setRodiumAvailable(false);
+      if (autostart) setError(t("loginRodiumOidcUnavailable"));
+    } else if (result.reason === "popup_blocked") {
+      setError(t("authSocialPopupBlocked"));
+    } else if (result.reason === "cancelled") {
+      // User closed the popup — not an error worth shouting about.
+    } else if (result.error instanceof Error) {
+      setError(result.error.message);
+    } else if (result.reason === "error") {
+      setError(t("errorGeneric"));
+    }
+    setRedirecting(false);
   }
 
   async function submit(event: React.FormEvent) {

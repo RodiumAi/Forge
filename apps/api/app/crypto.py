@@ -15,6 +15,11 @@ def _fernet() -> Fernet:
             return Fernet(key)
         except Exception:
             pass
+    # No valid explicit ENCRYPTION_KEY. Deriving one from SECRET_KEY is only
+    # acceptable locally; anywhere else the SECRET_KEY may be a public default,
+    # which would leave stored API keys / refresh tokens readable.
+    if not settings.is_local:
+        raise RuntimeError("ENCRYPTION_KEY is required (a valid Fernet key) outside local environments")
     digest = hashlib.sha256((raw or settings.secret_key).encode("utf-8")).digest()
     return Fernet(base64.urlsafe_b64encode(digest))
 

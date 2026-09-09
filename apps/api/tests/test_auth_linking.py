@@ -327,6 +327,32 @@ class TestFirebaseIdentityMapping:
         with pytest.raises(firebase_auth.FirebaseAuthError):
             firebase_auth._map_provider(None)
 
+    def test_missing_firebase_admin_package_reports_not_configured(self, monkeypatch):
+        """Prod image once shipped without the dep — must be 503, never 500."""
+        firebase_auth._app = None
+
+        class _Settings:
+            firebase_enabled = True
+            firebase_project_id = "rodiumai"
+            firebase_client_email = "sa@rodiumai.iam.gserviceaccount.com"
+            firebase_private_key_pem = "-----BEGIN PRIVATE KEY-----\nX\n-----END PRIVATE KEY-----\n"
+
+        monkeypatch.setattr(firebase_auth, "get_settings", lambda: _Settings())
+
+        import builtins
+
+        real_import = builtins.__import__
+
+        def _blocked(name, globals=None, locals=None, fromlist=(), level=0):
+            if name == "firebase_admin" or name.startswith("firebase_admin."):
+                raise ImportError("firebase_admin missing")
+            return real_import(name, globals, locals, fromlist, level)
+
+        monkeypatch.setattr(builtins, "__import__", _blocked)
+
+        with pytest.raises(firebase_auth.FirebaseAuthError, match="firebase_not_configured"):
+            firebase_auth._get_app()
+
 
 class TestVerificationGate:
     """No confirmed address, no session — on every path that issues one.

@@ -3,9 +3,9 @@ import contextlib
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.config import get_settings
@@ -73,6 +73,38 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+def _cors_origin_allowed(origin: str | None) -> bool:
+    if not origin:
+        return False
+    if origin in config.cors_origin_list:
+        return True
+    regex = config.cors_origin_regex
+    if not regex:
+        return False
+    import re
+
+    return re.fullmatch(regex, origin) is not None
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Ensure browsers still see CORS headers on unexpected 500s.
+
+    Starlette's ServerErrorMiddleware sits outside CORSMiddleware, so an
+    unhandled crash otherwise looks like a CORS failure in DevTools
+    (`No Access-Control-Allow-Origin`) and hides the real 500.
+    """
+    logger.exception("unhandled error on %s %s", request.method, request.url.path)
+    response = JSONResponse(status_code=500, content={"detail": "Internal Server Error"})
+    origin = request.headers.get("origin")
+    if _cors_origin_allowed(origin):
+        response.headers["Access-Control-Allow-Origin"] = origin or ""
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Vary"] = "Origin"
+    return response
+
 
 app.include_router(auth.router)
 app.include_router(settings_router.router)
