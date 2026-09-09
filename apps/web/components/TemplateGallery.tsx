@@ -92,22 +92,38 @@ export function TemplateGallery({
           <button
             key={tpl.id}
             type="button"
-            className="tpl-card"
+            className="home-card tpl-card"
             disabled={Boolean(busyId)}
             onClick={() => onSelect(tpl)}
           >
-            <SiteThumb
-              src={tpl.preview_url || `/templates/${tpl.id}/preview`}
-              viewportWidth={480}
-              viewportHeight={300}
-              title={tpl.title}
-              className="tpl-card-thumb"
-            />
-            <div className="tpl-card-meta">
-              <strong>{tpl.title}</strong>
-              <span>
-                {busyId === tpl.id ? t("forkingTemplate") : tpl.description}
+            <div className="home-card-media">
+              <SiteThumb
+                src={tpl.preview_url || `/templates/${tpl.id}/preview`}
+                viewportWidth={480}
+                viewportHeight={300}
+                title={tpl.title}
+                className="home-card-thumb tpl-card-thumb"
+              />
+            </div>
+            <div className="home-card-body">
+              <span className="home-card-avatar" aria-hidden>
+                <span>
+                  {tpl.title
+                    .trim()
+                    .split(/\s+/)
+                    .filter(Boolean)
+                    .slice(0, 2)
+                    .map((w) => w[0] || "")
+                    .join("")
+                    .toUpperCase() || "T"}
+                </span>
               </span>
+              <div className="home-card-meta">
+                <strong title={tpl.title}>{tpl.title}</strong>
+                <span className="home-card-desc" title={tpl.description}>
+                  {busyId === tpl.id ? t("forkingTemplate") : tpl.description}
+                </span>
+              </div>
             </div>
           </button>
         ))}
