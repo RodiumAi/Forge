@@ -222,16 +222,20 @@ def rodium_oauth_start(request: Request) -> OAuthStartResponse:
     `state_binding` is a one-time secret the browser generated and kept in
     `sessionStorage`; only its hash reaches us. The callback must present the
     original, which is what ties the flow to the browser that started it.
+
+    Optional `prompt` (e.g. `login`) is forwarded to the issuer so leftover
+    RodiumAi cookies cannot silently approve the wrong identity.
     """
     locale = resolve_locale(request)
     settings = get_settings()
     if not settings.rodium_oidc_client_id:
         raise HTTPException(status_code=503, detail=t("rodium_oauth_not_configured", locale))
     binding = (request.query_params.get("state_binding") or "").strip() or None
+    prompt = (request.query_params.get("prompt") or "").strip() or None
     try:
         verifier, challenge = generate_pkce()
         state = create_oauth_state(verifier, binding)
-        url = build_authorize_url(state=state, code_challenge=challenge)
+        url = build_authorize_url(state=state, code_challenge=challenge, prompt=prompt)
     except RodiumOidcError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     return OAuthStartResponse(authorize_url=url)
@@ -319,6 +323,7 @@ async def rodium_account(
 ) -> RodiumAccountOut:
     if not user.rodium_sub:
         return RodiumAccountOut(linked=False)
+    locale = resolve_locale(request)
     row = _get_or_create_settings(db, user)
     # Prefer DB cache so navbar/profile never wait on Nest latency.
     keys: list = []
@@ -342,6 +347,7 @@ async def rodium_account(
     # does not stick on the login-time balance.
     fresh = (request.query_params.get("fresh") or "").lower() in ("1", "true", "yes")
     timeout_s = 8.0 if fresh else 2.5
+    live_ok = False
 
     try:
         async with asyncio.timeout(timeout_s):
@@ -353,9 +359,39 @@ async def rodium_account(
             row.rodium_api_keys_json = json.dumps(keys)
             row.rodium_wallet_json = json.dumps(wallet)
             db.commit()
+            live_ok = True
     except Exception:
-        # Keep cached keys/wallet for UI continuity.
-        pass
+        # Tokens missing after logout, or Nest blip — try a trusted reissue
+        # before falling back to the stale DB cache.
+        try:
+            access = await _reissue_rodium_tokens(db, user)
+            if access:
+                async with asyncio.timeout(timeout_s):
+                    live_keys = await fetch_api_keys(access)
+                    live_wallet = await fetch_wallet(access)
+                    keys = live_keys if isinstance(live_keys, list) else keys
+                    wallet = live_wallet if isinstance(live_wallet, dict) else wallet
+                    row.rodium_api_keys_json = json.dumps(keys)
+                    row.rodium_wallet_json = json.dumps(wallet)
+                    db.commit()
+                    live_ok = True
+        except Exception:
+            pass
+
+    if not live_ok and fresh and not wallet:
+        # Last resort: pasted API key path (manual key users).
+        try:
+            from app.services.rodium import fetch_wallet_balance_by_api_key
+
+            if row.rodium_api_key_encrypted:
+                api_key = decrypt_secret(row.rodium_api_key_encrypted)
+                live_wallet = await fetch_wallet_balance_by_api_key(api_key, locale)
+                if isinstance(live_wallet, dict):
+                    wallet = live_wallet
+                    row.rodium_wallet_json = json.dumps(wallet)
+                    db.commit()
+        except Exception:
+            pass
 
     if not has_generation_key(user, row) and keys:
         await _ensure_default_generation_key(db, user, row, keys if isinstance(keys, list) else [])
@@ -485,6 +521,42 @@ async def _link_rodium_account(db: Session, user: User) -> str | None:
     return str(result.tokens.get("access_token") or "") or None
 
 
+async def _reissue_rodium_tokens(db: Session, user: User) -> str | None:
+    """Restore OAuth tokens for an already-linked account after Forge logout.
+
+    Logout clears refresh tokens but keeps `rodium_sub`. Google/email login
+    proves the address again; Nest re-mints tokens only when `userId` matches.
+    """
+    if not user.rodium_sub or not rodium_provisioning.enabled():
+        return None
+    row = _get_or_create_settings(db, user)
+    if row.rodium_refresh_token_encrypted:
+        return None
+    result = await rodium_provisioning.reissue_tokens(
+        email=user.email, user_id=str(user.rodium_sub)
+    )
+    if result is None:
+        return None
+    _store_oauth_tokens(row, result.tokens)
+    if not row.rodium_api_key_hint:
+        row.rodium_api_key_hint = "RodiumAi account"
+    db.commit()
+    return str(result.tokens.get("access_token") or "") or None
+
+
+async def _ensure_rodium_tokens_after_login(
+    db: Session, user: User, background_tasks: BackgroundTasks
+) -> None:
+    """Provision or reissue RodiumAi tokens, then hydrate wallet/keys off-request."""
+    access = await _link_rodium_account(db, user)
+    db.refresh(user)
+    if not access:
+        access = await _reissue_rodium_tokens(db, user)
+        db.refresh(user)
+    if access:
+        background_tasks.add_task(_hydrate_rodium_account_cache, user.id, access)
+
+
 def _send_verification_email(db: Session, user: User, locale: str) -> None:
     """Issue a fresh verification link and mail it.
 
@@ -564,14 +636,7 @@ async def verify_email(
     db.commit()
     db.refresh(user)
 
-    access = await _link_rodium_account(db, user)
-    db.refresh(user)
-    if access:
-        # Keys and wallet hydrate after the response, same as the OIDC callback:
-        # the user should land in the builder, not wait on two extra round-trips.
-        # This is also what mints and selects their generation key, via
-        # `autoGenerateApiKey` on the platform side.
-        background_tasks.add_task(_hydrate_rodium_account_cache, user.id, access)
+    await _ensure_rodium_tokens_after_login(db, user, background_tasks)
 
     return TokenResponse(access_token=token_for_user(user), email_verified=True)
 
@@ -766,16 +831,18 @@ async def oauth_firebase(
             detail=t("email_not_verified", locale),
         )
 
-    access = await _link_rodium_account(db, user)
-    db.refresh(user)
-    if access:
-        background_tasks.add_task(_hydrate_rodium_account_cache, user.id, access)
+    await _ensure_rodium_tokens_after_login(db, user, background_tasks)
 
     return TokenResponse(access_token=token_for_user(user), email_verified=True)
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(body: LoginRequest, request: Request, db: Session = Depends(get_db)) -> TokenResponse:
+async def login(
+    body: LoginRequest,
+    request: Request,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+) -> TokenResponse:
     locale = resolve_locale(request)
     rate_limit.enforce(request, "login", limit=10, window_seconds=900)
 
@@ -796,6 +863,7 @@ def login(body: LoginRequest, request: Request, db: Session = Depends(get_db)) -
             status_code=status.HTTP_403_FORBIDDEN,
             detail=t("email_not_verified", locale),
         )
+    await _ensure_rodium_tokens_after_login(db, user, background_tasks)
     return TokenResponse(
         access_token=token_for_user(user),
         email_verified=user.email_verified_at is not None,
@@ -862,6 +930,9 @@ async def logout(
         row.rodium_access_token_encrypted = None
         row.rodium_refresh_token_encrypted = None
         row.rodium_token_expires_at = None
+        # Drop the cached balance so a later Google login cannot show a stale
+        # figure while live Nest fetch is still re-linking tokens.
+        row.rodium_wallet_json = None
         db.commit()
     return LogoutResponse()
 
