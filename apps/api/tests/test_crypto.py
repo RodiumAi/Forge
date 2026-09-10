@@ -8,8 +8,8 @@ import hashlib
 import pytest
 from cryptography.fernet import Fernet
 
-from app.config import get_settings
 from app import crypto
+from app.config import get_settings
 
 
 @pytest.fixture(autouse=True)
