@@ -6,6 +6,11 @@ from cryptography.fernet import Fernet, InvalidToken
 from app.config import get_settings
 
 
+def _fernet_from_material(material: str) -> Fernet:
+    digest = hashlib.sha256(material.encode("utf-8")).digest()
+    return Fernet(base64.urlsafe_b64encode(digest))
+
+
 def _fernet() -> Fernet:
     settings = get_settings()
     raw = (settings.encryption_key or "").strip()
@@ -14,14 +19,14 @@ def _fernet() -> Fernet:
             key = raw.encode("utf-8") if isinstance(raw, str) else raw
             return Fernet(key)
         except Exception:
-            pass
-    # No valid explicit ENCRYPTION_KEY. Deriving one from SECRET_KEY is only
-    # acceptable locally; anywhere else the SECRET_KEY may be a public default,
-    # which would leave stored API keys / refresh tokens readable.
+            # Prod historically stored a random/hex string in ENCRYPTION_KEY,
+            # not a Fernet key. Derive so existing ciphertext stays readable.
+            return _fernet_from_material(raw)
+    # Empty ENCRYPTION_KEY: deriving from SECRET_KEY is only acceptable locally;
+    # elsewhere SECRET_KEY may be a public default.
     if not settings.is_local:
         raise RuntimeError("ENCRYPTION_KEY is required (a valid Fernet key) outside local environments")
-    digest = hashlib.sha256((raw or settings.secret_key).encode("utf-8")).digest()
-    return Fernet(base64.urlsafe_b64encode(digest))
+    return _fernet_from_material(settings.secret_key)
 
 
 def encrypt_secret(plain: str) -> str:
