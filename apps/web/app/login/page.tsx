@@ -22,8 +22,9 @@ import { AuthCallbackScreen } from "@/components/auth/AuthCallbackScreen";
 import { CheckInboxNotice } from "@/components/auth/CheckInboxNotice";
 import { PasswordField } from "@/components/auth/PasswordField";
 import { SocialButtons } from "@/components/auth/SocialButtons";
-import { ApiError, api, getToken, setToken } from "@/lib/api";
+import { ApiError, api, setToken } from "@/lib/api";
 import { sanitizeReturnTo, startRodiumOAuth } from "@/lib/rodium-oauth";
+import { clearSessionCache } from "@/lib/session-cache";
 import { firebaseEnabled } from "@/lib/firebase";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 
@@ -64,6 +65,9 @@ function LoginInner() {
       returnTo: sanitizeReturnTo(params.get("next")),
       unavailableHref: null,
       mode: autostart ? "redirect" : "popup",
+      // Autostart: silent SSO with the dashboard cookie. Manual: force login
+      // so a leftover RodiumAi session cannot bind the wrong Forge account.
+      prompt: autostart ? null : "login",
     });
     if (result.ok) {
       // Popup mode navigates the opener; redirect mode leaves this page.
@@ -112,10 +116,11 @@ function LoginInner() {
   useEffect(() => {
     if (!autostart || startedRef.current) return;
     startedRef.current = true;
-    if (getToken()) {
-      router.replace("/dashboard");
-      return;
-    }
+    // Dashboard CTA must always run OIDC for the *current* RodiumAi session.
+    // Keeping an existing forge_token short-circuits to the previous Forge
+    // account and ignores the account just opened on rodiumai.io.
+    setToken(null);
+    clearSessionCache();
     void loginWithRodium();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot autostart
   }, [autostart, router]);
