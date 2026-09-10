@@ -127,12 +127,13 @@ export type StartRodiumOAuthResult =
 
 async function startRodiumOAuthRedirect(options?: {
   unavailableHref?: string | null;
+  prompt?: string | null;
 }): Promise<StartRodiumOAuthResult> {
   try {
     const binding = await createStateBinding();
-    const data = await api<{ authorize_url: string }>(
-      `/auth/rodium/start?state_binding=${encodeURIComponent(binding)}`,
-    );
+    const qs = new URLSearchParams({ state_binding: binding });
+    if (options?.prompt) qs.set("prompt", options.prompt);
+    const data = await api<{ authorize_url: string }>(`/auth/rodium/start?${qs}`);
     window.location.href = data.authorize_url;
     return { ok: true, mode: "redirect" };
   } catch (err) {
@@ -221,16 +222,28 @@ export async function startRodiumOAuth(options?: {
   unavailableHref?: string | null;
   /** Default `popup`. Use `redirect` for `?autostart=1`. */
   mode?: "popup" | "redirect";
+  /**
+   * OIDC `prompt`. Manual Continue uses `login` so a leftover RodiumAi cookie
+   * cannot silently approve. Autostart omits it (SSO with the dashboard session).
+   */
+  prompt?: string | null;
 }): Promise<StartRodiumOAuthResult> {
   stashOAuthReturnTo(options?.returnTo);
   const mode = options?.mode ?? "popup";
+  const prompt =
+    options && "prompt" in options
+      ? options.prompt
+      : mode === "popup"
+        ? "login"
+        : null;
 
   if (mode === "redirect") {
-    return startRodiumOAuthRedirect(options);
+    return startRodiumOAuthRedirect({ ...options, prompt });
   }
 
+  const popupQs = prompt ? `?prompt=${encodeURIComponent(prompt)}` : "";
   const popup = window.open(
-    "/auth/rodium-popup",
+    `/auth/rodium-popup${popupQs}`,
     OAUTH_POPUP_WINDOW_NAME,
     popupFeatures(),
   );
@@ -256,7 +269,9 @@ export async function startRodiumOAuth(options?: {
  * Kick off OIDC *inside* the popup window (create binding → authorize URL).
  * Called only from `/auth/rodium-popup`.
  */
-export async function beginRodiumOAuthInPopup(): Promise<
+export async function beginRodiumOAuthInPopup(options?: {
+  prompt?: string | null;
+}): Promise<
   { ok: true } | { ok: false; reason: "oidc_unavailable" | "error"; error?: unknown }
 > {
   try {
@@ -266,9 +281,10 @@ export async function beginRodiumOAuthInPopup(): Promise<
   }
   try {
     const binding = await createStateBinding();
-    const data = await api<{ authorize_url: string }>(
-      `/auth/rodium/start?state_binding=${encodeURIComponent(binding)}`,
-    );
+    const qs = new URLSearchParams({ state_binding: binding });
+    const prompt = options?.prompt ?? "login";
+    if (prompt) qs.set("prompt", prompt);
+    const data = await api<{ authorize_url: string }>(`/auth/rodium/start?${qs}`);
     window.location.href = data.authorize_url;
     return { ok: true };
   } catch (err) {

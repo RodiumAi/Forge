@@ -153,7 +153,7 @@ export async function ensureSession(options?: { force?: boolean }): Promise<Sess
         api<{
           linked: boolean;
           wallet?: SessionWallet | null;
-        }>("/auth/rodium/account"),
+        }>(options?.force ? "/auth/rodium/account?fresh=1" : "/auth/rodium/account"),
       ]);
 
       const prev = getSessionSnapshot();

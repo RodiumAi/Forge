@@ -8,6 +8,7 @@
  */
 
 import { Suspense, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 import { AuthCallbackScreen } from "@/components/auth/AuthCallbackScreen";
 import { beginRodiumOAuthInPopup } from "@/lib/rodium-oauth";
@@ -15,14 +16,16 @@ import { useI18n } from "@/lib/i18n/I18nProvider";
 
 function RodiumPopupInner() {
   const { t } = useI18n();
+  const params = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const startedRef = useRef(false);
 
   useEffect(() => {
     if (startedRef.current) return;
     startedRef.current = true;
+    const prompt = params.get("prompt") || "login";
 
-    void beginRodiumOAuthInPopup().then((result) => {
+    void beginRodiumOAuthInPopup({ prompt }).then((result) => {
       if (result.ok) return;
       if (result.reason === "oidc_unavailable") {
         setError(t("loginRodiumOidcUnavailable"));
@@ -32,7 +35,7 @@ function RodiumPopupInner() {
         result.error instanceof Error ? result.error.message : t("errorGeneric"),
       );
     });
-  }, [t]);
+  }, [params, t]);
 
   return (
     <AuthCallbackScreen

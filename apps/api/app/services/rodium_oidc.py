@@ -90,7 +90,12 @@ def parse_oauth_state(state: str, binding: str | None = None) -> str:
     return verifier
 
 
-def build_authorize_url(*, state: str, code_challenge: str) -> str:
+def build_authorize_url(
+    *,
+    state: str,
+    code_challenge: str,
+    prompt: str | None = None,
+) -> str:
     settings = get_settings()
     if not settings.rodium_oidc_client_id or not settings.rodium_oidc_redirect_uri:
         raise RodiumOidcError("RodiumAi OAuth is not configured on the Forge API")
@@ -103,6 +108,11 @@ def build_authorize_url(*, state: str, code_challenge: str) -> str:
         "code_challenge": code_challenge,
         "code_challenge_method": "S256",
     }
+    # Interactive prompts disable Nest's silent first-party approve so a leftover
+    # RodiumAi cookie cannot bind the wrong Forge session.
+    cleaned = (prompt or "").strip().lower()
+    if cleaned and cleaned != "none":
+        params["prompt"] = cleaned
     return f"{settings.rodium_oidc_authorize_url}?{urlencode(params)}"
 
 

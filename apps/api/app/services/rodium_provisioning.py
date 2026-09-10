@@ -119,3 +119,66 @@ async def provision(
         return None
 
     return ProvisionResult(user_id=user_id, tokens=tokens)
+
+
+async def reissue_tokens(
+    *,
+    email: str,
+    user_id: str,
+) -> ProvisionResult | None:
+    """Re-mint OAuth tokens for an account Forge already linked.
+
+    Used after logout cleared refresh tokens: Google/email sign-in proves the
+    address again, and we pass the stored `rodium_sub` so Nest refuses a
+    mismatch.
+    """
+    settings = get_settings()
+    if not settings.provisioning_enabled or not settings.rodium_oidc_client_id:
+        return None
+
+    url = settings.rodium_provisioning_url.rstrip("/")
+    if url.endswith("/users"):
+        url = f"{url}/reissue-tokens"
+    else:
+        url = f"{url}/users/reissue-tokens"
+
+    payload = {
+        "email": email,
+        "emailVerified": True,
+        "userId": user_id,
+        "clientId": settings.rodium_oidc_client_id,
+        "source": "forge",
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=PROVISION_TIMEOUT) as client:
+            response = await client.post(
+                url,
+                json=payload,
+                headers={"X-Internal-Token": settings.rodium_provision_token},
+            )
+    except httpx.HTTPError:
+        logger.warning("rodium.reissue.unreachable", exc_info=True)
+        return None
+
+    if response.status_code >= 400:
+        logger.warning(
+            "rodium.reissue.rejected status=%s body=%s",
+            response.status_code,
+            response.text[:300],
+        )
+        return None
+
+    try:
+        data = response.json()
+        uid = str(data["userId"])
+        tokens = {
+            "access_token": data["accessToken"],
+            "refresh_token": data["refreshToken"],
+            "expires_in": data.get("expiresIn"),
+        }
+    except (ValueError, KeyError):
+        logger.warning("rodium.reissue.malformed_response", exc_info=True)
+        return None
+
+    return ProvisionResult(user_id=uid, tokens=tokens)

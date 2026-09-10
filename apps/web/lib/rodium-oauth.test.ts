@@ -100,7 +100,7 @@ describe("startRodiumOAuth popup", () => {
     const result = await startRodiumOAuth({ returnTo: "/dashboard", mode: "popup" });
     expect(result).toEqual({ ok: false, reason: "popup_blocked" });
     expect(window.open).toHaveBeenCalledWith(
-      "/auth/rodium-popup",
+      "/auth/rodium-popup?prompt=login",
       OAUTH_POPUP_WINDOW_NAME,
       expect.stringContaining("width=520"),
     );
