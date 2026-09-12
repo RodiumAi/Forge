@@ -97,6 +97,20 @@ def build_reset_password(to: str, url: str, locale: Locale = "en") -> MailMessag
     )
 
 
+def build_reset_password_sso_hint(to: str, login_url: str, locale: Locale = "en") -> MailMessage:
+    """Inform SSO-only accounts that there is no local password to reset."""
+    title = t("mail_reset_sso_subject", locale)
+    intro = t("mail_reset_sso_intro", locale)
+    footer = t("mail_reset_sso_footer", locale)
+    text = f"{title}\n\n{intro}\n\n{login_url}\n\n{footer}\n"
+    return MailMessage(
+        to=to,
+        subject=title,
+        text=text,
+        html=_html_document(title, intro, t("mail_reset_sso_cta", locale), login_url, footer),
+    )
+
+
 def _send_console(message: MailMessage) -> None:
     # One block, easy to spot in `docker compose logs -f api`.
     logger.info(
