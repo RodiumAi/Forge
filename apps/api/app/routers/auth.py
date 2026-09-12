@@ -685,15 +685,18 @@ def forgot_password(
     rate_limit.enforce(request, "forgot-password", limit=3, window_seconds=900, subject=email)
 
     user = db.query(User).filter(User.email == email).first()
-    # Accounts without a local password (created through RodiumAi or a social
-    # provider) have nothing to reset; silently skipping keeps the response
-    # identical for them too.
+    # Always return the same success payload (membership oracle). SSO-only
+    # accounts still get an email explaining how to sign in, so the inbox
+    # matches what the UI promised.
     if user is not None and user.password_hash:
         auth_tokens.invalidate_outstanding(db, user.id, AuthToken.KIND_PASSWORD_RESET)
         raw = auth_tokens.issue_password_reset(db, user.id)
         db.commit()
         url = get_settings().web_url(f"/reset-password?token={quote(raw)}")
         mail.send(mail.build_reset_password(user.email, url, locale))
+    elif user is not None:
+        login_url = get_settings().web_url("/login")
+        mail.send(mail.build_reset_password_sso_hint(user.email, login_url, locale))
     return SimpleOkResponse(message=t("reset_email_sent", locale))
 
 
