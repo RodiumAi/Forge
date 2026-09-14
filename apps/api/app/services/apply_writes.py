@@ -22,7 +22,7 @@ from app.services.import_validator import ImportViolation, validate_write_conten
 logger = logging.getLogger("apply_writes")
 
 _LOCKED_BRAND_RE = re.compile(
-    r"^(DESIGN\.md|public/logo(?:\.(?:png|jpe?g|webp|gif|svg))?)$",
+    r"^(DESIGN\.md|public/logo(?:\.(?:png|jpe?g|webp|gif))?)$",
     re.IGNORECASE,
 )
 _CSS_MERGE_MIN_EXISTING = 400

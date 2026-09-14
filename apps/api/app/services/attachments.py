@@ -397,7 +397,7 @@ def materialize_asset_markers(db: Session, project_id: str, user_text: str) -> s
                 disk = project_dir(project_id) / "public" / web_path.lstrip("/")
                 if disk.is_file():
                     ext = disk.suffix.lower() or ".png"
-                    if ext not in (".png", ".jpg", ".jpeg", ".webp", ".svg", ".gif", ".ico"):
+                    if ext not in (".png", ".jpg", ".jpeg", ".webp", ".gif", ".ico"):
                         ext = ".png"
                     write_bytes(project_id, f"public/logo{ext}", disk.read_bytes())
             except Exception:

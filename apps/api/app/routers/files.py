@@ -45,12 +45,33 @@ IMAGE_TYPES = {
     "image/jpg",
     "image/webp",
     "image/gif",
-    "image/svg+xml",
+    # SVG omitted: browsers execute embedded <script> when opened as a document
+    # (Stored XSS). Raster formats only — align with SEO upload allowlist.
     "image/x-icon",
     "image/vnd.microsoft.icon",
     "image/ico",
 }
-IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg", ".ico"}
+IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".ico"}
+
+
+def _is_svg_payload(*, name: str = "", content_type: str = "") -> bool:
+    ctype = (content_type or "").lower()
+    lower = (name or "").lower()
+    return (
+        "svg" in ctype
+        or lower.endswith(".svg")
+        or ctype == "image/svg+xml"
+    )
+
+
+def _svg_safe_response_headers(filename: str, *, cache_control: str) -> dict[str, str]:
+    """Force download for SVG so the browser never executes embedded scripts."""
+    safe = (filename or "file.svg").replace('"', "").replace("\n", "").replace("\r", "")
+    return {
+        "Cache-Control": cache_control,
+        "Content-Disposition": f'attachment; filename="{safe}"',
+        "X-Content-Type-Options": "nosniff",
+    }
 
 
 class FileWriteRequest(BaseModel):
@@ -259,6 +280,14 @@ def get_public_asset(
             continue
         if resolved.is_file():
             media_type = mimetypes.guess_type(resolved.name)[0] or "application/octet-stream"
+            if _is_svg_payload(name=resolved.name, content_type=media_type or ""):
+                return Response(
+                    content=resolved.read_bytes(),
+                    media_type="application/octet-stream",
+                    headers=_svg_safe_response_headers(
+                        resolved.name, cache_control="no-cache"
+                    ),
+                )
             return Response(
                 content=resolved.read_bytes(),
                 media_type=media_type,
@@ -359,12 +388,22 @@ def stream_asset_content(
     except Exception:
         # Fallback: redirect to a short-lived signed URL.
         return RedirectResponse(url=_presigned_asset_url(row), status_code=302)
+    display = asset_display_name(row.object_key)
+    if _is_svg_payload(name=display, content_type=row.content_type or ""):
+        return Response(
+            content=body,
+            media_type="application/octet-stream",
+            headers=_svg_safe_response_headers(
+                display, cache_control="private, max-age=300"
+            ),
+        )
     return Response(
         content=body,
         media_type=row.content_type or "application/octet-stream",
         headers={
             "Cache-Control": "private, max-age=300",
-            "Content-Disposition": f'inline; filename="{asset_display_name(row.object_key)}"',
+            "Content-Disposition": f'inline; filename="{display}"',
+            "X-Content-Type-Options": "nosniff",
         },
     )
 
@@ -382,6 +421,11 @@ async def upload_project_image(
     filename = (file.filename or "image.png").replace("\\", "/").split("/")[-1]
     ext = ("." + filename.rsplit(".", 1)[-1].lower()) if "." in filename else ""
     content_type = (file.content_type or "").lower()
+    if _is_svg_payload(name=filename, content_type=content_type):
+        raise HTTPException(
+            status_code=400,
+            detail="SVG uploads are not allowed (security). Use PNG, JPEG, WebP, or GIF.",
+        )
     if content_type not in IMAGE_TYPES and ext not in IMAGE_EXTS:
         raise HTTPException(status_code=400, detail="Only image files are allowed")
     body = await file.read()
