@@ -42,11 +42,10 @@ class ProvisionResult:
 
 
 class ProvisionConflict(Exception):
-    """The address already has a RodiumAi account.
+    """Legacy 409 from Nest when an address already exists.
 
-    Not an error state — it means the user should link the existing account
-    through "Continue with RodiumAi" instead, which is the only flow that
-    proves they own it.
+    Current Nest adopts verified emails and returns tokens (`created: false`)
+    instead. Kept so older Nest revisions cannot break verify/login.
     """
 
 
@@ -66,8 +65,8 @@ async def provision(
     answer" — the caller treats them the same way, because in both cases the
     Forge account exists and is simply not linked yet.
 
-    Raises `ProvisionConflict` only for a `409`, which the caller surfaces so
-    the user can link their existing account instead.
+    Raises `ProvisionConflict` only for a legacy `409`. Current Nest adopts
+    the existing account when `emailVerified` is true.
     """
     settings = get_settings()
     if not settings.provisioning_enabled:

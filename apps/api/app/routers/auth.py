@@ -503,10 +503,9 @@ async def _link_rodium_account(db: Session, user: User) -> str | None:
             email=user.email, full_name=user.name, avatar_url=user.avatar_url
         )
     except rodium_provisioning.ProvisionConflict:
-        # A RodiumAi account already owns this address. Linking it requires
-        # proving ownership, which only the consent flow does — so we leave the
-        # Forge account unlinked and the UI offers "Continue with RodiumAi".
-        logger.info("rodium.provision.exists email=%s", user.email)
+        # Unexpected after Nest adopts verified emails. Keep as a soft fallback
+        # so a stale 409 never breaks email verification / login.
+        logger.warning("rodium.provision.exists email=%s", user.email)
         return None
     if result is None:
         return None
