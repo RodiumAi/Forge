@@ -38,6 +38,7 @@ from app.schemas import (
     ResetPasswordRequest,
     RodiumAccountOut,
     RodiumApiKeyOut,
+    RodiumGenerateKeyResponse,
     RodiumSelectKeyRequest,
     RodiumSelectKeyResponse,
     RodiumWalletOut,
@@ -58,6 +59,7 @@ from app.services.rodium_generation import (
 from app.services.rodium_oidc import (
     RodiumOidcError,
     build_authorize_url,
+    create_api_key,
     create_oauth_state,
     exchange_code,
     fetch_api_keys,
@@ -322,7 +324,7 @@ async def rodium_account(
     db: Session = Depends(get_db),
 ) -> RodiumAccountOut:
     if not user.rodium_sub:
-        return RodiumAccountOut(linked=False)
+        return RodiumAccountOut(linked=False, can_generate_key=False)
     locale = resolve_locale(request)
     row = _get_or_create_settings(db, user)
     # Prefer DB cache so navbar/profile never wait on Nest latency.
@@ -407,6 +409,7 @@ async def rodium_account(
         selected_api_key_id=row.selected_rodium_api_key_id,
         has_generation_key=has_generation_key(user, row),
         generation_key_hint=row.rodium_api_key_hint,
+        can_generate_key=rodium_provisioning.enabled(),
     )
 
 
@@ -449,6 +452,69 @@ async def rodium_ensure_generation_key(
         selected_api_key_id=row.selected_rodium_api_key_id or "",
         has_generation_key=True,
         generation_key_hint=row.rodium_api_key_hint,
+    )
+
+
+@router.post("/rodium/generate-key", response_model=RodiumGenerateKeyResponse)
+async def rodium_generate_key(
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> RodiumGenerateKeyResponse:
+    """Mint (or reuse) a RodiumAi API key and select it for generation.
+
+    Official instance only (`RODIUM_PROVISION_TOKEN`). Opensource clones paste
+    a key manually instead.
+    """
+    locale = resolve_locale(request)
+    if not rodium_provisioning.enabled():
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=t("rodium_generate_key_unavailable", locale),
+        )
+    if not user.rodium_sub:
+        raise HTTPException(status_code=400, detail=t("rodium_oauth_required", locale))
+
+    row = _get_or_create_settings(db, user)
+    try:
+        access = await _ensure_rodium_access_token(db, user)
+        created = await create_api_key(access)
+        key_id = str(created["id"])
+        live_keys = await fetch_api_keys(access)
+        if isinstance(live_keys, list):
+            row.rodium_api_keys_json = json.dumps(live_keys)
+            db.commit()
+        else:
+            live_keys = [created]
+            row.rodium_api_keys_json = json.dumps(live_keys)
+            db.commit()
+        hint = await select_api_key_id(db, user, row, key_id)
+    except RodiumOidcError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=400, detail=str(exc) or "Failed to generate API key"
+        ) from exc
+
+    db.refresh(row)
+    keys_raw: list = []
+    if row.rodium_api_keys_json:
+        try:
+            parsed = json.loads(row.rodium_api_keys_json)
+            if isinstance(parsed, list):
+                keys_raw = parsed
+        except Exception:
+            keys_raw = []
+
+    return RodiumGenerateKeyResponse(
+        ok=True,
+        selected_api_key_id=row.selected_rodium_api_key_id or key_id,
+        has_generation_key=True,
+        generation_key_hint=hint or row.rodium_api_key_hint,
+        api_keys=_api_keys_out(keys_raw),
+        can_generate_key=True,
     )
 
 

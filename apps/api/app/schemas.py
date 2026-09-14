@@ -133,6 +133,8 @@ class RodiumAccountOut(BaseModel):
     selected_api_key_id: str | None = None
     has_generation_key: bool = False
     generation_key_hint: str | None = None
+    #: True only on the official instance (provisioning token set) when linked.
+    can_generate_key: bool = False
 
 
 class RodiumSelectKeyRequest(BaseModel):
@@ -144,6 +146,15 @@ class RodiumSelectKeyResponse(BaseModel):
     selected_api_key_id: str
     has_generation_key: bool = True
     generation_key_hint: str | None = None
+
+
+class RodiumGenerateKeyResponse(BaseModel):
+    ok: bool = True
+    selected_api_key_id: str
+    has_generation_key: bool = True
+    generation_key_hint: str | None = None
+    api_keys: list[RodiumApiKeyOut] = Field(default_factory=list)
+    can_generate_key: bool = True
 
 
 class PasswordChangeRequest(BaseModel):

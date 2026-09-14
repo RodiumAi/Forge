@@ -196,6 +196,35 @@ async def fetch_api_keys(access_token: str) -> list[dict[str, Any]]:
     return items if isinstance(items, list) else []
 
 
+async def create_api_key(
+    access_token: str, *, name: str | None = None
+) -> dict[str, Any]:
+    """Ask Nest to mint (or reuse) a key for a first-party OAuth client.
+
+    Official Forge only — Nest refuses clients without `autoGenerateApiKey`.
+    Returns key metadata without a plaintext secret.
+    """
+    settings = get_settings()
+    payload: dict[str, Any] = {}
+    if name and name.strip():
+        payload["name"] = name.strip()
+    async with httpx.AsyncClient(timeout=NEST_HTTP_TIMEOUT) as client:
+        response = await client.post(
+            settings.rodium_oidc_api_keys_url,
+            json=payload,
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+    if response.status_code >= 400:
+        raise RodiumOidcError(
+            f"RodiumAi create api-key error ({response.status_code}): {response.text[:400]}",
+            response.status_code,
+        )
+    data = response.json()
+    if not isinstance(data, dict) or not data.get("id"):
+        raise RodiumOidcError("RodiumAi create api-key response missing id")
+    return data
+
+
 async def fetch_wallet(access_token: str) -> dict[str, Any]:
     settings = get_settings()
     async with httpx.AsyncClient(timeout=NEST_HTTP_TIMEOUT) as client:
