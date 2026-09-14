@@ -30,6 +30,7 @@ type RodiumAccount = {
   rodium_sub?: string | null;
   has_generation_key?: boolean;
   generation_key_hint?: string | null;
+  can_generate_key?: boolean;
 };
 
 type RodiumTestResult = {
@@ -54,6 +55,7 @@ export function RodiumGenerationPanel() {
   const [loading, setLoading] = useState(true);
   const [selectedKeyId, setSelectedKeyId] = useState("");
   const [selectingKey, setSelectingKey] = useState(false);
+  const [generatingKey, setGeneratingKey] = useState(false);
   const [showManualPaste, setShowManualPaste] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [connecting, setConnecting] = useState(false);
@@ -226,6 +228,33 @@ export function RodiumGenerationPanel() {
       setError(err instanceof Error ? err.message : t("errorGeneric"));
     } finally {
       setSelectingKey(false);
+    }
+  }
+
+  async function onGenerateKey() {
+    if (!account?.can_generate_key || generatingKey) return;
+    setGeneratingKey(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const result = await api<{
+        selected_api_key_id: string;
+      }>("/auth/rodium/generate-key", {
+        method: "POST",
+        body: "{}",
+      });
+      const rodium = await refreshAccountAndKey(true);
+      setSelectedKeyId(
+        result.selected_api_key_id ||
+          rodium.selected_api_key_id ||
+          rodium.api_keys?.find((k) => k.is_active)?.id ||
+          "",
+      );
+      setMessage(t("rodiumKeyGenerated"));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("errorGeneric"));
+    } finally {
+      setGeneratingKey(false);
     }
   }
 
@@ -480,7 +509,24 @@ export function RodiumGenerationPanel() {
         ) : (
           <div className="settings-inline-form">
             {linked && !activeKeys.length ? (
-              <p className="muted">{t("rodiumNoKeys")}</p>
+              <>
+                <p className="muted">{t("rodiumNoKeys")}</p>
+                {account?.can_generate_key ? (
+                  <>
+                    <p className="home-settings-hint">{t("rodiumGenerateKeyHint")}</p>
+                    <div className="home-settings-actions">
+                      <button
+                        type="button"
+                        className="landing-create home-settings-save"
+                        onClick={() => void onGenerateKey()}
+                        disabled={generatingKey}
+                      >
+                        {generatingKey ? t("rodiumGeneratingKey") : t("rodiumGenerateKey")}
+                      </button>
+                    </div>
+                  </>
+                ) : null}
+              </>
             ) : null}
             {error && <p className="error home-settings-feedback">{error}</p>}
             {message && <p className="home-settings-success">{message}</p>}
