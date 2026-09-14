@@ -3,7 +3,7 @@ import { isStoredObjectId } from "@/lib/asset-url";
 export const MAX_PROMPT_FILES = 5;
 
 export const PROMPT_FILE_ACCEPT =
-  ".md,.markdown,.txt,.pdf,image/*,.png,.jpg,.jpeg,.gif,.webp,.svg,.ico,image/x-icon,image/vnd.microsoft.icon,text/markdown,text/plain,application/pdf";
+  ".md,.markdown,.txt,.pdf,.png,.jpg,.jpeg,.gif,.webp,.ico,image/png,image/jpeg,image/gif,image/webp,image/x-icon,image/vnd.microsoft.icon,text/markdown,text/plain,application/pdf";
 
 export type PromptAttachmentKind = "image" | "md" | "pdf" | "txt";
 
@@ -90,7 +90,6 @@ export function promptAttachmentKind(file: File): PromptAttachmentKind | null {
     "jpeg",
     "gif",
     "webp",
-    "svg",
     "ico",
     "bmp",
     "jfif",
@@ -101,6 +100,11 @@ export function promptAttachmentKind(file: File): PromptAttachmentKind | null {
     "tif",
     "tiff",
   ];
+
+  // SVG can carry executable script when opened as a document — reject early.
+  if (ext === "svg" || type === "image/svg+xml" || type.includes("svg+xml")) {
+    return null;
+  }
 
   if (type.startsWith("image/") || type === "image/x-icon" || type === "image/vnd.microsoft.icon" || imageExt.includes(ext)) {
     return "image";
@@ -136,8 +140,11 @@ export function createProjectRefAttachment(asset: {
   content_type?: string;
 }): ProjectRefPromptAttachment {
   const ext = extensionOf(asset.name);
+  const ctype = (asset.content_type || "").toLowerCase();
+  const isSvg = ext === "svg" || ctype.includes("svg");
   const kind: PromptAttachmentKind =
-    asset.content_type?.startsWith("image/") || ["png", "jpg", "jpeg", "gif", "webp", "svg"].includes(ext)
+    !isSvg &&
+    (ctype.startsWith("image/") || ["png", "jpg", "jpeg", "gif", "webp"].includes(ext))
       ? "image"
       : ext === "pdf"
         ? "pdf"
@@ -362,7 +369,7 @@ export function parseUserMessageContent(raw: string): {
       if (!name) continue;
       const ext = extensionOf(name);
       const kind =
-        ["png", "jpg", "jpeg", "gif", "webp", "svg"].includes(ext)
+        ["png", "jpg", "jpeg", "gif", "webp"].includes(ext)
           ? "image"
           : ext === "pdf"
             ? "pdf"

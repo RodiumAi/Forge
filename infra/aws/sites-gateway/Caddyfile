@@ -55,6 +55,23 @@
 			}
 		}
 
+		# SVG as document executes embedded <script> — force download (CWE-79).
+		@svg_asset path_regexp svg (?i)\.svg$
+		handle @svg_asset {
+			rewrite * /{site_slug}{uri}
+			reverse_proxy https://{$S3_ASSETS_BUCKET}.s3.{$S3_REGION}.amazonaws.com {
+				header_up Host {$S3_ASSETS_BUCKET}.s3.{$S3_REGION}.amazonaws.com
+				header_down Content-Disposition "attachment"
+				header_down X-Content-Type-Options "nosniff"
+				header_down Content-Type "application/octet-stream"
+				@missing status 404
+				handle_response @missing {
+					header Content-Type "text/html; charset=utf-8"
+					respond "Site not published" 404
+				}
+			}
+		}
+
 		handle /* {
 			rewrite * /{site_slug}{uri}
 			reverse_proxy https://{$S3_ASSETS_BUCKET}.s3.{$S3_REGION}.amazonaws.com {
@@ -89,6 +106,22 @@
 			rewrite * /{http.request.header.X-Site-Slug}/index.html
 			reverse_proxy https://{$S3_ASSETS_BUCKET}.s3.{$S3_REGION}.amazonaws.com {
 				header_up Host {$S3_ASSETS_BUCKET}.s3.{$S3_REGION}.amazonaws.com
+				@missing status 404
+				handle_response @missing {
+					header Content-Type "text/html; charset=utf-8"
+					respond "Site not published" 404
+				}
+			}
+		}
+
+		@svg_custom path_regexp svg_custom (?i)\.svg$
+		handle @svg_custom {
+			rewrite * /{http.request.header.X-Site-Slug}{uri}
+			reverse_proxy https://{$S3_ASSETS_BUCKET}.s3.{$S3_REGION}.amazonaws.com {
+				header_up Host {$S3_ASSETS_BUCKET}.s3.{$S3_REGION}.amazonaws.com
+				header_down Content-Disposition "attachment"
+				header_down X-Content-Type-Options "nosniff"
+				header_down Content-Type "application/octet-stream"
 				@missing status 404
 				handle_response @missing {
 					header Content-Type "text/html; charset=utf-8"

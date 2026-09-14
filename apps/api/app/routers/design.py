@@ -106,11 +106,10 @@ def _detect_logo_ext(content_type: str | None, name: str | None) -> str:
         return ".webp"
     if "gif" in ctype:
         return ".gif"
-    if "svg" in ctype:
-        return ".svg"
+    # SVG rejected for XSS — treat as PNG fallback only when no other signal.
     if name:
         lower = name.lower()
-        for ext in (".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg"):
+        for ext in (".jpg", ".jpeg", ".png", ".webp", ".gif"):
             if lower.endswith(ext):
                 return ".jpg" if ext == ".jpeg" else ext
     return ".png"
@@ -181,12 +180,16 @@ def get_design_logo(
         ".jpeg": "image/jpeg",
         ".webp": "image/webp",
         ".gif": "image/gif",
-        ".svg": "image/svg+xml",
     }.get(disk.suffix.lower(), "application/octet-stream")
+    headers = {"Cache-Control": "private, max-age=60", "X-Content-Type-Options": "nosniff"}
+    # Historical logo.svg: force download so embedded scripts never execute.
+    if disk.suffix.lower() == ".svg":
+        media = "application/octet-stream"
+        headers["Content-Disposition"] = f'attachment; filename="{disk.name}"'
     return FileResponse(
         disk,
         media_type=media,
-        headers={"Cache-Control": "private, max-age=60"},
+        headers=headers,
     )
 
 
