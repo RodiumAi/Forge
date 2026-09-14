@@ -5,7 +5,7 @@ import { api, getToken } from "@/lib/api";
 import { rodiumRechargeUrl } from "@/lib/constants/rodium-links";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { startRodiumOAuth } from "@/lib/rodium-oauth";
-import { patchSessionCache } from "@/lib/session-cache";
+import { patchSessionCache, getSessionSnapshot } from "@/lib/session-cache";
 import { SettingsBlock, SettingsRow } from "@/components/SettingsShell";
 
 type RodiumAccount = {
@@ -81,14 +81,25 @@ export function RodiumGenerationPanel() {
         setKeyStatus(item);
         // Unlinked: surface paste by default (only path without OIDC).
         if (!rodium.linked) setShowManualPaste(true);
+        const prev = getSessionSnapshot()?.profile ?? null;
         patchSessionCache({
           rodium: { linked: Boolean(rodium.linked), wallet: rodium.wallet ?? null },
-          profile: {
-            email: rodium.email || "",
-            name: rodium.name,
-            avatar_url: rodium.avatar_url,
-            rodium_linked: Boolean(rodium.linked),
-          },
+          profile: prev
+            ? {
+                ...prev,
+                rodium_linked: Boolean(rodium.linked),
+                rodium_sub: rodium.linked
+                  ? (rodium.rodium_sub ?? prev.rodium_sub ?? null)
+                  : null,
+                ...(rodium.linked
+                  ? {
+                      email: rodium.email || prev.email,
+                      name: rodium.name ?? prev.name,
+                      avatar_url: rodium.avatar_url ?? prev.avatar_url,
+                    }
+                  : {}),
+              }
+            : undefined,
         });
         const preferred =
           rodium.selected_api_key_id ||
@@ -134,16 +145,25 @@ export function RodiumGenerationPanel() {
     ]);
     setAccount(rodium);
     setKeyStatus(item);
+    const prev = getSessionSnapshot()?.profile ?? null;
     patchSessionCache({
       rodium: { linked: Boolean(rodium.linked), wallet: rodium.wallet ?? null },
-      profile: {
-        email: rodium.email || "",
-        name: rodium.name,
-        avatar_url: rodium.avatar_url,
-        rodium_linked: Boolean(rodium.linked),
-        // Dropping this would break the top-up link in the navbar badge.
-        rodium_sub: rodium.rodium_sub ?? null,
-      },
+      profile: prev
+        ? {
+            ...prev,
+            rodium_linked: Boolean(rodium.linked),
+            rodium_sub: rodium.linked
+              ? (rodium.rodium_sub ?? prev.rodium_sub ?? null)
+              : null,
+            ...(rodium.linked
+              ? {
+                  email: rodium.email || prev.email,
+                  name: rodium.name ?? prev.name,
+                  avatar_url: rodium.avatar_url ?? prev.avatar_url,
+                }
+              : {}),
+          }
+        : undefined,
     });
     return rodium;
   }

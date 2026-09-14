@@ -7,7 +7,7 @@ import { api, getToken } from "@/lib/api";
 import { Icon } from "@/components/ui/icon";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { startRodiumOAuth } from "@/lib/rodium-oauth";
-import { patchSessionCache, refreshRodiumWallet } from "@/lib/session-cache";
+import { patchSessionCache, refreshRodiumWallet, getSessionSnapshot } from "@/lib/session-cache";
 
 type RodiumAccount = {
   linked: boolean;
@@ -71,15 +71,27 @@ export function SidebarApiKeyBlock() {
         setAccount(rodium);
         setKeyStatus(item);
         if (!rodium.linked) setShowPaste(true);
+        // Never replace /auth/me profile with an unlinked stub (empty email/name
+        // blanks the ProfileMenu avatar + label). Only enrich when linked.
+        const prev = getSessionSnapshot()?.profile ?? null;
         patchSessionCache({
           rodium: { linked: Boolean(rodium.linked), wallet: rodium.wallet ?? null },
-          profile: {
-            email: rodium.email || "",
-            name: rodium.name,
-            avatar_url: rodium.avatar_url,
-            rodium_linked: Boolean(rodium.linked),
-            rodium_sub: rodium.rodium_sub ?? null,
-          },
+          profile: prev
+            ? {
+                ...prev,
+                rodium_linked: Boolean(rodium.linked),
+                rodium_sub: rodium.linked
+                  ? (rodium.rodium_sub ?? prev.rodium_sub ?? null)
+                  : null,
+                ...(rodium.linked
+                  ? {
+                      email: rodium.email || prev.email,
+                      name: rodium.name ?? prev.name,
+                      avatar_url: rodium.avatar_url ?? prev.avatar_url,
+                    }
+                  : {}),
+              }
+            : undefined,
         });
         const preferred =
           rodium.selected_api_key_id ||
@@ -238,14 +250,17 @@ export function SidebarApiKeyBlock() {
       ) : null}
 
       {!linked ? (
-        <button
-          type="button"
-          className="home-sidebar-key-btn"
-          onClick={() => void onConnect()}
-          disabled={connecting}
-        >
-          {connecting ? t("rodiumConnectWorking") : t("connectRodiumAi")}
-        </button>
+        <>
+          <button
+            type="button"
+            className="home-sidebar-key-btn"
+            onClick={() => void onConnect()}
+            disabled={connecting}
+          >
+            {connecting ? t("rodiumConnectWorking") : t("connectRodiumAi")}
+          </button>
+          <p className="home-sidebar-key-hint muted">{t("connectRodiumAiHint")}</p>
+        </>
       ) : null}
 
       {(showPaste || !linked) && (
