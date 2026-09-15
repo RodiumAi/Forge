@@ -951,7 +951,7 @@ def issue_media_token(user: User = Depends(get_current_user)) -> MediaTokenRespo
     7-day session that opens the whole API.
     """
     return MediaTokenResponse(
-        token=media_token_for_user(user, locale=locale),
+        token=media_token_for_user(user),
         expires_in=MEDIA_TOKEN_TTL_MINUTES * 60,
     )
 
