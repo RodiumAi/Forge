@@ -10,6 +10,7 @@ MESSAGES: dict[Locale, dict[str, str]] = {
     "en": {
         "not_authenticated": "Not authenticated",
         "session_revoked": "Your session has expired. Sign in again.",
+        "access_blocked": "This account has been suspended on RodiumAi. Forge access is disabled.",
         "too_many_requests": "Too many attempts. Please wait a moment and try again.",
         "email_not_verified": "Verify your email address to continue.",
         "invalid_or_expired_link": "This link is no longer valid. Request a new one.",
@@ -103,6 +104,7 @@ MESSAGES: dict[Locale, dict[str, str]] = {
     "fr": {
         "not_authenticated": "Non authentifié",
         "session_revoked": "Votre session a expiré. Reconnectez-vous.",
+        "access_blocked": "Ce compte a été suspendu sur RodiumAi. L’accès à Forge est désactivé.",
         "too_many_requests": "Trop de tentatives. Patientez un instant et réessayez.",
         "email_not_verified": "Vérifiez votre adresse email pour continuer.",
         "invalid_or_expired_link": "Ce lien n’est plus valide. Demandez-en un nouveau.",

@@ -51,6 +51,7 @@ def init_db() -> None:
         "ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMPTZ",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS access_blocked_at TIMESTAMPTZ",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS rodium_provisioned_at TIMESTAMPTZ",
         # Accounts that predate local sign-up all came through RodiumAi OIDC,
         # which proves the address — backfill so they keep working under the

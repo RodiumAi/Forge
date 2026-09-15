@@ -39,7 +39,12 @@ def create_access_token(user_id: UUID, token_version: int = 0) -> str:
     return jwt.encode(payload, settings.secret_key, algorithm="HS256")
 
 
-def token_for_user(user: User) -> str:
+def token_for_user(user: User, *, locale: str = "en") -> str:
+    if getattr(user, "access_blocked_at", None) is not None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=t("access_blocked", locale),
+        )
     return create_access_token(user.id, user.token_version or 0)
 
 
@@ -141,6 +146,12 @@ def _resolve_user(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=t("user_not_found", locale),
+        )
+
+    if getattr(user, "access_blocked_at", None) is not None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=t("access_blocked", locale),
         )
 
     # Tokens minted before the last password change are dead. Absent `tv`

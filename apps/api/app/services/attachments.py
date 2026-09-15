@@ -22,7 +22,11 @@ from app.services.asset_storage import (
     repair_private_upload_urls_in_project,
 )
 from app.services.filesystem import project_dir, safe_resolve
-from app.services.net_guard import BlockedURLError, validate_public_url_async
+from app.services.net_guard import (
+    BlockedURLError,
+    httpx_get_pinned,
+    resolve_and_validate_async,
+)
 
 _IMAGE_MARKER_RE = re.compile(
     r"\[(?:Reference screenshot|Capture de référence|Image attached|Image jointe|"
@@ -212,17 +216,23 @@ _MAX_FETCH_REDIRECTS = 5
 async def _fetch_url(url: str) -> tuple[bytes, str] | None:
     # Validate every hop ourselves instead of letting httpx follow redirects
     # blindly — a public URL can 3xx to an internal host.
+    #
+    # DNS is resolved once per hop inside resolve_and_validate; the TCP
+    # connection uses that pinned IP (httpx_get_pinned) so a rebinding
+    # nameserver cannot swap in an internal address on connect.
     try:
         async with httpx.AsyncClient(timeout=20.0, follow_redirects=False) as client:
             current = url
             for _ in range(_MAX_FETCH_REDIRECTS + 1):
-                await validate_public_url_async(current)
-                resp = await client.get(current)
+                target = await resolve_and_validate_async(current)
+                resp = await httpx_get_pinned(client, target)
                 if resp.is_redirect:
                     location = resp.headers.get("location")
                     if not location:
                         return None
-                    current = str(httpx.URL(str(resp.url)).join(location))
+                    # Join against the *original* hop URL (hostname), not the
+                    # pinned IP URL, so relative Location stays on the right host.
+                    current = str(httpx.URL(current).join(location))
                     continue
                 if resp.status_code >= 400:
                     return None

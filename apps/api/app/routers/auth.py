@@ -314,7 +314,7 @@ async def rodium_oauth_callback(
 
     background_tasks.add_task(_hydrate_rodium_account_cache, user.id, access)
 
-    return TokenResponse(access_token=token_for_user(user), email_verified=True)
+    return TokenResponse(access_token=token_for_user(user, locale=locale), email_verified=True)
 
 
 @router.get("/rodium/account", response_model=RodiumAccountOut)
@@ -703,7 +703,7 @@ async def verify_email(
 
     await _ensure_rodium_tokens_after_login(db, user, background_tasks)
 
-    return TokenResponse(access_token=token_for_user(user), email_verified=True)
+    return TokenResponse(access_token=token_for_user(user, locale=locale), email_verified=True)
 
 
 @router.post("/verify-email/resend", response_model=SimpleOkResponse)
@@ -791,7 +791,7 @@ def reset_password(
     db.commit()
     db.refresh(user)
 
-    return TokenResponse(access_token=token_for_user(user), email_verified=True)
+    return TokenResponse(access_token=token_for_user(user, locale=locale), email_verified=True)
 
 
 @router.post("/oauth/firebase", response_model=TokenResponse)
@@ -901,7 +901,7 @@ async def oauth_firebase(
 
     await _ensure_rodium_tokens_after_login(db, user, background_tasks)
 
-    return TokenResponse(access_token=token_for_user(user), email_verified=True)
+    return TokenResponse(access_token=token_for_user(user, locale=locale), email_verified=True)
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -936,7 +936,7 @@ async def login(
         )
     await _ensure_rodium_tokens_after_login(db, user, background_tasks)
     return TokenResponse(
-        access_token=token_for_user(user),
+        access_token=token_for_user(user, locale=locale),
         email_verified=user.email_verified_at is not None,
     )
 
@@ -951,7 +951,7 @@ def issue_media_token(user: User = Depends(get_current_user)) -> MediaTokenRespo
     7-day session that opens the whole API.
     """
     return MediaTokenResponse(
-        token=media_token_for_user(user),
+        token=media_token_for_user(user, locale=locale),
         expires_in=MEDIA_TOKEN_TTL_MINUTES * 60,
     )
 
@@ -1029,4 +1029,4 @@ def change_password(
     user.token_version = (user.token_version or 0) + 1
     db.commit()
     db.refresh(user)
-    return PasswordChangeResponse(access_token=token_for_user(user))
+    return PasswordChangeResponse(access_token=token_for_user(user, locale=locale))

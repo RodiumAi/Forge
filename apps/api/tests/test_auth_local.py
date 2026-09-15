@@ -40,6 +40,7 @@ def _user(**overrides):
         "email": "user@example.com",
         "password_hash": None,
         "email_verified_at": None,
+        "access_blocked_at": None,
     }
     base.update(overrides)
     return SimpleNamespace(**base)
@@ -54,6 +55,24 @@ class TestTokenVersion:
 
         resolved = auth_mod.get_current_user(_request_with_bearer(token), _credentials(token), db)
         assert resolved is user
+
+    def test_rodium_suspend_blocks_outstanding_sessions(self):
+        user = _user(token_version=1)
+        token = auth_mod.token_for_user(user)
+        user.access_blocked_at = datetime.now(UTC)
+        db = MagicMock()
+        db.get.return_value = user
+
+        with pytest.raises(HTTPException) as exc:
+            auth_mod.get_current_user(_request_with_bearer(token), _credentials(token), db)
+        assert exc.value.status_code == 401
+        assert "suspended" in str(exc.value.detail).lower() or "suspendu" in str(exc.value.detail).lower()
+
+    def test_rodium_suspend_refuses_new_session_mint(self):
+        user = _user(access_blocked_at=datetime.now(UTC))
+        with pytest.raises(HTTPException) as exc:
+            auth_mod.token_for_user(user)
+        assert exc.value.status_code == 401
 
     def test_a_password_change_kills_outstanding_tokens(self):
         user = _user(token_version=1)

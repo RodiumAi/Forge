@@ -12,8 +12,8 @@ from app.services.filesystem import write_bytes
 from app.services.llm import RodiumError
 from app.services.net_guard import (
     BlockedURLError,
-    validate_public_url,
-    validate_public_url_async,
+    resolve_and_validate,
+    resolve_and_validate_async,
 )
 
 logger = logging.getLogger("url_capture")
@@ -79,35 +79,56 @@ def _capture_sync(url: str) -> list[tuple[str, bytes]]:
         ) from exc
 
     def _guard_route(route) -> None:
-        # Re-validate every request (initial navigation, redirects, subresources)
-        # so a redirect to an internal host is aborted mid-flight.
+        # Resolve + validate once, then force Chromium onto that IP so a
+        # rebinding DNS answer cannot land the real TCP connect internally.
+        # ignore_https_errors on the context covers cert/SNI mismatch when the
+        # URL host is a literal IP (Host header still carries the real name).
         try:
-            validate_public_url(route.request.url)
+            target = resolve_and_validate(route.request.url)
         except BlockedURLError:
             with contextlib.suppress(Exception):
                 route.abort()
             return
+        headers = dict(route.request.headers)
+        headers["host"] = target.host_header
         with contextlib.suppress(Exception):
-            route.continue_()
+            route.continue_(url=target.pinned_url, headers=headers)
+
+    # Pin the initial navigation URL the same way (goto would otherwise DNS again).
+    try:
+        initial = resolve_and_validate(url)
+    except BlockedURLError as exc:
+        raise RodiumError(f"Could not capture screenshots for {url}", None, "upstream") from exc
 
     shots: list[tuple[str, bytes]] = []
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         try:
-            for label, width, height in _VIEWPORTS:
-                page = browser.new_page(viewport={"width": width, "height": height})
-                page.route("**/*", _guard_route)
-                try:
-                    page.goto(url, wait_until="domcontentloaded", timeout=_NAV_TIMEOUT_MS)
-                    with contextlib.suppress(Exception):
-                        page.wait_for_load_state("networkidle", timeout=12_000)
-                    # Prefer full page when short enough; otherwise viewport.
-                    png = page.screenshot(full_page=True, type="png")
-                    if len(png) > 4_500_000:
-                        png = page.screenshot(full_page=False, type="png")
-                    shots.append((label, png))
-                finally:
-                    page.close()
+            # Cert name will not match a pinned IP; we already proved the IP is public.
+            context = browser.new_context(ignore_https_errors=True)
+            try:
+                for label, width, height in _VIEWPORTS:
+                    page = context.new_page()
+                    page.set_viewport_size({"width": width, "height": height})
+                    page.set_extra_http_headers({"Host": initial.host_header})
+                    page.route("**/*", _guard_route)
+                    try:
+                        page.goto(
+                            initial.pinned_url,
+                            wait_until="domcontentloaded",
+                            timeout=_NAV_TIMEOUT_MS,
+                        )
+                        with contextlib.suppress(Exception):
+                            page.wait_for_load_state("networkidle", timeout=12_000)
+                        # Prefer full page when short enough; otherwise viewport.
+                        png = page.screenshot(full_page=True, type="png")
+                        if len(png) > 4_500_000:
+                            png = page.screenshot(full_page=False, type="png")
+                        shots.append((label, png))
+                    finally:
+                        page.close()
+            finally:
+                context.close()
         finally:
             browser.close()
     if not shots:
@@ -125,7 +146,7 @@ async def capture_site_screenshots(
     import asyncio
 
     try:
-        await validate_public_url_async(url)
+        await resolve_and_validate_async(url)
     except BlockedURLError as exc:
         # Don't leak *why* (internal host, metadata, etc.) — same message as an
         # unreachable public site.

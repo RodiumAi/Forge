@@ -25,6 +25,9 @@ class User(Base):
     #: were minted with, so bumping it invalidates every outstanding token —
     #: without it a 7-day JWT would survive a password reset.
     token_version: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    #: Set when RodiumAi admin suspends the linked platform account. Blocks
+    #: every Forge session (JWT `tv` bump + this flag) until restored.
+    access_blocked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     #: When a RodiumAi account was created for this user by the provisioning
     #: call. Distinct from `rodium_sub`, which means "we hold OAuth tokens".
     rodium_provisioned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

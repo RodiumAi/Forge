@@ -43,6 +43,7 @@ def _user(token_version: int = 0):
         email="ada@example.com",
         password_hash=None,
         email_verified_at=None,
+        access_blocked_at=None,
     )
 
 
