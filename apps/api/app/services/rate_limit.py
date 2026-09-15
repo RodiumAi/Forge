@@ -19,6 +19,7 @@ session", here it is "nobody can log in".
 
 from __future__ import annotations
 
+import ipaddress
 import logging
 import time
 from threading import Lock
@@ -36,12 +37,44 @@ _local_hits: dict[str, tuple[int, float]] = {}
 _local_lock = Lock()
 
 
+def _peer_is_trusted(peer: str, cidrs: list[str]) -> bool:
+    try:
+        addr = ipaddress.ip_address(peer)
+    except ValueError:
+        return False
+    for cidr in cidrs:
+        try:
+            if addr in ipaddress.ip_network(cidr, strict=False):
+                return True
+        except ValueError:
+            continue
+    return False
+
+
 def _client_ip(request: Request) -> str:
-    # The stack runs behind Caddy/ALB, so the socket address is the proxy.
+    """Resolve the caller IP for rate-limit buckets.
+
+    Never take ``X-Forwarded-For``'s leftmost entry blindly — that header is
+    client-controllable. Only trust XFF when the TCP peer is a known proxy
+    (private/loopback by default), then pick the entry inserted by that hop:
+    ``parts[len(parts) - hops]``. Direct hits to the API ignore XFF entirely.
+    """
+    settings = get_settings()
+    peer = request.client.host if request.client else "unknown"
+    hops = settings.trusted_proxy_hops
+    if hops <= 0 or peer == "unknown" or not _peer_is_trusted(peer, settings.trusted_proxy_cidr_list):
+        return peer
+
     forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.client.host if request.client else "unknown"
+    if not forwarded:
+        return peer
+
+    parts = [p.strip() for p in forwarded.split(",") if p.strip()]
+    if not parts:
+        return peer
+
+    # hops=1 + "fake, real" → real; hops=2 + "fake, client, edge" → client.
+    return parts[max(0, len(parts) - hops)]
 
 
 def _incr_local(key: str, window: int) -> int:

@@ -140,6 +140,12 @@ class Settings(BaseSettings):
     redis_url: str = "redis://127.0.0.1:6380/0"
     usage_stream: str = "sites:usage"
     usage_consumer_group: str = "billing"
+    # Rate-limit client IP: only trust X-Forwarded-For when the TCP peer is a
+    # proxy in trusted_proxy_cidrs, then take the entry at len(parts) - hops.
+    # Local/Caddy → 1; prod CloudFront+ALB → 2.
+    trusted_proxy_hops: int = 1
+    # Comma-separated CIDRs. Empty → RFC1918 + loopback (see property below).
+    trusted_proxy_cidrs: str = ""
     # SSE comment heartbeats so ALB/proxies with long idle timeouts stay open.
     sse_heartbeat_seconds: float = 15.0
     # Target ALB idle timeout (seconds) — document & IaC must match before streaming runs.
@@ -163,6 +169,20 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
+    @property
+    def trusted_proxy_cidr_list(self) -> list[str]:
+        configured = [c.strip() for c in self.trusted_proxy_cidrs.split(",") if c.strip()]
+        if configured:
+            return configured
+        # Default: loopback + RFC1918 (Docker bridge, private ALB, compose Caddy).
+        return [
+            "127.0.0.0/8",
+            "::1/128",
+            "10.0.0.0/8",
+            "172.16.0.0/12",
+            "192.168.0.0/16",
+        ]
 
     @property
     def cors_origin_regex(self) -> str:

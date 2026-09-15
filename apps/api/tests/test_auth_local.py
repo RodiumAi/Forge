@@ -323,9 +323,12 @@ class TestMail:
 
 
 class TestRateLimit:
-    def _request(self, ip: str = "203.0.113.9") -> MagicMock:
+    def _request(self, ip: str = "203.0.113.9", *, xff: str | None = None) -> MagicMock:
         request = MagicMock()
-        request.headers = {}
+        headers: dict[str, str] = {}
+        if xff is not None:
+            headers["x-forwarded-for"] = xff
+        request.headers = headers
         request.client = SimpleNamespace(host=ip)
         return request
 
@@ -367,3 +370,61 @@ class TestRateLimit:
 
         monkeypatch.setattr(rate_limit, "_incr_redis", lambda *_a, **_k: None)
         rate_limit.enforce(self._request(), f"test-{uuid.uuid4()}", limit=1, window_seconds=60)
+
+    def test_untrusted_peer_ignores_spoofed_xff(self, monkeypatch):
+        from app.config import clear_settings_cache
+
+        monkeypatch.setenv("TRUSTED_PROXY_HOPS", "1")
+        clear_settings_cache()
+        try:
+            # Public peer + spoofed XFF must not become the bucket identity.
+            request = self._request("203.0.113.50", xff="198.51.100.1")
+            assert rate_limit._client_ip(request) == "203.0.113.50"
+        finally:
+            monkeypatch.delenv("TRUSTED_PROXY_HOPS", raising=False)
+            clear_settings_cache()
+
+    def test_trusted_peer_uses_xff_entry_for_one_hop(self, monkeypatch):
+        from app.config import clear_settings_cache
+
+        monkeypatch.setenv("TRUSTED_PROXY_HOPS", "1")
+        clear_settings_cache()
+        try:
+            # Caddy/ALB peer (RFC1918) + "fake, real" → real (last trusted hop).
+            request = self._request("10.0.0.2", xff="198.51.100.9, 203.0.113.7")
+            assert rate_limit._client_ip(request) == "203.0.113.7"
+        finally:
+            monkeypatch.delenv("TRUSTED_PROXY_HOPS", raising=False)
+            clear_settings_cache()
+
+    def test_trusted_peer_uses_xff_entry_for_two_hops(self, monkeypatch):
+        from app.config import clear_settings_cache
+
+        monkeypatch.setenv("TRUSTED_PROXY_HOPS", "2")
+        clear_settings_cache()
+        try:
+            # CloudFront+ALB: "fake, client, edge" → client.
+            request = self._request("172.31.10.5", xff="198.51.100.9, 203.0.113.7, 10.0.0.99")
+            assert rate_limit._client_ip(request) == "203.0.113.7"
+        finally:
+            monkeypatch.delenv("TRUSTED_PROXY_HOPS", raising=False)
+            clear_settings_cache()
+
+    def test_login_account_bucket_blocks_rotating_xff(self, monkeypatch):
+        """Same email, rotating spoofed XFF → login-account 429 (IP spray useless)."""
+        monkeypatch.setattr(rate_limit, "_incr_redis", lambda *_a, **_k: None)
+        email = f"victim-{uuid.uuid4()}@example.com"
+        limit = 3
+
+        for i in range(limit):
+            # Untrusted peer: each XFF spoof is ignored for the IP bucket, but
+            # the subject bucket is what matters for targeted brute-force.
+            req = self._request(f"203.0.113.{i + 1}", xff=f"198.51.100.{i}")
+            rate_limit.enforce(req, "login", limit=limit, window_seconds=60)
+            rate_limit.enforce(req, "login-account", limit=limit, window_seconds=60, subject=email)
+
+        with pytest.raises(HTTPException) as exc:
+            req = self._request("203.0.113.99", xff="198.51.100.99")
+            rate_limit.enforce(req, "login", limit=limit, window_seconds=60)
+            rate_limit.enforce(req, "login-account", limit=limit, window_seconds=60, subject=email)
+        assert exc.value.status_code == 429
