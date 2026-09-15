@@ -912,9 +912,12 @@ async def login(
     db: Session = Depends(get_db),
 ) -> TokenResponse:
     locale = resolve_locale(request)
+    email = body.email.strip().lower()
+    # IP bucket (spray) + per-account bucket (rotating XFF / proxies useless).
     rate_limit.enforce(request, "login", limit=10, window_seconds=900)
+    rate_limit.enforce(request, "login-account", limit=10, window_seconds=900, subject=email)
 
-    user = db.query(User).filter(User.email == body.email.strip().lower()).first()
+    user = db.query(User).filter(User.email == email).first()
     if user is None or not user.password_hash or not verify_password(body.password, user.password_hash):
         # One message for "no such account" and "wrong password" — the
         # distinction is only useful to someone enumerating addresses.
