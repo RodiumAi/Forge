@@ -161,7 +161,7 @@ def _run_callback(db, monkeypatch, email: str = "victim@example.com", sub: str =
     monkeypatch.setattr(auth_mod, "parse_oauth_state", lambda _s, _b=None: "verifier")
     monkeypatch.setattr(auth_mod, "exchange_code", fake_exchange)
     monkeypatch.setattr(auth_mod, "fetch_userinfo", fake_userinfo)
-    monkeypatch.setattr(auth_mod, "token_for_user", lambda _u: "forge-jwt")
+    monkeypatch.setattr(auth_mod, "token_for_user", lambda _u, **_kwargs: "forge-jwt")
     monkeypatch.setattr(auth_mod, "_store_oauth_tokens", lambda _r, _t: None)
     monkeypatch.setattr(auth_mod, "_get_or_create_settings", lambda _d, _u: db.get(UserSettings, None))
 
@@ -236,7 +236,7 @@ def _identity(email: str = "victim@example.com", *, verified: bool = True, uid: 
 def _run_firebase(db, monkeypatch, identity=None):
     monkeypatch.setattr(firebase_auth, "enabled", lambda: True)
     monkeypatch.setattr(firebase_auth, "verify_id_token", lambda _t: identity or _identity())
-    monkeypatch.setattr(auth_mod, "token_for_user", lambda _u: "forge-jwt")
+    monkeypatch.setattr(auth_mod, "token_for_user", lambda _u, **_kwargs: "forge-jwt")
     # Provisioning has its own tests; here it must not reach the network.
     monkeypatch.setattr(auth_mod.rodium_provisioning, "enabled", lambda: False)
 
