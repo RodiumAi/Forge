@@ -22,6 +22,12 @@ def safe_resolve(project_id: str, relative: str) -> Path:
     # merely starts with the project id (e.g. "<id>extra") must not pass.
     if target != base and base not in target.parents:
         raise ValueError("Path escapes project root")
+    # `.git` is private server-side history metadata, never project content.
+    # Enforce this at the shared path boundary so every read/write/upload/edit
+    # sink is covered, including nested and case-variant paths.
+    relative_parts = target.relative_to(base).parts
+    if any(part.casefold() == ".git" for part in relative_parts):
+        raise ValueError("Refusing to access project history")
     return target
 
 

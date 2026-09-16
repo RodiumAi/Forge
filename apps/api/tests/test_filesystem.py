@@ -29,6 +29,26 @@ class TestPathSafety:
     def test_allows_nested_paths(self, project):
         assert safe_resolve(project, "src/components/Button.tsx")
 
+    @pytest.mark.parametrize(
+        "relative",
+        [
+            ".git",
+            ".git/config",
+            "./.git/hooks/post-checkout",
+            "src/.git/config",
+            ".GIT/config",
+        ],
+    )
+    def test_refuses_project_history_paths(self, project, relative):
+        with pytest.raises(ValueError, match="project history"):
+            safe_resolve(project, relative)
+
+    def test_all_write_helpers_refuse_project_history(self, project):
+        with pytest.raises(ValueError, match="project history"):
+            write_file(project, ".git/config", "[filter \"poc\"]")
+        with pytest.raises(ValueError, match="project history"):
+            write_bytes(project, ".git/objects/payload", b"payload")
+
 
 class TestReadWrite:
     def test_round_trips_utf8(self, project):
