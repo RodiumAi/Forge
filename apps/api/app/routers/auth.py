@@ -261,6 +261,12 @@ async def rodium_oauth_callback(
     except RodiumOidcError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
+    if info.get("email_verified") is not True:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=t("email_not_verified", locale),
+        )
+
     sub = str(info["sub"])
     email = str(info.get("email") or f"{sub}@rodium.local").lower()
     name = info.get("name")
