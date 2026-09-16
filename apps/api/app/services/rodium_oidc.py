@@ -10,7 +10,8 @@ from typing import Any
 from urllib.parse import urlencode
 
 import httpx
-from jose import JWTError, jwt
+import jwt
+from jwt import InvalidTokenError
 
 from app.config import get_settings
 
@@ -77,7 +78,7 @@ def parse_oauth_state(state: str, binding: str | None = None) -> str:
     settings = get_settings()
     try:
         payload = jwt.decode(state, settings.secret_key, algorithms=["HS256"])
-    except JWTError as exc:
+    except InvalidTokenError as exc:
         raise RodiumOidcError("Invalid or expired OAuth state") from exc
     verifier = payload.get("v")
     if not isinstance(verifier, str) or not verifier:
@@ -196,9 +197,7 @@ async def fetch_api_keys(access_token: str) -> list[dict[str, Any]]:
     return items if isinstance(items, list) else []
 
 
-async def create_api_key(
-    access_token: str, *, name: str | None = None
-) -> dict[str, Any]:
+async def create_api_key(access_token: str, *, name: str | None = None) -> dict[str, Any]:
     """Ask Nest to mint (or reuse) a key for a first-party OAuth client.
 
     Official Forge only — Nest refuses clients without `autoGenerateApiKey`.

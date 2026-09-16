@@ -494,9 +494,7 @@ async def rodium_generate_key(
     except HTTPException:
         raise
     except Exception as exc:
-        raise HTTPException(
-            status_code=400, detail=str(exc) or "Failed to generate API key"
-        ) from exc
+        raise HTTPException(status_code=400, detail=str(exc) or "Failed to generate API key") from exc
 
     db.refresh(row)
     keys_raw: list = []
@@ -597,9 +595,7 @@ async def _reissue_rodium_tokens(db: Session, user: User) -> str | None:
     row = _get_or_create_settings(db, user)
     if row.rodium_refresh_token_encrypted:
         return None
-    result = await rodium_provisioning.reissue_tokens(
-        email=user.email, user_id=str(user.rodium_sub)
-    )
+    result = await rodium_provisioning.reissue_tokens(email=user.email, user_id=str(user.rodium_sub))
     if result is None:
         return None
     _store_oauth_tokens(row, result.tokens)

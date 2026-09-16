@@ -26,12 +26,29 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: apps/api/requirements.txt
+          cache-dependency-path: |
+            apps/api/requirements.txt
+            apps/api/requirements-dev.txt
+
+      - name: Verify dependency locks
+        run: |
+          python -m pip install uv==0.11.15
+          uv --system-certs pip compile requirements.in \
+            --python-version 3.12 \
+            --python-platform x86_64-manylinux_2_17 \
+            --generate-hashes \
+            --output-file requirements.txt
+          uv --system-certs pip compile requirements-dev.in \
+            --python-version 3.12 \
+            --python-platform x86_64-manylinux_2_17 \
+            --generate-hashes \
+            --output-file requirements-dev.txt
+          git diff --exit-code -- requirements.txt requirements-dev.txt
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements-dev.txt
+          python -m pip install --require-hashes -r requirements-dev.txt
+          python -m pip check
 
       - name: Install runtime CLI (smoke transform tests)
         working-directory: apps/api/runtime
@@ -158,7 +175,6 @@ jobs:
             --scanners vuln \
             --severity CRITICAL,HIGH \
             --ignore-unfixed \
-            --ignorefile .trivyignore \
             --exit-code 1 \
             --skip-dirs node_modules,dist,coverage,.git,.next,__pycache__,.venv,testForge \
             .

@@ -21,6 +21,14 @@
 		format console
 	}
 
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"
+		Content-Security-Policy-Report-Only "default-src 'self'; base-uri 'self'; connect-src * data: blob:; font-src 'self' data: blob: https: http:; form-action 'self' https: http:; frame-src 'self' data: blob: https: http:; img-src 'self' data: blob: https: http:; object-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https: http:; style-src 'self' 'unsafe-inline' data: blob: https: http:; worker-src 'self' blob:; frame-ancestors 'self'"
+	}
+
 	handle /health {
 		respond "ok" 200
 	}

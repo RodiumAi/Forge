@@ -81,9 +81,7 @@ class ValidatedTarget:
         parsed = urlparse(self.url)
         netloc = f"[{self.ip}]:{self.port}" if ":" in self.ip else f"{self.ip}:{self.port}"
         path = parsed.path if parsed.path else "/"
-        return urlunparse(
-            (self.scheme, netloc, path, parsed.params, parsed.query, parsed.fragment)
-        )
+        return urlunparse((self.scheme, netloc, path, parsed.params, parsed.query, parsed.fragment))
 
 
 def _ip_is_blocked(ip: ipaddress._BaseAddress) -> bool:
@@ -165,9 +163,7 @@ def resolve_and_validate(url: str) -> ValidatedTarget:
     if literal is not None:
         if not allow_private and _ip_is_blocked(literal):
             raise BlockedURLError()
-        return ValidatedTarget(
-            url=url, scheme=scheme, host=host, port=port, ip=str(literal)
-        )
+        return ValidatedTarget(url=url, scheme=scheme, host=host, port=port, ip=str(literal))
 
     try:
         resolved = _resolve_ips(host, port)
@@ -185,9 +181,7 @@ def resolve_and_validate(url: str) -> ValidatedTarget:
         if not allow_private and _ip_is_blocked(ip):
             raise BlockedURLError()
 
-    return ValidatedTarget(
-        url=url, scheme=scheme, host=host, port=port, ip=resolved[0]
-    )
+    return ValidatedTarget(url=url, scheme=scheme, host=host, port=port, ip=resolved[0])
 
 
 def validate_public_url(url: str) -> None:

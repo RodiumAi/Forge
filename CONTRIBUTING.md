@@ -150,9 +150,13 @@ FastAPI + SQLAlchemy + Postgres.
 ```bash
 cd apps/api
 python -m venv .venv && .venv/Scripts/activate   # or source .venv/bin/activate
-pip install -r requirements-dev.txt              # runtime deps + ruff + pytest
+pip install --require-hashes -r requirements-dev.txt # runtime deps + ruff + pytest
 uvicorn app.main:app --reload --port 8100
 ```
+
+Edit `requirements.in` or `requirements-dev.in`, then run `make lock` from the
+repository root. Commit both the input and compiled lock; do not hand-edit the
+generated `.txt` files.
 
 Checks before submitting:
 
