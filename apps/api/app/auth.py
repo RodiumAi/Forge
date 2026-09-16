@@ -2,9 +2,10 @@ from datetime import UTC, datetime, timedelta
 from typing import Annotated
 from uuid import UUID
 
+import jwt
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError, jwt
+from jwt import InvalidTokenError
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
@@ -118,7 +119,7 @@ def _resolve_user(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=t("invalid_token", locale),
             )
-    except JWTError as exc:
+    except InvalidTokenError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=t("invalid_token", locale),

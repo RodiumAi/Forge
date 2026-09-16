@@ -261,6 +261,12 @@ async def rodium_oauth_callback(
     except RodiumOidcError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
+    if info.get("email_verified") is not True:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=t("email_not_verified", locale),
+        )
+
     sub = str(info["sub"])
     email = str(info.get("email") or f"{sub}@rodium.local").lower()
     name = info.get("name")
@@ -494,9 +500,7 @@ async def rodium_generate_key(
     except HTTPException:
         raise
     except Exception as exc:
-        raise HTTPException(
-            status_code=400, detail=str(exc) or "Failed to generate API key"
-        ) from exc
+        raise HTTPException(status_code=400, detail=str(exc) or "Failed to generate API key") from exc
 
     db.refresh(row)
     keys_raw: list = []
@@ -597,9 +601,7 @@ async def _reissue_rodium_tokens(db: Session, user: User) -> str | None:
     row = _get_or_create_settings(db, user)
     if row.rodium_refresh_token_encrypted:
         return None
-    result = await rodium_provisioning.reissue_tokens(
-        email=user.email, user_id=str(user.rodium_sub)
-    )
+    result = await rodium_provisioning.reissue_tokens(email=user.email, user_id=str(user.rodium_sub))
     if result is None:
         return None
     _store_oauth_tokens(row, result.tokens)

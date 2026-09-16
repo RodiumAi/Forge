@@ -104,7 +104,7 @@ Lancez l'infra avec Docker, puis l'API et/ou le web en local.
 ```bash
 cd apps/api
 python -m venv .venv && source .venv/bin/activate   # Windows : .venv\Scripts\activate
-pip install -r requirements-dev.txt                 # deps runtime + ruff + pytest
+pip install --require-hashes -r requirements-dev.txt # deps runtime + ruff + pytest
 cp .env.example .env
 uvicorn app.main:app --reload --port 8100
 ```

@@ -24,7 +24,7 @@ from app.schemas import (
     ProjectStatsOut,
     ProjectUpdate,
 )
-from app.services import preview_babel
+from app.services import preview_babel, rate_limit
 from app.services.filesystem import list_files, project_dir, write_bytes
 from app.services.posthog_client import capture_for_user
 from app.services.project_delete import delete_project_full
@@ -42,6 +42,9 @@ router = APIRouter(prefix="/projects", tags=["projects"])
 
 THUMBNAIL_FILENAME = "thumbnail.jpg"
 THUMBNAIL_MAX_BYTES = 800_000
+MAX_PROJECTS_PER_USER = 50
+PROJECT_CREATION_LIMIT_PER_HOUR = 10
+PROJECT_CREATION_IP_LIMIT_PER_HOUR = 30
 # Minimal valid 1x1 JPEG (JFIF) used only as a size/type reference in tests.
 _JPEG_MAGIC = b"\xff\xd8\xff"
 
@@ -131,6 +134,34 @@ async def create_project(
     db: Session = Depends(get_db),
 ) -> ProjectOut:
     locale = resolve_locale(request)
+    if user.email_verified_at is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=t("email_not_verified", locale),
+        )
+    rate_limit.enforce(
+        request,
+        "project-create-ip",
+        limit=PROJECT_CREATION_IP_LIMIT_PER_HOUR,
+        window_seconds=3600,
+    )
+    rate_limit.enforce(
+        request,
+        "project-create",
+        limit=PROJECT_CREATION_LIMIT_PER_HOUR,
+        window_seconds=3600,
+        subject=str(user.id),
+    )
+    # Serialize the count-and-create decision per account so concurrent
+    # requests cannot all observe the last free quota slot.
+    db.query(User.id).filter(User.id == user.id).with_for_update().one()
+    project_count = db.query(func.count(Project.id)).filter(Project.user_id == user.id).scalar() or 0
+    if project_count >= MAX_PROJECTS_PER_USER:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="project_quota_exceeded",
+        )
+
     template_id = (body.template_id or "").strip() or None
     prompt = (body.prompt or "").strip()
     # Templates apply ONLY when the user explicitly picks one. The old keyword

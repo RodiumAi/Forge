@@ -29,9 +29,9 @@ from app.services.filesystem import (
     content_version,
     delete_file,
     file_tree,
-    project_dir,
     read_file,
     rename_path,
+    safe_resolve,
     write_file,
 )
 from app.services.visual_edit import apply_visual_text_edit
@@ -57,11 +57,7 @@ IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".ico"}
 def _is_svg_payload(*, name: str = "", content_type: str = "") -> bool:
     ctype = (content_type or "").lower()
     lower = (name or "").lower()
-    return (
-        "svg" in ctype
-        or lower.endswith(".svg")
-        or ctype == "image/svg+xml"
-    )
+    return "svg" in ctype or lower.endswith(".svg") or ctype == "image/svg+xml"
 
 
 def _svg_safe_response_headers(filename: str, *, cache_control: str) -> dict[str, str]:
@@ -270,12 +266,10 @@ def get_public_asset(
     if not rel or ".." in rel.split("/"):
         raise HTTPException(status_code=404, detail=t("file_not_found", locale))
 
-    root = project_dir(str(project_id))
-    candidates = [root / "public" / rel, root / rel]
+    candidates = [f"public/{rel}", rel]
     for candidate in candidates:
         try:
-            resolved = candidate.resolve()
-            resolved.relative_to(root.resolve())
+            resolved = safe_resolve(str(project_id), candidate)
         except (OSError, ValueError):
             continue
         if resolved.is_file():
@@ -284,9 +278,7 @@ def get_public_asset(
                 return Response(
                     content=resolved.read_bytes(),
                     media_type="application/octet-stream",
-                    headers=_svg_safe_response_headers(
-                        resolved.name, cache_control="no-cache"
-                    ),
+                    headers=_svg_safe_response_headers(resolved.name, cache_control="no-cache"),
                 )
             return Response(
                 content=resolved.read_bytes(),
@@ -393,9 +385,7 @@ def stream_asset_content(
         return Response(
             content=body,
             media_type="application/octet-stream",
-            headers=_svg_safe_response_headers(
-                display, cache_control="private, max-age=300"
-            ),
+            headers=_svg_safe_response_headers(display, cache_control="private, max-age=300"),
         )
     return Response(
         content=body,

@@ -19,8 +19,10 @@ Design constraints:
 from __future__ import annotations
 
 import logging
+import os
 import shutil
 import subprocess
+import tempfile
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -32,6 +34,21 @@ logger = logging.getLogger("history")
 _AUTHOR_NAME = "Forge"
 _AUTHOR_EMAIL = "forge@rodiumai.local"
 _TIMEOUT = 30
+
+# Local repository config is an execution boundary, not user project data.
+# Keep only the settings Forge needs. In particular, never retain filter.*,
+# diff.*.command, include.path, core.fsmonitor, or a caller-controlled hooksPath.
+_TRUSTED_LOCAL_CONFIG = """\
+[core]
+\trepositoryformatversion = 0
+\tfilemode = true
+\tbare = false
+\tlogallrefupdates = true
+\thooksPath = /dev/null
+\tfsmonitor = false
+[commit]
+\tgpgsign = false
+"""
 
 # Never version build output or dependencies: they are huge and reproducible.
 _GITIGNORE = """\
@@ -68,10 +85,35 @@ def _git_exe() -> str | None:
     return shutil.which("git")
 
 
+def _reset_local_config(repo: Path) -> None:
+    """Atomically replace `.git/config` with Forge's known-safe configuration.
+
+    This also neutralises malicious filters planted before `.git` became a
+    reserved path. It runs before every Git subprocess so existing workspaces
+    are repaired on their next history operation.
+    """
+    git_dir = repo / ".git"
+    if not git_dir.is_dir():
+        return
+
+    fd, tmp_name = tempfile.mkstemp(dir=str(git_dir), prefix=".forge-config-")
+    tmp = Path(tmp_name)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(_TRUSTED_LOCAL_CONFIG)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(tmp, git_dir / "config")
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
+
+
 def _run(repo: Path, args: list[str], *, check: bool = True) -> subprocess.CompletedProcess[str]:
     exe = _git_exe()
     if not exe:
         raise HistoryUnavailable("git executable not found")
+    _reset_local_config(repo)
     cmd = [
         exe,
         "-c",
@@ -79,13 +121,24 @@ def _run(repo: Path, args: list[str], *, check: bool = True) -> subprocess.Compl
         "-c",
         f"user.email={_AUTHOR_EMAIL}",
         "-c",
-        "core.hooksPath=",
+        f"core.hooksPath={os.devnull}",
         "-c",
         "commit.gpgsign=false",
         "-C",
         str(repo),
         *args,
     ]
+    # Never inherit repository/config redirections from the API process.
+    env = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
+    env.update(
+        {
+            "GIT_CONFIG_NOSYSTEM": "1",
+            "GIT_CONFIG_GLOBAL": os.devnull,
+            "GIT_CONFIG_SYSTEM": os.devnull,
+            "GIT_ATTR_NOSYSTEM": "1",
+            "GIT_TERMINAL_PROMPT": "0",
+        }
+    )
     proc = subprocess.run(
         cmd,
         capture_output=True,
@@ -93,6 +146,7 @@ def _run(repo: Path, args: list[str], *, check: bool = True) -> subprocess.Compl
         encoding="utf-8",
         errors="replace",
         timeout=_TIMEOUT,
+        env=env,
     )
     if check and proc.returncode != 0:
         raise HistoryUnavailable(f"git {' '.join(args[:2])} failed: {proc.stderr.strip()}")
@@ -179,7 +233,14 @@ def snapshot_files(project_id: str, snapshot_id: str) -> list[str]:
     try:
         out = _run(
             repo,
-            ["show", "--pretty=format:", "--name-only", snapshot_id],
+            [
+                "show",
+                "--no-ext-diff",
+                "--no-textconv",
+                "--pretty=format:",
+                "--name-only",
+                snapshot_id,
+            ],
         )
     except (HistoryUnavailable, OSError, subprocess.SubprocessError):
         return []
@@ -190,7 +251,10 @@ def diff(project_id: str, snapshot_id: str) -> str:
     """Unified diff introduced by a snapshot (capped for UI display)."""
     repo = project_dir(project_id)
     try:
-        out = _run(repo, ["show", "--format=", "--unified=3", snapshot_id])
+        out = _run(
+            repo,
+            ["show", "--no-ext-diff", "--no-textconv", "--format=", "--unified=3", snapshot_id],
+        )
     except (HistoryUnavailable, OSError, subprocess.SubprocessError):
         return ""
     return out.stdout[:200_000]

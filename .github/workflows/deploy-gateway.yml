@@ -3,17 +3,10 @@
 name: Deploy Sites Gateway
 
 on:
-  push:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
     branches: [main]
-    paths:
-      - "infra/aws/sites-gateway/**"
-      - ".github/workflows/deploy-gateway.yml"
-  workflow_dispatch:
-    inputs:
-      image_tag:
-        description: "Docker image tag (default: commit SHA)"
-        required: false
-        type: string
 
 concurrency:
   group: deploy-gateway-production
@@ -32,23 +25,63 @@ env:
   CONTAINER_NAME: gateway
 
 jobs:
+  changes:
+    name: Detect gateway deployment changes
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-latest
+    outputs:
+      gateway: ${{ steps.filter.outputs.gateway }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 2
+
+      - name: Check changed paths
+        id: filter
+        env:
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          if ! BASE_SHA="$(git rev-parse "${HEAD_SHA}^" 2>/dev/null)"; then
+            echo "gateway=true" >> "$GITHUB_OUTPUT"
+          elif git diff --name-only "${BASE_SHA}" "${HEAD_SHA}" \
+            | grep -Eq '^(infra/aws/sites-gateway/|\.github/workflows/(ci|deploy-gateway)\.yml$)'; then
+            echo "gateway=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "gateway=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  verify:
+    name: Pre-deploy checks (gateway)
+    needs: changes
+    if: needs.changes.outputs.gateway == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Validate Caddy configuration
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}/infra/aws/sites-gateway/Caddyfile:/etc/caddy/Caddyfile:ro" \
+            caddy:2.11.4-alpine \
+            caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+
   build-and-push:
     name: Build image → ECR
+    needs: verify
     runs-on: ubuntu-latest
     environment: production
     outputs:
       image: ${{ steps.build-image.outputs.image }}
     steps:
       - uses: actions/checkout@v4
-
-      - name: Resolve image tag
-        id: meta
-        run: |
-          if [ -n "${{ github.event.inputs.image_tag }}" ]; then
-            echo "image_tag=${{ github.event.inputs.image_tag }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "image_tag=${{ github.sha }}" >> "$GITHUB_OUTPUT"
-          fi
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
@@ -60,19 +93,83 @@ jobs:
         id: ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build and push gateway image
+      - name: Build gateway image
         id: build-image
         env:
           ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
-          IMAGE_TAG: ${{ steps.meta.outputs.image_tag }}
+          IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
         run: |
           IMAGE="${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
           docker build --platform linux/amd64 \
             -f infra/aws/sites-gateway/Dockerfile \
             -t "${IMAGE}" \
             infra/aws/sites-gateway
-          docker push "${IMAGE}"
           echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
+          echo "IMAGE=${IMAGE}" >> "$GITHUB_ENV"
+
+      - name: Generate CycloneDX SBOM
+        run: |
+          docker run --rm \
+            -v trivy-cache:/root/.cache/trivy \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "${{ github.workspace }}:/work" \
+            aquasec/trivy:0.74.0 \
+            image --format cyclonedx \
+            --output /work/forge-gateway-sbom.cdx.json \
+            "${IMAGE}"
+
+      - name: Generate full vulnerability report
+        run: |
+          docker run --rm \
+            -v trivy-cache:/root/.cache/trivy \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "${{ github.workspace }}:/work" \
+            aquasec/trivy:0.74.0 \
+            image --scanners vuln --format json \
+            --output /work/forge-gateway-trivy.json \
+            "${IMAGE}"
+
+      - name: Upload gateway security artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: forge-gateway-security-${{ github.event.workflow_run.head_sha }}
+          path: |
+            forge-gateway-sbom.cdx.json
+            forge-gateway-trivy.json
+          if-no-files-found: error
+          retention-days: 90
+
+      # Caddy 2.11.4 is the newest upstream release. Keep its complete report
+      # visible without blocking on vulnerabilities that require a future
+      # upstream Caddy/Go rebuild.
+      - name: Report gateway HIGH and CRITICAL vulnerabilities
+        run: |
+          docker run --rm \
+            -v trivy-cache:/root/.cache/trivy \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy:0.74.0 \
+            image --scanners vuln \
+            --severity CRITICAL,HIGH \
+            --ignore-unfixed \
+            --exit-code 0 \
+            "${IMAGE}"
+
+      - name: Push verified gateway image
+        run: |
+          set +e
+          PUSH_OUTPUT="$(docker push "${IMAGE}" 2>&1)"
+          PUSH_STATUS=$?
+          set -e
+          printf '%s\n' "${PUSH_OUTPUT}"
+          if [ "${PUSH_STATUS}" -eq 0 ]; then
+            exit 0
+          elif [[ "${PUSH_OUTPUT}" == *"tag invalid"* \
+            && "${PUSH_OUTPUT}" == *"already exists"* \
+            && "${PUSH_OUTPUT}" == *"immutable"* ]]; then
+            echo "Reusing immutable image ${IMAGE}"
+          else
+            exit "${PUSH_STATUS}"
+          fi
 
   deploy:
     name: Deploy to ECS
@@ -81,6 +178,8 @@ jobs:
     environment: production
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
