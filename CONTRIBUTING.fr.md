@@ -175,7 +175,7 @@ Runner Babel navigateur. `packages.json` est la source unique de l'import map, d
 ```bash
 cd apps/api/runtime
 npm ci
-node --test tests/
+npm test
 ```
 
 ### Templates (`data/templates`)
