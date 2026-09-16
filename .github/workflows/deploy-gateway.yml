@@ -93,17 +93,25 @@ jobs:
         id: ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build gateway image
+      - name: Resolve or build gateway image
         id: build-image
         env:
           ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
         run: |
           IMAGE="${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
-          docker build --platform linux/amd64 \
-            -f infra/aws/sites-gateway/Dockerfile \
-            -t "${IMAGE}" \
-            infra/aws/sites-gateway
+          if aws ecr describe-images \
+            --repository-name "${ECR_REPOSITORY}" \
+            --image-ids "imageTag=${IMAGE_TAG}" >/dev/null 2>&1; then
+            docker pull "${IMAGE}"
+            echo "IMAGE_EXISTS=true" >> "$GITHUB_ENV"
+          else
+            docker build --platform linux/amd64 \
+              -f infra/aws/sites-gateway/Dockerfile \
+              -t "${IMAGE}" \
+              infra/aws/sites-gateway
+            echo "IMAGE_EXISTS=false" >> "$GITHUB_ENV"
+          fi
           echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
           echo "IMAGE=${IMAGE}" >> "$GITHUB_ENV"
 
@@ -155,7 +163,12 @@ jobs:
             "${IMAGE}"
 
       - name: Push verified gateway image
-        run: docker push "${IMAGE}"
+        run: |
+          if [ "${IMAGE_EXISTS}" = "true" ]; then
+            echo "Reusing immutable image ${IMAGE}"
+          else
+            docker push "${IMAGE}"
+          fi
 
   deploy:
     name: Deploy to ECS

@@ -38,6 +38,18 @@ def test_api_delivery_scans_the_exact_image_before_push():
     assert "forge-api-trivy.json" in workflow
 
 
+def test_immutable_image_reruns_reuse_the_existing_sha():
+    for relative in (
+        ".github/workflows/deploy-api.yml",
+        ".github/workflows/deploy-gateway.yml",
+    ):
+        workflow = _read(relative)
+        assert "aws ecr describe-images" in workflow
+        assert 'echo "IMAGE_EXISTS=true" >> "$GITHUB_ENV"' in workflow
+        assert 'if [ "${IMAGE_EXISTS}" = "true" ]; then' in workflow
+        assert "Reusing immutable image ${IMAGE}" in workflow
+
+
 def test_runtime_image_is_locked_and_non_root():
     dockerfile = _read("apps/api/Dockerfile")
     assert "pip install --no-cache-dir --require-hashes -r requirements.txt" in dockerfile
