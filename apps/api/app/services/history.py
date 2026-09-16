@@ -45,6 +45,9 @@ _TRUSTED_LOCAL_CONFIG = """\
 \tbare = false
 \tlogallrefupdates = true
 \thooksPath = /dev/null
+\tfsmonitor = false
+[commit]
+\tgpgsign = false
 """
 
 # Never version build output or dependencies: they are huge and reproducible.
@@ -118,18 +121,21 @@ def _run(repo: Path, args: list[str], *, check: bool = True) -> subprocess.Compl
         "-c",
         f"user.email={_AUTHOR_EMAIL}",
         "-c",
-        "core.hooksPath=",
+        f"core.hooksPath={os.devnull}",
         "-c",
         "commit.gpgsign=false",
         "-C",
         str(repo),
         *args,
     ]
-    env = os.environ.copy()
+    # Never inherit repository/config redirections from the API process.
+    env = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
     env.update(
         {
             "GIT_CONFIG_NOSYSTEM": "1",
             "GIT_CONFIG_GLOBAL": os.devnull,
+            "GIT_CONFIG_SYSTEM": os.devnull,
+            "GIT_ATTR_NOSYSTEM": "1",
             "GIT_TERMINAL_PROMPT": "0",
         }
     )
@@ -227,7 +233,14 @@ def snapshot_files(project_id: str, snapshot_id: str) -> list[str]:
     try:
         out = _run(
             repo,
-            ["show", "--pretty=format:", "--name-only", snapshot_id],
+            [
+                "show",
+                "--no-ext-diff",
+                "--no-textconv",
+                "--pretty=format:",
+                "--name-only",
+                snapshot_id,
+            ],
         )
     except (HistoryUnavailable, OSError, subprocess.SubprocessError):
         return []
@@ -238,7 +251,10 @@ def diff(project_id: str, snapshot_id: str) -> str:
     """Unified diff introduced by a snapshot (capped for UI display)."""
     repo = project_dir(project_id)
     try:
-        out = _run(repo, ["show", "--format=", "--unified=3", snapshot_id])
+        out = _run(
+            repo,
+            ["show", "--no-ext-diff", "--no-textconv", "--format=", "--unified=3", snapshot_id],
+        )
     except (HistoryUnavailable, OSError, subprocess.SubprocessError):
         return ""
     return out.stdout[:200_000]

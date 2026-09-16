@@ -29,9 +29,9 @@ from app.services.filesystem import (
     content_version,
     delete_file,
     file_tree,
-    project_dir,
     read_file,
     rename_path,
+    safe_resolve,
     write_file,
 )
 from app.services.visual_edit import apply_visual_text_edit
@@ -270,12 +270,10 @@ def get_public_asset(
     if not rel or ".." in rel.split("/"):
         raise HTTPException(status_code=404, detail=t("file_not_found", locale))
 
-    root = project_dir(str(project_id))
-    candidates = [root / "public" / rel, root / rel]
+    candidates = [f"public/{rel}", rel]
     for candidate in candidates:
         try:
-            resolved = candidate.resolve()
-            resolved.relative_to(root.resolve())
+            resolved = safe_resolve(str(project_id), candidate)
         except (OSError, ValueError):
             continue
         if resolved.is_file():

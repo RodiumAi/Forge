@@ -72,3 +72,22 @@ def test_file_content_endpoint_refuses_git_config(project, monkeypatch):
     assert exc.value.status_code == 400
     assert "project history" in str(exc.value.detail)
 
+
+def test_public_asset_endpoint_does_not_expose_git_metadata(project, monkeypatch):
+    """The legacy root-file fallback must still pass through the path guard."""
+    project_id = uuid.uuid4()
+    repo = project_dir(str(project_id))
+    (repo / ".git").mkdir()
+    (repo / ".git" / "config").write_text("[core]\n", encoding="utf-8")
+    monkeypatch.setattr(files_router, "_owned", MagicMock())
+
+    with pytest.raises(HTTPException) as exc:
+        files_router.get_public_asset(
+            project_id=project_id,
+            asset_path=".git/config",
+            request=SimpleNamespace(headers={}),
+            user=SimpleNamespace(id=uuid.uuid4()),
+            db=MagicMock(),
+        )
+
+    assert exc.value.status_code == 404

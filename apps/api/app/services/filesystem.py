@@ -17,6 +17,9 @@ def project_dir(project_id: str) -> Path:
 
 def safe_resolve(project_id: str, relative: str) -> Path:
     base = project_dir(project_id).resolve()
+    requested_parts = str(relative).replace("\\", "/").split("/")
+    if any(part.casefold() == ".git" for part in requested_parts):
+        raise ValueError("Refusing to access project history")
     target = (base / relative).resolve()
     # Containment on path components, not string prefix: a sibling dir whose name
     # merely starts with the project id (e.g. "<id>extra") must not pass.
@@ -25,8 +28,8 @@ def safe_resolve(project_id: str, relative: str) -> Path:
     # `.git` is private server-side history metadata, never project content.
     # Enforce this at the shared path boundary so every read/write/upload/edit
     # sink is covered, including nested and case-variant paths.
-    relative_parts = target.relative_to(base).parts
-    if any(part.casefold() == ".git" for part in relative_parts):
+    resolved_parts = target.relative_to(base).parts
+    if any(part.casefold() == ".git" for part in resolved_parts):
         raise ValueError("Refusing to access project history")
     return target
 

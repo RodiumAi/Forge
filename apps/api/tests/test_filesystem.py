@@ -37,6 +37,7 @@ class TestPathSafety:
             "./.git/hooks/post-checkout",
             "src/.git/config",
             ".GIT/config",
+            r".git\config",
         ],
     )
     def test_refuses_project_history_paths(self, project, relative):
@@ -45,7 +46,7 @@ class TestPathSafety:
 
     def test_all_write_helpers_refuse_project_history(self, project):
         with pytest.raises(ValueError, match="project history"):
-            write_file(project, ".git/config", "[filter \"poc\"]")
+            write_file(project, ".git/config", '[filter "poc"]')
         with pytest.raises(ValueError, match="project history"):
             write_bytes(project, ".git/objects/payload", b"payload")
 
