@@ -57,11 +57,7 @@ IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".ico"}
 def _is_svg_payload(*, name: str = "", content_type: str = "") -> bool:
     ctype = (content_type or "").lower()
     lower = (name or "").lower()
-    return (
-        "svg" in ctype
-        or lower.endswith(".svg")
-        or ctype == "image/svg+xml"
-    )
+    return "svg" in ctype or lower.endswith(".svg") or ctype == "image/svg+xml"
 
 
 def _svg_safe_response_headers(filename: str, *, cache_control: str) -> dict[str, str]:
@@ -282,9 +278,7 @@ def get_public_asset(
                 return Response(
                     content=resolved.read_bytes(),
                     media_type="application/octet-stream",
-                    headers=_svg_safe_response_headers(
-                        resolved.name, cache_control="no-cache"
-                    ),
+                    headers=_svg_safe_response_headers(resolved.name, cache_control="no-cache"),
                 )
             return Response(
                 content=resolved.read_bytes(),
@@ -391,9 +385,7 @@ def stream_asset_content(
         return Response(
             content=body,
             media_type="application/octet-stream",
-            headers=_svg_safe_response_headers(
-                display, cache_control="private, max-age=300"
-            ),
+            headers=_svg_safe_response_headers(display, cache_control="private, max-age=300"),
         )
     return Response(
         content=body,

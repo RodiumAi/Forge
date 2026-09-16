@@ -105,9 +105,7 @@ def admin_restore_by_rodium_sub(
 ) -> dict[str, int | str]:
     """Clear Forge access block after RodiumAi reactivation."""
     users = (
-        db.query(User)
-        .filter(User.rodium_sub == body.rodium_sub, User.access_blocked_at.is_not(None))
-        .all()
+        db.query(User).filter(User.rodium_sub == body.rodium_sub, User.access_blocked_at.is_not(None)).all()
     )
     for user in users:
         user.access_blocked_at = None

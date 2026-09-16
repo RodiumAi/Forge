@@ -136,11 +136,7 @@ async def reissue_tokens(
         return None
 
     url = settings.rodium_provisioning_url.rstrip("/")
-    url = (
-        f"{url}/reissue-tokens"
-        if url.endswith("/users")
-        else f"{url}/users/reissue-tokens"
-    )
+    url = f"{url}/reissue-tokens" if url.endswith("/users") else f"{url}/users/reissue-tokens"
 
     payload = {
         "email": email,
