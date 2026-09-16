@@ -42,7 +42,12 @@ def test_callback_critical_path_skips_keys_and_wallet(monkeypatch: pytest.Monkey
     async def fake_userinfo(access_token: str):
         calls.append("userinfo")
         assert access_token == "access-tok"
-        return {"sub": "rodium-sub-1", "email": "forge-user@example.com", "name": "Forge User"}
+        return {
+            "sub": "rodium-sub-1",
+            "email": "forge-user@example.com",
+            "email_verified": True,
+            "name": "Forge User",
+        }
 
     async def fake_keys(access_token: str):
         calls.append("keys")

@@ -37,7 +37,9 @@ describe("Next security headers", () => {
     expect(csp).toContain("https://*.i.posthog.com");
     expect(csp).toContain("https://*.googleapis.com");
     expect(csp).toContain("https://*.firebaseapp.com");
-    expect(csp).toContain("http://localhost:8100");
+    expect(csp).toContain(
+      new URL(process.env.NEXT_PUBLIC_API_URL || "http://localhost:8100").origin,
+    );
   });
 
   it.each(["/login", "/register", "/auth/:path*"])(
