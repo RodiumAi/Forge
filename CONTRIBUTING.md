@@ -179,7 +179,7 @@ In-browser Babel runner. `packages.json` is the single source of truth for the i
 ```bash
 cd apps/api/runtime
 npm ci
-node --test tests/
+npm test
 ```
 
 ### Templates (`data/templates`)
