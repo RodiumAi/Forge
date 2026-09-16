@@ -93,25 +93,17 @@ jobs:
         id: ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Resolve or build gateway image
+      - name: Build gateway image
         id: build-image
         env:
           ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
         run: |
           IMAGE="${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
-          if aws ecr describe-images \
-            --repository-name "${ECR_REPOSITORY}" \
-            --image-ids "imageTag=${IMAGE_TAG}" >/dev/null 2>&1; then
-            docker pull "${IMAGE}"
-            echo "IMAGE_EXISTS=true" >> "$GITHUB_ENV"
-          else
-            docker build --platform linux/amd64 \
-              -f infra/aws/sites-gateway/Dockerfile \
-              -t "${IMAGE}" \
-              infra/aws/sites-gateway
-            echo "IMAGE_EXISTS=false" >> "$GITHUB_ENV"
-          fi
+          docker build --platform linux/amd64 \
+            -f infra/aws/sites-gateway/Dockerfile \
+            -t "${IMAGE}" \
+            infra/aws/sites-gateway
           echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
           echo "IMAGE=${IMAGE}" >> "$GITHUB_ENV"
 
@@ -164,10 +156,19 @@ jobs:
 
       - name: Push verified gateway image
         run: |
-          if [ "${IMAGE_EXISTS}" = "true" ]; then
+          set +e
+          PUSH_OUTPUT="$(docker push "${IMAGE}" 2>&1)"
+          PUSH_STATUS=$?
+          set -e
+          printf '%s\n' "${PUSH_OUTPUT}"
+          if [ "${PUSH_STATUS}" -eq 0 ]; then
+            exit 0
+          elif [[ "${PUSH_OUTPUT}" == *"tag invalid"* \
+            && "${PUSH_OUTPUT}" == *"already exists"* \
+            && "${PUSH_OUTPUT}" == *"immutable"* ]]; then
             echo "Reusing immutable image ${IMAGE}"
           else
-            docker push "${IMAGE}"
+            exit "${PUSH_STATUS}"
           fi
 
   deploy:

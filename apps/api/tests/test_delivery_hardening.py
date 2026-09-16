@@ -44,9 +44,11 @@ def test_immutable_image_reruns_reuse_the_existing_sha():
         ".github/workflows/deploy-gateway.yml",
     ):
         workflow = _read(relative)
-        assert "aws ecr describe-images" in workflow
-        assert 'echo "IMAGE_EXISTS=true" >> "$GITHUB_ENV"' in workflow
-        assert 'if [ "${IMAGE_EXISTS}" = "true" ]; then' in workflow
+        assert 'PUSH_OUTPUT="$(docker push "${IMAGE}" 2>&1)"' in workflow
+        assert 'if [ "${PUSH_STATUS}" -eq 0 ]; then' in workflow
+        assert '*"tag invalid"*' in workflow
+        assert '*"already exists"*' in workflow
+        assert '*"immutable"*' in workflow
         assert "Reusing immutable image ${IMAGE}" in workflow
 
 
