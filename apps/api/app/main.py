@@ -2,6 +2,7 @@ import asyncio
 import contextlib
 import logging
 from contextlib import asynccontextmanager
+from urllib.parse import urlsplit
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -33,6 +34,49 @@ from app.services.preview_babel import render_runner_shell, runtime_public_dir
 logger = logging.getLogger(__name__)
 
 config = get_settings()
+
+GENERIC_SECURITY_HEADERS = {
+    "Strict-Transport-Security": "max-age=31536000",
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Permissions-Policy": (
+        "accelerometer=(), camera=(), geolocation=(), gyroscope=(), "
+        "magnetometer=(), microphone=(), payment=(), usb=()"
+    ),
+}
+
+
+def _runner_frame_ancestors() -> str:
+    """Return CSP-safe origins from the runner's existing parent allowlist."""
+    origins: list[str] = []
+    for candidate in config.runner_parent_origins.split(","):
+        try:
+            parsed = urlsplit(candidate.strip())
+            if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+                continue
+            host = f"[{parsed.hostname}]" if ":" in parsed.hostname else parsed.hostname
+            port = f":{parsed.port}" if parsed.port is not None else ""
+            origins.append(f"{parsed.scheme}://{host}{port}")
+        except ValueError:
+            continue
+    return " ".join(dict.fromkeys(origins)) or "'none'"
+
+
+RUNNER_CONTENT_SECURITY_POLICY = "; ".join(
+    [
+        "default-src 'self' data: blob: https: http:",
+        "base-uri 'self'",
+        "connect-src * data: blob:",
+        "font-src 'self' data: blob: https: http:",
+        "frame-src 'self' data: blob: https: http:",
+        "img-src 'self' data: blob: https: http:",
+        "object-src 'none'",
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://esm.sh",
+        "style-src 'self' 'unsafe-inline' data: blob: https: http:",
+        "worker-src 'self' blob:",
+        f"frame-ancestors {_runner_frame_ancestors()}",
+    ]
+)
 
 
 @asynccontextmanager
@@ -73,6 +117,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    for name, value in GENERIC_SECURITY_HEADERS.items():
+        response.headers.setdefault(name, value)
+    return response
 
 
 def _cors_origin_allowed(origin: str | None) -> bool:
@@ -143,7 +195,13 @@ def runner_shell(p: str | None = None) -> HTMLResponse:
             extra = extra_import_map(str(_uuid.UUID(p)))
         except Exception:
             extra = {}
-    return HTMLResponse(render_runner_shell(extra_imports=extra), headers={"Cache-Control": "no-store"})
+    return HTMLResponse(
+        render_runner_shell(extra_imports=extra),
+        headers={
+            "Cache-Control": "no-store",
+            "Content-Security-Policy": RUNNER_CONTENT_SECURITY_POLICY,
+        },
+    )
 
 
 # Declared after the route above so `/runner/` resolves to the generated shell
