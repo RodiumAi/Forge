@@ -5,9 +5,19 @@ import uuid
 from types import SimpleNamespace
 
 import pytest
+from PIL import Image
 
 from app.services import asset_storage
 from app.services.attachments import materialize_asset_markers
+
+
+def _png() -> bytes:
+    buffer = io.BytesIO()
+    Image.new("RGB", (2, 2), (255, 0, 0)).save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
+PNG_BYTES = _png()
 
 
 class _FakeStore:
@@ -16,7 +26,7 @@ class _FakeStore:
     class internal:
         @staticmethod
         def get_object(Bucket: str, Key: str) -> dict:
-            return {"Body": io.BytesIO(b"\x89PNG fake")}
+            return {"Body": io.BytesIO(PNG_BYTES)}
 
 
 @pytest.fixture

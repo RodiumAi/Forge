@@ -54,26 +54,31 @@ def create_oauth_state(code_verifier: str, binding: str | None = None) -> str:
     the original. A state captured in transit is then useless to anyone else —
     the classic login-CSRF that `state` is supposed to prevent.
 
-    Kept optional so a caller that predates the binding still works; the
-    callback enforces it whenever the state carries one.
+    The binding is required. Minting an unbound state left the guard opt-in, and
+    the opt-out was the attack: a caller could ask for a state with no binding,
+    complete the flow with its own account, and hand the pair to a victim whose
+    browser had no secret to check against — signing the victim into the
+    attacker's account. Every state now carries `b`.
     """
     settings = get_settings()
+    if not binding:
+        raise RodiumOidcError("Sign in with RodiumAi could not be secured to this browser")
     expire = datetime.now(UTC) + timedelta(minutes=10)
     payload: dict[str, object] = {
         "v": code_verifier,
         "exp": expire,
         "n": secrets.token_urlsafe(8),
+        "b": binding,
     }
-    if binding:
-        payload["b"] = binding
     return jwt.encode(payload, settings.secret_key, algorithm="HS256")
 
 
 def parse_oauth_state(state: str, binding: str | None = None) -> str:
     """Verify the state and return the PKCE verifier.
 
-    Refuses when the state was bound to a browser and the caller cannot
-    produce the matching secret.
+    Every state carries a browser binding; one that does not is refused rather
+    than waved through (that allowance was the login-CSRF hole), and the caller
+    must present the matching secret.
     """
     settings = get_settings()
     try:
@@ -85,8 +90,9 @@ def parse_oauth_state(state: str, binding: str | None = None) -> str:
         raise RodiumOidcError("Invalid OAuth state payload")
 
     expected = payload.get("b")
-    bound = isinstance(expected, str) and bool(expected)
-    if bound and (not binding or not secrets.compare_digest(hash_state_binding(binding), expected)):
+    if not isinstance(expected, str) or not expected:
+        raise RodiumOidcError("OAuth state is not bound to a browser")
+    if not binding or not secrets.compare_digest(hash_state_binding(binding), expected):
         raise RodiumOidcError("OAuth state does not match this browser")
     return verifier
 

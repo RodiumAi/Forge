@@ -27,12 +27,16 @@ def cached_wallet_balance(user: User, db: Session) -> float:
 
 
 def require_rodi_for_paid_capability(user: User, db: Session) -> None:
-    """Gate AI generation on a positive RODI wallet balance."""
+    """Gate AI generation on a positive RODI wallet balance.
+
+    Fail closed: only a balance we can read and that is above zero clears the
+    gate. A missing or unreadable cache used to return silently — treating
+    "unknown" as "allowed" — which let a user empty the cache (logout does
+    exactly that) and then generate unmetered. Treat "unknown" as "no funds"
+    instead; the balance is refreshed live by GET /auth/rodium/account.
+    """
     from app.errors import insufficient_rodi
 
-    row = db.get(UserSettings, user.id)
-    if row is None or not row.rodium_wallet_json:
-        return
     if cached_wallet_balance(user, db) > 0:
         return
     raise insufficient_rodi("Insufficient RODI credits. Recharge your RodiumAi wallet to keep generating.")

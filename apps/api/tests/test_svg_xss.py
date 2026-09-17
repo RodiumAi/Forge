@@ -3,8 +3,8 @@
 from app.routers.files import (
     IMAGE_EXTS,
     IMAGE_TYPES,
+    _download_response_headers,
     _is_svg_payload,
-    _svg_safe_response_headers,
 )
 
 
@@ -21,15 +21,15 @@ def test_is_svg_payload_detects_extension_and_mime():
     assert not _is_svg_payload(name="icon.ico", content_type="image/x-icon")
 
 
-def test_svg_safe_headers_force_attachment_and_nosniff():
-    headers = _svg_safe_response_headers("evil.svg", cache_control="no-cache")
+def test_download_headers_force_attachment_and_nosniff():
+    headers = _download_response_headers("evil.svg", cache_control="no-cache")
     assert headers["Content-Disposition"].startswith("attachment;")
     assert 'filename="evil.svg"' in headers["Content-Disposition"]
     assert headers["X-Content-Type-Options"] == "nosniff"
     assert headers["Cache-Control"] == "no-cache"
 
 
-def test_svg_safe_headers_strip_quotes_from_filename():
-    headers = _svg_safe_response_headers('evil"x.svg', cache_control="private")
+def test_download_headers_strip_quotes_from_filename():
+    headers = _download_response_headers('evil"x.svg', cache_control="private")
     # Quotes stripped from the name, then re-wrapped once for the header value.
     assert headers["Content-Disposition"] == 'attachment; filename="evilx.svg"'
