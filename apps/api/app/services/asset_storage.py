@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from io import BytesIO
 from uuid import UUID
 
+from PIL import Image
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
@@ -11,6 +13,25 @@ from app.errors import provider_not_configured
 from app.models import Project, StoredObject, User
 from app.services import s3 as s3_service
 from app.services.capabilities import assert_managed_storage_quota
+
+RASTER_FORMATS = {
+    "PNG": ("image/png", ".png"),
+    "JPEG": ("image/jpeg", ".jpg"),
+    "WEBP": ("image/webp", ".webp"),
+    "GIF": ("image/gif", ".gif"),
+    "ICO": ("image/x-icon", ".ico"),
+}
+
+
+def sniff_raster(body: bytes) -> tuple[str, str] | None:
+    """Return canonical MIME and extension for a verified raster image."""
+    try:
+        with Image.open(BytesIO(body)) as image:
+            image_format = (image.format or "").upper()
+            image.verify()
+    except Exception:
+        return None
+    return RASTER_FORMATS.get(image_format)
 
 
 def asset_display_name(object_key: str) -> str:
@@ -172,9 +193,15 @@ def materialize_asset_to_public(db: Session, project_id: UUID, object_id: UUID) 
         raise provider_not_configured("Object store (S3/MinIO)")
     obj = store.internal.get_object(Bucket=bucket, Key=row.object_key)
     body = obj["Body"].read()
+    verified = sniff_raster(body)
+    if verified is None:
+        raise ValueError("Stored asset is not a valid raster image")
+    _content_type, extension = verified
 
     name = asset_display_name(row.object_key)
-    safe = "".join(c if c.isalnum() or c in ".-_" else "-" for c in name).strip("-.") or "image.png"
+    stem = name.rsplit(".", 1)[0] if "." in name else name
+    safe_stem = "".join(c if c.isalnum() or c in "-_" else "-" for c in stem).strip("-_")
+    safe = f"{safe_stem or 'image'}{extension}"
     # Object-id prefix: stable (re-picking the same asset overwrites, no
     # duplicate files) and collision-free across same-named uploads.
     rel = f"public/images/{str(object_id)[:8]}-{safe}"

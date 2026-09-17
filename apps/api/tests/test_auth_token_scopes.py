@@ -164,10 +164,31 @@ class TestOauthStateBinding:
         state = create_oauth_state("verifier", binding_hash)
         assert "browser-secret" not in state
 
-    def test_an_unbound_state_still_parses(self):
-        state = create_oauth_state("verifier")
-        assert parse_oauth_state(state, None) == "verifier"
-        assert parse_oauth_state(state, "anything") == "verifier"
+    def test_an_unbound_state_cannot_be_minted(self):
+        # The binding is mandatory: refusing to mint an unbound state is what
+        # stops a caller from opting out of login-CSRF protection.
+        with pytest.raises(RodiumOidcError):
+            create_oauth_state("verifier")
+        with pytest.raises(RodiumOidcError):
+            create_oauth_state("verifier", "")
+
+    def test_a_forged_unbound_state_is_refused_at_the_callback(self):
+        # An attacker crafts a signed state with no `b` claim (the shape /start
+        # would once have handed out) and feeds it to a victim whose browser
+        # holds no secret. Parsing must refuse it, not wave it through.
+        forged = jwt.encode(
+            {
+                "v": "verifier",
+                "exp": datetime.now(UTC) + timedelta(minutes=5),
+                "n": "abc",
+            },
+            get_settings().secret_key,
+            algorithm="HS256",
+        )
+        with pytest.raises(RodiumOidcError):
+            parse_oauth_state(forged, None)
+        with pytest.raises(RodiumOidcError):
+            parse_oauth_state(forged, "anything")
 
     def test_a_tampered_state_is_refused(self):
         binding_hash = hash_state_binding("browser-secret")

@@ -233,6 +233,10 @@ def rodium_oauth_start(request: Request) -> OAuthStartResponse:
     if not settings.rodium_oidc_client_id:
         raise HTTPException(status_code=503, detail=t("rodium_oauth_not_configured", locale))
     binding = (request.query_params.get("state_binding") or "").strip() or None
+    if binding is None:
+        # No binding means no login-CSRF protection, and the opt-out was the
+        # attack. Refuse rather than mint an unbound state.
+        raise HTTPException(status_code=400, detail=t("rodium_oauth_binding_required", locale))
     prompt = (request.query_params.get("prompt") or "").strip() or None
     try:
         verifier, challenge = generate_pkce()
@@ -1006,7 +1010,12 @@ async def logout(
         # Drop the cached balance so a later Google login cannot show a stale
         # figure while live Nest fetch is still re-linking tokens.
         row.rodium_wallet_json = None
-        db.commit()
+    # Revoke the session itself. Without this the caller's JWT stayed valid after
+    # logout, so the same token kept reaching authenticated routes — and, since
+    # we just cleared the cached wallet, it slipped past the RODI gate unmetered.
+    # Bumping the version makes `get_current_user` reject the old token.
+    user.token_version = (user.token_version or 0) + 1
+    db.commit()
     return LogoutResponse()
 
 

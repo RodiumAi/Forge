@@ -13,10 +13,20 @@ import uuid
 from types import SimpleNamespace
 
 import pytest
+from PIL import Image
 
 from app.services import asset_storage
 from app.services.filesystem import project_dir
 from app.services.visual_image import apply_visual_image_replace
+
+
+def _png() -> bytes:
+    buffer = io.BytesIO()
+    Image.new("RGB", (2, 2), (255, 0, 0)).save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
+PNG_BYTES = _png()
 
 
 class _FakeStore:
@@ -25,7 +35,7 @@ class _FakeStore:
     class internal:
         @staticmethod
         def get_object(Bucket: str, Key: str) -> dict:
-            return {"Body": io.BytesIO(b"\x89PNG fake bytes")}
+            return {"Body": io.BytesIO(PNG_BYTES)}
 
 
 @pytest.fixture
@@ -43,7 +53,7 @@ class TestMaterialize:
         project, _, web_path = materialized
         on_disk = project_dir(project) / "public" / "images" / web_path.rsplit("/", 1)[-1]
         assert on_disk.is_file()
-        assert on_disk.read_bytes() == b"\x89PNG fake bytes"
+        assert on_disk.read_bytes() == PNG_BYTES
 
     def test_returns_a_relative_web_path(self, materialized):
         _, object_id, web_path = materialized

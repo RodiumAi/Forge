@@ -1,4 +1,3 @@
-import mimetypes
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
@@ -22,6 +21,7 @@ from app.services.asset_storage import (
     is_private_upload_url,
     list_project_assets,
     materialize_asset_to_public,
+    sniff_raster,
     upload_project_asset,
 )
 from app.services.filesystem import (
@@ -53,6 +53,26 @@ IMAGE_TYPES = {
 }
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".ico"}
 
+# Canonical, server-derived Content-Type per real (Pillow-decoded) format. The
+# client-supplied Content-Type is never trusted for storage or serving: a
+# text/html body named `evil.png` would otherwise be stored and re-served as
+# text/html, and the browser would render the embedded <script> (Stored XSS).
+# Types safe to serve `inline`. Anything else — SVG, text/html, or a stale
+# client-supplied type on a row uploaded before byte-validation — is sent as a
+# download so the browser never renders it as a document.
+_INLINE_SAFE_TYPES = frozenset(
+    {
+        "image/png",
+        "image/jpeg",
+        "image/webp",
+        "image/gif",
+        "image/x-icon",
+    }
+) | {
+    "image/vnd.microsoft.icon",
+    "image/ico",
+}
+
 
 def _is_svg_payload(*, name: str = "", content_type: str = "") -> bool:
     ctype = (content_type or "").lower()
@@ -60,9 +80,21 @@ def _is_svg_payload(*, name: str = "", content_type: str = "") -> bool:
     return "svg" in ctype or lower.endswith(".svg") or ctype == "image/svg+xml"
 
 
-def _svg_safe_response_headers(filename: str, *, cache_control: str) -> dict[str, str]:
-    """Force download for SVG so the browser never executes embedded scripts."""
-    safe = (filename or "file.svg").replace('"', "").replace("\n", "").replace("\r", "")
+def _sniff_raster_content_type(body: bytes) -> str | None:
+    """Return the canonical Content-Type for `body` iff it is a real raster image.
+
+    Decodes the actual bytes with Pillow and maps the detected format to a fixed
+    allowlist. Anything Pillow cannot decode as one of these formats — HTML, SVG,
+    a renamed script, a truncated file — returns None, regardless of the
+    filename extension or the client-declared Content-Type.
+    """
+    verified = sniff_raster(body)
+    return verified[0] if verified else None
+
+
+def _download_response_headers(filename: str, *, cache_control: str) -> dict[str, str]:
+    """Force a download so the browser never renders the body as a document."""
+    safe = (filename or "download").replace('"', "").replace("\n", "").replace("\r", "")
     return {
         "Cache-Control": cache_control,
         "Content-Disposition": f'attachment; filename="{safe}"',
@@ -273,17 +305,21 @@ def get_public_asset(
         except (OSError, ValueError):
             continue
         if resolved.is_file():
-            media_type = mimetypes.guess_type(resolved.name)[0] or "application/octet-stream"
-            if _is_svg_payload(name=resolved.name, content_type=media_type or ""):
+            body = resolved.read_bytes()
+            verified = sniff_raster(body)
+            if verified is None:
                 return Response(
-                    content=resolved.read_bytes(),
+                    content=body,
                     media_type="application/octet-stream",
-                    headers=_svg_safe_response_headers(resolved.name, cache_control="no-cache"),
+                    headers=_download_response_headers(resolved.name, cache_control="no-cache"),
                 )
             return Response(
-                content=resolved.read_bytes(),
-                media_type=media_type,
-                headers={"Cache-Control": "no-cache"},
+                content=body,
+                media_type=verified[0],
+                headers={
+                    "Cache-Control": "no-cache",
+                    "X-Content-Type-Options": "nosniff",
+                },
             )
 
     raise HTTPException(status_code=404, detail=t("file_not_found", locale))
@@ -331,14 +367,29 @@ def list_assets(
     ]
 
 
-def _presigned_asset_url(row) -> str:
+def _presigned_asset_url(row, *, force_download: bool = False) -> str:
     store = get_object_store()
     bucket = store.bucket_uploads or get_settings().aws_s3_bucket
     if not bucket:
+        if force_download:
+            raise HTTPException(status_code=503, detail="Safe asset download unavailable")
         return row.public_url
     try:
-        return store.presign_get(bucket, row.object_key, expires=3600)
-    except Exception:
+        return store.presign_get(
+            bucket,
+            row.object_key,
+            expires=3600,
+            download_name=asset_display_name(row.object_key) if force_download else None,
+        )
+    except Exception as exc:
+        if force_download:
+            # A raw public URL would reflect the object's legacy Content-Type
+            # and could render HTML/SVG. Fail closed when response overrides
+            # cannot be signed.
+            raise HTTPException(
+                status_code=503,
+                detail="Safe asset download unavailable",
+            ) from exc
         return row.public_url
 
 
@@ -354,7 +405,13 @@ def redirect_asset(
     row = get_project_asset(db, project_id, object_id)
     if row is None:
         raise HTTPException(status_code=404, detail="Asset not found")
-    return RedirectResponse(url=_presigned_asset_url(row), status_code=302)
+    return RedirectResponse(
+        # This endpoint cannot inspect the bytes before redirecting. Always
+        # override object metadata so legacy objects that falsely claim a safe
+        # raster Content-Type cannot become inline HTML/SVG.
+        url=_presigned_asset_url(row, force_download=True),
+        status_code=302,
+    )
 
 
 @router.get("/{project_id}/assets/{object_id}/content")
@@ -378,18 +435,27 @@ def stream_asset_content(
         obj = store.internal.get_object(Bucket=bucket, Key=row.object_key)
         body = obj["Body"].read()
     except Exception:
-        # Fallback: redirect to a short-lived signed URL.
-        return RedirectResponse(url=_presigned_asset_url(row), status_code=302)
+        # Without the bytes we cannot verify a legacy object's real format.
+        # Signed response overrides make this a download regardless of stored
+        # metadata, including rows that falsely claim image/png.
+        return RedirectResponse(
+            url=_presigned_asset_url(row, force_download=True),
+            status_code=302,
+        )
     display = asset_display_name(row.object_key)
-    if _is_svg_payload(name=display, content_type=row.content_type or ""):
+    verified_type = _sniff_raster_content_type(body)
+    if verified_type is None or (row.content_type or "").lower() not in _INLINE_SAFE_TYPES:
+        # SVG, or any type we will not render inline. Rows uploaded before
+        # byte-validation may still contain attacker-controlled bytes even if
+        # their metadata claims image/png.
         return Response(
             content=body,
             media_type="application/octet-stream",
-            headers=_svg_safe_response_headers(display, cache_control="private, max-age=300"),
+            headers=_download_response_headers(display, cache_control="private, max-age=300"),
         )
     return Response(
         content=body,
-        media_type=row.content_type or "application/octet-stream",
+        media_type=verified_type,
         headers={
             "Cache-Control": "private, max-age=300",
             "Content-Disposition": f'inline; filename="{display}"',
@@ -409,21 +475,23 @@ async def upload_project_image(
     locale = resolve_locale(request)
     project = _owned(db, user, project_id, locale)
     filename = (file.filename or "image.png").replace("\\", "/").split("/")[-1]
-    ext = ("." + filename.rsplit(".", 1)[-1].lower()) if "." in filename else ""
-    content_type = (file.content_type or "").lower()
-    if _is_svg_payload(name=filename, content_type=content_type):
-        raise HTTPException(
-            status_code=400,
-            detail="SVG uploads are not allowed (security). Use PNG, JPEG, WebP, or GIF.",
-        )
-    if content_type not in IMAGE_TYPES and ext not in IMAGE_EXTS:
-        raise HTTPException(status_code=400, detail="Only image files are allowed")
     body = await file.read()
     if len(body) > 8 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="Image too large (max 8 MB)")
-    safe = "".join(c if c.isalnum() or c in ".-_" else "-" for c in filename).strip("-") or "image.png"
-    if "." not in safe and ext:
-        safe = safe + ext
+    # Validate the actual bytes, never the extension or the client-declared
+    # Content-Type: both are attacker-controlled, and trusting them let a
+    # text/html body dressed as `evil.png` be stored and re-served as text/html
+    # (Stored XSS). The stored type is derived from what the bytes really are.
+    verified = sniff_raster(body)
+    if verified is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Only image files are allowed (PNG, JPEG, WebP, GIF, ICO).",
+        )
+    verified_type, verified_extension = verified
+    stem = filename.rsplit(".", 1)[0] if "." in filename else filename
+    safe_stem = "".join(c if c.isalnum() or c in "-_" else "-" for c in stem).strip("-_")
+    safe = f"{safe_stem or 'image'}{verified_extension}"
     try:
         row = upload_project_asset(
             db,
@@ -431,7 +499,7 @@ async def upload_project_image(
             project=project,
             body=body,
             filename=safe,
-            content_type=content_type or "application/octet-stream",
+            content_type=verified_type,
         )
     except SitesError:
         raise

@@ -137,9 +137,27 @@ class ObjectStore:
             ExpiresIn=expires,
         )
 
-    def presign_get(self, bucket: str, key: str, expires: int = 3600) -> str:
+    def presign_get(
+        self,
+        bucket: str,
+        key: str,
+        expires: int = 3600,
+        *,
+        download_name: str | None = None,
+    ) -> str:
+        params = {"Bucket": bucket, "Key": key}
+        if download_name is not None:
+            safe_name = download_name.replace('"', "").replace("\n", "").replace("\r", "")
+            params.update(
+                {
+                    "ResponseContentDisposition": f'attachment; filename="{safe_name or "download"}"',
+                    "ResponseContentType": "application/octet-stream",
+                }
+            )
         return self.public.generate_presigned_url(
-            "get_object", Params={"Bucket": bucket, "Key": key}, ExpiresIn=expires
+            "get_object",
+            Params=params,
+            ExpiresIn=expires,
         )
 
 
