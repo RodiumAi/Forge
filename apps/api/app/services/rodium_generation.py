@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.crypto import decrypt_secret, encrypt_secret
 from app.models import User, UserSettings
+from app.services.capabilities import require_rodi_for_paid_capability
 from app.services.rodium_oidc import (
     RodiumOidcError,
     fetch_api_keys,
@@ -233,8 +234,16 @@ def _bound_user(db: Session, user: User) -> User:
     return bound or user
 
 
-async def resolve_generation_auth(db: Session, user: User) -> RodiumGenerationAuth:
+async def resolve_generation_auth(
+    db: Session,
+    user: User,
+    *,
+    usage: Literal["paid", "free"] = "paid",
+) -> RodiumGenerationAuth:
+    """Resolve generation credentials, requiring RODI unless explicitly free."""
     user = _bound_user(db, user)
+    if usage != "free":
+        require_rodi_for_paid_capability(user, db)
     row = db.get(UserSettings, user.id)
     if row is None:
         raise HTTPException(status_code=400, detail="RodiumAi API key is required")

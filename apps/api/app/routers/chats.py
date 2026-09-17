@@ -1227,11 +1227,8 @@ async def confirm_plan(
     # the case the Resume button exists for, so it has to be resumable too.
     if run.status not in ("awaiting_plan_confirm", "error", "partial"):
         raise HTTPException(status_code=400, detail=t("run_invalid_state", locale))  # type: ignore[arg-type]
-    require_rodi_for_paid_capability(user, db)
-    # Called for its side effect: raises early if the account has no usable
-    # generation key, before we start mutating the run. This one stays eager:
-    # confirm-plan streams nothing of its own, it hands off to the worker, so
-    # there is no first frame to protect and a real HTTP status is more useful.
+    # Resolve eagerly before mutating the run so wallet/key failures remain real
+    # HTTP statuses; paid RODI enforcement is centralized in this resolver.
     await resolve_generation_auth(db, user)
 
     plan = body.plan if body.plan else (json.loads(run.plan_json) if run.plan_json else [])

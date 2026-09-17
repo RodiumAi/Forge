@@ -7,7 +7,7 @@ import { Icon } from "@/components/ui/icon";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 
 export type DomainDnsRecord = {
-  purpose: "routing" | "acm_validation" | string;
+  purpose: "ownership" | "routing" | "acm_validation" | string;
   type: string;
   name: string;
   full_name: string;
@@ -22,6 +22,7 @@ export type DomainState = {
   public_url: string | null;
   last_error: string | null;
   verified_at: string | null;
+  challenge_expires_at: string | null;
 };
 
 type Props = {
@@ -82,6 +83,11 @@ export function CustomDomainSection({ projectId, onOk, onError }: Props) {
         return t("domainErrReserved");
       case "hostname_taken":
         return t("domainErrTaken");
+      case "ownership_txt_missing":
+      case "ownership_proof_required":
+        return t("domainErrOwnershipTxt");
+      case "ownership_challenge_expired":
+        return t("domainErrChallengeExpired");
       case "routing_cname_missing":
         return t("domainErrRoutingCname");
       case "acm_cname_missing":
@@ -244,7 +250,11 @@ export function CustomDomainSection({ projectId, onOk, onError }: Props) {
                 {domain.dns_records.map((rec) => (
                   <div className="domain-dns-row" role="row" key={rec.purpose}>
                     <span className="domain-dns-purpose">
-                      {rec.purpose === "routing" ? t("domainDnsRouting") : t("domainDnsSsl")}
+                      {rec.purpose === "ownership"
+                        ? t("domainDnsOwnership")
+                        : rec.purpose === "routing"
+                          ? t("domainDnsRouting")
+                          : t("domainDnsSsl")}
                     </span>
                     <span>{rec.type}</span>
                     <span className="domain-dns-copy" title={rec.full_name}>

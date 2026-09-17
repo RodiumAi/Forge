@@ -263,6 +263,32 @@ class StoredObject(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class ProjectDomainClaim(Base):
+    """Short-lived ownership proof that does not reserve a hostname globally."""
+
+    __tablename__ = "project_domain_claims"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    hostname: Mapped[str] = mapped_column(String(253), index=True, nullable=False)
+    cname_target: Mapped[str] = mapped_column(String(253), nullable=False)
+    ownership_txt_name: Mapped[str] = mapped_column(String(300), nullable=False)
+    ownership_txt_value: Mapped[str] = mapped_column(String(300), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    __table_args__ = (UniqueConstraint("project_id", name="uq_project_domain_claims_project"),)
+
+
 class ProjectDomain(Base):
     """Custom domain attached to a project (1 primary domain max per project).
 
@@ -283,6 +309,10 @@ class ProjectDomain(Base):
     acm_validation_name: Mapped[str | None] = mapped_column(String(300), nullable=True)
     acm_validation_value: Mapped[str | None] = mapped_column(String(300), nullable=True)
     acm_certificate_arn: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    acm_idempotency_token: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    ownership_txt_name: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    ownership_txt_value: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    ownership_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

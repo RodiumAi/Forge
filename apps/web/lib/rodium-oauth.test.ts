@@ -17,28 +17,59 @@ import {
 } from "@/lib/rodium-oauth";
 
 describe("sanitizeReturnTo", () => {
+  const origin = "https://forge.rodiumai.io";
+
   beforeEach(() => {
-    vi.stubGlobal("window", { location: { origin: "https://forge.rodiumai.io" } });
+    vi.stubGlobal("window", { location: { origin } });
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
   });
 
-  it("keeps a relative same-origin path", () => {
-    expect(sanitizeReturnTo("/dashboard?tab=x#y")).toBe("/dashboard?tab=x#y");
+  it.each([
+    ["/dashboard?tab=x#y", "/dashboard?tab=x#y"],
+    ["settings?tab=generation", "/settings?tab=generation"],
+    ["?tab=generation", "/?tab=generation"],
+    ["#section", "/#section"],
+    ["/@evil.example", "/@evil.example"],
+  ])("keeps the legitimate relative URL %p", (value, expected) => {
+    expect(sanitizeReturnTo(value)).toBe(expected);
   });
 
-  it("keeps an absolute same-origin URL as a path", () => {
-    expect(sanitizeReturnTo("https://forge.rodiumai.io/settings?tab=generation")).toBe(
-      "/settings?tab=generation",
-    );
+  it.each([
+    ["https://forge.rodiumai.io/settings?tab=generation#api", "/settings?tab=generation#api"],
+    ["HTTPS://FORGE.RODIUMAI.IO/dashboard", "/dashboard"],
+    ["//forge.rodiumai.io/settings", "/settings"],
+    ["https://user:password@forge.rodiumai.io/profile", "/profile"],
+  ])("keeps the legitimate same-origin URL %p as a path", (value, expected) => {
+    expect(sanitizeReturnTo(value)).toBe(expected);
+  });
+
+  it("rejects a backslash already decoded by URLSearchParams", () => {
+    const decoded = new URLSearchParams("?next=/%5Cevil.com").get("next");
+    expect(decoded).toBe("/\\evil.com");
+    expect(sanitizeReturnTo(decoded)).toBeNull();
   });
 
   it.each([
     "https://evil.example/phish",
     "//evil.example",
     "http://forge.rodiumai.io.evil.example/",
+    "https://forge.rodiumai.io@evil.example/phish",
+    "https://forge.rodiumai.io\\@evil.example/phish",
+    "/\\evil.com",
+    "/%5Cevil.com",
+    "/%5cevil.com",
+    "/%255Cevil.com",
+    "/%25255Cevil.com",
+    "/%0Aevil.com",
+    "/%250Devil.com",
+    "/\u0000evil.com",
+    "/\u001fevil.com",
+    "/\u007fevil.com",
+    "\n/dashboard",
+    "/dashboard\t",
     "javascript:alert(1)",
     "  ",
     "",
@@ -46,6 +77,18 @@ describe("sanitizeReturnTo", () => {
     undefined,
   ])("rejects %p", (value) => {
     expect(sanitizeReturnTo(value)).toBeNull();
+  });
+
+  it.each([
+    "/dashboard?tab=x#y",
+    "settings?tab=generation",
+    "https://forge.rodiumai.io/profile",
+    "//forge.rodiumai.io/settings",
+    "/@evil.example",
+  ])("returns a destination that remains same-origin after final parsing: %p", (value) => {
+    const result = sanitizeReturnTo(value);
+    expect(result).not.toBeNull();
+    expect(new URL(result!, origin).origin).toBe(origin);
   });
 });
 

@@ -11,7 +11,6 @@ from app.config import get_settings
 from app.db import get_db
 from app.i18n import resolve_locale, t
 from app.models import Project, User
-from app.services.capabilities import require_rodi_for_paid_capability
 from app.services.filesystem import project_dir
 from app.services.llm import RodiumError, complete_chat
 from app.services.orchestration.images import generate_project_image
@@ -193,7 +192,6 @@ async def generate_seo_copy(
 ) -> SeoMetaOut:
     locale = resolve_locale(request)
     project = _owned(db, user, project_id, locale)
-    require_rodi_for_paid_capability(user, db)
     gen_auth = await resolve_generation_auth(db, user)
 
     lang = (body.locale if body else None) or locale
@@ -274,7 +272,6 @@ async def generate_seo_image(
 ) -> SeoAssetResponse:
     locale = resolve_locale(request)
     project = _owned(db, user, project_id, locale)
-    require_rodi_for_paid_capability(user, db)
     gen_auth = await resolve_generation_auth(db, user)
 
     current = read_seo_meta(str(project.id))
