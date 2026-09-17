@@ -24,6 +24,7 @@ from __future__ import annotations
 import asyncio
 import ipaddress
 import socket
+from collections.abc import Mapping
 from dataclasses import dataclass
 from urllib.parse import urlparse, urlunparse
 
@@ -225,14 +226,17 @@ async def httpx_get_pinned(
 def httpx_get_pinned_sync(
     client: httpx.Client,
     target: ValidatedTarget,
+    *,
+    headers: Mapping[str, str] | None = None,
 ) -> httpx.Response:
     """Sync counterpart of ``httpx_get_pinned`` (Playwright route fulfill)."""
-    headers = {"Host": target.host_header}
+    request_headers = {key: value for key, value in (headers or {}).items() if key.lower() != "host"}
+    request_headers["Host"] = target.host_header
     extensions: dict[str, str] = {}
     if target.scheme == "https":
         extensions["sni_hostname"] = target.host
     return client.get(
         target.pinned_url,
-        headers=headers,
+        headers=request_headers,
         extensions=extensions,
     )

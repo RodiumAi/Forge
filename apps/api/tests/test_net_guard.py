@@ -18,6 +18,7 @@ from app.services import attachments
 from app.services.net_guard import (
     BlockedURLError,
     ValidatedTarget,
+    httpx_get_pinned_sync,
     resolve_and_validate,
     validate_public_url,
 )
@@ -224,3 +225,30 @@ def test_fetch_url_https_sets_sni_hostname_extension(monkeypatch):
     monkeypatch.setattr(httpx.AsyncClient, "get", fake_get)
     assert asyncio.run(attachments._fetch_url("https://example.com/a.png")) is not None
     assert seen_ext[0] == {"sni_hostname": "example.com"}
+
+
+def test_sync_pinned_fetch_preserves_browser_headers_host_and_sni():
+    seen: dict = {}
+
+    class Client:
+        def get(self, url, **kwargs):
+            seen.update(url=str(url), **kwargs)
+            return httpx.Response(200, request=httpx.Request("GET", str(url)))
+
+    target = ValidatedTarget(
+        url="https://example.com/page",
+        scheme="https",
+        host="example.com",
+        port=443,
+        ip="93.184.216.34",
+    )
+    httpx_get_pinned_sync(
+        Client(),  # type: ignore[arg-type]
+        target,
+        headers={"cookie": "session=browser", "host": "attacker.invalid"},
+    )
+
+    assert seen["url"] == "https://93.184.216.34:443/page"
+    assert seen["headers"]["cookie"] == "session=browser"
+    assert seen["headers"]["Host"] == "example.com"
+    assert seen["extensions"] == {"sni_hostname": "example.com"}

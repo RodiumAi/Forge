@@ -45,6 +45,9 @@ THUMBNAIL_MAX_BYTES = 800_000
 MAX_PROJECTS_PER_USER = 50
 PROJECT_CREATION_LIMIT_PER_HOUR = 10
 PROJECT_CREATION_IP_LIMIT_PER_HOUR = 30
+SECURITY_REVIEW_LIMIT_PER_HOUR = 5
+SECURITY_REVIEW_USER_LIMIT_PER_HOUR = 10
+SECURITY_REVIEW_IP_LIMIT_PER_HOUR = 30
 # Minimal valid 1x1 JPEG (JFIF) used only as a size/type reference in tests.
 _JPEG_MAGIC = b"\xff\xd8\xff"
 
@@ -468,7 +471,27 @@ async def security_review_project(
 ) -> dict:
     """Optional Forge-style security review of generated site code (no auto-apply)."""
     locale = resolve_locale(request)
+    rate_limit.enforce(
+        request,
+        "security-review-user",
+        limit=SECURITY_REVIEW_USER_LIMIT_PER_HOUR,
+        window_seconds=3600,
+        subject=str(user.id),
+    )
     _owned_project(db, user, project_id, locale)
+    rate_limit.enforce(
+        request,
+        "security-review-ip",
+        limit=SECURITY_REVIEW_IP_LIMIT_PER_HOUR,
+        window_seconds=3600,
+    )
+    rate_limit.enforce(
+        request,
+        "security-review-project",
+        limit=SECURITY_REVIEW_LIMIT_PER_HOUR,
+        window_seconds=3600,
+        subject=str(project_id),
+    )
     from app.services.orchestration.security_review import run_security_review
     from app.services.rodium_generation import resolve_generation_auth
 

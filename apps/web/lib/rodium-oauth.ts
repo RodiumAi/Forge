@@ -27,18 +27,56 @@ export const OAUTH_POPUP_MESSAGE_TYPE = "forge-rodium-oauth";
 const POPUP_WIDTH = 520;
 const POPUP_HEIGHT = 680;
 
+const UNSAFE_RETURN_TO_CHARS = /[\\\u0000-\u001f\u007f]/;
+
+/**
+ * Reject URL parser differentials hidden behind one or more percent-encoding
+ * layers. A malformed encoding is rejected conservatively as well.
+ */
+function hasUnsafeReturnToChars(value: string): boolean {
+  let decoded = value;
+  const seen = new Set<string>();
+
+  while (!seen.has(decoded)) {
+    if (UNSAFE_RETURN_TO_CHARS.test(decoded)) return true;
+    seen.add(decoded);
+    try {
+      const next = decodeURIComponent(decoded);
+      if (next === decoded) return false;
+      decoded = next;
+    } catch {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 /** Only allow same-origin paths (open-redirect guard). */
 export function sanitizeReturnTo(value: string | undefined | null): string | null {
   if (!value) return null;
+  if (hasUnsafeReturnToChars(value)) return null;
   const trimmed = value.trim();
-  // Preferred form: relative path.
-  if (trimmed.startsWith("/") && !trimmed.startsWith("//")) return trimmed;
-  // Absolute same-origin (e.g. ChatErrorActions used to pass location.href) → path.
+  if (!trimmed) return null;
   if (typeof window === "undefined") return null;
+
   try {
-    const url = new URL(trimmed);
-    if (url.origin !== window.location.origin) return null;
-    return `${url.pathname}${url.search}${url.hash}` || "/";
+    const base = new URL(window.location.origin);
+    const resolved = new URL(trimmed, base);
+    if (resolved.origin !== base.origin) return null;
+
+    const destination = `${resolved.pathname}${resolved.search}${resolved.hash}` || "/";
+    if (hasUnsafeReturnToChars(destination)) return null;
+
+    // Reparse the exact string handed to location.assign. This catches values
+    // such as a reconstructed `//host/path` that acquire authority semantics.
+    const verified = new URL(destination, base);
+    if (verified.origin !== base.origin) return null;
+
+    const verifiedDestination =
+      `${verified.pathname}${verified.search}${verified.hash}` || "/";
+    if (hasUnsafeReturnToChars(verifiedDestination)) return null;
+    return verifiedDestination;
   } catch {
     return null;
   }

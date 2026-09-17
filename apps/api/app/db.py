@@ -231,6 +231,77 @@ def init_db() -> None:
         """,
         "CREATE UNIQUE INDEX IF NOT EXISTS uq_project_domains_hostname ON project_domains (hostname)",
         "CREATE UNIQUE INDEX IF NOT EXISTS uq_project_domains_project ON project_domains (project_id)",
+        "ALTER TABLE project_domains ADD COLUMN IF NOT EXISTS acm_idempotency_token VARCHAR(32)",
+        "ALTER TABLE project_domains ADD COLUMN IF NOT EXISTS ownership_txt_name VARCHAR(300)",
+        "ALTER TABLE project_domains ADD COLUMN IF NOT EXISTS ownership_txt_value VARCHAR(300)",
+        "ALTER TABLE project_domains ADD COLUMN IF NOT EXISTS ownership_verified_at TIMESTAMPTZ",
+        """
+        CREATE TABLE IF NOT EXISTS project_domain_claims (
+            id UUID PRIMARY KEY,
+            project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+            user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            hostname VARCHAR(253) NOT NULL,
+            cname_target VARCHAR(253) NOT NULL,
+            ownership_txt_name VARCHAR(300) NOT NULL,
+            ownership_txt_value VARCHAR(300) NOT NULL,
+            expires_at TIMESTAMPTZ NOT NULL,
+            last_error TEXT,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+        """,
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_project_domain_claims_project ON project_domain_claims (project_id)",
+        "CREATE INDEX IF NOT EXISTS ix_project_domain_claims_project_id ON project_domain_claims (project_id)",
+        "CREATE INDEX IF NOT EXISTS ix_project_domain_claims_user_id ON project_domain_claims (user_id)",
+        # Deliberately non-unique: unproven claims never reserve a hostname.
+        "CREATE INDEX IF NOT EXISTS ix_project_domain_claims_hostname ON project_domain_claims (hostname)",
+        """
+        CREATE TABLE IF NOT EXISTS forge_schema_migrations (
+            version VARCHAR(100) PRIMARY KEY,
+            applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+        """,
+        # One-time conversion. A transaction-scoped advisory lock prevents two
+        # API tasks starting together from both attempting the data migration.
+        # Future processing/pending rows are legitimate post-proof ACM states
+        # and must never be converted again on restart.
+        """
+        DO $$
+        BEGIN
+          PERFORM pg_advisory_xact_lock(hashtext('forge-domain-ownership-claims-v1'));
+          IF NOT EXISTS (
+            SELECT 1 FROM forge_schema_migrations
+            WHERE version = 'domain-ownership-claims-v1'
+          ) THEN
+            INSERT INTO project_domain_claims (
+                id, project_id, user_id, hostname, cname_target,
+                ownership_txt_name, ownership_txt_value, expires_at,
+                last_error, created_at, updated_at
+            )
+            SELECT
+                gen_random_uuid(), d.project_id, p.user_id, d.hostname, d.cname_target,
+                '_rodiumai-challenge.' || d.hostname,
+                'rodiumai-domain-verification=' ||
+                    replace(gen_random_uuid()::text, '-', '') ||
+                    replace(gen_random_uuid()::text, '-', ''),
+                now() + interval '24 hours',
+                'ownership_reverification_required', now(), now()
+            FROM project_domains d
+            JOIN projects p ON p.id = d.project_id
+            WHERE d.status <> 'validated'
+            ON CONFLICT (project_id) DO NOTHING;
+
+            DELETE FROM project_domains WHERE status <> 'validated';
+
+            UPDATE project_domains
+            SET ownership_verified_at = COALESCE(verified_at, created_at, now())
+            WHERE status = 'validated' AND ownership_verified_at IS NULL;
+
+            INSERT INTO forge_schema_migrations (version)
+            VALUES ('domain-ownership-claims-v1');
+          END IF;
+        END $$;
+        """,
     ]
     with engine.begin() as conn:
         for sql in statements:
