@@ -127,25 +127,67 @@ class TestPaidCapabilityGate:
         with pytest.raises(SitesError) as exc:
             capabilities.require_rodi_for_paid_capability(_user(), _db_returning(None))
         assert exc.value.status_code == 402
+        assert exc.value.code == "INSUFFICIENT_RODI"
 
-    def test_it_denies_when_the_wallet_cache_is_empty(self):
-        row = SimpleNamespace(rodium_wallet_json=None)
+    def test_it_denies_when_the_wallet_cache_is_empty_after_logout(self):
+        # Logout clears tokens + wallet; unknown without OAuth must stay fail-closed.
+        row = SimpleNamespace(
+            rodium_wallet_json=None,
+            rodium_access_token_encrypted=None,
+            rodium_refresh_token_encrypted=None,
+        )
         with pytest.raises(SitesError) as exc:
             capabilities.require_rodi_for_paid_capability(_user(), _db_returning(row))
         assert exc.value.status_code == 402
+        assert exc.value.code == "INSUFFICIENT_RODI"
+
+    def test_it_reports_syncing_when_oauth_tokens_exist_but_wallet_is_empty(self):
+        row = SimpleNamespace(
+            rodium_wallet_json=None,
+            rodium_access_token_encrypted="enc-access",
+            rodium_refresh_token_encrypted=None,
+        )
+        with pytest.raises(SitesError) as exc:
+            capabilities.require_rodi_for_paid_capability(_user(), _db_returning(row))
+        assert exc.value.status_code == 503
+        assert exc.value.code == "WALLET_SYNCING"
 
     def test_it_denies_on_a_zero_balance(self):
-        row = SimpleNamespace(rodium_wallet_json='{"balanceRodi": "0"}')
-        with pytest.raises(SitesError):
+        row = SimpleNamespace(
+            rodium_wallet_json='{"balanceRodi": "0"}',
+            rodium_access_token_encrypted="enc",
+            rodium_refresh_token_encrypted=None,
+        )
+        with pytest.raises(SitesError) as exc:
             capabilities.require_rodi_for_paid_capability(_user(), _db_returning(row))
+        assert exc.value.code == "INSUFFICIENT_RODI"
 
-    def test_it_denies_on_an_unreadable_cache(self):
-        row = SimpleNamespace(rodium_wallet_json="not-json")
-        with pytest.raises(SitesError):
+    def test_it_denies_on_an_unreadable_cache_without_tokens(self):
+        row = SimpleNamespace(
+            rodium_wallet_json="not-json",
+            rodium_access_token_encrypted=None,
+            rodium_refresh_token_encrypted=None,
+        )
+        with pytest.raises(SitesError) as exc:
             capabilities.require_rodi_for_paid_capability(_user(), _db_returning(row))
+        assert exc.value.code == "INSUFFICIENT_RODI"
+
+    def test_it_reports_syncing_on_unreadable_cache_with_tokens(self):
+        row = SimpleNamespace(
+            rodium_wallet_json="not-json",
+            rodium_access_token_encrypted="enc",
+            rodium_refresh_token_encrypted=None,
+        )
+        with pytest.raises(SitesError) as exc:
+            capabilities.require_rodi_for_paid_capability(_user(), _db_returning(row))
+        assert exc.value.code == "WALLET_SYNCING"
 
     def test_it_allows_a_positive_balance(self):
-        row = SimpleNamespace(rodium_wallet_json='{"balanceRodi": "12.5"}')
+        row = SimpleNamespace(
+            rodium_wallet_json='{"balanceRodi": "12.5"}',
+            rodium_access_token_encrypted=None,
+            rodium_refresh_token_encrypted=None,
+        )
         # No exception is the contract.
         capabilities.require_rodi_for_paid_capability(_user(), _db_returning(row))
 

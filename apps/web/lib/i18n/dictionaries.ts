@@ -214,6 +214,8 @@ export const dictionaries = {
     // happened and what the button next to it will do.
     streamErrorQuota:
       "Your RODI balance is empty. Top up to keep generating — your project is saved.",
+    streamErrorWalletSync:
+      "Your RODI balance is still syncing from RodiumAi. Wait a moment, then retry.",
     streamErrorAuth:
       "Your RodiumAi connection has expired. Reconnect to keep generating.",
     streamErrorInvalidKey:
@@ -374,6 +376,7 @@ export const dictionaries = {
     rodiumGenerateKeyHint: "Create a key on your RodiumAi account and use it in Forge.",
     rodiumKeyGenerated: "API key created and selected.",
     balanceRodi: "Main balance",
+    walletSyncingShort: "Syncing…",
     rechargeRodi: "Top up RODI",
     providedRodi: "Provided credits",
     walletProvidedShort: "provided",
@@ -897,6 +900,8 @@ export const dictionaries = {
       "Session RodiumAi expirée. Déconnectez-vous, reconnectez-vous avec RodiumAi, puis réessayez.",
     streamErrorQuota:
       "Votre solde RODI est épuisé. Rechargez pour continuer à générer — votre projet est sauvegardé.",
+    streamErrorWalletSync:
+      "Votre solde RODI se synchronise encore depuis RodiumAi. Patientez un instant puis réessayez.",
     streamErrorAuth:
       "Votre connexion RodiumAi a expiré. Reconnectez-vous pour continuer à générer.",
     streamErrorInvalidKey:
@@ -1057,6 +1062,7 @@ export const dictionaries = {
     rodiumGenerateKeyHint: "Créez une clé sur votre compte RodiumAi et utilisez-la dans Forge.",
     rodiumKeyGenerated: "Clé API créée et sélectionnée.",
     balanceRodi: "Solde principal",
+    walletSyncingShort: "Sync…",
     rechargeRodi: "Recharger RODI",
     providedRodi: "Crédits fournis",
     walletProvidedShort: "fournis",

@@ -9,36 +9,55 @@ from app.config import get_settings
 from app.models import SiteUsageDay, StoredObject, User, UserSettings
 
 
-def cached_wallet_balance(user: User, db: Session) -> float:
-    row = db.get(UserSettings, user.id)
-    if row is None or not row.rodium_wallet_json:
-        return 0.0
+def _parse_wallet_balance(raw_json: str | None) -> float | None:
+    """Return balance when the cache is readable, else None (unknown)."""
+    if not raw_json:
+        return None
     try:
-        raw = json.loads(row.rodium_wallet_json)
+        raw = json.loads(raw_json)
     except Exception:
-        return 0.0
+        return None
     if not isinstance(raw, dict):
+        return None
+    value = raw.get("balanceRodi") or raw.get("balance_rodi")
+    if value is None:
         return 0.0
-    value = raw.get("balanceRodi") or raw.get("balance_rodi") or 0
     try:
         return float(value)
     except (TypeError, ValueError):
+        return None
+
+
+def cached_wallet_balance(user: User, db: Session) -> float:
+    row = db.get(UserSettings, user.id)
+    if row is None:
         return 0.0
+    parsed = _parse_wallet_balance(row.rodium_wallet_json)
+    return 0.0 if parsed is None else parsed
+
+
+def _has_rodium_oauth_tokens(row: UserSettings | None) -> bool:
+    if row is None:
+        return False
+    return bool(row.rodium_access_token_encrypted or row.rodium_refresh_token_encrypted)
 
 
 def require_rodi_for_paid_capability(user: User, db: Session) -> None:
     """Gate AI generation on a positive RODI wallet balance.
 
-    Fail closed: only a balance we can read and that is above zero clears the
-    gate. A missing or unreadable cache used to return silently — treating
-    "unknown" as "allowed" — which let a user empty the cache (logout does
-    exactly that) and then generate unmetered. Treat "unknown" as "no funds"
-    instead; the balance is refreshed live by GET /auth/rodium/account.
+    Fail closed on a known-zero or missing cache after logout (tokens cleared).
+    After login the wallet is hydrated in the background — an empty cache with
+    live OAuth tokens means "still syncing", not "no funds", so we return
+    WALLET_SYNCING (retry) instead of a false INSUFFICIENT_RODI.
     """
-    from app.errors import insufficient_rodi
+    from app.errors import insufficient_rodi, wallet_syncing
 
-    if cached_wallet_balance(user, db) > 0:
+    row = db.get(UserSettings, user.id)
+    parsed = _parse_wallet_balance(row.rodium_wallet_json if row else None)
+    if parsed is not None and parsed > 0:
         return
+    if parsed is None and _has_rodium_oauth_tokens(row):
+        raise wallet_syncing()
     raise insufficient_rodi("Insufficient RODI credits. Recharge your RodiumAi wallet to keep generating.")
 
 

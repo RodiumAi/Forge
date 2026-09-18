@@ -37,11 +37,16 @@ def test_callback_critical_path_skips_keys_and_wallet(monkeypatch: pytest.Monkey
         calls.append("exchange")
         assert code == "auth-code"
         assert code_verifier == "verifier"
-        return {"access_token": "access-tok", "refresh_token": "refresh-tok", "expires_in": 3600}
+        return {
+            "access_token": "access-tok",
+            "refresh_token": "refresh-tok",
+            "expires_in": 3600,
+            # No id_token → forces userinfo fallback on the critical path.
+        }
 
-    async def fake_userinfo(access_token: str):
+    async def fake_resolve(tokens: dict):
         calls.append("userinfo")
-        assert access_token == "access-tok"
+        assert tokens["access_token"] == "access-tok"
         return {
             "sub": "rodium-sub-1",
             "email": "forge-user@example.com",
@@ -59,7 +64,7 @@ def test_callback_critical_path_skips_keys_and_wallet(monkeypatch: pytest.Monkey
 
     monkeypatch.setattr(auth_mod, "parse_oauth_state", lambda _state, _binding=None: "verifier")
     monkeypatch.setattr(auth_mod, "exchange_code", fake_exchange)
-    monkeypatch.setattr(auth_mod, "fetch_userinfo", fake_userinfo)
+    monkeypatch.setattr(auth_mod, "resolve_rodium_profile", fake_resolve)
     monkeypatch.setattr(auth_mod, "fetch_api_keys", fake_keys)
     monkeypatch.setattr(auth_mod, "fetch_wallet", fake_wallet)
     monkeypatch.setattr(auth_mod, "token_for_user", lambda _user, **_kwargs: "forge-jwt")

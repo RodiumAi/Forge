@@ -162,7 +162,8 @@ def _run_callback(
     async def fake_exchange(*, code: str, code_verifier: str):
         return {"access_token": "access-tok", "refresh_token": "r", "expires_in": 3600}
 
-    async def fake_userinfo(access_token: str):
+    async def fake_resolve(tokens: dict):
+        assert tokens["access_token"] == "access-tok"
         return {
             "sub": sub,
             "email": email,
@@ -172,7 +173,7 @@ def _run_callback(
 
     monkeypatch.setattr(auth_mod, "parse_oauth_state", lambda _s, _b=None: "verifier")
     monkeypatch.setattr(auth_mod, "exchange_code", fake_exchange)
-    monkeypatch.setattr(auth_mod, "fetch_userinfo", fake_userinfo)
+    monkeypatch.setattr(auth_mod, "resolve_rodium_profile", fake_resolve)
     monkeypatch.setattr(auth_mod, "token_for_user", lambda _u, **_kwargs: "forge-jwt")
     monkeypatch.setattr(auth_mod, "_store_oauth_tokens", lambda _r, _t: None)
     monkeypatch.setattr(auth_mod, "_get_or_create_settings", lambda _d, _u: db.get(UserSettings, None))

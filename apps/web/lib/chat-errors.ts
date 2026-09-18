@@ -41,6 +41,7 @@ export type ChatErrorAction =
 export type ChatErrorLabelKey =
   | "streamError"
   | "streamErrorQuota"
+  | "streamErrorWalletSync"
   | "streamErrorAuth"
   | "streamErrorInvalidKey"
   | "streamErrorTimeout"
@@ -69,6 +70,7 @@ export type ChatErrorInfo = {
 const BY_CODE: Record<string, { labelKey: ChatErrorLabelKey; action: ChatErrorAction }> = {
   // ── No credit ────────────────────────────────────────────────────────────
   INSUFFICIENT_RODI: { labelKey: "streamErrorQuota", action: { kind: "recharge" } },
+  WALLET_SYNCING: { labelKey: "streamErrorWalletSync", action: { kind: "retry" } },
   quota: { labelKey: "streamErrorQuota", action: { kind: "recharge" } },
 
   // ── The RodiumAI link ────────────────────────────────────────────────────
