@@ -32,6 +32,13 @@ def insufficient_rodi(message: str = "Insufficient RODI credits.") -> SitesError
     return SitesError(402, "INSUFFICIENT_RODI", message)
 
 
+def wallet_syncing(
+    message: str = "Your RODI balance is still syncing. Retry in a moment.",
+) -> SitesError:
+    """Wallet cache not warm yet after login — distinct from a known-zero balance."""
+    return SitesError(503, "WALLET_SYNCING", message)
+
+
 def quota_exceeded(code: str, message: str, extra: dict | None = None) -> SitesError:
     return SitesError(429, code, message, extra)
 

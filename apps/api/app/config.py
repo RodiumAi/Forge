@@ -268,6 +268,10 @@ class Settings(BaseSettings):
         return self._rodium_oidc_server_base + "/api/v1/oauth/userinfo"
 
     @property
+    def rodium_oidc_jwks_url(self) -> str:
+        return self._rodium_oidc_server_base + "/api/v1/oauth/jwks"
+
+    @property
     def rodium_oidc_api_keys_url(self) -> str:
         return self._rodium_oidc_server_base + "/api/v1/oauth/api-keys"
 

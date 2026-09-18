@@ -11,13 +11,34 @@ from urllib.parse import urlencode
 
 import httpx
 import jwt
-from jwt import InvalidTokenError
+from jwt import InvalidTokenError, PyJWKClient
 
 from app.config import get_settings
 
 # Bound Nest round-trips so login cannot sit open until a proxy kills the socket
 # (browser then shows opaque "Network request failed").
 NEST_HTTP_TIMEOUT = httpx.Timeout(12.0, connect=5.0)
+
+# JWKS client is process-wide so cold login pays one Nest fetch, not every call.
+_jwks_client: PyJWKClient | None = None
+_jwks_client_url: str | None = None
+
+
+def _reset_jwks_client_for_tests() -> None:
+    global _jwks_client, _jwks_client_url
+    _jwks_client = None
+    _jwks_client_url = None
+
+
+def _jwks_client_for_settings() -> PyJWKClient:
+    global _jwks_client, _jwks_client_url
+    settings = get_settings()
+    url = settings.rodium_oidc_jwks_url
+    if _jwks_client is None or _jwks_client_url != url:
+        # cache_keys + lifespan avoid re-fetching Nest JWKS on every login.
+        _jwks_client = PyJWKClient(url, cache_keys=True, lifespan=3600)
+        _jwks_client_url = url
+    return _jwks_client
 
 
 class RodiumOidcError(Exception):
@@ -184,6 +205,82 @@ async def fetch_userinfo(access_token: str) -> dict[str, Any]:
     if not data.get("sub"):
         raise RodiumOidcError("RodiumAi userinfo missing sub")
     return data
+
+
+def claims_from_id_token(id_token: str | None) -> dict[str, Any] | None:
+    """Read profile claims from the token-endpoint id_token when present.
+
+    Skips a second Nest round-trip (/userinfo) on the login critical path.
+    The JWT signature is verified against Nest JWKS (RS256). On any failure we
+    return None so the caller falls back to /userinfo — never accept an
+    unverified id_token.
+    """
+    if not id_token or not isinstance(id_token, str):
+        return None
+    settings = get_settings()
+    if not settings.rodium_oidc_client_id:
+        return None
+
+    try:
+        signing_key = _jwks_client_for_settings().get_signing_key_from_jwt(id_token)
+        payload = jwt.decode(
+            id_token,
+            signing_key.key,
+            algorithms=["RS256"],
+            audience=settings.rodium_oidc_client_id,
+            options={
+                "require": ["exp", "sub", "iss", "aud"],
+                "verify_iss": False,  # checked against public + internal issuers below
+            },
+        )
+    except Exception:
+        return None
+
+    if not isinstance(payload, dict):
+        return None
+
+    issuers = {
+        settings.rodium_oidc_issuer.rstrip("/"),
+        (settings.rodium_oidc_internal_issuer or "").rstrip("/"),
+        settings._rodium_oidc_server_base.rstrip("/"),
+    }
+    issuers.discard("")
+    raw_iss = str(payload.get("iss") or "").rstrip("/")
+    if raw_iss not in issuers:
+        return None
+
+    sub = payload.get("sub")
+    if not isinstance(sub, str) or not sub:
+        return None
+
+    email_verified = payload.get("email_verified")
+    if email_verified is not True:
+        # Fall through to userinfo rather than refusing here — Nest may only
+        # put the flag on the userinfo response in older deployments.
+        return None
+
+    out: dict[str, Any] = {
+        "sub": sub,
+        "email_verified": True,
+    }
+    if isinstance(payload.get("email"), str):
+        out["email"] = payload["email"]
+    if isinstance(payload.get("name"), str):
+        out["name"] = payload["name"]
+    if isinstance(payload.get("picture"), str):
+        out["picture"] = payload["picture"]
+    return out
+
+
+async def resolve_rodium_profile(tokens: dict[str, Any]) -> dict[str, Any]:
+    """Prefer id_token claims; fall back to /userinfo."""
+    from_id = claims_from_id_token(tokens.get("id_token") if isinstance(tokens, dict) else None)
+    if from_id is not None:
+        return from_id
+    access = tokens.get("access_token") if isinstance(tokens, dict) else None
+    if not isinstance(access, str) or not access:
+        raise RodiumOidcError("RodiumAi token response missing access_token")
+    return await fetch_userinfo(access)
 
 
 async def fetch_api_keys(access_token: str) -> list[dict[str, Any]]:

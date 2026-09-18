@@ -63,10 +63,10 @@ from app.services.rodium_oidc import (
     create_oauth_state,
     exchange_code,
     fetch_api_keys,
-    fetch_userinfo,
     fetch_wallet,
     generate_pkce,
     parse_oauth_state,
+    resolve_rodium_profile,
     revoke_token,
 )
 
@@ -162,8 +162,10 @@ async def _ensure_default_generation_key(
 async def _hydrate_rodium_account_cache(user_id: uuid.UUID, access_token: str) -> None:
     """Fetch Nest keys/wallet after login JWT is already returned to the browser."""
     try:
-        keys = await fetch_api_keys(access_token)
-        wallet = await fetch_wallet(access_token)
+        keys, wallet = await asyncio.gather(
+            fetch_api_keys(access_token),
+            fetch_wallet(access_token),
+        )
     except Exception:
         logger.warning(
             "rodium.callback.hydrate_nest_failed",
@@ -255,13 +257,14 @@ async def rodium_oauth_callback(
     db: Session = Depends(get_db),
 ) -> TokenResponse:
     locale = resolve_locale(request)
-    # Critical path only: code exchange + userinfo. Keys/wallet hydrate in
-    # background so a slow Nest/ALB cut never surfaces as "Network request failed".
+    # Critical path only: code exchange + profile (id_token preferred over
+    # /userinfo). Keys/wallet hydrate in background so a slow Nest/ALB cut
+    # never surfaces as "Network request failed".
     try:
         verifier = parse_oauth_state(body.state, body.state_binding)
         tokens = await exchange_code(code=body.code, code_verifier=verifier)
         access = tokens["access_token"]
-        info = await fetch_userinfo(access)
+        info = await resolve_rodium_profile(tokens)
     except RodiumOidcError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -327,9 +330,20 @@ async def rodium_oauth_callback(
     return TokenResponse(access_token=token_for_user(user, locale=locale), email_verified=True)
 
 
+async def _fetch_nest_keys_and_wallet(access: str) -> tuple[list, dict]:
+    live_keys, live_wallet = await asyncio.gather(
+        fetch_api_keys(access),
+        fetch_wallet(access),
+    )
+    keys = live_keys if isinstance(live_keys, list) else []
+    wallet = live_wallet if isinstance(live_wallet, dict) else {}
+    return keys, wallet
+
+
 @router.get("/rodium/account", response_model=RodiumAccountOut)
 async def rodium_account(
     request: Request,
+    background_tasks: BackgroundTasks,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> RodiumAccountOut:
@@ -355,19 +369,53 @@ async def rodium_account(
         except Exception:
             wallet = {}
 
-    # fresh=1: longer timeout after billing events (chat/generation) so the UI
-    # does not stick on the login-time balance.
     fresh = (request.query_params.get("fresh") or "").lower() in ("1", "true", "yes")
-    timeout_s = 8.0 if fresh else 2.5
+
+    def _account_out() -> RodiumAccountOut:
+        return RodiumAccountOut(
+            linked=True,
+            rodium_sub=user.rodium_sub,
+            email=user.email,
+            name=user.name,
+            avatar_url=user.avatar_url,
+            wallet=_wallet_out(wallet if isinstance(wallet, dict) else None),
+            api_keys=_api_keys_out(keys if isinstance(keys, list) else []),
+            selected_api_key_id=row.selected_rodium_api_key_id,
+            has_generation_key=has_generation_key(user, row),
+            generation_key_hint=row.rodium_api_key_hint,
+            can_generate_key=rodium_provisioning.enabled(),
+        )
+
+    # Cached wallet: return immediately. Optionally refresh Nest in background
+    # (fresh=1 after generation) so the UI never sits on an 8s Nest timeout.
+    if wallet:
+        if fresh:
+            try:
+                if row.rodium_access_token_encrypted:
+                    access_hint = decrypt_secret(row.rodium_access_token_encrypted)
+                    if access_hint:
+                        background_tasks.add_task(
+                            _hydrate_rodium_account_cache, user.id, access_hint
+                        )
+            except Exception:
+                pass
+        if not has_generation_key(user, row) and keys:
+            await _ensure_default_generation_key(
+                db, user, row, keys if isinstance(keys, list) else []
+            )
+        return _account_out()
+
+    # Cache miss (typical right after login before background hydrate finishes):
+    # bounded Nest pull. Keep this short — hanging for 8s made login feel broken.
+    timeout_s = 3.0 if fresh else 2.5
     live_ok = False
 
     try:
         async with asyncio.timeout(timeout_s):
             access = await _ensure_rodium_access_token(db, user)
-            live_keys = await fetch_api_keys(access)
-            live_wallet = await fetch_wallet(access)
-            keys = live_keys if isinstance(live_keys, list) else keys
-            wallet = live_wallet if isinstance(live_wallet, dict) else wallet
+            live_keys, live_wallet = await _fetch_nest_keys_and_wallet(access)
+            keys = live_keys if live_keys else keys
+            wallet = live_wallet if live_wallet else wallet
             row.rodium_api_keys_json = json.dumps(keys)
             row.rodium_wallet_json = json.dumps(wallet)
             db.commit()
@@ -379,10 +427,9 @@ async def rodium_account(
             access = await _reissue_rodium_tokens(db, user)
             if access:
                 async with asyncio.timeout(timeout_s):
-                    live_keys = await fetch_api_keys(access)
-                    live_wallet = await fetch_wallet(access)
-                    keys = live_keys if isinstance(live_keys, list) else keys
-                    wallet = live_wallet if isinstance(live_wallet, dict) else wallet
+                    live_keys, live_wallet = await _fetch_nest_keys_and_wallet(access)
+                    keys = live_keys if live_keys else keys
+                    wallet = live_wallet if live_wallet else wallet
                     row.rodium_api_keys_json = json.dumps(keys)
                     row.rodium_wallet_json = json.dumps(wallet)
                     db.commit()
@@ -408,19 +455,7 @@ async def rodium_account(
     if not has_generation_key(user, row) and keys:
         await _ensure_default_generation_key(db, user, row, keys if isinstance(keys, list) else [])
 
-    return RodiumAccountOut(
-        linked=True,
-        rodium_sub=user.rodium_sub,
-        email=user.email,
-        name=user.name,
-        avatar_url=user.avatar_url,
-        wallet=_wallet_out(wallet if isinstance(wallet, dict) else None),
-        api_keys=_api_keys_out(keys if isinstance(keys, list) else []),
-        selected_api_key_id=row.selected_rodium_api_key_id,
-        has_generation_key=has_generation_key(user, row),
-        generation_key_hint=row.rodium_api_key_hint,
-        can_generate_key=rodium_provisioning.enabled(),
-    )
+    return _account_out()
 
 
 @router.post("/rodium/ensure-generation-key", response_model=RodiumSelectKeyResponse)
@@ -964,28 +999,9 @@ def issue_media_token(user: User = Depends(get_current_user)) -> MediaTokenRespo
 
 @router.get("/me", response_model=UserOut)
 async def me(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> UserOut:
-    user_id = user.id
-    if user.rodium_sub:
-        try:
-            async with asyncio.timeout(1.5):
-                access = await _ensure_rodium_access_token(db, user)
-                info = await fetch_userinfo(access)
-                name = info.get("name") if isinstance(info.get("name"), str) else None
-                picture = _picture_from_userinfo(info)
-                # Re-bind after token refresh commits (avoid DetachedInstanceError).
-                fresh = db.get(User, user_id) or user
-                dirty = False
-                if name and name != fresh.name:
-                    fresh.name = name
-                    dirty = True
-                if picture and picture != fresh.avatar_url:
-                    fresh.avatar_url = picture
-                    dirty = True
-                if dirty:
-                    db.commit()
-                user = db.get(User, user_id) or fresh
-        except Exception:
-            user = db.get(User, user_id) or user
+    # Local profile only. Nest userinfo used to block login for ~1.5s (timeout)
+    # on every ensureSession; name/avatar are already refreshed on OAuth callback.
+    _ = db  # keep signature stable for Depends wiring / tests
     return _user_out(user)
 
 

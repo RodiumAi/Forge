@@ -138,13 +138,14 @@ export function RodiumWalletBadge({
 
   if (!hasWallet) {
     return (
-      <Link
-        href="/settings?tab=generation"
+      <div
         className={`rodium-wallet-connect${compact || collapsed ? " rodium-wallet-connect-compact" : ""}`}
-        title={t("connectRodiumAiHint")}
+        title={t("streamErrorWalletSync")}
+        aria-busy="true"
+        aria-label={t("streamErrorWalletSync")}
       >
-        {collapsed ? null : compact ? "RODI" : t("connectRodiumAi")}
-      </Link>
+        {collapsed ? null : compact ? "…" : t("walletSyncingShort")}
+      </div>
     );
   }
 

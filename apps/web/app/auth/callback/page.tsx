@@ -45,16 +45,18 @@ function CallbackInner() {
       method: "POST",
       body: JSON.stringify({ code, state, state_binding: stateBinding }),
     })
-      .then(async (data) => {
+      .then((data) => {
         if (cancelled) return;
         setToken(data.access_token);
-        try {
-          const { ensureSession } = await import("@/lib/session-cache");
-          await ensureSession({ force: true });
-        } catch {
-          // Session hydrate is best-effort; dashboard will refresh again.
-        }
-        if (cancelled) return;
+        // Do not await Nest-backed session hydrate here — force=true used to
+        // block the redirect for ~8–10s (/account?fresh=1 + /me). Dashboard
+        // badges refresh on mount; generation gates treat an empty wallet cache
+        // as "syncing" rather than a false INSUFFICIENT_RODI.
+        void import("@/lib/session-cache")
+          .then(({ ensureSession }) => ensureSession())
+          .catch(() => {
+            /* best-effort; dashboard will refresh again */
+          });
         if (asPopup) {
           finishOAuthPopup();
           return;
