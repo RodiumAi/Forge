@@ -475,7 +475,9 @@ async def upload_project_image(
     locale = resolve_locale(request)
     project = _owned(db, user, project_id, locale)
     filename = (file.filename or "image.png").replace("\\", "/").split("/")[-1]
-    body = await file.read()
+    # Read one byte past the limit: enough to detect "too large" without ever
+    # buffering an attacker-sized body in memory.
+    body = await file.read(8 * 1024 * 1024 + 1)
     if len(body) > 8 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="Image too large (max 8 MB)")
     # Validate the actual bytes, never the extension or the client-declared

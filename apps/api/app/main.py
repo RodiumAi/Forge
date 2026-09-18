@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import get_settings
 from app.db import init_db
+from app.middleware import MAX_BODY_BYTES, MaxBodySizeMiddleware
 from app.routers import (
     auth,
     chats,
@@ -108,6 +109,10 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(title="Forge Web API", version="0.1.0", lifespan=lifespan)
+
+# Added before CORS so it sits inside it: a 413 then still carries the CORS
+# headers and the browser can read the error instead of reporting a CORS failure.
+app.add_middleware(MaxBodySizeMiddleware, max_bytes=MAX_BODY_BYTES)
 
 app.add_middleware(
     CORSMiddleware,
