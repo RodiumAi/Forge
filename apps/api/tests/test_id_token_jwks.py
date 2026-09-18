@@ -132,7 +132,5 @@ def test_resolve_falls_back_to_userinfo_when_id_token_invalid(monkeypatch):
 
     import asyncio
 
-    info = asyncio.run(
-        oidc.resolve_rodium_profile({"access_token": "access-tok", "id_token": "bad"})
-    )
+    info = asyncio.run(oidc.resolve_rodium_profile({"access_token": "access-tok", "id_token": "bad"}))
     assert info["sub"] == "u"

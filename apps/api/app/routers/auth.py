@@ -394,15 +394,11 @@ async def rodium_account(
                 if row.rodium_access_token_encrypted:
                     access_hint = decrypt_secret(row.rodium_access_token_encrypted)
                     if access_hint:
-                        background_tasks.add_task(
-                            _hydrate_rodium_account_cache, user.id, access_hint
-                        )
+                        background_tasks.add_task(_hydrate_rodium_account_cache, user.id, access_hint)
             except Exception:
                 pass
         if not has_generation_key(user, row) and keys:
-            await _ensure_default_generation_key(
-                db, user, row, keys if isinstance(keys, list) else []
-            )
+            await _ensure_default_generation_key(db, user, row, keys if isinstance(keys, list) else [])
         return _account_out()
 
     # Cache miss (typical right after login before background hydrate finishes):

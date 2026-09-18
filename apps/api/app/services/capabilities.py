@@ -58,9 +58,7 @@ def require_rodi_for_paid_capability(user: User, db: Session) -> None:
         return
     if parsed is None and _has_rodium_oauth_tokens(row):
         raise wallet_syncing()
-    raise insufficient_rodi(
-        "Insufficient RODI credits. Recharge your RodiumAi wallet to keep generating."
-    )
+    raise insufficient_rodi("Insufficient RODI credits. Recharge your RodiumAi wallet to keep generating.")
 
 
 def usage_row(db: Session, user: User, project_id) -> SiteUsageDay:
