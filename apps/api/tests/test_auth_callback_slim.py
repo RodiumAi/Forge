@@ -16,7 +16,7 @@ from app.services.rodium_oidc import NEST_HTTP_TIMEOUT
 
 def test_nest_http_timeout_is_bounded() -> None:
     assert NEST_HTTP_TIMEOUT.connect == 5.0
-    assert float(NEST_HTTP_TIMEOUT.read) == 12.0
+    assert float(NEST_HTTP_TIMEOUT.read) == 20.0
 
 
 class _FakeQuery:

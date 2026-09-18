@@ -17,7 +17,8 @@ from app.config import get_settings
 
 # Bound Nest round-trips so login cannot sit open until a proxy kills the socket
 # (browser then shows opaque "Network request failed").
-NEST_HTTP_TIMEOUT = httpx.Timeout(12.0, connect=5.0)
+# Token exchange alone can take ~10–13s on a cold Nest task; keep headroom above that.
+NEST_HTTP_TIMEOUT = httpx.Timeout(20.0, connect=5.0)
 
 # JWKS client is process-wide so cold login pays one Nest fetch, not every call.
 _jwks_client: PyJWKClient | None = None
@@ -172,12 +173,17 @@ async def refresh_access_token(refresh_token: str) -> dict[str, Any]:
 
 async def _token_request(data: dict[str, str]) -> dict[str, Any]:
     settings = get_settings()
-    async with httpx.AsyncClient(timeout=NEST_HTTP_TIMEOUT) as client:
-        response = await client.post(
-            settings.rodium_oidc_token_url,
-            data=data,
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
-        )
+    try:
+        async with httpx.AsyncClient(timeout=NEST_HTTP_TIMEOUT) as client:
+            response = await client.post(
+                settings.rodium_oidc_token_url,
+                data=data,
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+            )
+    except httpx.TimeoutException as exc:
+        raise RodiumOidcError("RodiumAi token endpoint timed out") from exc
+    except httpx.HTTPError as exc:
+        raise RodiumOidcError(f"RodiumAi token endpoint unreachable: {exc}") from exc
     if response.status_code >= 400:
         raise RodiumOidcError(
             f"RodiumAi token error ({response.status_code}): {response.text[:400]}",
@@ -191,11 +197,16 @@ async def _token_request(data: dict[str, str]) -> dict[str, Any]:
 
 async def fetch_userinfo(access_token: str) -> dict[str, Any]:
     settings = get_settings()
-    async with httpx.AsyncClient(timeout=NEST_HTTP_TIMEOUT) as client:
-        response = await client.get(
-            settings.rodium_oidc_userinfo_url,
-            headers={"Authorization": f"Bearer {access_token}"},
-        )
+    try:
+        async with httpx.AsyncClient(timeout=NEST_HTTP_TIMEOUT) as client:
+            response = await client.get(
+                settings.rodium_oidc_userinfo_url,
+                headers={"Authorization": f"Bearer {access_token}"},
+            )
+    except httpx.TimeoutException as exc:
+        raise RodiumOidcError("RodiumAi userinfo timed out") from exc
+    except httpx.HTTPError as exc:
+        raise RodiumOidcError(f"RodiumAi userinfo unreachable: {exc}") from exc
     if response.status_code >= 400:
         raise RodiumOidcError(
             f"RodiumAi userinfo error ({response.status_code}): {response.text[:400]}",
