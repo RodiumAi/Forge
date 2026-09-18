@@ -33,6 +33,37 @@ _IMAGE_EXT = (
     ".bmp",
     ".avif",
 )
+# Non-page assets / third-party embeds must not trigger vision site cloning.
+_ASSET_EXT = (
+    ".js",
+    ".mjs",
+    ".cjs",
+    ".css",
+    ".map",
+    ".json",
+    ".xml",
+    ".txt",
+    ".wasm",
+)
+_EMBED_PATH_RE = re.compile(
+    r"/(?:embed|widgets?|js(?:/|$)|sdk(?:/|$)|static(?:/|$)|assets(?:/|$))",
+    re.I,
+)
+# Pasted iframe/script widgets (Tally, Typeform, Calendly, …) — integrate, don't screenshot.
+_EMBED_SNIPPET_RE = re.compile(
+    r"<\s*iframe\b[^>]*(?:src|data-[\w-]*src)\s*=\s*[\"']https?://"
+    r"|<\s*script\b[^>]*\bsrc\s*=\s*[\"']https?://[^\"']*"
+    r"(?:embed|widget|sdk|js\.|\.js(?:\?|#|$))",
+    re.I,
+)
+_AUTO_URL_CAPTURE_FILES_RE = re.compile(
+    r"\n*\[(?:Files|Fichiers):\s*[^\]]*\burl-capture-[^\]]*\]\s*",
+    re.I,
+)
+_AUTO_URL_CAPTURE_REF_RE = re.compile(
+    r"\n*\[(?:Reference screenshot|Capture de référence):\s*url-capture-[^\]]*\]\s*",
+    re.I,
+)
 _VIEWPORTS = (
     ("desktop", 1440, 900),
     ("mobile", 390, 844),
@@ -52,14 +83,37 @@ _RESPONSE_HEADERS_TO_DROP = {
 }
 
 
+def is_capturable_site_url(url: str) -> bool:
+    """True when the URL looks like a browsable page worth screenshotting."""
+    lower = (url or "").lower()
+    path = urlparse(lower).path or "/"
+    bare_path = path.split("?", 1)[0]
+    if any(bare_path.endswith(ext) for ext in _IMAGE_EXT):
+        return False
+    if any(bare_path.endswith(ext) for ext in _ASSET_EXT):
+        return False
+    return not _EMBED_PATH_RE.search(path)
+
+
+def looks_like_third_party_embed_snippet(text: str) -> bool:
+    """True when the user pasted an iframe/script embed to integrate, not clone."""
+    return bool(_EMBED_SNIPPET_RE.search(text or ""))
+
+
+def strip_auto_url_capture_markers(text: str) -> str:
+    """Remove auto url-capture Files/Reference markers (keeps user-uploaded refs)."""
+    cleaned = _AUTO_URL_CAPTURE_FILES_RE.sub("\n", text or "")
+    cleaned = _AUTO_URL_CAPTURE_REF_RE.sub("\n", cleaned)
+    return re.sub(r"\n{3,}", "\n\n", cleaned).strip()
+
+
 def extract_site_urls(text: str) -> list[str]:
-    """Return http(s) URLs that look like pages (not bare image files)."""
+    """Return http(s) URLs that look like pages (not images, assets, or embeds)."""
     found: list[str] = []
     seen: set[str] = set()
     for raw in _SITE_URL_RE.findall(text or ""):
         url = raw.rstrip(").,;]")
-        lower = url.lower()
-        if any(lower.split("?", 1)[0].endswith(ext) for ext in _IMAGE_EXT):
+        if not is_capturable_site_url(url):
             continue
         if url in seen:
             continue
@@ -70,9 +124,13 @@ def extract_site_urls(text: str) -> list[str]:
 
 def site_url_needing_capture(user_text: str) -> str | None:
     """First site URL to capture, or None if enough reference shots already exist."""
-    if count_markers_by_intent(user_text or "", "reference") >= 2:
+    text = user_text or ""
+    # Embed snippets (Tally iframe + widget.js, etc.) must not trigger cloning captures.
+    if looks_like_third_party_embed_snippet(text):
         return None
-    urls = extract_site_urls(user_text or "")
+    if count_markers_by_intent(text, "reference") >= 2:
+        return None
+    urls = extract_site_urls(text)
     return urls[0] if urls else None
 
 
@@ -255,7 +313,14 @@ async def enrich_prompt_with_site_url_captures(
     user_content: str,
     locale: str = "en",
 ) -> str:
-    """If the prompt has a site URL and few references, capture and inject markers."""
+    """If the prompt has a site URL and few references, capture and inject markers.
+
+    Third-party embed pastes (iframe/script widgets) skip capture. If a prior run
+    already attached accidental ``url-capture-*`` markers, strip them so Retry
+    does not force ``code.edit.with_vision`` / multi-page planning.
+    """
+    if looks_like_third_party_embed_snippet(user_content):
+        return strip_auto_url_capture_markers(user_content)
     url = site_url_needing_capture(user_content)
     if not url:
         return user_content
