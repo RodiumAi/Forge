@@ -92,9 +92,7 @@ def is_capturable_site_url(url: str) -> bool:
         return False
     if any(bare_path.endswith(ext) for ext in _ASSET_EXT):
         return False
-    if _EMBED_PATH_RE.search(path):
-        return False
-    return True
+    return not _EMBED_PATH_RE.search(path)
 
 
 def looks_like_third_party_embed_snippet(text: str) -> bool:
