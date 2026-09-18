@@ -87,8 +87,9 @@ class _Upload:
         self.filename = filename
         self.content_type = content_type
 
-    async def read(self) -> bytes:
-        return self._body
+    async def read(self, size: int = -1) -> bytes:
+        # Same contract as UploadFile.read: a negative size means "everything".
+        return self._body if size < 0 else self._body[:size]
 
 
 def _project_and_db():

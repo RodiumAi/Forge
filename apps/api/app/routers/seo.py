@@ -156,7 +156,9 @@ async def upload_seo_asset(
     if content_type not in IMAGE_TYPES and ext not in IMAGE_EXTS:
         raise HTTPException(status_code=400, detail="Only PNG/JPEG/WebP images are allowed")
 
-    raw = await file.read()
+    # Read one byte past the limit: enough to detect "too large" without ever
+    # buffering an attacker-sized body in memory.
+    raw = await file.read(8 * 1024 * 1024 + 1)
     if len(raw) > 8 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="Image too large (max 8 MB)")
 
