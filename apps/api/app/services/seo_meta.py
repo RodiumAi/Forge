@@ -9,7 +9,7 @@ from typing import Any
 from bs4 import BeautifulSoup
 from PIL import Image
 
-from app.services.filesystem import project_dir, read_file, safe_resolve, write_bytes, write_file
+from app.services.filesystem import read_file, safe_resolve, write_bytes, write_file
 
 INDEX_PATH = "index.html"
 SEO_DIR = "public/seo"
