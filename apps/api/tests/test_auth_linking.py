@@ -84,6 +84,12 @@ class _FakeDb:
     def commit(self):
         self.committed = True
 
+    def rollback(self):
+        return None
+
+    def close(self):
+        return None
+
     def refresh(self, row):
         if getattr(row, "token_version", None) is None:
             row.token_version = 0
@@ -177,13 +183,13 @@ def _run_callback(
     monkeypatch.setattr(auth_mod, "token_for_user", lambda _u, **_kwargs: "forge-jwt")
     monkeypatch.setattr(auth_mod, "_store_oauth_tokens", lambda _r, _t: None)
     monkeypatch.setattr(auth_mod, "_get_or_create_settings", lambda _d, _u: db.get(UserSettings, None))
+    monkeypatch.setattr(auth_mod, "SessionLocal", lambda: db)
 
     return asyncio.run(
         auth_mod.rodium_oauth_callback(
             body=OAuthCallbackRequest(code="c", state="s"),
             request=_request(),
             background_tasks=BackgroundTasks(),
-            db=db,
         )
     )
 

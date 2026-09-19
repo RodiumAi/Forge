@@ -101,6 +101,7 @@ def test_callback_critical_path_skips_keys_and_wallet(monkeypatch: pytest.Monkey
             obj.id = user_id
 
     db.refresh.side_effect = fake_refresh
+    monkeypatch.setattr(auth_mod, "SessionLocal", lambda: db)
 
     background = BackgroundTasks()
     request = MagicMock()
@@ -111,7 +112,6 @@ def test_callback_critical_path_skips_keys_and_wallet(monkeypatch: pytest.Monkey
             body=body,
             request=request,
             background_tasks=background,
-            db=db,
         )
 
     result = asyncio.run(run_callback())
