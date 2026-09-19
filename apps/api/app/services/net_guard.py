@@ -95,8 +95,14 @@ def _ip_is_blocked(ip: ipaddress._BaseAddress) -> bool:
     if str(ip) in _METADATA_IPS:
         return True
 
+    # `not is_global` catches every IANA special-purpose range, including
+    # CGNAT / shared address space (100.64.0.0/10, RFC 6598), which is_private
+    # does not cover. It is added to the explicit checks rather than replacing
+    # them: is_global is still True for multicast, 64:ff9b::/96 (NAT64) and
+    # unallocated IPv6 space, which the checks below refuse.
     if (
-        ip.is_private
+        not ip.is_global
+        or ip.is_private
         or ip.is_loopback
         or ip.is_link_local
         or ip.is_reserved
