@@ -122,6 +122,73 @@ def test_allow_private_setting_bypasses(monkeypatch):
         clear_settings_cache()
 
 
+# --- shared address space (CGNAT, 100.64.0.0/10) -------------------------------
+# ipaddress.is_private is False for this range, so it needs its own coverage.
+
+CGNAT_LITERALS = [
+    "http://100.64.0.0/",  # first address
+    "http://100.64.0.1/",
+    "http://100.100.50.25:8080/",
+    "http://100.127.255.255/",  # last address
+    "http://[::ffff:100.64.0.1]/",  # IPv4-mapped
+]
+
+
+@pytest.mark.parametrize("url", CGNAT_LITERALS)
+def test_blocks_cgnat_literals(url):
+    with pytest.raises(BlockedURLError):
+        validate_public_url(url)
+
+
+def test_blocks_public_host_resolving_to_cgnat(monkeypatch):
+    monkeypatch.setattr(socket, "getaddrinfo", _fake_getaddrinfo("100.64.12.34"))
+    with pytest.raises(BlockedURLError):
+        validate_public_url("http://totally-legit.example.com/")
+
+
+def test_blocks_host_when_any_resolved_address_is_cgnat(monkeypatch):
+    def _resolver(host, port, *args, **kwargs):
+        return [
+            (socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP, "", ("93.184.216.34", port)),
+            (socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP, "", ("100.64.12.34", port)),
+        ]
+
+    monkeypatch.setattr(socket, "getaddrinfo", _resolver)
+    with pytest.raises(BlockedURLError):
+        resolve_and_validate("http://mixed.example.com/")
+
+
+@pytest.mark.parametrize("ip", ["100.63.255.255", "100.128.0.0"])
+def test_addresses_next_to_cgnat_are_still_public(ip):
+    # The blocked range is exactly 100.64.0.0/10; its neighbours are ordinary public space.
+    assert resolve_and_validate(f"http://{ip}/").ip == ip
+
+
+def test_allow_private_setting_bypasses_cgnat(monkeypatch):
+    # Self-hosters reaching internal services over Tailscale (100.x) opt in the same way as for RFC 1918.
+    monkeypatch.setenv("URL_FETCH_ALLOW_PRIVATE", "true")
+    clear_settings_cache()
+    try:
+        validate_public_url("http://100.64.0.1/")  # should not raise
+    finally:
+        clear_settings_cache()
+
+
+# ipaddress.is_global is True for these, so a guard built on it alone would let them through.
+NOT_GLOBAL_BLIND_SPOTS = [
+    "http://224.0.0.1/",  # IPv4 multicast
+    "http://[ff02::1]/",  # IPv6 multicast
+    "http://[64:ff9b::808:808]/",  # NAT64: embeds an IPv4 address
+    "http://[5f00::1]/",  # unallocated IPv6 space
+]
+
+
+@pytest.mark.parametrize("url", NOT_GLOBAL_BLIND_SPOTS)
+def test_blocks_ranges_that_is_global_alone_would_allow(url):
+    with pytest.raises(BlockedURLError):
+        validate_public_url(url)
+
+
 # --- sink: attachments._fetch_url --------------------------------------------
 
 
