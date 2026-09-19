@@ -104,15 +104,46 @@ class TestTokenVersion:
 
 
 def _matches(row, predicate) -> bool:
-    """Evaluate a simple `Column == value` / `Column.is_(None)` clause in Python.
+    """Evaluate a simple SQLAlchemy clause in Python for the fake session.
 
     The fake has to honour the predicates rather than ignore them, otherwise a
     test like "a reset link cannot be spent as a verification link" passes for
     the wrong reason — the filter it is checking would never have run.
     """
-    column = predicate.left.name
-    value = getattr(predicate.right, "value", None)
-    return getattr(row, column) == value
+    from sqlalchemy.sql import operators
+    from sqlalchemy.sql.elements import Null
+
+    op = getattr(predicate, "operator", None)
+    left = getattr(predicate, "left", None)
+    if left is None:
+        return False
+    column = left.name
+    actual = getattr(row, column)
+    right = getattr(predicate, "right", None)
+
+    if op is operators.is_:
+        if right is None or isinstance(right, Null):
+            return actual is None
+        return actual is getattr(right, "value", right)
+    if op is operators.isnot:
+        if right is None or isinstance(right, Null):
+            return actual is not None
+        return actual is not getattr(right, "value", right)
+    value = getattr(right, "value", right) if right is not None else None
+    if op is operators.ge:
+        if actual is None or value is None:
+            return False
+        if getattr(actual, "tzinfo", None) is None and getattr(value, "tzinfo", None) is not None:
+            actual = actual.replace(tzinfo=value.tzinfo)
+        return actual >= value
+    if op is operators.gt:
+        if actual is None or value is None:
+            return False
+        if getattr(actual, "tzinfo", None) is None and getattr(value, "tzinfo", None) is not None:
+            actual = actual.replace(tzinfo=value.tzinfo)
+        return actual > value
+    # Default: Column == value
+    return actual == value
 
 
 class _FakeTokenQuery:
@@ -126,10 +157,19 @@ class _FakeTokenQuery:
         return self._rows[0] if self._rows else None
 
     def update(self, values, synchronize_session=False):
+        # Re-check at write time so a stale filter snapshot cannot double-consume
+        # the way a real conditional UPDATE would refuse a second winner.
+        updated = 0
         for row in self._rows:
+            if (
+                "consumed_at" in {getattr(col, "name", None) for col in values}
+                and row.consumed_at is not None
+            ):
+                continue
             for column, value in values.items():
                 setattr(row, column.name, value)
-        return len(self._rows)
+            updated += 1
+        return updated
 
 
 class _FakeSession:

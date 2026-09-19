@@ -4,9 +4,9 @@ The raw token exists only in the link we mail out; the database keeps its
 sha256. A read-only leak of `auth_tokens` therefore yields nothing usable —
 the same reasoning as `keyHash` on API keys and `codeHash` on OAuth codes.
 
-`consume()` is the only way back to a user, and it is atomic-by-construction:
-a token is marked consumed in the same transaction that returns it, so a link
-clicked twice (mail scanners routinely prefetch) resolves once.
+`consume()` is the only way back to a user. It burns the row with a single
+conditional ``UPDATE … WHERE consumed_at IS NULL``, so two concurrent
+clicks (mail scanners, reset races) cannot both succeed under READ COMMITTED.
 """
 
 from __future__ import annotations
@@ -75,22 +75,29 @@ def consume(db: Session, raw: str, kind: str) -> UUID | None:
     One `None` for every failure mode (unknown, wrong kind, already used,
     expired): the caller shows a single "this link is no longer valid"
     message, which is also all an attacker learns.
+
+    Consumption is a single conditional UPDATE so concurrent requests cannot
+    both observe ``consumed_at IS NULL`` and both succeed (TOCTOU / reset race).
     """
     if not raw:
         return None
-    row = db.query(AuthToken).filter(AuthToken.token_hash == hash_token(raw), AuthToken.kind == kind).first()
-    if row is None or row.consumed_at is not None:
-        return None
-
-    expires_at = row.expires_at
-    if expires_at.tzinfo is None:  # naive timestamps come back from some drivers
-        expires_at = expires_at.replace(tzinfo=UTC)
-    if expires_at < datetime.now(UTC):
-        return None
-
-    row.consumed_at = datetime.now(UTC)
+    now = datetime.now(UTC)
+    token_hash = hash_token(raw)
+    updated = (
+        db.query(AuthToken)
+        .filter(
+            AuthToken.token_hash == token_hash,
+            AuthToken.kind == kind,
+            AuthToken.consumed_at.is_(None),
+            AuthToken.expires_at >= now,
+        )
+        .update({AuthToken.consumed_at: now}, synchronize_session=False)
+    )
     db.flush()
-    return row.user_id
+    if updated != 1:
+        return None
+    row = db.query(AuthToken).filter(AuthToken.token_hash == token_hash, AuthToken.kind == kind).first()
+    return row.user_id if row is not None else None
 
 
 def invalidate_outstanding(db: Session, user_id: UUID, kind: str) -> None:
