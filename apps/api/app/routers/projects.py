@@ -48,6 +48,21 @@ PROJECT_CREATION_IP_LIMIT_PER_HOUR = 30
 SECURITY_REVIEW_LIMIT_PER_HOUR = 5
 SECURITY_REVIEW_USER_LIMIT_PER_HOUR = 10
 SECURITY_REVIEW_IP_LIMIT_PER_HOUR = 30
+# A project's slug becomes its public subdomain ({slug}.<sites domain>), so names
+# the platform itself uses, or that visitors would read as ours (login., support.),
+# must not be claimable. Mirrors the reserved-hostname check for custom domains
+# in services/domains.py. A slug the user sets explicitly is refused; one derived
+# from a project name gets an "-app" suffix instead (see _unique_slug_excluding).
+RESERVED_SLUGS = frozenset(
+    {
+        "www", "api", "app", "mail", "smtp", "ftp", "ssh",
+        "login", "auth", "oauth", "sso", "accounts", "signup",
+        "admin", "adminer", "dashboard", "panel",
+        "support", "help", "docs", "status", "billing",
+        "sites", "forge", "cdn", "assets", "static",
+        "security", "abuse", "noreply", "no-reply",
+    }
+)  # fmt: skip
 # Minimal valid 1x1 JPEG (JFIF) used only as a size/type reference in tests.
 _JPEG_MAGIC = b"\xff\xd8\xff"
 
@@ -94,6 +109,14 @@ def _slugify(name: str) -> str:
     return slug[:80] or "project"
 
 
+def _reject_reserved_slug(slug: str, locale: str) -> None:
+    if slug in RESERVED_SLUGS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=t("slug_reserved", locale),  # type: ignore[arg-type]
+        )
+
+
 def _owned_project(db: Session, user: User, project_id: UUID, locale: str = "fr") -> Project:
     project = db.get(Project, project_id)
     if project is None or project.user_id != user.id:
@@ -115,8 +138,17 @@ def _unique_slug(db: Session, base: str) -> str:
 
 
 def _unique_slug_excluding(db: Session, base: str, exclude_id: UUID | None) -> str:
-    """Pick a globally unique project slug (required for {slug}.lvh.me routing)."""
+    """Pick a globally unique project slug (required for {slug}.lvh.me routing).
+
+    This is where a display name becomes a slug (creating a project, or renaming
+    an unpublished one). The user never typed a slug there, so a name that lands
+    on a reserved one is not refused: it falls back to "<name>-app" and then goes
+    through the usual uniqueness loop. A slug the user sets explicitly is checked
+    separately, in update_project.
+    """
     base_slug = _slugify(base)
+    if base_slug in RESERVED_SLUGS:
+        base_slug = f"{base_slug}-app"
     slug = base_slug
     i = 2
     while True:
@@ -288,6 +320,7 @@ def update_project(
         next_slug = _slugify(body.slug)
         if not next_slug:
             raise HTTPException(status_code=400, detail=t("invalid_slug", locale))  # type: ignore[arg-type]
+        _reject_reserved_slug(next_slug, locale)
         clash = db.query(Project).filter(Project.slug == next_slug, Project.id != project.id).first()
         if clash is not None:
             raise HTTPException(status_code=409, detail=t("slug_taken", locale))  # type: ignore[arg-type]
