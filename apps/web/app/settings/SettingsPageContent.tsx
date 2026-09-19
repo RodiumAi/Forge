@@ -87,12 +87,13 @@ export default function SettingsPageContent() {
       // Changing the password revokes every outstanding session, including
       // this tab's. The endpoint hands back a replacement so the person who
       // just changed it is not logged out by their own action.
+      const settingFirstPassword = !profile?.has_password;
       const result = await api<{ access_token?: string | null }>(
         "/auth/change-password",
         {
           method: "POST",
           body: JSON.stringify({
-            current_password: currentPassword,
+            current_password: settingFirstPassword ? "" : currentPassword,
             new_password: newPassword,
           }),
         },
@@ -100,8 +101,10 @@ export default function SettingsPageContent() {
       if (result?.access_token) setToken(result.access_token);
       setCurrentPassword("");
       setNewPassword("");
-      setMessage(t("settingsPasswordChanged"));
-    } catch (err) {
+      setMessage(settingFirstPassword ? t("settingsPasswordSet") : t("settingsPasswordChanged"));
+      // Refresh so Security shows the change-password form after a first set.
+      const next = await api<Profile>("/auth/me");
+      setProfile(next);    } catch (err) {
       setError(err instanceof Error ? err.message : t("errorGeneric"));
     } finally {
       setChangingPassword(false);
@@ -195,10 +198,30 @@ export default function SettingsPageContent() {
                 linked: since local sign-up landed, an account can have both,
                 and those users must still be able to change their password. */}
             {!profile?.has_password ? (
-              <SettingsBlock title={t("settingsPasswordSection")} subtitle={t("loginRodiumHint")}>
-                <div className="settings-block-status">
-                  <span className="home-settings-badge ok">{t("rodiumConnected")}</span>
-                </div>
+              <SettingsBlock title={t("settingsPasswordSection")} subtitle={t("settingsSetPasswordHelp")}>
+                <form className="settings-inline-form" onSubmit={onChangePassword}>
+                  <label className="home-settings-field">
+                    <span>{t("settingsNewPassword")}</span>
+                    <input
+                      className="home-settings-input"
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      autoComplete="new-password"
+                    />
+                  </label>
+                  {error && <p className="error home-settings-feedback">{error}</p>}
+                  {message && <p className="home-settings-success">{message}</p>}
+                  <div className="home-settings-actions">
+                    <button
+                      className="landing-create home-settings-save"
+                      type="submit"
+                      disabled={changingPassword || newPassword.length < 8}
+                    >
+                      {changingPassword ? t("settingsSaving") : t("settingsSetPassword")}
+                    </button>
+                  </div>
+                </form>
               </SettingsBlock>
             ) : (
               <SettingsBlock title={t("settingsPasswordSection")} subtitle={t("settingsPasswordHelp")}>
