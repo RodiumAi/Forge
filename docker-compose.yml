@@ -5,8 +5,9 @@ services:
     image: postgres:17-alpine
     container_name: forge-web-postgres
     restart: unless-stopped
+    # Dev only — bound to loopback; do not expose on a public host
     ports:
-      - "${FORGE_WEB_POSTGRES_PORT:-5434}:5432"
+      - "127.0.0.1:${FORGE_WEB_POSTGRES_PORT:-5434}:5432"
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-forge}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-forge}
@@ -29,9 +30,10 @@ services:
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-rodiumdev123}
       MINIO_SERVER_URL: http://localhost:9000
       MINIO_BROWSER_REDIRECT_URL: http://localhost:9001
+    # Dev only — bound to loopback; do not expose on a public host
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
     volumes:
       - forge_web_minio_data:/data
 
@@ -169,9 +171,10 @@ services:
     environment:
       MP_SMTP_AUTH_ACCEPT_ANY: "1"
       MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+    # Dev only — bound to loopback; do not expose on a public host
     ports:
-      - "${FORGE_WEB_MAILPIT_SMTP_PORT:-1026}:1025"
-      - "${FORGE_WEB_MAILPIT_UI_PORT:-8026}:8025"
+      - "127.0.0.1:${FORGE_WEB_MAILPIT_SMTP_PORT:-1026}:1025"
+      - "127.0.0.1:${FORGE_WEB_MAILPIT_UI_PORT:-8026}:8025"
 
   caddy:
     image: caddy:2.9-alpine
@@ -189,8 +192,9 @@ services:
     image: adminer:4
     container_name: forge-web-adminer
     restart: unless-stopped
+    # Dev only — bound to loopback; do not expose on a public host
     ports:
-      - "${FORGE_WEB_ADMINER_PORT:-8089}:8080"
+      - "127.0.0.1:${FORGE_WEB_ADMINER_PORT:-8089}:8080"
     depends_on:
       postgres:
         condition: service_healthy
