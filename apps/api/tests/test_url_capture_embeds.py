@@ -35,9 +35,7 @@ def test_plain_site_url_still_needs_capture():
 
 
 def test_iframe_src_http_is_embed():
-    assert url_capture.looks_like_third_party_embed_snippet(
-        '<iframe src="https://calendly.com/x"></iframe>'
-    )
+    assert url_capture.looks_like_third_party_embed_snippet('<iframe src="https://calendly.com/x"></iframe>')
 
 
 def test_script_embed_js_is_detected():

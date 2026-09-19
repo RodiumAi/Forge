@@ -126,8 +126,10 @@ def _iframe_window_is_embed(window: str) -> bool:
             return False
         # Bound attribute name length to avoid quadratic scans.
         name_end = idx + 5
-        while name_end < len(lower) and name_end - idx < 48 and (
-            lower[name_end].isalnum() or lower[name_end] in "_-"
+        while (
+            name_end < len(lower)
+            and name_end - idx < 48
+            and (lower[name_end].isalnum() or lower[name_end] in "_-")
         ):
             name_end += 1
         if name_end > idx + 5 and lower[idx:name_end].endswith("src"):

@@ -137,9 +137,7 @@ async def publish_project_esm(
             existing = await asyncio.to_thread(store.list_prefix, bucket, prefix)
             stale = [k for k in existing if k not in new_keys]
             if stale:
-                orphans = await asyncio.to_thread(
-                    store.delete_keys, bucket, stale, under_prefix=prefix
-                )
+                orphans = await asyncio.to_thread(store.delete_keys, bucket, stale, under_prefix=prefix)
                 logger.info(
                     "publish purged %s orphan key(s) under %s",
                     orphans,
