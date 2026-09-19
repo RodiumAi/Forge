@@ -53,7 +53,10 @@ class _FakeTokenQuery:
     def update(self, values, synchronize_session=False):
         updated = 0
         for row in self._rows:
-            if "consumed_at" in {getattr(col, "name", None) for col in values} and row.consumed_at is not None:
+            if (
+                "consumed_at" in {getattr(col, "name", None) for col in values}
+                and row.consumed_at is not None
+            ):
                 continue
             for column, value in values.items():
                 setattr(row, column.name, value)

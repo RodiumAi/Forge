@@ -28,11 +28,7 @@ def test_read_seo_meta_falls_back_instead_of_echoing_traversal(project: str):
     write_file(
         project,
         "index.html",
-        (
-            "<!doctype html><html><head>"
-            f'<link rel="icon" href="{evil}">'
-            "</head><body></body></html>\n"
-        ),
+        (f'<!doctype html><html><head><link rel="icon" href="{evil}"></head><body></body></html>\n'),
     )
     meta = seo_meta.read_seo_meta(project)
     assert "etc/" not in (meta["favicon_path"] or "")
