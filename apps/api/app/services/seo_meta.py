@@ -9,7 +9,7 @@ from typing import Any
 from bs4 import BeautifulSoup
 from PIL import Image
 
-from app.services.filesystem import project_dir, read_file, write_bytes, write_file
+from app.services.filesystem import read_file, safe_resolve, write_bytes, write_file
 
 INDEX_PATH = "index.html"
 SEO_DIR = "public/seo"
@@ -81,22 +81,37 @@ def _link_href(soup: BeautifulSoup, rel: str) -> str | None:
 
 
 def _public_to_disk(path: str | None) -> str | None:
+    """Map a public URL path to a project-relative disk path under ``public/``.
+
+    Rejects traversal (``..``, backslashes) so callers cannot escape the
+    project sandbox via favicon/OG path checks.
+    """
     if not path:
         return None
-    p = path.strip()
+    p = path.strip().replace("\\", "/")
     if p.startswith(("http://", "https://")):
         return None
+    if ".." in p.split("/"):
+        return None
     if p.startswith("/"):
-        return f"public{p}"
-    if p.startswith("public/"):
-        return p
-    return f"public/{p.lstrip('/')}"
+        disk = f"public{p}"
+    elif p.startswith("public/"):
+        disk = p
+    else:
+        disk = f"public/{p.lstrip('/')}"
+    # Normalise and require the result to stay under public/.
+    parts = [part for part in disk.split("/") if part and part != "."]
+    if not parts or parts[0] != "public" or ".." in parts:
+        return None
+    return "/".join(parts)
 
 
 def _disk_to_public(path: str | None) -> str | None:
     if not path:
         return None
     p = path.strip().replace("\\", "/")
+    if ".." in p.split("/"):
+        return None
     if p.startswith("public/"):
         return "/" + p[len("public/") :]
     if p.startswith("/"):
@@ -107,7 +122,10 @@ def _disk_to_public(path: str | None) -> str | None:
 def _asset_exists(project_id: str, disk_path: str | None) -> bool:
     if not disk_path:
         return False
-    return (project_dir(project_id) / disk_path).is_file()
+    try:
+        return safe_resolve(project_id, disk_path).is_file()
+    except ValueError:
+        return False
 
 
 def read_seo_meta(project_id: str) -> dict[str, Any]:
