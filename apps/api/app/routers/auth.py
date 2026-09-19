@@ -254,9 +254,15 @@ async def rodium_oauth_callback(
     body: OAuthCallbackRequest,
     request: Request,
     background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db),
 ) -> TokenResponse:
+    """Complete RodiumAi OIDC without pinning a DB connection during Nest I/O.
+
+    Nest token/profile can take several seconds. Holding ``Depends(get_db)``
+    across those awaits can exhaust the Forge pool under concurrent logins; we
+    only open a session after the issuer round-trips succeed.
+    """
     locale = resolve_locale(request)
+    rate_limit.enforce(request, "oauth-rodium-callback", limit=20, window_seconds=900)
     # Critical path only: code exchange + profile (id_token preferred over
     # /userinfo). Keys/wallet hydrate in background so a slow Nest/ALB cut
     # never surfaces as "Network request failed".
@@ -279,55 +285,65 @@ async def rodium_oauth_callback(
     name = info.get("name")
     picture = _picture_from_userinfo(info)
 
-    user = db.query(User).filter(User.rodium_sub == sub).first()
-    if user is None:
-        # Adopt a local account with the same address — but only once that
-        # address is proven here too. Without the check, registering locally
-        # with someone else's address (unverified) and waiting for them to
-        # open Forge from their RodiumAi dashboard would hand the attacker
-        # their identity, their OAuth tokens and their RODI balance.
-        candidate = db.query(User).filter(User.email == email).first()
-        if candidate is not None and candidate.email_verified_at is None:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=t("account_needs_password_login", locale),
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.rodium_sub == sub).first()
+        if user is None:
+            # Adopt a local account with the same address — but only once that
+            # address is proven here too. Without the check, registering locally
+            # with someone else's address (unverified) and waiting for them to
+            # open Forge from their RodiumAi dashboard would hand the attacker
+            # their identity, their OAuth tokens and their RODI balance.
+            candidate = db.query(User).filter(User.email == email).first()
+            if candidate is not None and candidate.email_verified_at is None:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=t("account_needs_password_login", locale),
+                )
+            user = candidate
+        if user is None:
+            user = User(
+                email=email,
+                password_hash=None,
+                rodium_sub=sub,
+                name=name,
+                avatar_url=picture,
+                # Reaching us through the RodiumAi issuer proves the address.
+                email_verified_at=datetime.now(UTC),
             )
-        user = candidate
-    if user is None:
-        user = User(
-            email=email,
-            password_hash=None,
-            rodium_sub=sub,
-            name=name,
-            avatar_url=picture,
-            # Reaching us through the RodiumAi issuer proves the address.
-            email_verified_at=datetime.now(UTC),
-        )
-        db.add(user)
-        db.flush()
-        db.add(UserSettings(user_id=user.id, default_model=get_settings().effective_default_model))
-    else:
-        user.rodium_sub = sub
-        user.email = email
-        if user.email_verified_at is None:
-            user.email_verified_at = datetime.now(UTC)
-        if name:
-            user.name = name
-        if picture:
-            user.avatar_url = picture
+            db.add(user)
+            db.flush()
+            db.add(UserSettings(user_id=user.id, default_model=get_settings().effective_default_model))
+        else:
+            user.rodium_sub = sub
+            user.email = email
+            if user.email_verified_at is None:
+                user.email_verified_at = datetime.now(UTC)
+            if name:
+                user.name = name
+            if picture:
+                user.avatar_url = picture
 
-    db.commit()
-    db.refresh(user)
+        db.commit()
+        db.refresh(user)
 
-    settings_row = _get_or_create_settings(db, user)
-    _store_oauth_tokens(settings_row, tokens)
-    if not settings_row.rodium_api_key_hint:
-        settings_row.rodium_api_key_hint = "RodiumAi account"
-    db.commit()
+        settings_row = _get_or_create_settings(db, user)
+        _store_oauth_tokens(settings_row, tokens)
+        if not settings_row.rodium_api_key_hint:
+            settings_row.rodium_api_key_hint = "RodiumAi account"
+        db.commit()
 
-    background_tasks.add_task(_hydrate_rodium_account_cache, user.id, access)
+        user_id = user.id
+        access_token = token_for_user(user, locale=locale)
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
 
-    return TokenResponse(access_token=token_for_user(user, locale=locale), email_verified=True)
+    background_tasks.add_task(_hydrate_rodium_account_cache, user_id, access)
+
+    return TokenResponse(access_token=access_token, email_verified=True)
 
 
 async def _fetch_nest_keys_and_wallet(access: str) -> tuple[list, dict]:

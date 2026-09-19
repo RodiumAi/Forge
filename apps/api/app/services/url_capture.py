@@ -50,12 +50,10 @@ _EMBED_PATH_RE = re.compile(
     re.I,
 )
 # Pasted iframe/script widgets (Tally, Typeform, Calendly, …) — integrate, don't screenshot.
-_EMBED_SNIPPET_RE = re.compile(
-    r"<\s*iframe\b[^>]*(?:src|data-[\w-]*src)\s*=\s*[\"']https?://"
-    r"|<\s*script\b[^>]*\bsrc\s*=\s*[\"']https?://[^\"']*"
-    r"(?:embed|widget|sdk|js\.|\.js(?:\?|#|$))",
-    re.I,
-)
+# Linear scan only: the previous `_EMBED_SNIPPET_RE` used unbounded `[^>]*` /
+# `[\w-]*` / `[^\"']*` and could stall the asyncio event loop on ~50k pastes.
+_EMBED_TAG_WINDOW = 512
+_EMBED_SRC_HINTS = ("embed", "widget", "sdk", "js.", ".js?", ".js#", ".js")
 _AUTO_URL_CAPTURE_FILES_RE = re.compile(
     r"\n*\[(?:Files|Fichiers):\s*[^\]]*\burl-capture-[^\]]*\]\s*",
     re.I,
@@ -95,9 +93,94 @@ def is_capturable_site_url(url: str) -> bool:
     return not _EMBED_PATH_RE.search(path)
 
 
+def _window_has_http_attr(window: str, attr: str) -> bool:
+    """True when `attr="https://...` or `attr='https://...` appears in window."""
+    lower = window.lower()
+    needle = attr.lower() + "="
+    start = 0
+    while True:
+        idx = lower.find(needle, start)
+        if idx < 0:
+            return False
+        j = idx + len(needle)
+        while j < len(lower) and lower[j] in " \t\n\r":
+            j += 1
+        if j < len(lower) and lower[j] in ("'", '"'):
+            j += 1
+            while j < len(lower) and lower[j] in " \t\n\r":
+                j += 1
+            if lower.startswith("http://", j) or lower.startswith("https://", j):
+                return True
+        start = idx + 1
+
+
+def _iframe_window_is_embed(window: str) -> bool:
+    if _window_has_http_attr(window, "src"):
+        return True
+    # data-tally-src, data-src, data-widget-src, …
+    lower = window.lower()
+    start = 0
+    while True:
+        idx = lower.find("data-", start)
+        if idx < 0:
+            return False
+        # Bound attribute name length to avoid quadratic scans.
+        name_end = idx + 5
+        while (
+            name_end < len(lower)
+            and name_end - idx < 48
+            and (lower[name_end].isalnum() or lower[name_end] in "_-")
+        ):
+            name_end += 1
+        if name_end > idx + 5 and lower[idx:name_end].endswith("src"):
+            attr = lower[idx:name_end]
+            if _window_has_http_attr(window, attr):
+                return True
+        start = idx + 1
+
+
+def _script_window_is_embed(window: str) -> bool:
+    if not _window_has_http_attr(window, "src"):
+        return False
+    lower = window.lower()
+    # Same keywords as the former regex: embed|widget|sdk|js.|.js(?|#|$)
+    for hint in _EMBED_SRC_HINTS:
+        if hint in lower:
+            return True
+    # Bare `.js` at end of a quoted URL inside the window.
+    return bool('.js"' in lower or ".js'" in lower)
+
+
 def looks_like_third_party_embed_snippet(text: str) -> bool:
-    """True when the user pasted an iframe/script embed to integrate, not clone."""
-    return bool(_EMBED_SNIPPET_RE.search(text or ""))
+    """True when the user pasted an iframe/script embed to integrate, not clone.
+
+    O(n) scan with a fixed per-tag window — safe to run on the asyncio loop.
+    """
+    if not text:
+        return False
+    lower = text.lower()
+    n = len(lower)
+    i = 0
+    while i < n:
+        # Find next '<' then check for iframe/script without unbounded regex.
+        lt = lower.find("<", i)
+        if lt < 0:
+            break
+        j = lt + 1
+        while j < n and lower[j] in " \t\n\r":
+            j += 1
+        window = text[lt : min(lt + _EMBED_TAG_WINDOW, n)]
+        if lower.startswith("iframe", j) and (j + 6 >= n or not lower[j + 6].isalnum()):
+            if _iframe_window_is_embed(window):
+                return True
+        elif (
+            lower.startswith("script", j)
+            and (j + 6 >= n or not lower[j + 6].isalnum())
+            and _script_window_is_embed(window)
+        ):
+            return True
+        i = lt + 1
+    return False
 
 
 def strip_auto_url_capture_markers(text: str) -> str:

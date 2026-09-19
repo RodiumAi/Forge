@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import time
+
 from app.services import url_capture
 
 _TALLY_PROMPT = """en bas tu peux integrer tally avec ces script
@@ -30,6 +32,37 @@ def test_plain_site_url_still_needs_capture():
     prompt = "Reproduis ce site https://mapoche.example/landing en landing page"
     assert not url_capture.looks_like_third_party_embed_snippet(prompt)
     assert url_capture.site_url_needing_capture(prompt) == "https://mapoche.example/landing"
+
+
+def test_iframe_src_http_is_embed():
+    assert url_capture.looks_like_third_party_embed_snippet('<iframe src="https://calendly.com/x"></iframe>')
+
+
+def test_script_embed_js_is_detected():
+    assert url_capture.looks_like_third_party_embed_snippet(
+        '<script src="https://cdn.example.com/widget.js"></script>'
+    )
+
+
+def test_embed_scan_50k_stays_fast():
+    """Former regex stalled seconds on ~50k ambiguous pastes; linear scan must not."""
+    # Ambiguous-looking paste: many '<' and near-iframe noise without a real match.
+    chunk = "<" + ("a" * 80) + " data-xsrc=noturl "
+    payload = chunk * 650  # ~53k chars
+    assert len(payload) >= 50_000
+    t0 = time.perf_counter()
+    assert not url_capture.looks_like_third_party_embed_snippet(payload)
+    elapsed_ms = (time.perf_counter() - t0) * 1000
+    assert elapsed_ms < 50, f"embed scan took {elapsed_ms:.1f}ms"
+
+
+def test_embed_scan_50k_with_late_hit_stays_fast():
+    chunk = "<" + ("x" * 60) + " "
+    payload = (chunk * 800) + '<iframe data-tally-src="https://tally.so/embed/x"></iframe>'
+    t0 = time.perf_counter()
+    assert url_capture.looks_like_third_party_embed_snippet(payload)
+    elapsed_ms = (time.perf_counter() - t0) * 1000
+    assert elapsed_ms < 50, f"embed scan took {elapsed_ms:.1f}ms"
 
 
 def test_strip_auto_url_capture_markers_keeps_user_refs():

@@ -84,6 +84,8 @@ async def transform_project_to_dir(project_id: str, out_dir: Path, *, title: str
 
 
 def _guess_content_type(path: Path) -> str:
+    if path.suffix.lower() in {".webmanifest", ".manifest"}:
+        return "application/manifest+json"
     ctype, _ = mimetypes.guess_type(str(path))
     return ctype or "application/octet-stream"
 
@@ -109,6 +111,8 @@ async def publish_project_esm(
         prefix = f"{slug}/"
         uploaded = 0
         sem = asyncio.Semaphore(_UPLOAD_CONCURRENCY)
+        paths = [p for p in out.rglob("*") if p.is_file()]
+        new_keys = {prefix + p.relative_to(out).as_posix() for p in paths}
 
         async def upload_one(path: Path) -> None:
             nonlocal uploaded
@@ -125,8 +129,26 @@ async def publish_project_esm(
                 )
             uploaded += 1
 
-        paths = [p for p in out.rglob("*") if p.is_file()]
+        # Upload first so the live site never goes empty mid-publish, then drop
+        # keys that are no longer in this build (stale files / cross-tenant leftovers).
         await asyncio.gather(*(upload_one(p) for p in paths))
+        orphans = 0
+        try:
+            existing = await asyncio.to_thread(store.list_prefix, bucket, prefix)
+            stale = [k for k in existing if k not in new_keys]
+            if stale:
+                orphans = await asyncio.to_thread(store.delete_keys, bucket, stale, under_prefix=prefix)
+                logger.info(
+                    "publish purged %s orphan key(s) under %s",
+                    orphans,
+                    prefix,
+                )
+        except Exception:
+            logger.exception("Failed to purge orphan published keys prefix=%s", prefix)
 
     public_url = settings.sites_url_for_slug(slug)
-    return {"public_url": public_url, "files_uploaded": uploaded}
+    return {
+        "public_url": public_url,
+        "files_uploaded": uploaded,
+        "orphans_deleted": orphans,
+    }

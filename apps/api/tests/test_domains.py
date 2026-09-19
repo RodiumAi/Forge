@@ -33,8 +33,10 @@ def _settings(**overrides):
         "custom_domain_cname_target": "",
         "custom_domain_alb_listener_arn": "",
         "custom_domain_gateway_tg_arn": "",
+        "environment": base.environment,
         **overrides,
     }
+    env = values["environment"]
     return types.SimpleNamespace(
         **values,
         effective_custom_domain_cname_target=(
@@ -44,7 +46,7 @@ def _settings(**overrides):
         custom_domain_aws_enabled=bool(
             values["custom_domain_alb_listener_arn"] and values["custom_domain_gateway_tg_arn"]
         ),
-        environment=base.environment,
+        is_local=env in ("local", "test"),
     )
 
 
@@ -307,6 +309,25 @@ class TestStateMachine:
         assert d.last_error is None
         assert d.verified_at is not None and d.verified_at.tzinfo == UTC
         assert public_url_for_domain(d) == "https://www.client.com"
+
+    def test_degraded_mode_refused_outside_local(self):
+        d = advance_verification(
+            _domain(),
+            _settings(environment="production"),
+            resolver=lambda h: "sites.forge.rodiumai.io",
+        )
+        assert d.status == STATUS_FAILED
+        assert d.last_error == "custom_domain_aws_required"
+        assert d.verified_at is None
+
+    def test_degraded_mode_refused_in_staging(self):
+        d = advance_verification(
+            _domain(),
+            _settings(environment="staging"),
+            resolver=lambda h: "sites.forge.rodiumai.io",
+        )
+        assert d.status == STATUS_FAILED
+        assert d.last_error == "custom_domain_aws_required"
 
     def _aws_settings(self):
         return _settings(

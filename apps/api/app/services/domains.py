@@ -435,9 +435,18 @@ def advance_verification(
         domain.last_error = "routing_cname_missing"
         return domain
 
-    # Ownership was already proven while promoting the claim. In degraded
-    # mode there is no certificate state left to wait for.
+    # Ownership was already proven while promoting the claim. Degraded mode
+    # (CNAME-only → VALIDATED) is local/test only — staging/production must
+    # never skip ACM + ALB attachment.
     if not settings.custom_domain_aws_enabled:
+        is_local = getattr(settings, "is_local", None)
+        if is_local is None:
+            env = getattr(settings, "environment", "local")
+            is_local = env in ("local", "test")
+        if not is_local:
+            domain.status = STATUS_FAILED
+            domain.last_error = "custom_domain_aws_required"
+            return domain
         domain.status = STATUS_VALIDATED
         domain.last_error = None
         domain.verified_at = datetime.now(UTC)

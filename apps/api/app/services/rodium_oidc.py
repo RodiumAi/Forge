@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import logging
 import secrets
 from datetime import UTC, datetime, timedelta
+from threading import Lock
 from typing import Any
 from urllib.parse import urlencode
 
@@ -19,6 +21,13 @@ from app.config import get_settings
 # (browser then shows opaque "Network request failed").
 # Token exchange alone can take ~10–13s on a cold Nest task; keep headroom above that.
 NEST_HTTP_TIMEOUT = httpx.Timeout(20.0, connect=5.0)
+
+logger = logging.getLogger("rodium_oidc")
+
+_STATE_NONCE_PREFIX = "forge:oauth:state:"
+_STATE_NONCE_TTL_SEC = 600  # matches JWT exp window
+_local_nonces: set[str] = set()
+_local_nonce_lock = Lock()
 
 # JWKS client is process-wide so cold login pays one Nest fetch, not every call.
 _jwks_client: PyJWKClient | None = None
@@ -61,6 +70,36 @@ def generate_pkce() -> tuple[str, str]:
 def hash_state_binding(binding: str) -> str:
     """sha256 of the browser's one-time binding secret."""
     return hashlib.sha256(binding.encode("utf-8")).hexdigest()
+
+
+def _consume_state_nonce(nonce: str) -> bool:
+    """Mark nonce as used. Returns True on first use, False on replay.
+
+    Staging/production require Redis so multi-worker replay cannot slip through
+    an in-process fallback. Local/test keep the memory store when Redis is down.
+    """
+    key = f"{_STATE_NONCE_PREFIX}{nonce}"
+    settings = get_settings()
+    try:
+        import redis
+
+        client = redis.Redis.from_url(settings.redis_url)
+        # SET NX EX — first caller wins for the full state lifetime.
+        ok = client.set(key, "1", nx=True, ex=_STATE_NONCE_TTL_SEC)
+        return bool(ok)
+    except Exception:
+        if not settings.is_local:
+            logger.exception("oauth state nonce: redis required outside local/test")
+            raise RodiumOidcError("Sign-in temporarily unavailable") from None
+        logger.debug("oauth state nonce: redis unavailable, using in-process store", exc_info=True)
+        with _local_nonce_lock:
+            if nonce in _local_nonces:
+                return False
+            _local_nonces.add(nonce)
+            if len(_local_nonces) > 20_000:
+                _local_nonces.clear()
+                _local_nonces.add(nonce)
+            return True
 
 
 def create_oauth_state(code_verifier: str, binding: str | None = None) -> str:
@@ -116,6 +155,13 @@ def parse_oauth_state(state: str, binding: str | None = None) -> str:
         raise RodiumOidcError("OAuth state is not bound to a browser")
     if not binding or not secrets.compare_digest(hash_state_binding(binding), expected):
         raise RodiumOidcError("OAuth state does not match this browser")
+
+    nonce = payload.get("n")
+    if not isinstance(nonce, str) or not nonce:
+        raise RodiumOidcError("Invalid OAuth state payload")
+    if not _consume_state_nonce(nonce):
+        raise RodiumOidcError("OAuth state has already been used")
+
     return verifier
 
 

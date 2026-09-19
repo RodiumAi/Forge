@@ -50,7 +50,12 @@ def api(tmp_path_factory, monkeypatch):
     # _project_out asks the ORM which session owns the project; there is none.
     monkeypatch.setattr(sa_orm.Session, "object_session", staticmethod(lambda _obj: None))
 
-    user = SimpleNamespace(id=uuid.uuid4(), email="owner@example.com", email_verified_at=datetime.now(UTC))
+    user = SimpleNamespace(
+        id=uuid.uuid4(),
+        email="owner@example.com",
+        email_verified_at=datetime.now(UTC),
+        rodium_sub=None,
+    )
     project = SimpleNamespace(
         id=uuid.uuid4(),
         user_id=user.id,
