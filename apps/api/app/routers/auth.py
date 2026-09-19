@@ -750,7 +750,15 @@ async def verify_email(
     if user is None:
         raise HTTPException(status_code=400, detail=t("invalid_or_expired_link", locale))
     if user.email_verified_at is None:
+        # First verification proves mailbox control — not that the password
+        # chosen at register belonged to the mailbox owner (pre-hijacking:
+        # attacker registers with victim@…, victim clicks the mail, attacker
+        # still logs in with the registration password). Wipe that credential
+        # and revoke any prior session version; the victim is signed in here
+        # and can set a password from Settings / forgot-password.
         user.email_verified_at = datetime.now(UTC)
+        user.password_hash = None
+        user.token_version = (user.token_version or 0) + 1
     db.commit()
     db.refresh(user)
 
@@ -803,10 +811,11 @@ def forgot_password(
     rate_limit.enforce(request, "forgot-password", limit=3, window_seconds=900, subject=email)
 
     user = db.query(User).filter(User.email == email).first()
-    # Always return the same success payload (membership oracle). SSO-only
-    # accounts still get an email explaining how to sign in, so the inbox
-    # matches what the UI promised.
-    if user is not None and user.password_hash:
+    # Always return the same success payload (membership oracle). Verified
+    # accounts without a local password (SSO, or post-verify wipe) still get a
+    # reset link so they can set one. Unverified SSO-shaped accounts get the
+    # sign-in hint instead.
+    if user is not None and (user.password_hash or user.email_verified_at is not None):
         auth_tokens.invalidate_outstanding(db, user.id, AuthToken.KIND_PASSWORD_RESET)
         raw = auth_tokens.issue_password_reset(db, user.id)
         db.commit()
@@ -1055,12 +1064,13 @@ def change_password(
     db: Session = Depends(get_db),
 ) -> PasswordChangeResponse:
     locale = resolve_locale(request)
-    if not user.password_hash:
-        raise HTTPException(status_code=400, detail=t("rodium_oauth_no_password", locale))
-    if not verify_password(body.current_password, user.password_hash):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=t("invalid_current_password", locale)
-        )
+    if user.password_hash:
+        if not verify_password(body.current_password, user.password_hash):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail=t("invalid_current_password", locale)
+            )
+    # else: first local password (SSO or after verify-email wipe) — no
+    # current credential to check.
     user.password_hash = hash_password(body.new_password)
     # Revoke every outstanding session, including any the caller does not
     # control. `access_token` below re-authenticates the current browser so

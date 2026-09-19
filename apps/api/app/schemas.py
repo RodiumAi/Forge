@@ -158,7 +158,8 @@ class RodiumGenerateKeyResponse(BaseModel):
 
 
 class PasswordChangeRequest(BaseModel):
-    current_password: str
+    #: Empty when setting the first local password (no prior hash).
+    current_password: str = ""
     new_password: str = Field(min_length=8, max_length=128)
 
 
