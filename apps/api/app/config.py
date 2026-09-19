@@ -137,7 +137,7 @@ class Settings(BaseSettings):
 
     # Queue (Valkey / Redis Streams — same impl local and prod)
     queue_provider: Literal["redis"] = "redis"
-    redis_url: str = "redis://127.0.0.1:6380/0"
+    redis_url: str = "redis://:forge-dev-valkey@127.0.0.1:6380/0"
     usage_stream: str = "sites:usage"
     usage_consumer_group: str = "billing"
     # Rate-limit client IP: only trust X-Forwarded-For when the TCP peer is a

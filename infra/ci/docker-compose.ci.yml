@@ -17,8 +17,19 @@ services:
 
   valkey:
     image: valkey/valkey:8-alpine
+    environment:
+      VALKEY_PASSWORD: ci-valkey
+    command:
+      - valkey-server
+      - --requirepass
+      - ci-valkey
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD-SHELL", "valkey-cli -a ci-valkey ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
 
   minio:
     image: minio/minio:RELEASE.2025-04-22T22-12-26Z

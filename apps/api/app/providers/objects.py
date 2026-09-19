@@ -13,6 +13,34 @@ _GENERIC_AWS_S3_ENDPOINT = re.compile(
     re.IGNORECASE,
 )
 
+# Published site keys live under ``{slug}/…``. Refuse empty / root / traversal
+# prefixes so a bug cannot list or wipe the whole shared assets bucket.
+_SITE_PREFIX_RE = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?/$")
+_SITE_OBJECT_KEY_RE = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?/.+")
+
+
+def _require_site_prefix(prefix: str) -> str:
+    """Normalize and validate a site assets prefix (must be ``{slug}/``)."""
+    raw = (prefix or "").strip()
+    if not raw or ".." in raw or "\\" in raw or raw.startswith("/"):
+        raise ValueError(f"Refusing unsafe site object prefix: {prefix!r}")
+    normalized = raw.lstrip("/")
+    if not normalized.endswith("/"):
+        normalized = f"{normalized}/"
+    if not _SITE_PREFIX_RE.fullmatch(normalized):
+        raise ValueError(f"Refusing unsafe site object prefix: {prefix!r}")
+    return normalized
+
+
+def _is_safe_site_object_key(key: str, *, under_prefix: str | None = None) -> bool:
+    if not key or ".." in key or "\\" in key or key.startswith("/"):
+        return False
+    if not _SITE_OBJECT_KEY_RE.fullmatch(key):
+        return False
+    if under_prefix is not None and not key.startswith(under_prefix):
+        return False
+    return True
+
 
 def _resolve_static_credentials() -> tuple[str, str]:
     return get_settings().resolved_object_store_credentials()
@@ -105,23 +133,56 @@ class ObjectStore:
     def delete(self, bucket: str, key: str) -> None:
         self.internal.delete_object(Bucket=bucket, Key=key)
 
-    def delete_prefix(self, bucket: str, prefix: str) -> int:
-        """Best-effort recursive delete of keys under prefix. Returns deleted count."""
-        deleted = 0
+    def list_prefix(self, bucket: str, prefix: str) -> list[str]:
+        """Return object keys under a strict ``{slug}/`` prefix (paginated)."""
+        safe_prefix = _require_site_prefix(prefix)
+        keys: list[str] = []
         token: str | None = None
         while True:
-            kwargs: dict = {"Bucket": bucket, "Prefix": prefix.lstrip("/")}
+            kwargs: dict = {"Bucket": bucket, "Prefix": safe_prefix}
             if token:
                 kwargs["ContinuationToken"] = token
             resp = self.internal.list_objects_v2(**kwargs)
-            objects = [{"Key": obj["Key"]} for obj in resp.get("Contents") or []]
-            if objects:
-                self.internal.delete_objects(Bucket=bucket, Delete={"Objects": objects})
-                deleted += len(objects)
-            if not resp.get("IsTruncated"):
+            for obj in resp.get("Contents") or []:
+                key = obj.get("Key")
+                if isinstance(key, str) and _is_safe_site_object_key(key, under_prefix=safe_prefix):
+                    keys.append(key)
+            if resp.get("IsTruncated") is not True:
                 break
             token = resp.get("NextContinuationToken")
+            if not isinstance(token, str) or not token:
+                break
+        return keys
+
+    def delete_keys(self, bucket: str, keys: list[str], *, under_prefix: str | None = None) -> int:
+        """Delete specific keys in batches of 1000. Returns deleted count.
+
+        Only keys that look like site objects under ``{slug}/…`` are deleted.
+        When ``under_prefix`` is set it must already be a validated site prefix.
+        """
+        scope = _require_site_prefix(under_prefix) if under_prefix is not None else None
+        deleted = 0
+        batch: list[dict] = []
+        for key in keys:
+            if not _is_safe_site_object_key(key, under_prefix=scope):
+                raise ValueError(f"Refusing to delete unsafe site object key: {key!r}")
+            batch.append({"Key": key})
+            if len(batch) >= 1000:
+                self.internal.delete_objects(Bucket=bucket, Delete={"Objects": batch})
+                deleted += len(batch)
+                batch = []
+        if batch:
+            self.internal.delete_objects(Bucket=bucket, Delete={"Objects": batch})
+            deleted += len(batch)
         return deleted
+
+    def delete_prefix(self, bucket: str, prefix: str) -> int:
+        """Best-effort recursive delete of keys under a strict site prefix."""
+        safe_prefix = _require_site_prefix(prefix)
+        keys = self.list_prefix(bucket, safe_prefix)
+        if not keys:
+            return 0
+        return self.delete_keys(bucket, keys, under_prefix=safe_prefix)
 
     def presign_put(
         self, bucket: str, key: str, content_type: str, max_bytes: int, expires: int = 900

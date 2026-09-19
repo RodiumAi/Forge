@@ -52,13 +52,25 @@ services:
   valkey:
     image: valkey/valkey:8-alpine
     container_name: forge-web-valkey
-    command: valkey-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    environment:
+      VALKEY_PASSWORD: ${VALKEY_PASSWORD:-forge-dev-valkey}
+    command:
+      - valkey-server
+      - --appendonly
+      - "yes"
+      - --maxmemory
+      - 512mb
+      - --maxmemory-policy
+      - allkeys-lru
+      - --requirepass
+      - ${VALKEY_PASSWORD:-forge-dev-valkey}
+    # Localhost-only: do not expose an unauthenticated (or weak) Redis to the LAN.
     ports:
-      - "${FORGE_WEB_VALKEY_PORT:-6380}:6379"
+      - "127.0.0.1:${FORGE_WEB_VALKEY_PORT:-6380}:6379"
     volumes:
       - forge_web_valkey_data:/data
     healthcheck:
-      test: ["CMD", "valkey-cli", "ping"]
+      test: ["CMD-SHELL", "valkey-cli -a \"$$VALKEY_PASSWORD\" ping | grep -q PONG"]
       interval: 5s
       timeout: 3s
       retries: 12
@@ -84,8 +96,10 @@ services:
       OBJECT_STORE_ACCESS_KEY: ${MINIO_ROOT_USER:-rodiumdev}
       OBJECT_STORE_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-rodiumdev123}
       OBJECT_STORE_ADDRESSING: path
-      REDIS_URL: redis://valkey:6379/0
-      API_BASE_URL: http://localhost:8100
+      REDIS_URL: redis://:${VALKEY_PASSWORD:-forge-dev-valkey}@valkey:6379/0
+      # Prefer 127.0.0.1: on Windows, localhost often resolves to ::1 and the
+      # browser iframe fails while fetch via 127.0.0.1 still works.
+      API_BASE_URL: http://127.0.0.1:8100
       # Origin used to build the links we email out (verify, reset).
       WEB_APP_URL: ${WEB_APP_URL:-http://localhost:3100}
       # `mailpit` resolves on the compose network; the host port is only for

@@ -309,6 +309,7 @@ def update_project(
     locale = resolve_locale(request)
     project = _owned_project(db, user, project_id, locale)
     name_changed = False
+    old_slug: str | None = None
     if body.name is not None:
         next_name = body.name.strip()
         if not next_name:
@@ -324,14 +325,34 @@ def update_project(
         clash = db.query(Project).filter(Project.slug == next_slug, Project.id != project.id).first()
         if clash is not None:
             raise HTTPException(status_code=409, detail=t("slug_taken", locale))  # type: ignore[arg-type]
-        project.slug = next_slug
+        if next_slug != project.slug:
+            old_slug = project.slug
+            project.slug = next_slug
     elif name_changed and getattr(project, "published_at", None) is None:
         # Keep unpublished site URL in sync with the display name.
         candidate = _slugify(project.name)
         if candidate and candidate != project.slug:
+            old_slug = project.slug
             project.slug = _unique_slug_excluding(db, candidate, project.id)
     db.commit()
     db.refresh(project)
+
+    # Drop the old public prefix so another tenant cannot reclaim leftover objects.
+    if old_slug and old_slug != project.slug:
+        try:
+            settings = get_settings()
+            from app.providers.objects import get_object_store
+
+            store = get_object_store()
+            bucket = store.bucket_site_assets or settings.bucket_site_assets
+            if bucket:
+                store.delete_prefix(bucket, f"{old_slug}/")
+        except Exception:
+            logger.exception(
+                "Failed to cleanup old published assets slug=%s",
+                old_slug,
+            )
+
     return _project_out(project)
 
 
