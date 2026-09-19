@@ -1064,13 +1064,12 @@ def change_password(
     db: Session = Depends(get_db),
 ) -> PasswordChangeResponse:
     locale = resolve_locale(request)
-    if user.password_hash:
-        if not verify_password(body.current_password, user.password_hash):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail=t("invalid_current_password", locale)
-            )
-    # else: first local password (SSO or after verify-email wipe) — no
-    # current credential to check.
+    if user.password_hash and not verify_password(body.current_password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=t("invalid_current_password", locale)
+        )
+    # First local password (SSO or after verify-email wipe): no current
+    # credential to check when password_hash is absent.
     user.password_hash = hash_password(body.new_password)
     # Revoke every outstanding session, including any the caller does not
     # control. `access_token` below re-authenticates the current browser so
