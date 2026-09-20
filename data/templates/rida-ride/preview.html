@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Rida — preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 480px; height: 300px; overflow: hidden;
+    background: radial-gradient(120% 120% at 82% 0%, #0f2830, #0a1417 60%);
+    color: #e9fbfb;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    display: flex; align-items: center; gap: 20px; padding: 0 26px;
+  }
+  .side { width: 150px; }
+  .side .logo { display: flex; align-items: center; gap: 7px; font-size: 15px; font-weight: 800; letter-spacing: -.01em; }
+  .side .logo .dot { width: 14px; height: 14px; border-radius: 5px; background: linear-gradient(135deg, #22d3ee, #0e5866); }
+  .side h2 { font-size: 20px; font-weight: 800; letter-spacing: -.02em; line-height: 1.12; margin-top: 14px; }
+  .side p { font-size: 10px; color: #7fa0a3; line-height: 1.4; margin-top: 8px; }
+  .side .tag {
+    display: inline-block; margin-top: 12px; font-size: 8.5px; font-weight: 700; color: #22d3ee;
+    background: color-mix(in srgb, #22d3ee 16%, transparent); padding: 3px 8px; border-radius: 99px;
+  }
+  .phone {
+    width: 172px; height: 288px; border-radius: 26px; flex: none;
+    border: 2px solid color-mix(in srgb, #e9fbfb 16%, transparent);
+    background: #0a1417; overflow: hidden; position: relative;
+    box-shadow: 0 22px 48px rgba(0,0,0,.55);
+  }
+  .notch { position: absolute; z-index: 5; left: 50%; transform: translateX(-50%); top: 8px; width: 52px; height: 7px; border-radius: 99px; background: color-mix(in srgb, #e9fbfb 16%, transparent); }
+  /* Map */
+  .map {
+    position: absolute; left: 0; right: 0; top: 0; height: 150px; overflow: hidden;
+    background: radial-gradient(120% 90% at 70% 10%, color-mix(in srgb, #22d3ee 16%, transparent), transparent 60%), linear-gradient(180deg, #0e1c20, #0a1417);
+  }
+  .grid {
+    position: absolute; inset: -20% -20%;
+    background-image:
+      linear-gradient(color-mix(in srgb, #e9fbfb 8%, transparent) 1.4px, transparent 1.4px),
+      linear-gradient(90deg, color-mix(in srgb, #e9fbfb 8%, transparent) 1.4px, transparent 1.4px);
+    background-size: 34px 34px, 34px 34px;
+    transform: perspective(400px) rotateX(36deg) scale(1.3);
+    transform-origin: center 38%;
+  }
+  .route { position: absolute; inset: 0; width: 100%; height: 100%; filter: drop-shadow(0 0 4px color-mix(in srgb, #22d3ee 60%, transparent)); }
+  .origin { position: absolute; left: 15%; bottom: 22%; width: 9px; height: 9px; border-radius: 99px; background: #e9fbfb; box-shadow: 0 0 0 3px color-mix(in srgb, #e9fbfb 22%, transparent); }
+  .pin { position: absolute; right: 15%; top: 16%; width: 18px; height: 18px; color: #22d3ee; }
+  .car { position: absolute; left: 44%; top: 44%; width: 22px; height: 22px; border-radius: 99px; background: #22d3ee; color: #04181c; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px color-mix(in srgb, #22d3ee 45%, transparent); }
+  /* Sheet */
+  .sheet {
+    position: absolute; left: 0; right: 0; top: 138px; bottom: 24px;
+    background: #101c1f; border: 1px solid color-mix(in srgb, #e9fbfb 12%, transparent);
+    border-radius: 16px 16px 0 0; padding: 7px 10px;
+  }
+  .grab { width: 26px; height: 3px; border-radius: 99px; background: color-mix(in srgb, #e9fbfb 14%, transparent); margin: 0 auto 7px; }
+  .wa { display: flex; align-items: center; gap: 6px; border: 1px solid color-mix(in srgb, #e9fbfb 12%, transparent); background: #0c181b; border-radius: 9px; padding: 6px 8px; }
+  .wa .s { width: 11px; height: 11px; border-radius: 99px; border: 1.6px solid #22d3ee; position: relative; }
+  .wa .s::after { content: ""; position: absolute; right: -3px; bottom: -3px; width: 5px; height: 1.6px; background: #22d3ee; transform: rotate(45deg); border-radius: 2px; }
+  .wa b { flex: 1; font-size: 8.5px; }
+  .wa .now { font-size: 6.5px; font-weight: 700; color: #22d3ee; background: color-mix(in srgb, #22d3ee 16%, transparent); padding: 2px 6px; border-radius: 99px; }
+  .lbl { font-size: 6px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #7fa0a3; margin: 8px 0 5px; }
+  .opt { display: flex; align-items: center; gap: 7px; border: 1px solid color-mix(in srgb, #e9fbfb 12%, transparent); background: #0c181b; border-radius: 9px; padding: 5px 7px; margin-bottom: 4px; }
+  .opt.sel { border-color: color-mix(in srgb, #22d3ee 60%, transparent); background: color-mix(in srgb, #22d3ee 12%, transparent); }
+  .opt .g { width: 22px; height: 22px; border-radius: 7px; flex: none; display: flex; align-items: center; justify-content: center; color: #22d3ee; background: color-mix(in srgb, #22d3ee 14%, transparent); }
+  .opt.sel .g { background: #22d3ee; color: #04181c; }
+  .opt .m { flex: 1; }
+  .opt .m b { display: block; font-size: 8px; }
+  .opt .m span { font-size: 6px; color: #7fa0a3; }
+  .opt .p { font-size: 8.5px; font-weight: 800; }
+  .book { margin-top: 5px; display: flex; align-items: center; justify-content: center; gap: 4px; background: #22d3ee; color: #04181c; font-size: 8.5px; font-weight: 800; border-radius: 9px; padding: 8px 0; }
+  .tabs {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    display: grid; grid-template-columns: repeat(4,1fr); padding: 5px 4px 7px;
+    border-top: 1px solid color-mix(in srgb, #e9fbfb 10%, transparent);
+    background: color-mix(in srgb, #0a1417 92%, #000);
+    font-size: 5.5px; color: #7fa0a3; text-align: center; gap: 2px;
+  }
+  .tabs .d { width: 11px; height: 11px; margin: 0 auto 2px; border-radius: 3px; border: 1.3px solid currentColor; }
+  .tabs .active { color: #22d3ee; font-weight: 700; }
+</style>
+</head>
+<body>
+  <div class="side">
+    <div class="logo"><span class="dot"></span> Rida</div>
+    <h2>Your city, in motion</h2>
+    <p>Onboarding · live map &amp; route · upfront ride prices · trips &amp; activity — with bottom tabs.</p>
+    <span class="tag">Mobile app shell</span>
+  </div>
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="map">
+      <div class="grid"></div>
+      <svg class="route" viewBox="0 0 172 150" preserveAspectRatio="none">
+        <path d="M28 120 C 60 96, 74 100, 92 74 S 128 36, 148 26" fill="none" stroke="#22d3ee" stroke-width="3.5" stroke-linecap="round" />
+      </svg>
+      <span class="origin"></span>
+      <span class="pin">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" /><circle cx="12" cy="10" r="2.4" stroke="currentColor" stroke-width="1.8" /></svg>
+      </span>
+      <span class="car">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M4 16v2a1 1 0 0 0 1 1h1.5a1 1 0 0 0 1-1v-1h9v1a1 1 0 0 0 1 1H20a1 1 0 0 0 1-1v-2m-1-1-1.4-4.2A2 2 0 0 0 16.7 8H7.3a2 2 0 0 0-1.9 1.4L4 15h16Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
+      </span>
+    </div>
+    <div class="sheet">
+      <div class="grab"></div>
+      <div class="wa"><span class="s"></span><b>Where to?</b><span class="now">Now</span></div>
+      <div class="lbl">Choose a ride</div>
+      <div class="opt sel">
+        <span class="g"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M9 8V6.6a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1V8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M4 16v2h4v-1h8v1h4v-2l-1.4-5A2 2 0 0 0 16.7 9H7.3a2 2 0 0 0-1.9 1.4L4 16Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <span class="m"><b>Comfort</b><span>Newer cars · 5 min</span></span>
+        <span class="p">3,650</span>
+      </div>
+      <div class="opt">
+        <span class="g"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M4 16v2h4v-1h8v1h4v-2l-1.4-5A2 2 0 0 0 16.7 9H7.3a2 2 0 0 0-1.9 1.4L4 16Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <span class="m"><b>Eco</b><span>Everyday · 3 min</span></span>
+        <span class="p">2,400</span>
+      </div>
+      <div class="book"><svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M13 3 5 13h5l-1 8 8-10h-5l1-8Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" fill="currentColor" fill-opacity=".2"/></svg> Book ride</div>
+    </div>
+    <div class="tabs">
+      <span class="active"><span class="d"></span>Home</span>
+      <span><span class="d"></span>Trips</span>
+      <span><span class="d"></span>Activity</span>
+      <span><span class="d"></span>Account</span>
+    </div>
+  </div>
+</body>
+</html>

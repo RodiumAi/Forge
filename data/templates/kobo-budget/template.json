@@ -1,0 +1,28 @@
+{
+  "kind": "mobile",
+  "id": "kobo-budget",
+  "title": {
+    "en": "Kobo",
+    "fr": "Kobo"
+  },
+  "description": {
+    "en": "Personal budgeting app: onboarding, budget-left ring, category limits with progress bars, add-expense keypad, and monthly stats — phone shell with bottom tabs.",
+    "fr": "App de budget perso : onboarding, anneau de budget restant, limites par catégorie avec barres, saisie de dépense au clavier, et stats mensuelles — shell téléphone + tabs."
+  },
+  "tags": [
+    "mobile",
+    "budgeting",
+    "expenses",
+    "finance"
+  ],
+  "preview": "preview.html",
+  "bootHint": {
+    "en": "Adapt kobo-budget: currency, monthly budget, category names and limits, expense labels, reminder text.",
+    "fr": "Adapte kobo-budget : devise, budget mensuel, catégories et limites, libellés de dépenses, texte de rappel."
+  },
+  "accent": "#60a5fa",
+  "bg": "#0e1230",
+  "fg": "#eef1ff",
+  "muted": "#8b90bd",
+  "tone": "clear, reassuring, organised"
+}

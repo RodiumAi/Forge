@@ -1,0 +1,28 @@
+{
+  "kind": "mobile",
+  "id": "sabor-recipes",
+  "title": {
+    "en": "Sabor",
+    "fr": "Sabor"
+  },
+  "description": {
+    "en": "Recipe app: onboarding, featured recipe hero, category chips, search, saved cook-agains, and a cooking profile — phone shell with bottom tabs.",
+    "fr": "App de recettes : onboarding, recette à la une, chips de catégories, recherche, favoris à refaire et profil cuisine — shell téléphone + tabs."
+  },
+  "tags": [
+    "mobile",
+    "recipes",
+    "cooking",
+    "food"
+  ],
+  "preview": "preview.html",
+  "bootHint": {
+    "en": "Adapt sabor-recipes: recipe names, cook times, categories, cuisines, ratings, and chef names.",
+    "fr": "Adapte sabor-recipes : noms de recettes, temps de cuisson, catégories, cuisines, notes et noms de chefs."
+  },
+  "accent": "#f59e0b",
+  "bg": "#1a120b",
+  "fg": "#fdf3e7",
+  "muted": "#b39b82",
+  "tone": "warm, appetizing, homey"
+}

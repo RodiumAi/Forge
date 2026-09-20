@@ -1,5 +1,6 @@
 {
   "id": "gallery-photos",
+  "kind": "web",
   "title": { "en": "Photo Gallery", "fr": "Galerie Photo" },
   "description": {
     "en": "A bright, minimal photography gallery with category filters and a masonry-style grid of visual tiles.",

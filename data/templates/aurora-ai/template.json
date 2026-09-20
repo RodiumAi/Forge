@@ -1,5 +1,6 @@
 {
   "id": "aurora-ai",
+  "kind": "web",
   "title": { "en": "Aurora AI", "fr": "Aurora AI" },
   "description": {
     "en": "Premium AI SaaS landing on deep black with animated aurora gradients, glassmorphism cards, 3D-tilted dashboard mockup, pricing and testimonials.",

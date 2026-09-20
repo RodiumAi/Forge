@@ -1,5 +1,6 @@
 {
   "id": "podux-podcast",
+  "kind": "web",
   "title": { "en": "Podux Podcast", "fr": "Podcast Podux" },
   "description": {
     "en": "A modern podcast landing page with show hero, numbered episode list, hosts section and footer.",

@@ -1,5 +1,6 @@
 {
   "id": "tailstore-shop",
+  "kind": "web",
   "title": { "en": "Tailstore Shop", "fr": "Boutique Tailstore" },
   "description": {
     "en": "A clean fashion e-commerce storefront with hero promo, product grids and a newsletter banner.",

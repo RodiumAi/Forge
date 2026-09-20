@@ -1,0 +1,28 @@
+{
+  "kind": "mobile",
+  "id": "trove-market",
+  "title": {
+    "en": "Trove Market",
+    "fr": "Trove Market"
+  },
+  "description": {
+    "en": "Shopping app: onboarding, search, category chips, promo hero, 2-column product grid, cart with checkout — phone shell with bottom tabs.",
+    "fr": "App shopping : onboarding, recherche, chips catégories, héro promo, grille produits 2 colonnes, panier + paiement — shell téléphone + tabs."
+  },
+  "tags": [
+    "mobile",
+    "ecommerce",
+    "shopping",
+    "retail"
+  ],
+  "preview": "preview.html",
+  "bootHint": {
+    "en": "Adapt trove-market: currency, product names, prices, categories, promo copy, order labels.",
+    "fr": "Adapte trove-market : devise, noms de produits, prix, catégories, texte promo, libellés de commandes."
+  },
+  "accent": "#f97316",
+  "bg": "#faf7f2",
+  "fg": "#1c1917",
+  "muted": "#78716c",
+  "tone": "warm, curated, tactile"
+}

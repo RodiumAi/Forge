@@ -1,0 +1,22 @@
+{
+  "name": "Loop",
+  "short_name": "Loop",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d1b1e",
+  "theme_color": "#0d1b1e",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 {
   "id": "tailnext-saas",
+  "kind": "web",
   "title": { "en": "TailNext SaaS Landing", "fr": "Landing SaaS TailNext" },
   "description": {
     "en": "A clean, airy SaaS marketing landing page: split hero, logo strip, three-column features, highlighted pricing and contact footer.",

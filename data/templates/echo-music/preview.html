@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Echo — preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 480px; height: 300px; overflow: hidden;
+    background: radial-gradient(120% 120% at 88% -6%, #2a123a, #0c0a12 58%);
+    color: #f5f0fb;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    display: flex; align-items: center; gap: 20px; padding: 0 26px;
+  }
+  .side { width: 150px; }
+  .side .logo { display: flex; align-items: center; gap: 7px; font-size: 15px; font-weight: 800; letter-spacing: -.01em; }
+  .side .logo .dot { width: 14px; height: 14px; border-radius: 5px; background: linear-gradient(135deg, #ec4899, #7c3aed); }
+  .side h2 { font-size: 20px; font-weight: 800; letter-spacing: -.02em; line-height: 1.12; margin-top: 14px; }
+  .side p { font-size: 10px; color: #9b90ad; line-height: 1.4; margin-top: 8px; }
+  .side .tag {
+    display: inline-block; margin-top: 12px; font-size: 8.5px; font-weight: 700; color: #ec4899;
+    background: color-mix(in srgb, #ec4899 16%, transparent); padding: 3px 8px; border-radius: 99px;
+  }
+  .phone {
+    width: 172px; height: 288px; border-radius: 26px; flex: none;
+    border: 2px solid color-mix(in srgb, #f5f0fb 16%, transparent);
+    background: #0c0a12; overflow: hidden; position: relative;
+    box-shadow: 0 22px 48px rgba(0,0,0,.55);
+  }
+  .notch { width: 52px; height: 7px; border-radius: 99px; margin: 8px auto 0; background: color-mix(in srgb, #f5f0fb 16%, transparent); }
+  .nav { display: flex; align-items: center; gap: 6px; padding: 8px 11px 7px; }
+  .pfp { width: 20px; height: 20px; border-radius: 99px; flex: none; display: flex; align-items: center; justify-content: center; font-size: 8px; font-weight: 800; color: #fff; background: linear-gradient(135deg, #ec4899, #7c3aed); }
+  .nav b { font-size: 11px; }
+  .nav small { display: block; font-size: 6.5px; color: #9b90ad; }
+  .gear { margin-left: auto; width: 18px; height: 18px; border-radius: 99px; border: 1px solid color-mix(in srgb, #f5f0fb 14%, transparent); }
+  .lbl { font-size: 7.5px; font-weight: 700; padding: 6px 11px 4px; color: #f5f0fb; }
+  .rail { display: flex; gap: 6px; padding: 0 11px; }
+  .rail .col { width: 44px; }
+  .rail .art { width: 44px; height: 44px; border-radius: 9px; box-shadow: 0 6px 14px rgba(0,0,0,.45); }
+  .rail b { display: block; font-size: 6.5px; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rail span { font-size: 5.5px; color: #9b90ad; }
+  .pcard { display: flex; align-items: center; gap: 7px; margin: 8px 11px 0; padding: 5px; border-radius: 9px; border: 1px solid color-mix(in srgb, #f5f0fb 12%, transparent); background: color-mix(in srgb, #f5f0fb 6%, #0c0a12); }
+  .pcard .art { width: 24px; height: 24px; border-radius: 6px; flex: none; }
+  .pcard b { display: block; font-size: 7.5px; }
+  .pcard span { font-size: 6px; color: #9b90ad; }
+  .mini {
+    position: absolute; left: 8px; right: 8px; bottom: 33px;
+    display: flex; align-items: center; gap: 6px; padding: 4px 5px; border-radius: 9px;
+    border: 1px solid color-mix(in srgb, #ec4899 24%, transparent);
+    background: color-mix(in srgb, #f5f0fb 9%, #17121f);
+    box-shadow: 0 10px 22px rgba(0,0,0,.5);
+  }
+  .mini .art { width: 22px; height: 22px; border-radius: 5px; flex: none; }
+  .mini .m { flex: 1; }
+  .mini .m b { display: block; font-size: 7px; }
+  .mini .m span { font-size: 5.5px; color: #9b90ad; }
+  .mini .pp { width: 16px; height: 16px; border-radius: 99px; flex: none; display: flex; align-items: center; justify-content: center; font-size: 8px; color: #f5f0fb; }
+  .tabs {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    display: grid; grid-template-columns: repeat(4,1fr); padding: 6px 4px 8px;
+    border-top: 1px solid color-mix(in srgb, #f5f0fb 10%, transparent);
+    background: color-mix(in srgb, #0c0a12 92%, #000);
+    font-size: 5.5px; color: #9b90ad; text-align: center; gap: 2px;
+  }
+  .tabs .ic { width: 12px; height: 12px; margin: 0 auto 2px; border-radius: 3px; border: 1.3px solid currentColor; }
+  .tabs .active { color: #ec4899; font-weight: 700; }
+  .g-a { background: radial-gradient(120% 120% at 20% 12%, #ec4899, transparent 60%), linear-gradient(150deg, #6d28d9, #17121f 82%); }
+  .g-b { background: radial-gradient(120% 120% at 20% 12%, #3b82f6, transparent 60%), linear-gradient(150deg, #0e7490, #17121f 82%); }
+  .g-c { background: radial-gradient(120% 120% at 20% 12%, #f97316, transparent 60%), linear-gradient(150deg, #be123c, #17121f 82%); }
+  .g-d { background: radial-gradient(120% 120% at 20% 12%, #22d3ee, transparent 60%), linear-gradient(150deg, #4338ca, #17121f 82%); }
+  .g-p { background: radial-gradient(120% 120% at 20% 12%, #ec4899, transparent 60%), linear-gradient(150deg, #831843, #17121f 82%); }
+</style>
+</head>
+<body>
+  <div class="side">
+    <div class="logo"><span class="dot"></span> Echo</div>
+    <h2>Your sound, all night</h2>
+    <p>Onboarding · recently played &amp; playlists · search · library · now playing — with a mini-player and bottom tabs.</p>
+    <span class="tag">Mobile app shell</span>
+  </div>
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="nav">
+      <span class="pfp">M</span>
+      <div><b>Echo</b><small>Good evening, Maya</small></div>
+      <span class="gear"></span>
+    </div>
+    <div class="lbl">Recently played</div>
+    <div class="rail">
+      <div class="col"><div class="art g-a"></div><b>Neon Tide</b><span>Nadi Vaal</span></div>
+      <div class="col"><div class="art g-b"></div><b>Slow Static</b><span>Kite Season</span></div>
+      <div class="col"><div class="art g-c"></div><b>Midnight</b><span>Nadi Vaal</span></div>
+    </div>
+    <div class="pcard">
+      <span class="art g-p"></span>
+      <div><b>Daily Mix 1</b><span>Nadi Vaal · Solene · Kite Season</span></div>
+    </div>
+    <div class="mini">
+      <span class="art g-a"></span>
+      <div class="m"><b>Neon Tide</b><span>Nadi Vaal</span></div>
+      <span class="pp">⏸</span>
+    </div>
+    <div class="tabs">
+      <span class="active"><span class="ic"></span>Home</span>
+      <span><span class="ic"></span>Search</span>
+      <span><span class="ic"></span>Library</span>
+      <span><span class="ic"></span>Now</span>
+    </div>
+  </div>
+</body>
+</html>

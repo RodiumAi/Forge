@@ -1,5 +1,6 @@
 {
   "id": "kinetic-conf",
+  "kind": "web",
   "title": { "en": "Kinetic 2027 Conference", "fr": "Conférence Kinetic 2027" },
   "description": {
     "en": "Loud kinetic-typography site for a tech conference: opposing marquee hero, hard color blocks, duotone speakers grid, accordion schedule and ticket tiers.",

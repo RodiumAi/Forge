@@ -39,6 +39,7 @@ Bilingual metadata plus a strict palette. All four colors must be 6-digit hex (`
 
 ```json
 {
+  "kind": "web",
   "id": "aurora-ai",
   "title": { "en": "Aurora AI", "fr": "Aurora AI" },
   "description": { "en": "…", "fr": "…" },
@@ -53,6 +54,7 @@ Bilingual metadata plus a strict palette. All four colors must be 6-digit hex (`
 }
 ```
 
+- `kind`: required — `"web"` (marketing / multi-page site) or `"mobile"` (app-shell prototype). The gallery filters by kind; forking sets `project.platform` from this field.
 - `title`, `description`, `bootHint`: both `en` and `fr` must be non-empty.
 - `accent`, `bg`, `fg`, `muted`: hex `#rrggbb` only (no shorthand, no `rgb()`).
 - `preview` points to `"preview.html"`.

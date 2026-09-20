@@ -39,6 +39,7 @@ Métadonnées bilingues plus une palette stricte. Les quatre couleurs doivent ê
 
 ```json
 {
+  "kind": "web",
   "id": "aurora-ai",
   "title": { "en": "Aurora AI", "fr": "Aurora AI" },
   "description": { "en": "…", "fr": "…" },
@@ -53,6 +54,7 @@ Métadonnées bilingues plus une palette stricte. Les quatre couleurs doivent ê
 }
 ```
 
+- `kind` : obligatoire — `"web"` (site / landing) ou `"mobile"` (prototype shell d’app). La galerie filtre sur ce champ ; le fork renseigne `project.platform`.
 - `title`, `description`, `bootHint` : `en` et `fr` doivent être non vides.
 - `accent`, `bg`, `fg`, `muted` : hex `#rrggbb` uniquement (pas de raccourci, pas de `rgb()`).
 - `preview` pointe vers `"preview.html"`.

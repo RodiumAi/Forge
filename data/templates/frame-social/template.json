@@ -1,0 +1,28 @@
+{
+  "kind": "mobile",
+  "id": "frame-social",
+  "title": {
+    "en": "Frame",
+    "fr": "Frame"
+  },
+  "description": {
+    "en": "Photo social app: onboarding, stories row, photo feed, explore grid, compose sheet, and profile — phone shell with bottom tabs.",
+    "fr": "App photo sociale : onboarding, stories, feed photo, grille explore, composer et profil — shell téléphone + tabs."
+  },
+  "tags": [
+    "mobile",
+    "social",
+    "photo",
+    "feed"
+  ],
+  "preview": "preview.html",
+  "bootHint": {
+    "en": "Adapt frame-social: brand name, usernames, captions, story names, and the Unsplash photo IDs.",
+    "fr": "Adapte frame-social : nom de marque, pseudos, légendes, noms de stories et les IDs de photos Unsplash."
+  },
+  "accent": "#8b5cf6",
+  "bg": "#fbfbfd",
+  "fg": "#101114",
+  "muted": "#6b7280",
+  "tone": "playful, social, clean"
+}

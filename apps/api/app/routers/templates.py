@@ -20,14 +20,18 @@ def _to_out(meta, locale: str) -> TemplateOut:
         accent=meta.accent,
         bg=meta.bg,
         preview_url=f"/templates/{meta.id}/preview",
+        kind=meta.kind if meta.kind in ("web", "mobile") else "web",
     )
 
 
 @router.get("", response_model=list[TemplateOut])
-def get_templates(request: Request) -> JSONResponse:
+def get_templates(request: Request, kind: str | None = None) -> JSONResponse:
     """Public catalogue — used on landing + dashboard."""
     locale = resolve_locale(request)
-    payload = [_to_out(meta, locale).model_dump() for meta in list_templates()]
+    filter_kind = kind.strip().lower() if kind else None
+    if filter_kind and filter_kind not in ("web", "mobile"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid kind")
+    payload = [_to_out(meta, locale).model_dump() for meta in list_templates(kind=filter_kind)]
     return JSONResponse(
         content=payload,
         headers={"Cache-Control": "public, max-age=60, stale-while-revalidate=300"},

@@ -98,6 +98,7 @@ def _project_out(project: Project) -> ProjectOut:
         custom_domain_status=domain.status if domain else None,
         template_id=project.template_id,
         published_at=getattr(project, "published_at", None),
+        platform=getattr(project, "platform", None) or "web",
         created_at=project.created_at,
         updated_at=project.updated_at,
         has_thumbnail=_has_thumbnail(project.id),
@@ -209,6 +210,14 @@ async def create_project(
             detail=t("template_not_found", locale),
         )
 
+    platform = (body.platform or "web").strip().lower()
+    if platform not in ("web", "mobile"):
+        platform = "web"
+    if template_id:
+        meta_for_kind = get_template(template_id)
+        if meta_for_kind is not None:
+            platform = meta_for_kind.kind if meta_for_kind.kind in ("web", "mobile") else "web"
+
     fallback = t("new_project", locale)  # type: ignore[arg-type]
     if prompt:
         display_name = await suggest_project_name(
@@ -245,6 +254,7 @@ async def create_project(
         slug=slug,
         status="ready",
         template_id=template_id,
+        platform=platform,
     )
     db.add(project)
     db.commit()
@@ -264,7 +274,12 @@ async def create_project(
                     project.design_brief = desc
                     db.commit()
         else:
-            await asyncio.to_thread(scaffold_vite_react, str(project.id), project.name)
+            await asyncio.to_thread(
+                scaffold_vite_react,
+                str(project.id),
+                project.name,
+                platform,
+            )
     except Exception as exc:
         db.delete(project)
         db.commit()
@@ -283,6 +298,7 @@ async def create_project(
             "project_id": str(project.id),
             "template_id": template_id,
             "has_prompt": bool(prompt),
+            "platform": platform,
         },
     )
     return _project_out(project)

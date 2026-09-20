@@ -198,7 +198,7 @@ Each kit lives at `data/templates/<id>/` where `<id>` matches `^[a-z0-9][a-z0-9-
 
 ```
 data/templates/<id>/
-├── template.json        # catalog: i18n title/description, tags, hex palette, bootHint
+├── template.json        # catalog: kind (web|mobile), i18n title/description, tags, hex palette, bootHint
 ├── DESIGN.md            # design charter (colors, tone, do/don't, image URLs)
 ├── preview.html         # static gallery thumbnail — no <script> tags
 ├── index.html
@@ -223,6 +223,7 @@ Overview: [data/templates/README.md](data/templates/README.md) · Full contract:
 | `preview.html` has **no** `<script>` | Gallery thumbnail is pure HTML/CSS |
 | `src/index.css` has **no** `@import` | No external fonts/CSS at runtime |
 | `template.json` palette uses `#rrggbb` hex | Agent and gallery read consistent tokens |
+| `template.json` includes `kind`: `web` or `mobile` | Gallery filter + project.platform on fork |
 | `title`, `description`, `bootHint` in **en** + **fr** | Bilingual product |
 
 ### Submission workflow
@@ -230,8 +231,8 @@ Overview: [data/templates/README.md](data/templates/README.md) · Full contract:
 1. Fork / branch from latest `main`.
 2. Add or edit `data/templates/<id>/` following the layout above.
 3. Register the new `<id>` in `EXPECTED_IDS` (`apps/api/tests/test_templates.py`).
-4. Update keyword routing in `apps/api/app/services/templates.py` if the kit targets new topics.
-5. Run `cd apps/api && pytest tests/test_templates.py -q`.
+4. Run `cd apps/api && pytest tests/test_templates.py -q`.
+5. Open a PR with screenshots of the gallery card and a forked preview.
 6. Open a PR with:
    - **Screenshot** of the gallery card (`preview.html` rendering)
    - **Screenshot or video** of a forked live preview in the builder

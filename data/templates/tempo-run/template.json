@@ -1,0 +1,28 @@
+{
+  "kind": "mobile",
+  "id": "tempo-run",
+  "title": {
+    "en": "Tempo Run",
+    "fr": "Tempo Run"
+  },
+  "description": {
+    "en": "Running tracker app: onboarding, today's activity rings, one-tap start run, recent runs, weekly stats and personal bests — phone shell with bottom tabs.",
+    "fr": "App de suivi de course : onboarding, anneaux d'activité du jour, démarrage en un tap, courses récentes, stats hebdo et records — shell téléphone + tabs."
+  },
+  "tags": [
+    "mobile",
+    "fitness",
+    "running",
+    "tracker"
+  ],
+  "preview": "preview.html",
+  "bootHint": {
+    "en": "Adapt tempo-run: units (km/mi), goals, run labels, pace/calorie targets, connected devices, personal bests.",
+    "fr": "Adapte tempo-run : unités (km/mi), objectifs, libellés de courses, cibles allure/calories, appareils connectés, records."
+  },
+  "accent": "#a3e635",
+  "bg": "#0a0f0d",
+  "fg": "#f0fdf4",
+  "muted": "#86a08f",
+  "tone": "energetic, motivating, precise"
+}

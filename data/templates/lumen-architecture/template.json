@@ -1,5 +1,6 @@
 {
   "id": "lumen-architecture",
+  "kind": "web",
   "title": { "en": "Lumen Atelier", "fr": "Lumen Atelier" },
   "description": {
     "en": "Editorial architecture studio site: huge serif headlines on warm off-white, asymmetric full-bleed project grid, numbered sections, hairline rules, philosophy and team.",

@@ -1,5 +1,6 @@
 {
   "id": "logsfolio-portfolio",
+  "kind": "web",
   "title": { "en": "Developer Portfolio", "fr": "Portfolio Developpeur" },
   "description": {
     "en": "A dark single-page developer portfolio: hero intro, work experience, projects, education, testimonials and blog teasers.",

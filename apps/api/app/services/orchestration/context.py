@@ -318,7 +318,20 @@ async def build_llm_messages(
     design = load_design_md(project_id)
     has_design = bool(design)
 
-    layer1 = system_prompt_with_design(has_design)
+    platform = "web"
+    if db is not None:
+        try:
+            from uuid import UUID
+
+            from app.models import Project
+
+            row = db.get(Project, UUID(str(project_id)))
+            if row is not None and getattr(row, "platform", None) in ("web", "mobile"):
+                platform = row.platform
+        except Exception:
+            platform = "web"
+
+    layer1 = system_prompt_with_design(has_design, platform=platform)
     layer2_parts = []
     ai_rules = load_ai_rules_md(project_id)
     if ai_rules:

@@ -1,0 +1,28 @@
+{
+  "kind": "mobile",
+  "id": "fern-plants",
+  "title": {
+    "en": "Fern",
+    "fr": "Fern"
+  },
+  "description": {
+    "en": "Plant care app: onboarding, water-today reminders, my-plants grid with watering countdowns, care guides, and add-a-plant — phone shell with bottom tabs.",
+    "fr": "App de soin des plantes : onboarding, rappels d'arrosage du jour, grille de plantes avec comptes à rebours, guides d'entretien et ajout de plante — shell téléphone + tabs."
+  },
+  "tags": [
+    "mobile",
+    "plants",
+    "gardening",
+    "reminders"
+  ],
+  "preview": "preview.html",
+  "bootHint": {
+    "en": "Adapt fern-plants: plant names, rooms, watering intervals, light needs, care tips, and guide labels.",
+    "fr": "Adapte fern-plants : noms de plantes, pièces, intervalles d'arrosage, besoins en lumière, conseils d'entretien et libellés de guides."
+  },
+  "accent": "#4ade80",
+  "bg": "#0f1a14",
+  "fg": "#eafaf0",
+  "muted": "#86a894",
+  "tone": "calm, nurturing, fresh"
+}

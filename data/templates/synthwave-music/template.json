@@ -1,5 +1,6 @@
 {
   "id": "synthwave-music",
+  "kind": "web",
   "title": { "en": "Neon Nights", "fr": "Neon Nights" },
   "description": {
     "en": "Retro synthwave artist site: violet-pink gradient sky, striped CSS sun, perspective floor grid, 3D vinyl album cards, tracklist and tour dates in full neon.",

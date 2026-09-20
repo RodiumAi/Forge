@@ -1,0 +1,28 @@
+{
+  "kind": "mobile",
+  "id": "rida-ride",
+  "title": {
+    "en": "Rida",
+    "fr": "Rida"
+  },
+  "description": {
+    "en": "Ride-hailing app: onboarding, live CSS map with route, upfront ride options with price & ETA, trips, activity — phone shell with bottom tabs.",
+    "fr": "App VTC : onboarding, carte CSS avec itinéraire, options de course avec prix et ETA affichés, trajets, activité — shell téléphone + tabs."
+  },
+  "tags": [
+    "mobile",
+    "ride-hailing",
+    "mobility",
+    "transport"
+  ],
+  "preview": "preview.html",
+  "bootHint": {
+    "en": "Adapt rida-ride: city, ride tiers, prices & ETA, saved places, trip labels, currency.",
+    "fr": "Adapte rida-ride : ville, catégories de course, prix et ETA, lieux enregistrés, libellés de trajets, devise."
+  },
+  "accent": "#22d3ee",
+  "bg": "#0a1417",
+  "fg": "#e9fbfb",
+  "muted": "#7fa0a3",
+  "tone": "fast, confident, urban"
+}

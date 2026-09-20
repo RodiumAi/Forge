@@ -1,0 +1,28 @@
+{
+  "kind": "mobile",
+  "id": "loop-habit",
+  "title": {
+    "en": "Loop",
+    "fr": "Loop"
+  },
+  "description": {
+    "en": "Habit tracker app: onboarding, Today progress ring, streak checklist, calendar heatmap stats, and profile — phone shell with bottom tabs.",
+    "fr": "App de suivi d'habitudes : onboarding, anneau de progression du jour, checklist de séries, heatmap calendrier et profil — shell téléphone + tabs."
+  },
+  "tags": [
+    "mobile",
+    "habits",
+    "productivity",
+    "wellness"
+  ],
+  "preview": "preview.html",
+  "bootHint": {
+    "en": "Adapt loop-habit: habit names, schedules, streak counts, heatmap data, reminder times, achievements.",
+    "fr": "Adapte loop-habit : noms d'habitudes, fréquences, séries, données de heatmap, rappels, badges."
+  },
+  "accent": "#2dd4bf",
+  "bg": "#0d1b1e",
+  "fg": "#eafcff",
+  "muted": "#7fa3a8",
+  "tone": "focused, encouraging, tidy"
+}

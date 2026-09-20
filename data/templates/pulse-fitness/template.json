@@ -1,5 +1,6 @@
 {
   "id": "pulse-fitness",
+  "kind": "web",
   "title": { "en": "Pulse Club", "fr": "Pulse Club" },
   "description": {
     "en": "High-voltage fitness club site: diagonal clip-path sections, giant condensed italic type, animated progress bars, coach grid and membership plans in electric lime on black.",

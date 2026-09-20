@@ -628,7 +628,12 @@ export function PreviewPane({
             </div>
           )}
           {previewSrc ? (
-            <PreviewToolbar tool={previewTool} onToolChange={onPreviewToolChange} />
+            <PreviewToolbar
+              key={viewport}
+              tool={previewTool}
+              onToolChange={onPreviewToolChange}
+              defaultCollapsed={viewport === "phone"}
+            />
           ) : null}
         </div>
         {sidePanel}

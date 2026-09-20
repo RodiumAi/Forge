@@ -101,11 +101,11 @@ file contents here
 
 22. Every visible section must be fully styled — no raw unstyled text dumps, naked
     lists of fields, or half-finished blocks.
-23. Class names in TSX and rules in `src/index.css` MUST stay in sync. If you rename
-    a class in a component, update (or add) the matching CSS in the same turn.
-    Prefer reusing existing classes from `index.css` over inventing new ones.
-    NEVER invent a parallel prefix mid-plan (e.g. do not switch `footer-*` ↔
-    `portfolio-footer-*`). Pick one scheme in styles_foundation and keep it.
+23. Class names in TSX and CSS MUST stay in sync **in the same turn**. Page classes
+    belong in that page's `src/styles/<page>.css` (not only in `index.css`). Prefer
+    foundation utilities from `index.css` (`.card`, `.btn-primary`, shell layout)
+    over inventing parallel globals. NEVER invent a parallel prefix mid-plan
+    (e.g. do not switch `footer-*` ↔ `portfolio-footer-*`).
 24. When creating or rewriting a section, ship BOTH the component AND its CSS together.
 25. Prefer writing complete file contents for touched TSX. CSS discipline:
     - styles_foundation task: write the full `src/index.css` foundation (tokens,
@@ -114,6 +114,21 @@ file contents here
       its own `src/styles/<page>.css` (full file, same turn as the component,
       imported at its top). This is what keeps the design intact across the plan.
 26. Keep spacing, hierarchy, grids/cards, and responsive behavior consistent.
+
+## CSS isolation (critical — all stylesheets load globally)
+
+Every `import "../styles/*.css"` is injected into ONE shared document. Rules are
+NOT scoped by React mount — Home CSS still applies while Missions is visible.
+
+- Root each page under a unique screen class (`.search-screen`, `.profile-screen`,
+  `.home-screen`, …) and write page rules as `.search-screen .mission-card`, not
+  bare `.mission-card` / `.form-group` / `.filter-chip`.
+- NEVER dump page-specific selectors into `src/index.css` after foundation.
+- NEVER reuse the same unscoped class name across two page stylesheets with
+  different layouts (e.g. two `.form-group` definitions).
+- Before finishing a page task: every `className` in that TSX must exist in that
+  page's CSS or in foundation utilities — no orphan TSX classes, no dead CSS
+  from a previous naming scheme.
 
 ## Responsive (mobile is not an afterthought)
 
@@ -161,9 +176,10 @@ that only works at 1440px is not finished.
     already use a name (`navigate` and `navigateTo` both pointing to the same fn).
 38. Never call `.filter` / `.map` / `.find` on context values that may be undefined —
     always provide defaults (`products = []`, etc.) on the Provider.
-39. Class names used in JSX must exist as CSS selectors in `src/index.css` in the same
-    turn. Do not invent a parallel `dh-*` naming scheme if `index.css` already uses
-    another convention (or update CSS to match in the same turn).
+39. Class names used in JSX must exist as CSS selectors in the page's
+    `src/styles/<page>.css` and/or foundation utilities in `src/index.css` in the
+    same turn. Do not invent a parallel `dh-*` naming scheme if the project
+    already uses another convention (or update CSS to match in the same turn).
 
 ## Uploaded assets
 
@@ -242,14 +258,47 @@ You are editing an existing Babel/ESM React project. File skeletons and selected
 SYSTEM_PROMPT_WITH_DESIGN = SYSTEM_PROMPT  # same body; design rules cover charter
 
 
-def system_prompt_with_design(has_design: bool) -> str:
+def system_prompt_with_design(has_design: bool, platform: str = "web") -> str:
+    base = SYSTEM_PROMPT
+    if platform == "mobile":
+        base = SYSTEM_PROMPT + "\n" + MOBILE_PLATFORM_RULES + "\n"
     if has_design:
         return (
-            SYSTEM_PROMPT + "\nBRAND LOCK ACTIVE: DESIGN.md and public/logo.* are the source of truth. "
+            base + "\nBRAND LOCK ACTIVE: DESIGN.md and public/logo.* are the source of truth. "
             "Do not rewrite DESIGN.md, do not invent a new brand name/palette/logo, "
             "and keep using the logo path from DESIGN.md (typically /logo.png).\n"
         )
-    return SYSTEM_PROMPT + "\nNo DESIGN.md is present — use #F2620A as the primary accent.\n"
+    return base + "\nNo DESIGN.md is present — use #F2620A as the primary accent.\n"
+
+
+MOBILE_PLATFORM_RULES = """
+## Platform: MOBILE APP (not a marketing website)
+This project is a **mobile-first app prototype** (phone primary, tablet secondary).
+
+### Default app IA (follow this unless the user asks otherwise)
+When the user describes an app — or asks for onboarding, home, navbar, bottom navigation —
+structure the UI like a real product, not a marketing site:
+
+1. **Onboarding** (first launch): 2–4 slides (value props) + primary CTA; persist completion in
+   `localStorage` so it only shows once. Skip if they already completed it.
+2. **Top navbar** on shell screens: screen title, optional back/close on stack screens,
+   optional trailing action (search, avatar, filter). Keep it compact; respect safe-area top.
+3. **Home** as the default tab: summary cards, feed, or actionable dashboard — still app UI.
+4. **Bottom navigation**: 3–5 tabs (icon + label), clear active state, fixed to the bottom with
+   `env(safe-area-inset-bottom)`. Never replace this with a desktop mega-menu.
+5. When asked for deeper flows: **stack screens** (detail with back), sheets/modals, lists,
+   forms, empty states, and success toasts — still inside the app shell.
+
+### Hard rules
+- Build an **app shell** (screens + nav), NOT a multi-section landing page / pricing / testimonials layout.
+- Default layout ~390px width; tablet (~768px) may widen spacing but keep app patterns.
+- Use `viewport-fit=cover` and `env(safe-area-inset-*)` for notches / home indicator.
+- Touch targets ≥ 44px.
+- Keep `manifest.webmanifest` (PWA **manifest-only**). Never add a service worker or
+  `navigator.serviceWorker.register`.
+- Screens as components; mock data + `localStorage` only (frontend prototype).
+- Only pivot to a marketing website if the user explicitly asks for a landing/site.
+"""
 
 
 THEME_QUALITY_HINT = """Theme quality reminders:

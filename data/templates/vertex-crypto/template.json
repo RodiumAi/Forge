@@ -1,5 +1,6 @@
 {
   "id": "vertex-crypto",
+  "kind": "web",
   "title": { "en": "Vertex Crypto", "fr": "Vertex Crypto" },
   "description": {
     "en": "Dark fintech/crypto exchange landing: glass cards with gradient borders, pure-CSS charts and sparklines, live-style price tickers, stats grid, security section and neon CTA.",

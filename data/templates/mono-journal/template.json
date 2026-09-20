@@ -1,5 +1,6 @@
 {
   "id": "mono-journal",
+  "kind": "web",
   "title": { "en": "Monochrome Journal", "fr": "Journal Monochrome" },
   "description": {
     "en": "Radically minimal typographic magazine: pure black on white, editorial columns, drop caps, numbered article index, full-page pull quote — one restrained red accent.",

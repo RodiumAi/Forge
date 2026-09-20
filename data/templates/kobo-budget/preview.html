@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Kobo — preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 480px; height: 300px; overflow: hidden;
+    background: radial-gradient(120% 120% at 15% 0%, #1a1f52, #0e1230 62%);
+    color: #eef1ff;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    display: flex; align-items: center; gap: 22px; padding: 0 26px;
+  }
+  .side { width: 150px; }
+  .side .logo { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 800; letter-spacing: -.01em; }
+  .side .logo .mk { width: 18px; height: 18px; border-radius: 6px; background: linear-gradient(140deg, #60a5fa, #7c3aed); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 900; color: #061229; }
+  .side h2 { font-size: 20px; font-weight: 800; letter-spacing: -.02em; line-height: 1.12; margin-top: 14px; }
+  .side p { font-size: 10px; color: #8b90bd; line-height: 1.4; margin-top: 8px; }
+  .side .tag {
+    display: inline-block; margin-top: 12px; font-size: 8.5px; font-weight: 700; color: #60a5fa;
+    background: color-mix(in srgb, #60a5fa 16%, transparent); padding: 3px 8px; border-radius: 99px;
+  }
+  .phone {
+    width: 172px; height: 288px; border-radius: 26px; flex: none;
+    border: 2px solid color-mix(in srgb, #eef1ff 16%, transparent);
+    background: #0e1230; overflow: hidden; position: relative;
+    box-shadow: 0 22px 48px rgba(0,0,0,.55);
+  }
+  .notch { width: 52px; height: 7px; border-radius: 99px; margin: 8px auto 0; background: color-mix(in srgb, #eef1ff 16%, transparent); }
+  .nav { display: flex; align-items: center; gap: 6px; padding: 8px 11px 7px; }
+  .nav .mk { width: 18px; height: 18px; border-radius: 6px; background: linear-gradient(140deg, #60a5fa, #7c3aed); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 900; color: #061229; flex: none; }
+  .nav b { font-size: 10.5px; }
+  .nav small { display: block; font-size: 6.5px; color: #8b90bd; }
+  .cal { margin-left: auto; width: 18px; height: 18px; border-radius: 6px; border: 1px solid color-mix(in srgb, #eef1ff 14%, transparent); }
+  .hero {
+    margin: 4px 11px 0; padding: 10px; border-radius: 15px;
+    display: flex; flex-direction: column; align-items: center;
+    background: radial-gradient(120% 90% at 50% -10%, color-mix(in srgb, #60a5fa 24%, transparent), transparent 60%), #161a3d;
+    border: 1px solid color-mix(in srgb, #eef1ff 12%, transparent);
+  }
+  .ring { position: relative; width: 78px; height: 78px; }
+  .ring svg { width: 100%; height: 100%; }
+  .ring .c { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .ring .c .l { font-size: 5.5px; color: #8b90bd; }
+  .ring .c .v { font-size: 17px; font-weight: 800; letter-spacing: -.03em; line-height: 1; }
+  .ring .c .s { font-size: 5.5px; color: #8b90bd; margin-top: 1px; }
+  .cat { display: flex; align-items: center; gap: 6px; padding: 6px 11px 0; }
+  .cat .i { width: 16px; height: 16px; border-radius: 5px; background: color-mix(in srgb, #eef1ff 8%, transparent); display: flex; align-items: center; justify-content: center; font-size: 8px; flex: none; }
+  .cat .b { flex: 1; }
+  .cat .b .t { display: flex; justify-content: space-between; font-size: 6.5px; }
+  .cat .b .t span { color: #8b90bd; }
+  .cat .b .tr { height: 4px; border-radius: 99px; margin-top: 2px; background: color-mix(in srgb, #eef1ff 12%, transparent); overflow: hidden; }
+  .cat .b .tr i { display: block; height: 100%; border-radius: 99px; }
+  .tx { display: flex; align-items: center; gap: 7px; padding: 7px 11px 0; }
+  .tx .a { width: 18px; height: 18px; border-radius: 6px; background: color-mix(in srgb, #eef1ff 8%, transparent); display: flex; align-items: center; justify-content: center; font-size: 9px; flex: none; }
+  .tx .m { flex: 1; }
+  .tx .m b { display: block; font-size: 7.5px; }
+  .tx .m span { font-size: 6px; color: #8b90bd; }
+  .tx .amt { font-size: 8px; font-weight: 800; }
+  .tabs {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    display: grid; grid-template-columns: repeat(4,1fr); padding: 6px 4px 8px;
+    border-top: 1px solid color-mix(in srgb, #eef1ff 10%, transparent);
+    background: color-mix(in srgb, #0e1230 88%, #000);
+    font-size: 5.5px; color: #8b90bd; text-align: center; gap: 2px;
+  }
+  .tabs .dot { width: 12px; height: 12px; margin: 0 auto 2px; border-radius: 3px; border: 1.3px solid currentColor; }
+  .tabs .active { color: #60a5fa; font-weight: 700; }
+</style>
+</head>
+<body>
+  <div class="side">
+    <div class="logo"><span class="mk">k</span> Kobo</div>
+    <h2>Know where money goes</h2>
+    <p>Onboarding · budget-left ring · category limits · add expense · monthly stats — with bottom tabs.</p>
+    <span class="tag">Mobile app shell</span>
+  </div>
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="nav">
+      <span class="mk">k</span>
+      <div><b>September</b><small>Budget overview</small></div>
+      <span class="cal"></span>
+    </div>
+    <div class="hero">
+      <div class="ring">
+        <svg viewBox="0 0 80 80">
+          <circle cx="40" cy="40" r="30" fill="none" stroke="color-mix(in srgb, #eef1ff 12%, transparent)" stroke-width="7" />
+          <circle cx="40" cy="40" r="30" fill="none" stroke="#60a5fa" stroke-width="7" stroke-linecap="round"
+            stroke-dasharray="116.9 188.5" transform="rotate(-90 40 40)" />
+        </svg>
+        <div class="c"><span class="l">Left</span><span class="v">760</span><span class="s">of 2,000</span></div>
+      </div>
+    </div>
+    <div class="cat">
+      <span class="i">🛒</span>
+      <div class="b"><div class="t"><b>Groceries</b><span>380 / 450</span></div><div class="tr"><i style="width:84%;background:#60a5fa"></i></div></div>
+    </div>
+    <div class="cat">
+      <span class="i">🚌</span>
+      <div class="b"><div class="t"><b>Transport</b><span>210 / 240</span></div><div class="tr"><i style="width:88%;background:#38bdf8"></i></div></div>
+    </div>
+    <div class="tx"><span class="a">🎬</span><span class="m"><b>Cinéma Sea Plaza</b><span>Fun · Yesterday</span></span><span class="amt">-3,000</span></div>
+    <div class="tabs">
+      <span class="active"><span class="dot"></span>Home</span>
+      <span><span class="dot"></span>Add</span>
+      <span><span class="dot"></span>Stats</span>
+      <span><span class="dot"></span>Account</span>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field
@@ -158,8 +159,7 @@ class RodiumGenerateKeyResponse(BaseModel):
 
 
 class PasswordChangeRequest(BaseModel):
-    #: Empty when setting the first local password (no prior hash).
-    current_password: str = ""
+    current_password: str
     new_password: str = Field(min_length=8, max_length=128)
 
 
@@ -235,6 +235,7 @@ class ProjectCreate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=200)
     prompt: str | None = Field(default=None, max_length=8000)
     template_id: str | None = Field(default=None, max_length=64)
+    platform: Literal["web", "mobile"] | None = Field(default="web")
 
 
 class ProjectOut(BaseModel):
@@ -249,6 +250,7 @@ class ProjectOut(BaseModel):
     custom_domain: str | None = None
     custom_domain_status: str | None = None
     template_id: str | None = None
+    platform: Literal["web", "mobile"] = "web"
     published_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
@@ -290,6 +292,7 @@ class TemplateOut(BaseModel):
     accent: str | None = None
     bg: str | None = None
     preview_url: str | None = None
+    kind: Literal["web", "mobile"] = "web"
 
 
 class ChatOut(BaseModel):

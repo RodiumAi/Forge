@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Tempo Run — preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 480px; height: 300px; overflow: hidden;
+    background: radial-gradient(120% 120% at 12% 0%, #14210f, #0a0f0d 62%);
+    color: #f0fdf4;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    display: flex; align-items: center; gap: 20px; padding: 0 26px;
+  }
+  .side { width: 150px; }
+  .side .logo { display: flex; align-items: center; gap: 7px; font-size: 15px; font-weight: 800; letter-spacing: -.01em; }
+  .side .logo .dot { width: 14px; height: 14px; border-radius: 5px; background: linear-gradient(135deg, #a3e635, #4d7c0f); }
+  .side h2 { font-size: 20px; font-weight: 800; letter-spacing: -.02em; line-height: 1.12; margin-top: 14px; }
+  .side p { font-size: 10px; color: #86a08f; line-height: 1.4; margin-top: 8px; }
+  .side .tag {
+    display: inline-block; margin-top: 12px; font-size: 8.5px; font-weight: 800; color: #a3e635;
+    background: color-mix(in srgb, #a3e635 16%, transparent); padding: 3px 8px; border-radius: 99px;
+  }
+  .phone {
+    width: 172px; height: 288px; border-radius: 26px; flex: none;
+    border: 2px solid color-mix(in srgb, #f0fdf4 16%, transparent);
+    background: #0a0f0d; overflow: hidden; position: relative;
+    box-shadow: 0 22px 48px rgba(0,0,0,.55);
+  }
+  .notch { width: 52px; height: 7px; border-radius: 99px; margin: 8px auto 0; background: color-mix(in srgb, #f0fdf4 16%, transparent); }
+  .nav { display: flex; align-items: center; gap: 6px; padding: 8px 11px 7px; }
+  .pfp { width: 20px; height: 20px; border-radius: 99px; overflow: hidden; flex: none; }
+  .pfp img { width: 100%; height: 100%; object-fit: cover; }
+  .nav b { font-size: 10.5px; }
+  .nav small { display: block; font-size: 6.5px; color: #86a08f; }
+  .bell { margin-left: auto; width: 18px; height: 18px; border-radius: 99px; border: 1px solid color-mix(in srgb, #f0fdf4 14%, transparent); }
+  .card {
+    margin: 4px 11px 0; padding: 9px 10px; border-radius: 14px;
+    background: radial-gradient(130% 120% at 0% 0%, color-mix(in srgb, #a3e635 18%, transparent), transparent 55%),
+      linear-gradient(160deg, color-mix(in srgb, #a3e635 8%, #12160f), #12160f);
+    border: 1px solid color-mix(in srgb, #a3e635 24%, transparent);
+  }
+  .card .h { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
+  .card .h b { font-size: 8px; }
+  .card .h .pill { font-size: 6px; font-weight: 800; color: #a3e635; background: color-mix(in srgb, #a3e635 16%, transparent); padding: 2px 6px; border-radius: 99px; }
+  .rings { display: flex; justify-content: space-between; }
+  .ring { text-align: center; }
+  .ring .dial { width: 34px; height: 34px; border-radius: 99px; margin: 0 auto 3px; display: grid; place-items: center; }
+  .ring .dial.a { background: conic-gradient(#a3e635 84%, color-mix(in srgb, #f0fdf4 10%, transparent) 0); }
+  .ring .dial.b { background: conic-gradient(#a3e635 72%, color-mix(in srgb, #f0fdf4 10%, transparent) 0); }
+  .ring .dial.c { background: conic-gradient(#a3e635 61%, color-mix(in srgb, #f0fdf4 10%, transparent) 0); }
+  .ring .core { width: 24px; height: 24px; border-radius: 99px; background: #0a0f0d; display: grid; place-items: center; font-size: 6.5px; font-weight: 800; box-shadow: inset 0 0 0 1px color-mix(in srgb, #f0fdf4 12%, transparent); }
+  .ring .lbl { font-size: 6px; font-weight: 700; }
+  .cta {
+    margin: 8px 11px 0; display: flex; align-items: center; gap: 6px;
+    padding: 8px 9px; border-radius: 13px; color: #14210a;
+    background: linear-gradient(135deg, #a3e635, color-mix(in srgb, #a3e635 62%, #4d7c0f));
+  }
+  .cta .play { width: 22px; height: 22px; border-radius: 99px; background: color-mix(in srgb, #14210a 20%, transparent); display: grid; place-items: center; font-size: 10px; }
+  .cta b { font-size: 9.5px; display: block; }
+  .cta small { font-size: 6px; font-weight: 700; opacity: .78; }
+  .cta .go { margin-left: auto; font-size: 8px; font-weight: 900; letter-spacing: .04em; padding: 2px 6px; border-radius: 99px; background: color-mix(in srgb, #14210a 16%, transparent); }
+  .last { margin: 8px 11px 0; display: flex; align-items: center; gap: 7px; padding: 8px 9px; border-radius: 12px; background: color-mix(in srgb, #f0fdf4 5%, transparent); border: 1px solid color-mix(in srgb, #f0fdf4 10%, transparent); }
+  .last .rt { width: 24px; height: 24px; border-radius: 7px; flex: none; padding: 3px; background: color-mix(in srgb, #a3e635 12%, transparent); border: 1px solid color-mix(in srgb, #a3e635 22%, transparent); }
+  .last .rt svg { display: block; }
+  .last .m b { font-size: 7.5px; display: block; }
+  .last .m span { font-size: 6px; color: #86a08f; }
+  .last .v { margin-left: auto; text-align: right; }
+  .last .v b { font-size: 8px; display: block; }
+  .last .v span { font-size: 6px; color: #a3e635; font-weight: 700; }
+  .tabs {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    display: grid; grid-template-columns: repeat(4,1fr); padding: 6px 4px 8px;
+    border-top: 1px solid color-mix(in srgb, #f0fdf4 10%, transparent);
+    background: color-mix(in srgb, #0a0f0d 88%, #000);
+    font-size: 5.5px; color: #86a08f; text-align: center; gap: 2px;
+  }
+  .tabs .dot { width: 12px; height: 12px; margin: 0 auto 2px; border-radius: 3px; border: 1.3px solid currentColor; }
+  .tabs .active { color: #a3e635; font-weight: 800; }
+</style>
+</head>
+<body>
+  <div class="side">
+    <div class="logo"><span class="dot"></span> Tempo Run</div>
+    <h2>Every run, in rhythm</h2>
+    <p>Onboarding · activity rings &amp; start run · recent runs · weekly stats — with bottom tabs.</p>
+    <span class="tag">Mobile app shell</span>
+  </div>
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="nav">
+      <span class="pfp"><img src="https://images.unsplash.com/photo-1571008887538-b36bb32f4571?auto=format&fit=crop&w=120&q=70" alt="" /></span>
+      <div><b>Tempo</b><small>Good morning, Kaya</small></div>
+      <span class="bell"></span>
+    </div>
+    <div class="card">
+      <div class="h"><b>Today's activity</b><span class="pill">On track</span></div>
+      <div class="rings">
+        <div class="ring"><div class="dial a"><div class="core">8.4</div></div><div class="lbl">Distance</div></div>
+        <div class="ring"><div class="dial b"><div class="core">5:12</div></div><div class="lbl">Pace</div></div>
+        <div class="ring"><div class="dial c"><div class="core">612</div></div><div class="lbl">Calories</div></div>
+      </div>
+    </div>
+    <div class="cta">
+      <span class="play">▶</span>
+      <span><b>Start run</b><small>GPS ready · Auto-splits</small></span>
+      <span class="go">GO</span>
+    </div>
+    <div class="last">
+      <span class="rt"><svg viewBox="0 0 32 32" width="18" height="18" fill="none"><path d="M4 26c4-10 8 2 12-6s10 8 12-2" stroke="#a3e635" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="4" cy="26" r="2.2" fill="#a3e635"/></svg></span>
+      <span class="m"><b>Riverside Loop</b><span>Today · 6:42 AM</span></span>
+      <span class="v"><b>8.4 km</b><span>5:12 /km</span></span>
+    </div>
+    <div class="tabs">
+      <span class="active"><span class="dot"></span>Home</span>
+      <span><span class="dot"></span>Runs</span>
+      <span><span class="dot"></span>Stats</span>
+      <span><span class="dot"></span>Profile</span>
+    </div>
+  </div>
+</body>
+</html>

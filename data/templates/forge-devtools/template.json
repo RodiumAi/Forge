@@ -1,5 +1,6 @@
 {
   "id": "forge-devtools",
+  "kind": "web",
   "title": { "en": "Hexbin Devtools", "fr": "Hexbin Devtools" },
   "description": {
     "en": "Dark GitHub-style landing for a developer tool: animated terminal hero with blinking cursor, one-line install, glow-on-hover feature grid, before/after diff and open-source stats.",
