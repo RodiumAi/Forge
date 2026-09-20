@@ -8531,6 +8531,7 @@ body:has(.home) [data-next-mark] {
 .home-panel-toolbar .tpl-kind-switch {
   margin-right: 0;
   margin-left: auto;
+}
 
 .home-card-meta span,
 .home-card-body span:not(.home-card-avatar):not(.home-card-badge) {
