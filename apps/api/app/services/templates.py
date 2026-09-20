@@ -26,6 +26,12 @@ class TemplateMeta:
     bg: str | None
     preview: str | None
     path: Path
+    kind: str = "web"
+
+
+def _parse_kind(raw: object) -> str:
+    kind = str(raw or "web").strip().lower()
+    return kind if kind in ("web", "mobile") else "web"
 
 
 def templates_root() -> Path:
@@ -82,10 +88,11 @@ def _load_meta(folder: Path) -> TemplateMeta | None:
         bg=str(data["bg"]) if data.get("bg") else None,
         preview=str(data["preview"]) if data.get("preview") else None,
         path=folder,
+        kind=_parse_kind(data.get("kind")),
     )
 
 
-def list_templates() -> list[TemplateMeta]:
+def list_templates(*, kind: str | None = None) -> list[TemplateMeta]:
     global _templates_cache, _templates_cache_mtime
     root = templates_root()
     if not root.is_dir():
@@ -95,22 +102,25 @@ def list_templates() -> list[TemplateMeta]:
     except OSError:
         mtime = None
     if _templates_cache is not None and mtime is not None and mtime == _templates_cache_mtime:
-        return _templates_cache
-
-    out: list[TemplateMeta] = []
-    try:
-        children = sorted(root.iterdir())
-    except OSError:
-        return []
-    for child in children:
-        if not child.is_dir() or child.name.startswith("_"):
-            continue
-        meta = _load_meta(child)
-        if meta is not None:
-            out.append(meta)
-    _templates_cache = out
-    _templates_cache_mtime = mtime
-    return out
+        rows = _templates_cache
+    else:
+        out: list[TemplateMeta] = []
+        try:
+            children = sorted(root.iterdir())
+        except OSError:
+            return []
+        for child in children:
+            if not child.is_dir() or child.name.startswith("_"):
+                continue
+            meta = _load_meta(child)
+            if meta is not None:
+                out.append(meta)
+        _templates_cache = out
+        _templates_cache_mtime = mtime
+        rows = out
+    if kind in ("web", "mobile"):
+        return [m for m in rows if m.kind == kind]
+    return rows
 
 
 def get_template(template_id: str) -> TemplateMeta | None:

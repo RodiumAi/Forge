@@ -44,6 +44,8 @@ type Props = {
   onModeChange: (mode: BuilderMode) => void;
   viewport: ViewportMode;
   onViewportChange: (v: ViewportMode) => void;
+  /** When mobile, hide desktop viewport and default to phone framing. */
+  projectPlatform?: "web" | "mobile";
   pages: string[];
   previewPath: string;
   onPreviewPathChange: (path: string) => void;
@@ -69,6 +71,7 @@ export function BuilderTopbar({
   onModeChange,
   viewport,
   onViewportChange,
+  projectPlatform = "web",
   pages,
   previewPath,
   onPreviewPathChange,
@@ -300,6 +303,7 @@ export function BuilderTopbar({
         {mainMode === "preview" && (
           <>
             <div className="builder-viewport-switch" role="group" aria-label={t("builderViewport")}>
+              {projectPlatform !== "mobile" && (
               <button
                 type="button"
                 className={viewport === "desktop" ? "active" : ""}
@@ -308,6 +312,7 @@ export function BuilderTopbar({
               >
                 <Icon icon={Monitor} className="ui-icon-sm" />
               </button>
+              )}
               <button
                 type="button"
                 className={viewport === "tablet" ? "active" : ""}

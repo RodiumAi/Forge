@@ -6,9 +6,9 @@ import {
   GithubMark,
   LandingSocialLinks,
 } from "@/components/landing/LandingSocialLinks";
+import { PlatformToggle, type ProjectPlatform } from "@/components/PlatformToggle";
 import { PromptFileChips } from "@/components/PromptFileChips";
-import { SiteThumb } from "@/components/SiteThumb";
-import { GalleryTemplate } from "@/components/TemplateGallery";
+import { GalleryTemplate, TemplateGallery } from "@/components/TemplateGallery";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { Icon } from "@/components/ui/icon";
 import { getToken } from "@/lib/api";
@@ -24,6 +24,7 @@ import {
   ensureCanGenerate,
   forkProjectFromTemplate,
   stashPendingFiles,
+  stashPendingPlatform,
 } from "@/lib/create-project";
 import { LocaleSwitch, useI18n } from "@/lib/i18n/I18nProvider";
 import {
@@ -51,6 +52,8 @@ type PromptBoxProps = {
   compact?: boolean;
   prompt: string;
   setPrompt: (v: string) => void;
+  platform: ProjectPlatform;
+  setPlatform: (v: ProjectPlatform) => void;
   files: PromptAttachment[];
   fileError: string | null;
   error: string | null;
@@ -69,6 +72,8 @@ function LandingPromptBox({
   compact,
   prompt,
   setPrompt,
+  platform,
+  setPlatform,
   files,
   fileError,
   error,
@@ -114,7 +119,9 @@ function LandingPromptBox({
         maxLength={PROMPT_MAX_CHARS}
         onChange={(e) => setPrompt(e.target.value)}
         onKeyDown={onKeyDown}
-        placeholder={t("promptPlaceholder")}
+        placeholder={
+          platform === "mobile" ? t("promptPlaceholderMobile") : t("promptPlaceholder")
+        }
         aria-label={t("promptAria")}
         rows={compact ? 2 : 3}
         disabled={submitting}
@@ -137,6 +144,12 @@ function LandingPromptBox({
         >
           <Icon icon={Plus} />
         </button>
+        <PlatformToggle
+          value={platform}
+          onChange={setPlatform}
+          disabled={submitting}
+          className="lp-platform-toggle"
+        />
         <button
           type="submit"
           className="lp-send"
@@ -161,6 +174,7 @@ export default function LandingPage() {
   const router = useRouter();
   const { t, locale } = useI18n();
   const [prompt, setPrompt] = useState("");
+  const [platform, setPlatform] = useState<ProjectPlatform>("web");
   const [files, setFiles] = useState<PromptAttachment[]>([]);
   const [fileError, setFileError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -235,6 +249,7 @@ export default function LandingPage() {
 
       if (!getToken()) {
         sessionStorage.setItem(PENDING_PROMPT_KEY, trimmed);
+        stashPendingPlatform(platform);
         const localFiles = files
           .filter(
             (item): item is LocalPromptAttachment => item.source === "local",
@@ -257,6 +272,7 @@ export default function LandingPage() {
         t("newProject"),
         promptLabels(),
         locale,
+        platform,
       );
       invalidateProjectsCache();
       prependProject(locale, project);
@@ -358,6 +374,8 @@ export default function LandingPage() {
   const promptProps = {
     prompt,
     setPrompt,
+    platform,
+    setPlatform,
     files,
     fileError,
     error,
@@ -478,45 +496,20 @@ export default function LandingPage() {
         <section className="lp-templates" id="templates">
           <div className="lp-templates-head">
             <h2 className="lp-section-title">{t("landingTemplatesTitle")}</h2>
-            <button
-              type="button"
-              className="lp-templates-all"
-              onClick={() => {
+          </div>
+          {templates.length > 0 ? (
+            <TemplateGallery
+              templates={templates}
+              onSelect={(tpl) => void onSelectTemplate(tpl)}
+              busyId={forkingId}
+              useError={error}
+              limit={8}
+              variant="landing"
+              onBrowseAll={() => {
                 if (authed) router.push("/dashboard?tab=templates");
                 else router.push("/login");
               }}
-            >
-              {t("landingTemplatesAll")}
-            </button>
-          </div>
-          {templates.length > 0 ? (
-            <div className="lp-templates-grid">
-              {templates.slice(0, 8).map((tpl) => (
-                <button
-                  key={tpl.id}
-                  type="button"
-                  className="lp-tpl-card"
-                  disabled={Boolean(forkingId) || submitting}
-                  onClick={() => void onSelectTemplate(tpl)}
-                >
-                  <SiteThumb
-                    src={tpl.preview_url || `/templates/${tpl.id}/preview`}
-                    viewportWidth={480}
-                    viewportHeight={300}
-                    title={tpl.title}
-                    className="lp-tpl-thumb"
-                  />
-                  <div className="lp-tpl-meta">
-                    <strong>{tpl.title}</strong>
-                    <span>
-                      {forkingId === tpl.id
-                        ? t("forkingTemplate")
-                        : tpl.description}
-                    </span>
-                  </div>
-                </button>
-              ))}
-            </div>
+            />
           ) : (
             <p className="lp-empty">{t("noTemplates")}</p>
           )}

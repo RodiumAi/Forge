@@ -6,18 +6,42 @@ import { PAYLOAD_MAX_CHARS, PromptTooLongError } from "@/lib/constants/prompt";
 
 export const PENDING_PROMPT_KEY = "forge_pending_prompt";
 export const PENDING_TEMPLATE_KEY = "forge_pending_template";
+export const PENDING_PLATFORM_KEY = "forge_pending_platform";
+
+export type ProjectPlatform = "web" | "mobile";
 
 export type CreatedProject = {
   id: string;
   name: string;
   slug: string;
+  platform?: ProjectPlatform;
 };
 
 export type ForkableTemplate = {
   id: string;
   title: string;
   boot_hint: string;
+  kind?: ProjectPlatform;
 };
+
+function normalizePlatform(raw: unknown): ProjectPlatform {
+  return raw === "mobile" ? "mobile" : "web";
+}
+
+export function readPendingPlatform(): ProjectPlatform {
+  if (typeof window === "undefined") return "web";
+  return normalizePlatform(sessionStorage.getItem(PENDING_PLATFORM_KEY));
+}
+
+export function stashPendingPlatform(platform: ProjectPlatform) {
+  if (typeof window === "undefined") return;
+  sessionStorage.setItem(PENDING_PLATFORM_KEY, normalizePlatform(platform));
+}
+
+export function clearPendingPlatform() {
+  if (typeof window === "undefined") return;
+  sessionStorage.removeItem(PENDING_PLATFORM_KEY);
+}
 
 export function bootPromptKey(projectId: string): string {
   return `forge_boot_prompt_${projectId}`;
@@ -61,13 +85,18 @@ export async function ensureCanGenerate(): Promise<"ok" | "no_key"> {
 export async function createProjectFromPrompt(
   raw: string,
   nameFallback: string,
+  platform: ProjectPlatform = "web",
 ): Promise<CreatedProject> {
   const payload = raw.trim();
   if (!payload) throw new Error("empty prompt");
   // API may auto-fork a ThemeWagon kit when the prompt matches (hybrid start).
   const project = await api<CreatedProject>("/projects", {
     method: "POST",
-    body: JSON.stringify({ prompt: payload, name: nameFallback }),
+    body: JSON.stringify({
+      prompt: payload,
+      name: nameFallback,
+      platform: normalizePlatform(platform),
+    }),
   });
   setBootPrompt(project.id, payload);
   return project;
@@ -79,6 +108,7 @@ export async function createProjectWithAttachments(
   nameFallback: string,
   labels: PromptLabels,
   locale: string,
+  platform: ProjectPlatform = "web",
 ): Promise<CreatedProject> {
   const trimmed = text.trim();
   // Preflight the assembled size BEFORE creating the project. Inlined doc text
@@ -94,6 +124,7 @@ export async function createProjectWithAttachments(
     body: JSON.stringify({
       prompt: trimmed || nameFallback,
       name: nameFallback,
+      platform: normalizePlatform(platform),
     }),
   });
   const uploaded = attachments.length
@@ -102,6 +133,7 @@ export async function createProjectWithAttachments(
   const payload = await buildPromptWithAttachments(trimmed, uploaded, labels);
   if (payload) setBootPrompt(project.id, payload);
   await clearPendingFiles();
+  clearPendingPlatform();
   return project;
 }
 

@@ -1,5 +1,6 @@
 {
   "id": "orbit-dashboard",
+  "kind": "web",
   "title": { "en": "Orbit Admin Dashboard", "fr": "Tableau de bord Orbit" },
   "description": {
     "en": "A classic admin layout: dark navy sidebar, light content area, KPI card grid, CSS bar chart and a fictional data table.",

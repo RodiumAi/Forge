@@ -1,5 +1,6 @@
 {
   "id": "terra-eco",
+  "kind": "web",
   "title": { "en": "Terra Collective", "fr": "Terra Collective" },
   "description": {
     "en": "Warm organic site for a sustainability brand: blob shapes, earthy palette, animated impact counters, regenerative projects, certification badges and SVG wave dividers.",

@@ -337,23 +337,408 @@ This file is the graphic charter for the app. Forge injects it into every AI cal
 """
 
 
-def _index_html(app_name: str) -> str:
+def _index_html(app_name: str, *, platform: str = "web") -> str:
     # The visual-edit bridge used to be inlined here. It now ships with the
     # preview runner shell, so it no longer leaks into the user's exported ZIP.
-    return INDEX_HTML.replace("Forge App", app_name)
+    html = INDEX_HTML.replace("Forge App", app_name)
+    if platform == "mobile":
+        inject = (
+            '    <link rel="manifest" href="/manifest.webmanifest" />\n'
+            '    <meta name="theme-color" content="#0a0a0a" />\n'
+            '    <meta name="apple-mobile-web-app-capable" content="yes" />\n'
+            '    <link rel="apple-touch-icon" href="/favicon.png" />\n'
+        )
+        html = html.replace(
+            '    <meta name="viewport" content="width=device-width, initial-scale=1.0" />\n',
+            '    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />\n'
+            + inject,
+        )
+    return html
 
 
-def scaffold_vite_react(project_id: str, app_name: str) -> None:
+APP_TSX_MOBILE = """import { useEffect, useState } from "react";
+import { Home, Search, User } from "lucide-react";
+
+const ONBOARD_KEY = "forge_onboard_done";
+
+const SLIDES = [
+  {
+    title: "Welcome",
+    body: "A mobile-first app shell with onboarding, top bar, and bottom tabs.",
+  },
+  {
+    title: "Stay organized",
+    body: "Home is your hub. Explore and Profile are one tap away.",
+  },
+  {
+    title: "Ready when you are",
+    body: "Describe screens in chat — Forge keeps the app patterns.",
+  },
+];
+
+type Tab = "home" | "explore" | "profile";
+
+export default function App() {
+  const [ready, setReady] = useState(false);
+  const [onboarded, setOnboarded] = useState(false);
+  const [slide, setSlide] = useState(0);
+  const [tab, setTab] = useState<Tab>("home");
+
+  useEffect(() => {
+    try {
+      setOnboarded(localStorage.getItem(ONBOARD_KEY) === "1");
+    } catch {
+      /* ignore */
+    }
+    setReady(true);
+  }, []);
+
+  function finishOnboarding() {
+    try {
+      localStorage.setItem(ONBOARD_KEY, "1");
+    } catch {
+      /* ignore */
+    }
+    setOnboarded(true);
+  }
+
+  if (!ready) {
+    return <div className="app-shell" />;
+  }
+
+  if (!onboarded) {
+    const current = SLIDES[slide];
+    const last = slide === SLIDES.length - 1;
+    return (
+      <div className="app-shell onboard">
+        <div className="onboard-body">
+          <p className="onboard-kicker">
+            {slide + 1} / {SLIDES.length}
+          </p>
+          <h1>{current.title}</h1>
+          <p>{current.body}</p>
+        </div>
+        <div className="onboard-actions">
+          {!last ? (
+            <button type="button" className="btn-primary" onClick={() => setSlide((s) => s + 1)}>
+              Continue
+            </button>
+          ) : (
+            <button type="button" className="btn-primary" onClick={finishOnboarding}>
+              Get started
+            </button>
+          )}
+          <button type="button" className="btn-ghost" onClick={finishOnboarding}>
+            Skip
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const titles: Record<Tab, string> = {
+    home: "Home",
+    explore: "Explore",
+    profile: "Profile",
+  };
+
+  return (
+    <div className="app-shell">
+      <header className="app-navbar">
+        <h1>{titles[tab]}</h1>
+        <button type="button" className="nav-action" aria-label="Account">
+          <User size={18} aria-hidden />
+        </button>
+      </header>
+      <main className="app-main">
+        {tab === "home" && (
+          <>
+            <section className="card">
+              <h2>Today</h2>
+              <p>Your dashboard summary lives here. Ask Forge to add cards, lists, or feeds.</p>
+            </section>
+            <section className="card">
+              <h2>Quick actions</h2>
+              <p>Primary CTAs belong on Home — not on a marketing hero.</p>
+            </section>
+          </>
+        )}
+        {tab === "explore" && (
+          <section className="card">
+            <h2>Explore</h2>
+            <p>Search, browse, or discover content for this tab.</p>
+          </section>
+        )}
+        {tab === "profile" && (
+          <section className="card">
+            <h2>Profile</h2>
+            <p>Settings, account, and preferences go here.</p>
+          </section>
+        )}
+      </main>
+      <nav className="app-tabbar" aria-label="Primary">
+        <button
+          type="button"
+          className={tab === "home" ? "tab active" : "tab"}
+          aria-current={tab === "home" ? "page" : undefined}
+          onClick={() => setTab("home")}
+        >
+          <Home size={20} aria-hidden />
+          <span>Home</span>
+        </button>
+        <button
+          type="button"
+          className={tab === "explore" ? "tab active" : "tab"}
+          aria-current={tab === "explore" ? "page" : undefined}
+          onClick={() => setTab("explore")}
+        >
+          <Search size={20} aria-hidden />
+          <span>Explore</span>
+        </button>
+        <button
+          type="button"
+          className={tab === "profile" ? "tab active" : "tab"}
+          aria-current={tab === "profile" ? "page" : undefined}
+          onClick={() => setTab("profile")}
+        >
+          <User size={20} aria-hidden />
+          <span>Profile</span>
+        </button>
+      </nav>
+    </div>
+  );
+}
+"""
+
+INDEX_CSS_MOBILE = """:root {
+  color-scheme: dark;
+  --bg: #0a0a0a;
+  --fg: #f5f5f5;
+  --muted: #9a9a9a;
+  --accent: #f2620a;
+  --card: #141414;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  font-family: "Segoe UI", system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root {
+  margin: 0;
+  min-height: 100%;
+  height: 100%;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.app-shell {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-navbar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: calc(0.75rem + var(--safe-top)) 1rem 0.75rem;
+  background: color-mix(in srgb, var(--bg) 88%, #111);
+  border-bottom: 1px solid #222;
+}
+
+.app-navbar h1 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.nav-action {
+  appearance: none;
+  border: 0;
+  background: #1a1a1a;
+  color: var(--fg);
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+}
+
+.app-main {
+  flex: 1;
+  padding: 1rem 1rem 5.75rem;
+  display: grid;
+  gap: 0.85rem;
+  align-content: start;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid #222;
+  border-radius: 1rem;
+  padding: 1rem 1.05rem;
+}
+
+.card h2 {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+}
+
+.card p, .onboard-body p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.app-tabbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.25rem;
+  padding: 0.45rem 0.75rem calc(0.45rem + var(--safe-bottom));
+  background: color-mix(in srgb, var(--bg) 92%, #111);
+  border-top: 1px solid #222;
+}
+
+.tab {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.7rem;
+  min-height: 2.75rem;
+  padding: 0.35rem;
+}
+
+.tab.active { color: var(--accent); }
+
+.onboard {
+  padding: calc(1.5rem + var(--safe-top)) 1.25rem calc(1.25rem + var(--safe-bottom));
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.onboard-kicker {
+  margin: 0 0 0.75rem !important;
+  color: var(--accent) !important;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.onboard-body h1 {
+  margin: 0 0 0.75rem;
+  font-size: 1.85rem;
+  line-height: 1.15;
+}
+
+.onboard-actions {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.btn-primary, .btn-ghost {
+  appearance: none;
+  border: 0;
+  border-radius: 0.9rem;
+  min-height: 2.85rem;
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 0.7rem 1rem;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #111;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--muted);
+}
+"""
+
+DESIGN_MD_MOBILE = """# Design charter
+
+This file is the graphic charter for the **mobile app** prototype. Forge injects it into every AI call.
+
+## Platform
+- Target: mobile-first web app (phone), optionally tablet.
+- UI pattern: onboarding (first launch) → top navbar + Home → bottom tab bar.
+- Secondary: stack screens with back, sheets, lists, forms — still inside the app shell.
+
+## Colors
+- `--bg`: #0a0a0a
+- `--fg`: #f5f5f5
+- `--muted`: #9a9a9a
+- `--accent`: #f2620a
+
+## Typography
+- Sans UI, bold screen titles, comfortable body line-height on narrow viewports.
+
+## Tone
+- Direct, product-focused, touch-friendly.
+
+## Logo
+- None yet — configure via the Charte graphique panel.
+
+## Do / Don't
+- Do keep onboarding + top navbar + bottom tabs as the default IA when the user asks for an app.
+- Do use CSS variables from this file and respect safe-area insets.
+- Don't invent a second palette or switch to a multi-section landing layout.
+"""
+
+
+def _manifest_webmanifest(app_name: str) -> str:
+    # Manifest-only PWA (no service worker). Names are JSON-escaped via dumps.
+    import json
+
+    payload = {
+        "name": app_name,
+        "short_name": (app_name[:12] or "App").strip() or "App",
+        "start_url": "/",
+        "display": "standalone",
+        "background_color": "#0a0a0a",
+        "theme_color": "#0a0a0a",
+        "icons": [
+            {"src": "/favicon.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+            {"src": "/favicon.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+        ],
+    }
+    return json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
+
+
+def scaffold_vite_react(project_id: str, app_name: str, platform: str = "web") -> None:
     """Scaffold a React/TS app for the Babel/ESM runtime (no Vite / node_modules)."""
+    platform = platform if platform in ("web", "mobile") else "web"
     project_dir(project_id)
     slug = app_name.lower().replace(" ", "-")[:40] or "forge-app"
     write_file(project_id, "package.json", PACKAGE_JSON.replace("forge-app", slug))
     write_file(project_id, "tsconfig.json", TSCONFIG)
-    write_file(project_id, "index.html", _index_html(app_name))
+    write_file(project_id, "index.html", _index_html(app_name, platform=platform))
     write_file(project_id, "src/main.tsx", MAIN_TSX)
-    write_file(project_id, "src/App.tsx", APP_TSX)
-    write_file(project_id, "src/index.css", INDEX_CSS)
-    write_file(project_id, "DESIGN.md", DESIGN_MD)
+    if platform == "mobile":
+        write_file(project_id, "src/App.tsx", APP_TSX_MOBILE)
+        write_file(project_id, "src/index.css", INDEX_CSS_MOBILE)
+        write_file(project_id, "DESIGN.md", DESIGN_MD_MOBILE)
+        write_file(project_id, "manifest.webmanifest", _manifest_webmanifest(app_name))
+    else:
+        write_file(project_id, "src/App.tsx", APP_TSX)
+        write_file(project_id, "src/index.css", INDEX_CSS)
+        write_file(project_id, "DESIGN.md", DESIGN_MD)
     write_file(
         project_id,
         "forge.json",

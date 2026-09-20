@@ -14,28 +14,57 @@ EXPECTED_IDS = {
     "astroship-startup",
     "atelier-mode",
     "aurora-ai",
+    "ava-assistant",
     "bloom-wellness",
     "brutalist-studio",
+    "calm-space",
+    "echo-music",
+    "fern-plants",
     "forge-devtools",
+    "frame-social",
     "gallery-photos",
     "glacier-travel",
     "holo-portfolio",
     "kinetic-conf",
+    "kobo-budget",
     "logsfolio-portfolio",
+    "loop-habit",
     "lumen-architecture",
     "mono-journal",
     "nexora-agency",
+    "nova-bank",
     "orbit-dashboard",
     "origami-3d",
     "podux-podcast",
     "pulse-fitness",
     "quantum-consult",
+    "rida-ride",
+    "sabor-recipes",
     "synthwave-music",
     "tailnext-saas",
     "tailstore-shop",
+    "tempo-run",
     "terra-eco",
+    "trove-market",
     "vertex-crypto",
 }
+
+EXPECTED_MOBILE_IDS = {
+    "ava-assistant",
+    "calm-space",
+    "echo-music",
+    "fern-plants",
+    "frame-social",
+    "kobo-budget",
+    "loop-habit",
+    "nova-bank",
+    "rida-ride",
+    "sabor-recipes",
+    "tempo-run",
+    "trove-market",
+}
+
+EXPECTED_WEB_IDS = EXPECTED_IDS - EXPECTED_MOBILE_IDS
 
 
 class TestCatalog:
@@ -75,6 +104,15 @@ class TestCatalog:
             assert meta["description"]["en"] and meta["description"]["fr"], meta["id"]
             for key in ("accent", "bg", "fg", "muted"):
                 assert re.fullmatch(r"#[0-9a-fA-F]{6}", meta[key]), f"{meta['id']}.{key}"
+            assert meta.get("kind") in ("web", "mobile"), f"{meta['id']}.kind"
+
+    def test_catalog_kind_filter(self):
+        webs = list_templates(kind="web")
+        mobiles = list_templates(kind="mobile")
+        assert {t.id for t in webs} == EXPECTED_WEB_IDS
+        assert {t.id for t in mobiles} == EXPECTED_MOBILE_IDS
+        assert all(t.kind == "web" for t in webs)
+        assert all(t.kind == "mobile" for t in mobiles)
 
     def test_app_only_imports_react(self):
         # Kits must run in the Babel runner with zero install: React only.

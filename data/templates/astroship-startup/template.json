@@ -1,5 +1,6 @@
 {
   "id": "astroship-startup",
+  "kind": "web",
   "title": { "en": "Astroship Startup", "fr": "Astroship Startup" },
   "description": {
     "en": "Clean light landing page for startups and SaaS: split hero, logo strip, 6-feature grid, dark CTA band, minimal footer.",

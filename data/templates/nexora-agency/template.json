@@ -1,5 +1,6 @@
 {
   "id": "nexora-agency",
+  "kind": "web",
   "title": { "en": "Nexora Agency", "fr": "Nexora Agency" },
   "description": {
     "en": "Dark, premium digital agency landing: stats hero, client strip, services grid, why-us, 4-step process, case studies, testimonials, CTA.",

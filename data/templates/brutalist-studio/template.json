@@ -1,5 +1,6 @@
 {
   "id": "brutalist-studio",
+  "kind": "web",
   "title": { "en": "Raw Works Studio", "fr": "Raw Works Studio" },
   "description": {
     "en": "Loud neo-brutalist creative studio site: cream canvas, 3px black borders, hard offset shadows, giant type, CSS marquee, rotated stickers and a punchy project grid.",

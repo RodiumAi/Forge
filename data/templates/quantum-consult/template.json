@@ -1,5 +1,6 @@
 {
   "id": "quantum-consult",
+  "kind": "web",
   "title": { "en": "Quantum Consult", "fr": "Quantum Consult" },
   "description": {
     "en": "Authoritative premium consulting firm site: midnight-blue swiss grid, massive key figures, pure-CSS donut and bar charts, case studies, leadership and contact form.",

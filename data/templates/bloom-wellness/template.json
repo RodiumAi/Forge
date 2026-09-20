@@ -1,5 +1,6 @@
 {
   "id": "bloom-wellness",
+  "kind": "web",
   "title": { "en": "Bloom Wellness", "fr": "Bloom Wellness" },
   "description": {
     "en": "Serene spa and wellness studio site: soft pastel gradients, generously rounded cards, treatment menu with prices, class schedule and a numbered ritual walkthrough.",

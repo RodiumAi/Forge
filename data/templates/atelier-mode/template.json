@@ -1,5 +1,6 @@
 {
   "id": "atelier-mode",
+  "kind": "web",
   "title": { "en": "Atelier Mode", "fr": "Atelier Mode" },
   "description": {
     "en": "Editorial luxury fashion e-commerce: full-bleed photography, fine serif type, offset lookbook grid, minimal product cards and a maison heritage story.",

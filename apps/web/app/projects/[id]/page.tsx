@@ -114,6 +114,7 @@ type Project = {
   preview_port: number | null;
   sites_url?: string | null;
   published_at?: string | null;
+  platform?: "web" | "mobile";
 };
 
 type Chat = { id: string; title: string | null };
@@ -545,7 +546,10 @@ export default function ProjectPage() {
     const parsed = parseBuilderUrlState(searchParams);
     setMainMode(viewToMode(parsed.view));
     setMobilePane(parsed.pane ?? "chat");
-    setViewport(parsed.viewport ?? "desktop");
+    setViewport((current) => {
+      const next = parsed.viewport ?? current ?? "desktop";
+      return project?.platform === "mobile" && next === "desktop" ? "phone" : next;
+    });
     setPreviewTool(parsed.view === "preview" ? parsed.tool : null);
     setDesignOpen(parsed.design);
     if (parsed.view === "more" && isOptionsSubview(parsed.subview)) {
@@ -556,7 +560,7 @@ export default function ProjectPage() {
     } else if (parsed.view === "preview" && parsed.subview) {
       setPreviewPath(`/${parsed.subview.replace(/^\//, "")}`);
     }
-  }, [searchParams]);
+  }, [searchParams, project?.platform]);
 
   /**
    * Re-read the project's routes.
@@ -681,6 +685,13 @@ export default function ProjectPage() {
     const p = await api<Project>(`/projects/${projectId}`);
     if (streamAbortRef.current || streamingRunIdRef.current) return;
     setProject(p);
+    if (p.platform === "mobile") {
+      setViewport((current) => {
+        const next = current === "desktop" ? "phone" : current;
+        if (next !== current) syncBuilderUrl({ viewport: next });
+        return next;
+      });
+    }
     const chats = await api<Chat[]>(`/projects/${projectId}/chats`);
     if (streamAbortRef.current || streamingRunIdRef.current) return;
     const main = chats[0];
@@ -797,7 +808,7 @@ export default function ProjectPage() {
     if (streamAbortRef.current || streamingRunIdRef.current) return;
     if (status.running && status.url) setPreviewUrl(status.url);
     void refreshRoutes();
-  }, [projectId, t, refreshRoutes, setPreviewUrl]);
+  }, [projectId, t, refreshRoutes, setPreviewUrl, syncBuilderUrl]);
 
   const pushChatError = useCallback(
     (
@@ -2288,9 +2299,13 @@ export default function ProjectPage() {
           }
         }}
         viewport={viewport}
+        projectPlatform={project?.platform === "mobile" ? "mobile" : "web"}
         onViewportChange={(next) => {
-          setViewport(next);
-          syncBuilderUrl({ viewport: next });
+          const platform = project?.platform === "mobile" ? "mobile" : "web";
+          const safe =
+            platform === "mobile" && next === "desktop" ? "phone" : next;
+          setViewport(safe);
+          syncBuilderUrl({ viewport: safe });
         }}
         pages={pages}
         previewPath={previewPath}
@@ -2314,11 +2329,16 @@ export default function ProjectPage() {
           // Opening the bare runner URL showed an empty page (it waits for a
           // builder parent to postMessage the bundle, which a new tab lacks).
           const token = getMediaToken() || "";
-          window.open(
-            `${apiBase()}/projects/${projectId}/draft?access_token=${encodeURIComponent(token)}`,
-            "_blank",
-            "noopener,noreferrer",
-          );
+          const draftUrl = `${apiBase()}/projects/${projectId}/draft?access_token=${encodeURIComponent(token)}`;
+          if (project?.platform === "mobile") {
+            const device = viewport === "tablet" ? "tablet" : "phone";
+            const frame = new URL("/preview-frame", window.location.origin);
+            frame.searchParams.set("src", draftUrl);
+            frame.searchParams.set("device", device);
+            window.open(frame.toString(), "_blank", "noopener,noreferrer");
+            return;
+          }
+          window.open(draftUrl, "_blank", "noopener,noreferrer");
         }}
       />
 

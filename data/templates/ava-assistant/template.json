@@ -1,0 +1,28 @@
+{
+  "kind": "mobile",
+  "id": "ava-assistant",
+  "title": {
+    "en": "Ava",
+    "fr": "Ava"
+  },
+  "description": {
+    "en": "AI assistant app: onboarding, chat thread with suggestion chips, prompt library, history, and account — phone shell with bottom tabs.",
+    "fr": "App assistant IA : onboarding, fil de discussion avec suggestions, bibliothèque de prompts, historique et compte — shell téléphone + tabs."
+  },
+  "tags": [
+    "mobile",
+    "ai",
+    "assistant",
+    "chat"
+  ],
+  "preview": "preview.html",
+  "bootHint": {
+    "en": "Adapt ava-assistant: assistant name, chat messages, suggestion chips, prompt cards, history entries, model names.",
+    "fr": "Adapte ava-assistant : nom de l'assistant, messages du chat, suggestions, cartes de prompts, historique, noms de modèles."
+  },
+  "accent": "#8b5cf6",
+  "bg": "#0a0a0f",
+  "fg": "#f2f2f7",
+  "muted": "#8b8b9a",
+  "tone": "smart, helpful, friendly"
+}

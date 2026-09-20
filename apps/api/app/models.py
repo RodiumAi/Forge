@@ -119,6 +119,8 @@ class Project(Base):
     preview_running: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     design_brief: Mapped[str | None] = mapped_column(Text, nullable=True)
     template_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # "web" | "mobile" — mobile = app-shell prototype + PWA manifest-only.
+    platform: Mapped[str] = mapped_column(String(16), nullable=False, default="web")
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(

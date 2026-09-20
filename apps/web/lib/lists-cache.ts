@@ -19,6 +19,8 @@ export type CachedProject = {
   created_at?: string;
   updated_at?: string;
   status?: string;
+  has_thumbnail?: boolean;
+  platform?: "web" | "mobile";
 };
 
 export type CachedTemplate = {
@@ -30,6 +32,7 @@ export type CachedTemplate = {
   accent?: string | null;
   bg?: string | null;
   preview_url?: string | null;
+  kind?: "web" | "mobile";
 };
 
 type ListEnvelope<T> = {
