@@ -8366,16 +8366,14 @@ body:has(.home) [data-next-mark] {
 
 @media (max-width: 1100px) {
   .home-grid,
-  .home-grid-3,
-  .tpl-gallery-grid {
+  .home-grid-3 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 640px) {
   .home-grid,
-  .home-grid-3,
-  .tpl-gallery-grid {
+  .home-grid-3 {
     grid-template-columns: 1fr;
   }
 }
@@ -8699,7 +8697,9 @@ body:has(.home) [data-next-mark] {
   align-items: center;
   gap: 0.45rem;
   color: var(--home-text-muted);
-  min-width: 140px;
+  min-width: 0;
+  flex: 1 1 8rem;
+  max-width: 16rem;
 }
 
 .tpl-gallery-landing .tpl-gallery-search {
@@ -8712,7 +8712,8 @@ body:has(.home) [data-next-mark] {
   background: transparent;
   color: inherit;
   font: inherit;
-  width: 110px;
+  width: 100%;
+  min-width: 0;
   outline: none;
 }
 
@@ -8736,16 +8737,97 @@ body:has(.home) [data-next-mark] {
   font: inherit;
   font-size: 0.88rem;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .tpl-gallery-browse:hover {
   color: #f2620a;
 }
 
+/* auto-fill + min(100%, …) so narrow containers collapse without fighting
+   a later base rule that overrode max-width media queries. Cap at 3 cols
+   on wide layouts to match the previous landing design. */
 .tpl-gallery-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
   gap: 0.9rem;
+}
+
+@media (min-width: 900px) {
+  .tpl-gallery-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .landing-templates-wrap {
+    width: calc(100% - 1.25rem);
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .tpl-gallery {
+    padding: 0.85rem 0.8rem 1rem;
+    border-radius: 18px;
+  }
+
+  .tpl-gallery-toolbar {
+    gap: 0.5rem 0.65rem;
+  }
+
+  .tpl-kind-switch {
+    margin-right: 0;
+  }
+
+  .tpl-gallery-search {
+    flex: 1 1 calc(100% - 8rem);
+    max-width: none;
+  }
+
+  .tpl-gallery-pill {
+    order: 3;
+  }
+
+  .tpl-gallery-browse {
+    order: 4;
+    margin-left: auto;
+  }
+
+  .tpl-gallery-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 160px), 1fr));
+    gap: 0.75rem;
+  }
+
+  .home-card.tpl-card .home-card-meta strong,
+  .tpl-card-meta strong {
+    font-size: 0.88rem;
+  }
+
+  .home-card.tpl-card .home-card-desc,
+  .tpl-card-meta span {
+    -webkit-line-clamp: 2;
+    font-size: 0.74rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .landing-templates-wrap {
+    width: calc(100% - 1rem);
+  }
+
+  /* Single column on phones / narrow side panels (~490px) */
+  .tpl-gallery-grid {
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+  }
+
+  .tpl-gallery-search {
+    flex: 1 1 100%;
+  }
+
+  .tpl-gallery-browse {
+    margin-left: 0;
+  }
 }
 
 .home-card.tpl-card {
