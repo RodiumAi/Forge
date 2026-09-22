@@ -503,9 +503,7 @@ async def rodium_account(
             except Exception:
                 pass
         if keys:
-            await _ensure_default_generation_key(
-                db, user, row, keys if isinstance(keys, list) else []
-            )
+            await _ensure_default_generation_key(db, user, row, keys if isinstance(keys, list) else [])
     elif not has_generation_key(user, row) and keys:
         await _ensure_default_generation_key(db, user, row, keys if isinstance(keys, list) else [])
 
