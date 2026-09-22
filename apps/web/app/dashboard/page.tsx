@@ -11,8 +11,8 @@ import {
 } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Plus, Search, Monitor, Smartphone } from "lucide-react";
-import { apiBase, getToken } from "@/lib/api";
+import { ArrowUp, Plus, Search, Monitor, Smartphone } from "lucide-react";
+import { apiBase, getToken, ApiError } from "@/lib/api";
 import { useMediaToken } from "@/lib/media-token";
 import { projectThumbnailUrl } from "@/lib/project-thumbnail";
 import { VerifyEmailBanner } from "@/components/auth/VerifyEmailBanner";
@@ -22,6 +22,7 @@ import { PromptFileChips } from "@/components/PromptFileChips";
 import { SiteThumb, invalidateThumbCache } from "@/components/SiteThumb";
 import { GalleryTemplate, TemplateGallery } from "@/components/TemplateGallery";
 import { Icon } from "@/components/ui/icon";
+import { rodiumRechargeUrl } from "@/lib/constants/rodium-links";
 import {
   PENDING_PROMPT_KEY,
   PENDING_TEMPLATE_KEY,
@@ -282,6 +283,11 @@ function DashboardInner() {
     setError(null);
     try {
       const gate = await ensureCanGenerate();
+      if (gate === "no_rodi") {
+        setError(t("createNeedsRodi"));
+        setCreating(false);
+        return;
+      }
       if (gate === "no_key") {
         setError(t("createNeedsKey"));
         setCreating(false);
@@ -304,6 +310,8 @@ function DashboardInner() {
     } catch (err) {
       if (err instanceof PromptTooLongError) {
         setError(t("promptTooLong"));
+      } else if (err instanceof ApiError && err.code === "INSUFFICIENT_RODI") {
+        setError(t("createNeedsRodi"));
       } else {
         setError(err instanceof Error ? err.message : t("errorGeneric"));
       }
@@ -317,6 +325,11 @@ function DashboardInner() {
     setError(null);
     try {
       const gate = await ensureCanGenerate();
+      if (gate === "no_rodi") {
+        setError(t("createNeedsRodi"));
+        setForkingId(null);
+        return;
+      }
       if (gate === "no_key") {
         setError(t("createNeedsKey"));
         setForkingId(null);
@@ -328,7 +341,11 @@ function DashboardInner() {
       invalidateThumbCache(project.id);
       router.replace(`/projects/${project.id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("errorGeneric"));
+      if (err instanceof ApiError && err.code === "INSUFFICIENT_RODI") {
+        setError(t("createNeedsRodi"));
+      } else {
+        setError(err instanceof Error ? err.message : t("errorGeneric"));
+      }
       setForkingId(null);
     }
   }
@@ -407,8 +424,9 @@ function DashboardInner() {
   const mediaToken = useMediaToken();
 
   function projectThumb(p: Project) {
-    // Prefer the persisted JPEG from the API. Old projects without a file
-    // backfill once via live draft capture, then PUT so the next visit is cheap.
+    // Prefer the persisted JPEG from the API. Always keep a live draft URL as
+    // fallback — empty/solid mobile captures used to stick forever once
+    // has_thumbnail flipped true (no frameSrc → no re-capture).
     const token = mediaToken;
     const base = apiBase().replace(/\/$/, "");
     const parent =
@@ -420,7 +438,8 @@ function DashboardInner() {
     const templateSrc = p.template_id ? `/templates/${p.template_id}/preview` : null;
 
     // Mobile apps forked from a kit: the 480×300 preview.html already looks
-    // like a phone card. Prefer it over live draft capture.
+    // like a phone card. Prefer it over live draft capture (slow/flaky in a
+    // landscape thumbnail). Custom mobile apps still use live draft.
     if (p.platform === "mobile" && templateSrc) {
       return {
         imageSrc: null as string | null,
@@ -437,10 +456,10 @@ function DashboardInner() {
       if (imageSrc) {
         return {
           imageSrc,
-          frameSrc: null as string | null,
-          src: null as string | null,
+          frameSrc: draftFrame,
+          src: templateSrc,
           authPath: null as string | null,
-          persistProjectId: null as string | null,
+          persistProjectId: p.id,
           thumbViewport: null as { w: number; h: number } | null,
         };
       }
@@ -488,9 +507,20 @@ function DashboardInner() {
         >
           <PromptFileChips items={files} onRemove={removeFile} />
           {fileError && <p className="landing-file-error">{fileError}</p>}
-          {error && error === t("createNeedsKey") && (
+          {error && (error === t("createNeedsKey") || error === t("createNeedsRodi")) && (
             <p className="landing-file-error" role="alert">
-              {error} <Link href="/settings?tab=generation">{t("openSettings")}</Link>
+              {error}{" "}
+              {error === t("createNeedsKey") ? (
+                <Link href="/settings?tab=generation">{t("openSettings")}</Link>
+              ) : (
+                <a
+                  href={rodiumRechargeUrl(getSessionSnapshot()?.profile?.rodium_sub)}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {t("rechargeRodi")}
+                </a>
+              )}
             </p>
           )}
           {prompt.length > PROMPT_MAX_CHARS - 1000 ? (
@@ -540,11 +570,19 @@ function DashboardInner() {
             />
             <button
               type="submit"
-              className="landing-create"
+              className="lp-send"
               disabled={!canSubmit}
+              aria-label={t("create")}
               title={!canSubmit ? t("createNeedPrompt") : undefined}
             >
-              {creating ? t("loading") : t("create")}
+              {creating ? (
+                t("loading")
+              ) : (
+                <>
+                  <span className="lp-send-label">{t("create")}</span>
+                  <Icon icon={ArrowUp} />
+                </>
+              )}
             </button>
           </div>
         </form>
@@ -595,7 +633,7 @@ function DashboardInner() {
           </div>
         </div>
 
-        {error && error !== t("createNeedsKey") && (
+        {error && error !== t("createNeedsKey") && error !== t("createNeedsRodi") && (
           <p className="error home-panel-error">{error}</p>
         )}
 
@@ -637,6 +675,7 @@ function DashboardInner() {
                   thumb.thumbViewport?.w ??
                   (p.platform === "mobile" ? 390 : 1280);
                 // Live mobile drafts: capture a 16:10 band (matches the card).
+                // Full 844px phone viewports often timed out / produced empty JPEGs.
                 const thumbVh =
                   thumb.thumbViewport?.h ??
                   (p.platform === "mobile" ? 244 : 800);

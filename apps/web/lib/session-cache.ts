@@ -300,3 +300,35 @@ export async function refreshRodiumWallet(): Promise<SessionWallet | null> {
 
   return walletFlight;
 }
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+/**
+ * After OIDC callback: wait until a generation key is selected and the wallet
+ * cache is warm so the dashboard never flashes "Connect RodiumAi".
+ */
+export async function prepareSessionAfterRodiumLogin(): Promise<SessionSnapshot | null> {
+  let snap = await ensureSession({ force: true });
+
+  try {
+    await api("/auth/rodium/ensure-generation-key", { method: "POST" });
+  } catch {
+    // Key mint may race with Nest; wallet refresh below still helps.
+  }
+
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const wallet = await refreshRodiumWallet();
+    snap = getSessionSnapshot();
+    const hasWallet =
+      wallet != null &&
+      (wallet.balance_rodi != null || wallet.provided_total_rodi != null);
+    const linked = Boolean(snap?.rodium?.linked || snap?.profile?.rodium_linked);
+    if (linked && hasWallet) return snap;
+    await sleep(350 + attempt * 250);
+    snap = await ensureSession({ force: true });
+  }
+
+  return getSessionSnapshot();
+}

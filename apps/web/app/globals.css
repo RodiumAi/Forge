@@ -397,7 +397,6 @@ select option {
 
 /* Compact primary buttons inside the authenticated app shell only */
 .home .btn,
-.home .landing-create,
 .home .home-connector-action,
 .home .home-settings-save,
 .builder .btn,
@@ -406,6 +405,49 @@ select option {
 .plan-execute {
   padding: var(--btn-compact-pad);
   font-size: var(--btn-compact-size);
+}
+
+/* Dashboard prompt send — same chrome as landing `.lp-send`, themed for home */
+.home .lp-send {
+  margin-left: auto;
+  min-width: 2.45rem;
+  height: 2.45rem;
+  padding: 0 0.95rem;
+  border-radius: 999px;
+  border: 0;
+  appearance: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  background: var(--home-text);
+  color: var(--home-bg);
+  font-weight: 600;
+  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  transition: transform 0.15s ease, filter 0.15s ease, opacity 0.15s ease;
+}
+
+.home .lp-send:hover:not(:disabled) {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.home .lp-send:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.home .landing-plus {
+  width: 2.2rem;
+  height: 2.2rem;
+  background: color-mix(in srgb, #f2620a 16%, var(--home-input-bg));
+  color: #c2410c;
+}
+
+[data-theme="dark"] .home .landing-plus {
+  color: #fdba74;
 }
 
 .btn-ghost {
@@ -5268,7 +5310,7 @@ html[data-theme="light"] .builder-msg-attach-placeholder {
   color: var(--home-text-muted);
   padding: 0.35rem 0.65rem;
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0.04em;
   cursor: pointer;
 }
@@ -5685,7 +5727,7 @@ html[data-theme="light"] .builder-msg-attach-placeholder {
   background: transparent;
   color: color-mix(in srgb, var(--fg, #111) 62%, transparent);
   font-size: 0.82rem;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1;
 }
 
@@ -5717,7 +5759,7 @@ html[data-theme="light"] .builder-msg-attach-placeholder {
   border-radius: 999px;
   padding: 0.3rem 0.75rem;
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
   color: color-mix(in srgb, var(--fg, #111) 65%, transparent);
 }
@@ -6438,6 +6480,7 @@ html[data-theme="light"] .builder-msg-attach-placeholder {
   border: 0;
   background: #fff;
 }
+
 
 .lp-import-input {
   display: none;
@@ -7528,7 +7571,7 @@ body:has(.home) [data-next-mark] {
   left: 50%;
   top: 8%;
   transform: translateX(-50%);
-  background: radial-gradient(circle, rgba(59, 130, 246, 0.45) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(242, 98, 10, 0.38) 0%, transparent 70%);
 }
 
 .home-glow-b {
@@ -7536,7 +7579,7 @@ body:has(.home) [data-next-mark] {
   height: 40vw;
   right: -5%;
   top: 5%;
-  background: radial-gradient(circle, rgba(236, 72, 153, 0.35) 0%, transparent 72%);
+  background: radial-gradient(circle, rgba(242, 98, 10, 0.22) 0%, transparent 72%);
 }
 
 .home-glow-c {
@@ -7545,7 +7588,7 @@ body:has(.home) [data-next-mark] {
   left: 50%;
   bottom: 20%;
   transform: translateX(-50%);
-  background: radial-gradient(circle, rgba(242, 98, 10, 0.5) 0%, transparent 68%);
+  background: radial-gradient(circle, rgba(242, 98, 10, 0.42) 0%, transparent 68%);
 }
 
 .home-glow-d {
@@ -7553,7 +7596,7 @@ body:has(.home) [data-next-mark] {
   height: 30vw;
   left: 8%;
   bottom: 30%;
-  background: radial-gradient(circle, rgba(139, 92, 246, 0.25) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(180, 70, 8, 0.28) 0%, transparent 70%);
 }
 
 .home-sidebar {
@@ -7681,7 +7724,7 @@ body:has(.home) [data-next-mark] {
   gap: 0.45rem;
   color: var(--home-text-muted);
   font-size: 0.72rem;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.02em;
   text-transform: uppercase;
 }
@@ -7933,7 +7976,7 @@ body:has(.home) [data-next-mark] {
   background: transparent;
   color: var(--home-text-muted);
   font-size: 0.88rem;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -8024,6 +8067,8 @@ body:has(.home) [data-next-mark] {
 .home-scroll {
   flex: 1;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -8067,7 +8112,7 @@ body:has(.home) [data-next-mark] {
   color: var(--home-text);
   text-decoration: none;
   font-size: 0.8rem;
-  font-weight: 650;
+  font-weight: 500;
   line-height: 1.2;
   white-space: nowrap;
   transition: background 0.15s ease, border-color 0.15s ease;
@@ -8179,29 +8224,31 @@ body:has(.home) [data-next-mark] {
 }
 
 .home-hero {
-  flex-shrink: 0;
+  /* Reserve a vertical band above projects/templates and center the
+     prompt in it so top↔prompt ≈ prompt↔panel (even when the panel
+     content is taller than the viewport and flex-grow has no free space). */
+  flex: 1 0 auto;
+  min-height: clamp(11rem, 38vh, 22rem);
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   text-align: center;
-  padding: 0.85rem 1.25rem 0.65rem;
+  padding: 1.25rem 1.25rem;
+  box-sizing: border-box;
   color: var(--home-text);
 }
 
 .home-hero.is-compact {
-  padding-top: 0.45rem;
-  padding-bottom: 0.35rem;
-}
-
-.home-hero.is-compact .home-greeting {
-  display: none;
+  padding-top: 1.25rem;
+  padding-bottom: 1.25rem;
 }
 
 .home-greeting {
   margin: 0 0 0.7rem;
   font-family: var(--font-serif-display);
   font-size: clamp(1.35rem, 2.8vw, 1.9rem);
-  font-weight: 600;
+  font-weight: 550;
   letter-spacing: -0.015em;
   max-width: 22ch;
   color: var(--home-text);
@@ -8215,17 +8262,37 @@ body:has(.home) [data-next-mark] {
   margin-top: 0;
   padding: 0.75rem 0.9rem 0.7rem;
   border-radius: 18px;
+  background: var(--home-input-bg);
+  border: 1px solid var(--home-border-strong);
+  box-shadow: 0 12px 32px color-mix(in srgb, var(--home-text) 8%, transparent);
+  backdrop-filter: none;
+}
+
+.home .landing-prompt:focus-within {
+  border-color: color-mix(in srgb, #f2620a 55%, var(--home-border-strong));
+  box-shadow:
+    0 12px 32px color-mix(in srgb, var(--home-text) 8%, transparent),
+    0 0 0 3px rgba(242, 98, 10, 0.18);
 }
 
 .home .landing-prompt textarea {
   min-height: 72px;
   max-height: 140px;
   font-size: 0.98rem;
+  color: var(--home-text);
+}
+
+.home .landing-prompt textarea::placeholder {
+  color: var(--home-text-soft);
+}
+
+.home .landing-file-chip {
+  color: var(--home-text);
 }
 
 .home-panel {
-  flex: 1;
-  margin-top: auto;
+  flex: 0 0 auto;
+  margin-top: 0;
   background: var(--home-panel);
   border-top: 1px solid var(--home-border);
   border-radius: 28px 28px 0 0;
@@ -8309,7 +8376,7 @@ body:has(.home) [data-next-mark] {
   border-radius: 999px;
   padding: 0.4rem 0.85rem;
   font-size: 0.82rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--home-text-muted);
   background: transparent;
   cursor: pointer;
@@ -8366,14 +8433,16 @@ body:has(.home) [data-next-mark] {
 
 @media (max-width: 1100px) {
   .home-grid,
-  .home-grid-3 {
+  .home-grid-3,
+  .tpl-gallery-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 640px) {
   .home-grid,
-  .home-grid-3 {
+  .home-grid-3,
+  .tpl-gallery-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -8531,8 +8600,8 @@ body:has(.home) [data-next-mark] {
   margin-left: auto;
 }
 
-.home-card-meta span,
-.home-card-body span:not(.home-card-avatar):not(.home-card-badge) {
+.home-card-meta > span,
+.home-card-body > span:not(.home-card-avatar):not(.home-card-badge) {
   color: var(--home-text-muted);
   font-size: 0.78rem;
   white-space: nowrap;
@@ -8697,9 +8766,7 @@ body:has(.home) [data-next-mark] {
   align-items: center;
   gap: 0.45rem;
   color: var(--home-text-muted);
-  min-width: 0;
-  flex: 1 1 8rem;
-  max-width: 16rem;
+  min-width: 140px;
 }
 
 .tpl-gallery-landing .tpl-gallery-search {
@@ -8712,8 +8779,7 @@ body:has(.home) [data-next-mark] {
   background: transparent;
   color: inherit;
   font: inherit;
-  width: 100%;
-  min-width: 0;
+  width: 110px;
   outline: none;
 }
 
@@ -8737,97 +8803,16 @@ body:has(.home) [data-next-mark] {
   font: inherit;
   font-size: 0.88rem;
   cursor: pointer;
-  white-space: nowrap;
 }
 
 .tpl-gallery-browse:hover {
   color: #f2620a;
 }
 
-/* auto-fill + min(100%, …) so narrow containers collapse without fighting
-   a later base rule that overrode max-width media queries. Cap at 3 cols
-   on wide layouts to match the previous landing design. */
 .tpl-gallery-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.9rem;
-}
-
-@media (min-width: 900px) {
-  .tpl-gallery-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 720px) {
-  .landing-templates-wrap {
-    width: calc(100% - 1.25rem);
-    margin-left: auto;
-    margin-right: auto;
-  }
-
-  .tpl-gallery {
-    padding: 0.85rem 0.8rem 1rem;
-    border-radius: 18px;
-  }
-
-  .tpl-gallery-toolbar {
-    gap: 0.5rem 0.65rem;
-  }
-
-  .tpl-kind-switch {
-    margin-right: 0;
-  }
-
-  .tpl-gallery-search {
-    flex: 1 1 calc(100% - 8rem);
-    max-width: none;
-  }
-
-  .tpl-gallery-pill {
-    order: 3;
-  }
-
-  .tpl-gallery-browse {
-    order: 4;
-    margin-left: auto;
-  }
-
-  .tpl-gallery-grid {
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 160px), 1fr));
-    gap: 0.75rem;
-  }
-
-  .home-card.tpl-card .home-card-meta strong,
-  .tpl-card-meta strong {
-    font-size: 0.88rem;
-  }
-
-  .home-card.tpl-card .home-card-desc,
-  .tpl-card-meta span {
-    -webkit-line-clamp: 2;
-    font-size: 0.74rem;
-  }
-}
-
-@media (max-width: 520px) {
-  .landing-templates-wrap {
-    width: calc(100% - 1rem);
-  }
-
-  /* Single column on phones / narrow side panels (~490px) */
-  .tpl-gallery-grid {
-    grid-template-columns: 1fr;
-    gap: 0.85rem;
-  }
-
-  .tpl-gallery-search {
-    flex: 1 1 100%;
-  }
-
-  .tpl-gallery-browse {
-    margin-left: 0;
-  }
 }
 
 .home-card.tpl-card {
@@ -8835,6 +8820,33 @@ body:has(.home) [data-next-mark] {
   background: transparent;
   overflow: visible;
   border-radius: 18px;
+}
+
+.tpl-card .tpl-card-body {
+  display: block;
+  padding: 0.85rem 0.85rem 0.55rem;
+  gap: 0;
+}
+
+.tpl-card .tpl-card-body .home-card-meta {
+  width: 100%;
+}
+
+.tpl-card .tpl-card-body .home-card-meta strong {
+  -webkit-line-clamp: 1;
+  font-size: 0.95rem;
+  font-weight: 650;
+}
+
+.tpl-card .tpl-card-body .home-card-desc {
+  -webkit-line-clamp: 2;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--home-text-muted);
+}
+
+.tpl-gallery-landing .tpl-card .tpl-card-body .home-card-desc {
+  color: rgba(255, 255, 255, 0.55);
 }
 
 .tpl-card:not(.home-card) {
@@ -9453,7 +9465,7 @@ body:has(.home) [data-next-mark] {
 
 .profile-menu-name {
   font-size: 0.82rem;
-  font-weight: 600;
+  font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

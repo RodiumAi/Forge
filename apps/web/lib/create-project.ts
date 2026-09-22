@@ -62,14 +62,30 @@ export function clearBootPrompt(projectId: string) {
   sessionStorage.removeItem(bootPromptKey(projectId));
 }
 
-/** Ensure a generation key exists — auto-picks first active account key when unset. */
-export async function ensureCanGenerate(): Promise<"ok" | "no_key"> {
+export type GenerateGate = "ok" | "no_key" | "no_rodi";
+
+function parseRodiBalance(raw: string | null | undefined): number {
+  if (raw == null || raw === "") return 0;
+  const n = Number(String(raw).replace(",", "."));
+  return Number.isFinite(n) ? n : 0;
+}
+
+/**
+ * Preflight before creating / forking a project.
+ * Linked Rodium accounts need a positive RODI balance (fresh wallet) and a
+ * generation key. Unlinked accounts pass through (local / legacy).
+ */
+export async function ensureCanGenerate(): Promise<GenerateGate> {
   try {
     const acc = await api<{
       has_generation_key?: boolean;
       linked?: boolean;
-    }>("/auth/rodium/account");
+      wallet?: { balance_rodi?: string | null } | null;
+    }>("/auth/rodium/account?fresh=1");
     if (!acc?.linked) return "ok";
+
+    if (parseRodiBalance(acc.wallet?.balance_rodi) <= 0) return "no_rodi";
+
     if (acc.has_generation_key === true) return "ok";
 
     const ensured = await api<{ has_generation_key?: boolean }>(
@@ -89,7 +105,6 @@ export async function createProjectFromPrompt(
 ): Promise<CreatedProject> {
   const payload = raw.trim();
   if (!payload) throw new Error("empty prompt");
-  // API may auto-fork a ThemeWagon kit when the prompt matches (hybrid start).
   const project = await api<CreatedProject>("/projects", {
     method: "POST",
     body: JSON.stringify({

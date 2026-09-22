@@ -3,9 +3,24 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _ENV_FILE = Path(__file__).resolve().parent.parent / ".env"
+
+# Placeholders that must NOT enable "Continue with RodiumAi" for opensource clones.
+_OIDC_PLACEHOLDERS = frozenset(
+    {
+        "",
+        "empty",
+        "changeme",
+        "xxx",
+        "todo",
+        "replace-me",
+        "your-client-id",
+        "your-client-secret",
+    }
+)
 
 
 class Settings(BaseSettings):
@@ -40,6 +55,22 @@ class Settings(BaseSettings):
     rodium_oidc_client_secret: str = ""
     rodium_oidc_redirect_uri: str = "http://localhost:3100/auth/callback"
     rodium_oidc_scopes: str = "openid profile email api_keys.read wallet.read"
+
+    @field_validator("rodium_oidc_client_id", "rodium_oidc_client_secret", mode="before")
+    @classmethod
+    def _blank_oidc_placeholders(cls, value: object) -> str:
+        """Treat EMPTY/changeme as unset so opensource clones hide Rodium login."""
+        if value is None:
+            return ""
+        text = str(value).strip()
+        if text.lower() in _OIDC_PLACEHOLDERS:
+            return ""
+        return text
+
+    @property
+    def rodium_oidc_configured(self) -> bool:
+        return bool(self.rodium_oidc_client_id)
+
     # Public origin of the RodiumAi user app (avatars often live there locally).
     rodium_user_app_url: str = "http://localhost:3000"
     # Public origin of THIS web app — used to build the links we email out
