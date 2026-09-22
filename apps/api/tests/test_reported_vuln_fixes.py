@@ -46,7 +46,12 @@ def _request(binding: object = "__absent__") -> MagicMock:
 class TestRodiumStartBinding:
     def test_it_refuses_a_request_without_a_binding(self, monkeypatch):
         monkeypatch.setattr(
-            auth_mod, "get_settings", lambda: SimpleNamespace(rodium_oidc_client_id="client-123")
+            auth_mod,
+            "get_settings",
+            lambda: SimpleNamespace(
+                rodium_oidc_client_id="client-123",
+                rodium_oidc_configured=True,
+            ),
         )
         with pytest.raises(HTTPException) as exc:
             auth_mod.rodium_oauth_start(_request())
@@ -54,7 +59,12 @@ class TestRodiumStartBinding:
 
     def test_it_refuses_an_empty_binding(self, monkeypatch):
         monkeypatch.setattr(
-            auth_mod, "get_settings", lambda: SimpleNamespace(rodium_oidc_client_id="client-123")
+            auth_mod,
+            "get_settings",
+            lambda: SimpleNamespace(
+                rodium_oidc_client_id="client-123",
+                rodium_oidc_configured=True,
+            ),
         )
         with pytest.raises(HTTPException) as exc:
             auth_mod.rodium_oauth_start(_request(binding="   "))
@@ -62,7 +72,12 @@ class TestRodiumStartBinding:
 
     def test_it_forwards_the_binding_when_present(self, monkeypatch):
         monkeypatch.setattr(
-            auth_mod, "get_settings", lambda: SimpleNamespace(rodium_oidc_client_id="client-123")
+            auth_mod,
+            "get_settings",
+            lambda: SimpleNamespace(
+                rodium_oidc_client_id="client-123",
+                rodium_oidc_configured=True,
+            ),
         )
         monkeypatch.setattr(auth_mod, "generate_pkce", lambda: ("verifier", "challenge"))
         seen: dict[str, object] = {}
@@ -81,7 +96,12 @@ class TestRodiumStartBinding:
 
     def test_http_start_refuses_a_missing_binding(self, monkeypatch):
         monkeypatch.setattr(
-            auth_mod, "get_settings", lambda: SimpleNamespace(rodium_oidc_client_id="client-123")
+            auth_mod,
+            "get_settings",
+            lambda: SimpleNamespace(
+                rodium_oidc_client_id="client-123",
+                rodium_oidc_configured=True,
+            ),
         )
         app = FastAPI()
         app.include_router(auth_mod.router)
