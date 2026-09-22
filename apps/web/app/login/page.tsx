@@ -46,10 +46,10 @@ function LoginInner() {
    */
   const [needsVerification, setNeedsVerification] = useState<string | null>(null);
   /**
-   * Hidden once RodiumAi answers 503 — a clone should not show a button that
-   * cannot work. Starts visible so the hosted instance has no flicker.
+   * `null` while probing `/auth/features`. Opensource clones leave OIDC unset
+   * → false (button hidden). Hosted / local with CLIENT_ID set → true.
    */
-  const [rodiumAvailable, setRodiumAvailable] = useState(true);
+  const [rodiumAvailable, setRodiumAvailable] = useState<boolean | null>(null);
 
   const autostart = params.get("autostart") === "1";
   const startedRef = useRef(false);
@@ -76,8 +76,6 @@ function LoginInner() {
     if (result.reason === "oidc_unavailable") {
       setRodiumAvailable(false);
       if (autostart) setError(t("loginRodiumOidcUnavailable"));
-    } else if (result.reason === "popup_blocked") {
-      setError(t("authSocialPopupBlocked"));
     } else if (result.reason === "cancelled") {
       // User closed the popup — not an error worth shouting about.
     } else if (result.error instanceof Error) {
@@ -114,7 +112,22 @@ function LoginInner() {
   }
 
   useEffect(() => {
-    if (!autostart || startedRef.current) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const features = await api<{ rodium_oidc?: boolean }>("/auth/features");
+        if (!cancelled) setRodiumAvailable(Boolean(features.rodium_oidc));
+      } catch {
+        if (!cancelled) setRodiumAvailable(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!autostart || startedRef.current || rodiumAvailable !== true) return;
     startedRef.current = true;
     // Dashboard CTA must always run OIDC for the *current* RodiumAi session.
     // Keeping an existing forge_token short-circuits to the previous Forge
@@ -122,10 +135,10 @@ function LoginInner() {
     setToken(null);
     clearSessionCache();
     void loginWithRodium();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot autostart
-  }, [autostart, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot autostart after features probe
+  }, [autostart, rodiumAvailable, router]);
 
-  if (autostart && !error && rodiumAvailable) {
+  if (autostart && !error && rodiumAvailable !== false) {
     return <AuthCallbackScreen />;
   }
 
@@ -154,7 +167,7 @@ function LoginInner() {
 
   return (
     <AuthCard title={t("loginTitle")} subtitle={t("authLoginSub")} error={error}>
-      {rodiumAvailable ? (
+      {rodiumAvailable === true ? (
         <>
           <button
             className="btn"

@@ -137,15 +137,15 @@ export function RodiumWalletBadge({
   }
 
   if (!hasWallet) {
+    // Linked but wallet still hydrating — never flash the Connect CTA.
     return (
-      <div
-        className={`rodium-wallet-connect${compact || collapsed ? " rodium-wallet-connect-compact" : ""}`}
-        title={t("streamErrorWalletSync")}
+      <span
+        className={`rodium-wallet-connect rodium-wallet-pending${compact || collapsed ? " rodium-wallet-connect-compact" : ""}`}
         aria-busy="true"
-        aria-label={t("streamErrorWalletSync")}
+        title={t("balanceRodi")}
       >
-        {collapsed ? null : compact ? "…" : t("walletSyncingShort")}
-      </div>
+        {collapsed ? null : "…"}
+      </span>
     );
   }
 

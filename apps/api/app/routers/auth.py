@@ -74,6 +74,21 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 logger = logging.getLogger("auth")
 
 
+@router.get("/features")
+def auth_features() -> dict[str, bool]:
+    """Public flags the web app uses to show/hide auth providers.
+
+    Opensource clones leave ``RODIUM_OIDC_CLIENT_ID`` empty (or a placeholder
+    like ``EMPTY``) — the web app hides "Continue with RodiumAi" when this is
+    false so the button never leads to a 503.
+    """
+    settings = get_settings()
+    return {
+        "rodium_oidc": settings.rodium_oidc_configured,
+        "firebase": bool(settings.firebase_api_key and settings.firebase_project_id),
+    }
+
+
 def _picture_from_userinfo(info: dict) -> str | None:
     raw = info.get("picture") or info.get("avatarUrl") or info.get("avatar_url")
     if not isinstance(raw, str):
@@ -160,12 +175,29 @@ async def _ensure_default_generation_key(
 
 
 async def _hydrate_rodium_account_cache(user_id: uuid.UUID, access_token: str) -> None:
-    """Fetch Nest keys/wallet after login JWT is already returned to the browser."""
+    """Fetch Nest keys/wallet after login JWT is already returned to the browser.
+
+    New accounts often have zero keys: Nest mints ``Default · Forge`` on the
+    first list *or* via the trusted create endpoint when ``autoGenerateApiKey``
+    is on. We create here so the first dashboard paint already has a selection.
+    """
     try:
-        keys, wallet = await asyncio.gather(
-            fetch_api_keys(access_token),
-            fetch_wallet(access_token),
-        )
+        keys = await fetch_api_keys(access_token)
+        if not isinstance(keys, list):
+            keys = []
+        if not keys:
+            try:
+                await create_api_key(access_token, name="Default · Forge")
+                keys = await fetch_api_keys(access_token)
+                if not isinstance(keys, list):
+                    keys = []
+            except Exception:
+                logger.warning(
+                    "rodium.callback.hydrate_create_key_failed",
+                    extra={"user_id": str(user_id)},
+                    exc_info=True,
+                )
+        wallet = await fetch_wallet(access_token)
     except Exception:
         logger.warning(
             "rodium.callback.hydrate_nest_failed",
@@ -180,19 +212,13 @@ async def _hydrate_rodium_account_cache(user_id: uuid.UUID, access_token: str) -
             if user is None:
                 return
             row = _get_or_create_settings(db, user)
-            if isinstance(keys, list):
-                row.rodium_api_keys_json = json.dumps(keys)
+            row.rodium_api_keys_json = json.dumps(keys)
             if isinstance(wallet, dict):
                 row.rodium_wallet_json = json.dumps(wallet)
             if not row.rodium_api_key_hint:
                 row.rodium_api_key_hint = "RodiumAi account"
             db.commit()
-            await _ensure_default_generation_key(
-                db,
-                user,
-                row,
-                keys if isinstance(keys, list) else [],
-            )
+            await _ensure_default_generation_key(db, user, row, keys)
     except Exception:
         logger.warning(
             "rodium.callback.hydrate_db_failed",
@@ -232,7 +258,7 @@ def rodium_oauth_start(request: Request) -> OAuthStartResponse:
     """
     locale = resolve_locale(request)
     settings = get_settings()
-    if not settings.rodium_oidc_client_id:
+    if not settings.rodium_oidc_configured:
         raise HTTPException(status_code=503, detail=t("rodium_oauth_not_configured", locale))
     binding = (request.query_params.get("state_binding") or "").strip() or None
     if binding is None:
@@ -464,7 +490,23 @@ async def rodium_account(
         except Exception:
             pass
 
-    if not has_generation_key(user, row) and keys:
+    if live_ok:
+        if not keys:
+            try:
+                access = await _ensure_rodium_access_token(db, user)
+                await create_api_key(access, name="Default · Forge")
+                live_keys = await fetch_api_keys(access)
+                if isinstance(live_keys, list):
+                    keys = live_keys
+                    row.rodium_api_keys_json = json.dumps(keys)
+                    db.commit()
+            except Exception:
+                pass
+        if keys:
+            await _ensure_default_generation_key(
+                db, user, row, keys if isinstance(keys, list) else []
+            )
+    elif not has_generation_key(user, row) and keys:
         await _ensure_default_generation_key(db, user, row, keys if isinstance(keys, list) else [])
 
     return _account_out()
@@ -476,7 +518,7 @@ async def rodium_ensure_generation_key(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> RodiumSelectKeyResponse:
-    """Pick the first active account key when none is selected yet."""
+    """Pick (or mint) the first active account key when none is selected yet."""
     locale = resolve_locale(request)
     if not user.rodium_sub:
         raise HTTPException(status_code=400, detail=t("rodium_oauth_required", locale))
@@ -494,10 +536,19 @@ async def rodium_ensure_generation_key(
         live_keys = await fetch_api_keys(access)
         if isinstance(live_keys, list):
             keys = live_keys
-            row.rodium_api_keys_json = json.dumps(keys)
-            db.commit()
+        if not keys:
+            # Silent SSO path: Nest list is empty until we ask the trusted
+            # client to mint Default · Forge.
+            await create_api_key(access, name="Default · Forge")
+            live_keys = await fetch_api_keys(access)
+            if isinstance(live_keys, list):
+                keys = live_keys
+        row.rodium_api_keys_json = json.dumps(keys)
+        db.commit()
     except HTTPException:
         raise
+    except RodiumOidcError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc) or "Failed to list API keys") from exc
     ok = await _ensure_default_generation_key(db, user, row, keys)
