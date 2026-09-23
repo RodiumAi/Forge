@@ -1,0 +1,26 @@
+{
+  "id": "ecwid",
+  "name": "Ecwid",
+  "categories": [
+    "payments"
+  ],
+  "access": "yes",
+  "methods": [
+    "script"
+  ],
+  "docsUrl": "https://support.ecwid.com/hc/en-us/articles/207666869",
+  "badge": null,
+  "enabledHint": false,
+  "logo": "logo.png",
+  "simpleIcon": null,
+  "i18n": {
+    "en": {
+      "title": "Ecwid",
+      "blurb": "Instant storefront widget."
+    },
+    "fr": {
+      "title": "Ecwid",
+      "blurb": "Boutique instantanée en widget."
+    }
+  }
+}

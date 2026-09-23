@@ -1,0 +1,26 @@
+{
+  "id": "vimeo",
+  "name": "Vimeo",
+  "categories": [
+    "media"
+  ],
+  "access": "yes",
+  "methods": [
+    "iframe"
+  ],
+  "docsUrl": "https://developer.vimeo.com/api/oembed",
+  "badge": null,
+  "enabledHint": false,
+  "logo": "logo.png",
+  "simpleIcon": "vimeo",
+  "i18n": {
+    "en": {
+      "title": "Vimeo",
+      "blurb": "Player embed for Vimeo videos."
+    },
+    "fr": {
+      "title": "Vimeo",
+      "blurb": "Lecteur embarqué pour vidéos Vimeo."
+    }
+  }
+}

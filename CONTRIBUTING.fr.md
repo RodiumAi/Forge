@@ -21,6 +21,7 @@ Vous **pouvez** :
 - Joindre des assets design (PNG, SVG, courtes vidéos d'écran) directement dans l'issue ou la PR.
 - **Coder côté frontend** dans `apps/web` lorsque vous implémentez ou affinez l'interface (composants, styles, landing, builder).
 - **Proposer ou co-créer des kits templates** dans `data/templates/` (starters de la galerie) — voir [Contribuer des kits templates](#contribuer-des-kits-templates) ci-dessous.
+- **Proposer ou co-créer des intégrations** dans `data/integrations/` (catalogue d’embeds) — voir [Contribuer des intégrations](#contribuer-des-intégrations) ci-dessous.
 
 Vous **ne devez pas** :
 
@@ -58,8 +59,9 @@ Vous **pouvez** :
 
 - Implémenter des fonctionnalités, corriger des bugs, améliorer les prompts, l'orchestration, les templates et le runtime.
 - Proposer des changements d'architecture via une issue **avant** les gros refactors.
-- Toucher `apps/web`, `apps/api`, `apps/api/runtime` et `data/templates` selon le périmètre du changement.
+- Toucher `apps/web`, `apps/api`, `apps/api/runtime`, `data/templates` et `data/integrations` selon le périmètre du changement.
 - **Ajouter ou améliorer des kits templates** — voir [Contribuer des kits templates](#contribuer-des-kits-templates).
+- **Ajouter ou améliorer des intégrations** — voir [Contribuer des intégrations](#contribuer-des-intégrations).
 
 Vous **devez** :
 
@@ -166,10 +168,11 @@ ruff check app tests
 pytest -q
 ```
 
-Définissez `TEMPLATES_ROOT` pour les tests hors Docker :
+Définissez `TEMPLATES_ROOT` / `INTEGRATIONS_ROOT` pour les tests hors Docker :
 
 ```bash
 export TEMPLATES_ROOT="$(pwd)/../../data/templates"   # depuis apps/api
+export INTEGRATIONS_ROOT="$(pwd)/../../data/integrations"
 ```
 
 ### Runtime (`apps/api/runtime`)
@@ -185,6 +188,10 @@ npm test
 ### Templates (`data/templates`)
 
 Voir [Contribuer des kits templates](#contribuer-des-kits-templates).
+
+### Intégrations (`data/integrations`)
+
+Voir [Contribuer des intégrations](#contribuer-des-intégrations).
 
 ---
 
@@ -241,13 +248,57 @@ Utilisez le modèle d'issue [template_proposal.yml](.github/ISSUE_TEMPLATE/templ
 
 ---
 
+## Contribuer des intégrations
+
+Les intégrations sont des entrées de catalogue pour des **embeds statiques** tiers (iframe / script / lien de paiement) affichées sur `/integrations`. **Designers et développeurs** peuvent ajouter des kits ou améliorer guides et logos. Les SDK Auth/BaaS et les APIs form-action partielles sont hors scope.
+
+### Arborescence
+
+Chaque kit vit dans `data/integrations/<id>/` où `<id>` respecte `^[a-z0-9][a-z0-9-]{1,62}$` (exemple : `tally`).
+
+```
+data/integrations/<id>/
+├── integration.json   # meta : categories, access (yes), methods (iframe|script|link), docsUrl, i18n, logo
+├── logo.svg           # logo local (offline) — Simple Icons ou initiales
+├── guide.en.md        # Get started
+└── guide.fr.md
+```
+
+Vue d'ensemble : [data/integrations/README.md](data/integrations/README.md) · Contrat : [docs/INTEGRATIONS.fr.md](docs/INTEGRATIONS.fr.md) (🇬🇧 [INTEGRATIONS.md](docs/INTEGRATIONS.md))
+
+### Règles clés (vérifiées en CI)
+
+| Règle | Pourquoi |
+| --- | --- |
+| `id` de `integration.json` = nom du dossier | URLs stables `/integrations/{id}` |
+| `access` = `yes` uniquement | Embeds drop-in seulement — pas de kits partiels |
+| `methods` inclut `iframe`, `script` et/ou `link` | Doit marcher sur un site statique en collant |
+| `categories` non vide ; `docsUrl` renseigné | Découvrabilité + lien docs officiels |
+| `i18n.en` + `i18n.fr` avec `title` et `blurb` | Produit bilingue |
+| `logo.svg` (ou chemin `logo`) présent en local | Clone opensource offline |
+| `guide.en.md` + `guide.fr.md` non vides, avec titre, sans `<script>` brut | Docs Get started sûres et complètes |
+
+### Workflow de soumission
+
+1. Fork / branche depuis le dernier `main`.
+2. Ajouter ou modifier `data/integrations/<id>/` selon l'arborescence ci-dessus.
+3. Enregistrer le nouvel `<id>` dans `EXPECTED_IDS` (`apps/api/tests/test_integrations.py`).
+4. Lancer `cd apps/api && pytest tests/test_integrations.py -q`.
+5. Ouvrir une PR avec :
+   - Capture de la carte catalogue et de la page Get started
+   - Branche `integration/<id>` pour un nouveau kit
+
+Utilisez le modèle d'issue [integration_proposal.yml](.github/ISSUE_TEMPLATE/integration_proposal.yml) pour discuter d'une intégration **avant** une longue rédaction.
+
+---
+
 ## Intégration continue
 
 `.github/workflows/ci.yml` s'exécute à chaque push et pull request vers `main` :
 
 | Job | Contrôle |
 | --- | --- |
-| **API** | Ruff format + lint, pytest |
+| **API** | Ruff format + lint, pytest (inclut le **contrat Intégrations** sur `data/integrations/`) |
 | **Web** | ESLint, typecheck, Vitest, build production |
 | **Runtime** | Parité manifest Python/JS |
 | **Docker compose** | Validation stack locale |

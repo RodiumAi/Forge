@@ -1,0 +1,26 @@
+{
+  "id": "powr",
+  "name": "POWR",
+  "categories": [
+    "widgets"
+  ],
+  "access": "yes",
+  "methods": [
+    "script"
+  ],
+  "docsUrl": "https://www.powr.io/help",
+  "badge": null,
+  "enabledHint": false,
+  "logo": "logo.png",
+  "simpleIcon": null,
+  "i18n": {
+    "en": {
+      "title": "POWR",
+      "blurb": "Forms, galleries, and plugins via script."
+    },
+    "fr": {
+      "title": "POWR",
+      "blurb": "Formulaires, galeries et plugins via script."
+    }
+  }
+}

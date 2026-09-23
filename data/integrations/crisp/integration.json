@@ -1,0 +1,26 @@
+{
+  "id": "crisp",
+  "name": "Crisp",
+  "categories": [
+    "chat"
+  ],
+  "access": "yes",
+  "methods": [
+    "script"
+  ],
+  "docsUrl": "https://docs.crisp.chat/guides/chatbox-sdks/web-sdk/npm/",
+  "badge": null,
+  "enabledHint": false,
+  "logo": "logo.jpg",
+  "simpleIcon": "crisp",
+  "i18n": {
+    "en": {
+      "title": "Crisp",
+      "blurb": "Live chat widget with a paste-in snippet."
+    },
+    "fr": {
+      "title": "Crisp",
+      "blurb": "Widget de chat live via snippet."
+    }
+  }
+}

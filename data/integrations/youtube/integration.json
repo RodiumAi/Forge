@@ -1,0 +1,26 @@
+{
+  "id": "youtube",
+  "name": "YouTube",
+  "categories": [
+    "media"
+  ],
+  "access": "yes",
+  "methods": [
+    "iframe"
+  ],
+  "docsUrl": "https://support.google.com/youtube/answer/171780",
+  "badge": null,
+  "enabledHint": false,
+  "logo": "logo.png",
+  "simpleIcon": "youtube",
+  "i18n": {
+    "en": {
+      "title": "YouTube",
+      "blurb": "Standard video embed iframe."
+    },
+    "fr": {
+      "title": "YouTube",
+      "blurb": "Iframe vidéo standard."
+    }
+  }
+}

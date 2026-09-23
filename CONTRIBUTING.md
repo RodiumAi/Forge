@@ -21,6 +21,7 @@ You **may**:
 - Upload design assets (PNG, SVG, short screen recordings) directly in the issue or PR.
 - **Contribute frontend code** in `apps/web` when you implement or refine UI (components, styles, landing, builder).
 - **Propose or co-author template kits** in `data/templates/` (gallery starters) — see [Contributing template kits](#contributing-template-kits) below.
+- **Propose or co-author integrations** in `data/integrations/` (embed catalog) — see [Contributing integrations](#contributing-integrations) below.
 
 You **must not**:
 
@@ -58,8 +59,9 @@ You **may**:
 
 - Implement features, fix bugs, and improve prompts, orchestration, templates, and runtime behavior.
 - Propose architectural changes via an issue **before** large refactors.
-- Touch `apps/web`, `apps/api`, `apps/api/runtime`, and `data/templates` according to the change.
+- Touch `apps/web`, `apps/api`, `apps/api/runtime`, `data/templates`, and `data/integrations` according to the change.
 - **Add or improve template kits** — see [Contributing template kits](#contributing-template-kits).
+- **Add or improve integrations** — see [Contributing integrations](#contributing-integrations).
 
 You **must**:
 
@@ -166,10 +168,11 @@ ruff check app tests
 pytest -q
 ```
 
-Set `TEMPLATES_ROOT` when running tests outside Docker:
+Set `TEMPLATES_ROOT` / `INTEGRATIONS_ROOT` when running tests outside Docker:
 
 ```bash
 export TEMPLATES_ROOT="$(pwd)/../../data/templates"   # from apps/api
+export INTEGRATIONS_ROOT="$(pwd)/../../data/integrations"
 ```
 
 ### Runtime (`apps/api/runtime`)
@@ -185,6 +188,10 @@ npm test
 ### Templates (`data/templates`)
 
 See [Contributing template kits](#contributing-template-kits).
+
+### Integrations (`data/integrations`)
+
+See [Contributing integrations](#contributing-integrations).
 
 ---
 
@@ -242,13 +249,57 @@ Use issue template [template_proposal.yml](.github/ISSUE_TEMPLATE/template_propo
 
 ---
 
+## Contributing integrations
+
+Integrations are catalog entries for third-party **static embeds** (iframe / script / checkout link) shown on `/integrations`. **Designers and developers** can add kits or improve guides and logos. Auth/BaaS SDKs and partial form-action APIs are out of scope.
+
+### Folder layout
+
+Each kit lives at `data/integrations/<id>/` where `<id>` matches `^[a-z0-9][a-z0-9-]{1,62}$` (example: `tally`).
+
+```
+data/integrations/<id>/
+├── integration.json   # meta: categories, access (yes), methods (iframe|script|link), docsUrl, i18n, logo
+├── logo.svg           # vendored logo (offline) — Simple Icons or initials fallback
+├── guide.en.md        # Get started
+└── guide.fr.md
+```
+
+Overview: [data/integrations/README.md](data/integrations/README.md) · Full contract: [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md) (🇫🇷 [INTEGRATIONS.fr.md](docs/INTEGRATIONS.fr.md))
+
+### Key rules (enforced by CI)
+
+| Rule | Why |
+| --- | --- |
+| `integration.json` `id` equals folder name | Stable URLs `/integrations/{id}` |
+| `access` is `yes` only | Drop-in embeds only — no partial kits |
+| `methods` includes `iframe`, `script`, and/or `link` | Must work on a static site by paste |
+| `categories` non-empty; `docsUrl` set | Discoverability + official docs link |
+| `i18n.en` + `i18n.fr` with `title` and `blurb` | Bilingual product |
+| `logo.svg` (or `logo` path) present locally | Opensource clone works offline |
+| `guide.en.md` + `guide.fr.md` non-empty, with a heading, no raw `<script>` | Get started docs stay safe and complete |
+
+### Submission workflow
+
+1. Fork / branch from latest `main`.
+2. Add or edit `data/integrations/<id>/` following the layout above.
+3. Register the new `<id>` in `EXPECTED_IDS` (`apps/api/tests/test_integrations.py`).
+4. Run `cd apps/api && pytest tests/test_integrations.py -q`.
+5. Open a PR with:
+   - Screenshot of the catalog card and the Get started page
+   - Branch name `integration/<id>` when adding a kit
+
+Use issue template [integration_proposal.yml](.github/ISSUE_TEMPLATE/integration_proposal.yml) to discuss an integration **before** large write-ups.
+
+---
+
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs on every push and pull request to `main`:
 
 | Job | What it checks |
 | --- | --- |
-| **API** | Ruff format + lint, pytest |
+| **API** | Ruff format + lint, pytest (includes **Integrations contract** on `data/integrations/`) |
 | **Web** | ESLint, typecheck, Vitest, production build |
 | **Runtime** | Python/JS manifest parity |
 | **Docker compose** | Local stack validation |

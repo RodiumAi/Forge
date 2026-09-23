@@ -1,0 +1,26 @@
+{
+  "id": "voiceflow",
+  "name": "Voiceflow",
+  "categories": [
+    "chat"
+  ],
+  "access": "yes",
+  "methods": [
+    "script"
+  ],
+  "docsUrl": "https://docs.voiceflow.com/docs/web-chat",
+  "badge": null,
+  "enabledHint": false,
+  "logo": "logo.png",
+  "simpleIcon": "voiceflow",
+  "i18n": {
+    "en": {
+      "title": "Voiceflow",
+      "blurb": "AI agent web chat embed."
+    },
+    "fr": {
+      "title": "Voiceflow",
+      "blurb": "Chat web d’agent IA embarqué."
+    }
+  }
+}

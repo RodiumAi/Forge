@@ -1,0 +1,26 @@
+{
+  "id": "google-maps",
+  "name": "Google Maps Embed",
+  "categories": [
+    "maps"
+  ],
+  "access": "yes",
+  "methods": [
+    "iframe"
+  ],
+  "docsUrl": "https://developers.google.com/maps/documentation/embed/get-started",
+  "badge": null,
+  "enabledHint": false,
+  "logo": "logo.png",
+  "simpleIcon": "googlemaps",
+  "i18n": {
+    "en": {
+      "title": "Google Maps Embed",
+      "blurb": "Maps Embed API iframe."
+    },
+    "fr": {
+      "title": "Google Maps Embed",
+      "blurb": "Iframe Maps Embed API."
+    }
+  }
+}

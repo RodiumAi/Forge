@@ -8,6 +8,7 @@ import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { Icon } from "@/components/ui/icon";
 import { LocaleSwitch, useI18n } from "@/lib/i18n/I18nProvider";
 import {
+  Blocks,
   ChevronLeft,
   ChevronRight,
   Home,
@@ -20,7 +21,7 @@ import { useEffect, useState } from "react";
 export const SIDEBAR_KEY = "forge_home_sidebar";
 export const BUILDER_SIDEBAR_KEY = "forge_builder_sidebar";
 
-export type HomeNavItem = "projects" | "templates" | "settings" | null;
+export type HomeNavItem = "projects" | "templates" | "integrations" | "settings" | null;
 
 type HomeShellProps = {
   children: React.ReactNode;
@@ -110,6 +111,16 @@ export function HomeShell({
               <Icon icon={LayoutTemplate} />
             </span>
             <span className="home-sidebar-label">{t("navTemplates")}</span>
+          </Link>
+          <Link
+            href="/integrations"
+            className={`home-sidebar-btn ${activeNav === "integrations" ? "active" : ""}`}
+            title={t("navIntegrations")}
+          >
+            <span className="home-sidebar-icon" aria-hidden>
+              <Icon icon={Blocks} />
+            </span>
+            <span className="home-sidebar-label">{t("navIntegrations")}</span>
           </Link>
           <Link
             href="/settings"

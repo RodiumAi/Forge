@@ -2,6 +2,7 @@ import { api, getToken } from "@/lib/api";
 
 const PROJECTS_KEY = "forge_projects_v1";
 const TEMPLATES_KEY = "forge_templates_v1";
+const INTEGRATIONS_KEY = "forge_integrations_v1";
 /** Soft TTL: show cache immediately, refresh in background when older. */
 const SOFT_TTL_MS = 90 * 1000;
 const HARD_TTL_MS = 30 * 60 * 1000;
@@ -35,6 +36,20 @@ export type CachedTemplate = {
   kind?: "web" | "mobile";
 };
 
+export type CachedIntegration = {
+  id: string;
+  name: string;
+  title: string;
+  blurb: string;
+  categories: string[];
+  access: "yes";
+  methods: string[];
+  docs_url?: string | null;
+  badge?: string | null;
+  enabled_hint?: boolean;
+  logo_url?: string | null;
+};
+
 type ListEnvelope<T> = {
   tokenFp: string | null;
   locale: string;
@@ -46,11 +61,14 @@ type Listener = () => void;
 
 const projectListeners = new Set<Listener>();
 const templateListeners = new Set<Listener>();
+const integrationListeners = new Set<Listener>();
 
 let projectsMemory: ListEnvelope<CachedProject> | null = null;
 let templatesMemory: ListEnvelope<CachedTemplate> | null = null;
+let integrationsMemory: ListEnvelope<CachedIntegration> | null = null;
 let projectsFlight: Promise<CachedProject[]> | null = null;
 let templatesFlight: Promise<CachedTemplate[]> | null = null;
+let integrationsFlight: Promise<CachedIntegration[]> | null = null;
 
 function tokenFingerprint(): string | null {
   const token = getToken();
@@ -119,12 +137,24 @@ function templatesSnap(locale: string): ListEnvelope<CachedTemplate> | null {
   return snap;
 }
 
+function integrationsSnap(locale: string): ListEnvelope<CachedIntegration> | null {
+  const snap = integrationsMemory || readStorage<CachedIntegration>(INTEGRATIONS_KEY);
+  if (!snap || snap.locale !== locale) return null;
+  if (!isUsable(snap.updatedAt)) return null;
+  if (!integrationsMemory) integrationsMemory = snap;
+  return snap;
+}
+
 export function getCachedProjects(locale: string): CachedProject[] | null {
   return projectsSnap(locale)?.items ?? null;
 }
 
 export function getCachedTemplates(locale: string): CachedTemplate[] | null {
   return templatesSnap(locale)?.items ?? null;
+}
+
+export function getCachedIntegrations(locale: string): CachedIntegration[] | null {
+  return integrationsSnap(locale)?.items ?? null;
 }
 
 export function invalidateProjectsCache() {
@@ -139,9 +169,16 @@ export function invalidateTemplatesCache() {
   notify(templateListeners);
 }
 
+export function invalidateIntegrationsCache() {
+  integrationsMemory = null;
+  writeStorage(INTEGRATIONS_KEY, null);
+  notify(integrationListeners);
+}
+
 export function invalidateListsCache() {
   invalidateProjectsCache();
   invalidateTemplatesCache();
+  invalidateIntegrationsCache();
 }
 
 export function subscribeProjects(listener: Listener): () => void {
@@ -152,6 +189,11 @@ export function subscribeProjects(listener: Listener): () => void {
 export function subscribeTemplates(listener: Listener): () => void {
   templateListeners.add(listener);
   return () => templateListeners.delete(listener);
+}
+
+export function subscribeIntegrations(listener: Listener): () => void {
+  integrationListeners.add(listener);
+  return () => integrationListeners.delete(listener);
 }
 
 function commitProjects(locale: string, items: CachedProject[]) {
@@ -176,6 +218,18 @@ function commitTemplates(locale: string, items: CachedTemplate[]) {
   templatesMemory = envelope;
   writeStorage(TEMPLATES_KEY, envelope);
   notify(templateListeners);
+}
+
+function commitIntegrations(locale: string, items: CachedIntegration[]) {
+  const envelope: ListEnvelope<CachedIntegration> = {
+    tokenFp: null,
+    locale,
+    updatedAt: Date.now(),
+    items,
+  };
+  integrationsMemory = envelope;
+  writeStorage(INTEGRATIONS_KEY, envelope);
+  notify(integrationListeners);
 }
 
 async function fetchProjects(locale: string): Promise<CachedProject[]> {
@@ -204,6 +258,20 @@ async function fetchTemplates(locale: string): Promise<CachedTemplate[]> {
     }
   })();
   return templatesFlight;
+}
+
+async function fetchIntegrations(locale: string): Promise<CachedIntegration[]> {
+  if (integrationsFlight) return integrationsFlight;
+  integrationsFlight = (async () => {
+    try {
+      const list = await api<CachedIntegration[]>("/integrations");
+      commitIntegrations(locale, list);
+      return list;
+    } finally {
+      integrationsFlight = null;
+    }
+  })();
+  return integrationsFlight;
 }
 
 /**
@@ -267,6 +335,30 @@ export async function ensureTemplates(
   }
 
   return fetchTemplates(locale);
+}
+
+export async function ensureIntegrations(
+  locale: string,
+  options?: { force?: boolean },
+): Promise<CachedIntegration[]> {
+  const snap = integrationsSnap(locale);
+  if (options?.force) {
+    try {
+      return await fetchIntegrations(locale);
+    } catch (err) {
+      if (snap) return snap.items;
+      throw err;
+    }
+  }
+
+  if (snap && isFresh(snap.updatedAt)) return snap.items;
+
+  if (snap) {
+    void fetchIntegrations(locale).catch(() => undefined);
+    return snap.items;
+  }
+
+  return fetchIntegrations(locale);
 }
 
 /** Wait for an in-flight soft refresh if any; otherwise return current cache/network. */

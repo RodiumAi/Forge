@@ -295,6 +295,25 @@ class TemplateOut(BaseModel):
     kind: Literal["web", "mobile"] = "web"
 
 
+class IntegrationOut(BaseModel):
+    id: str
+    name: str
+    title: str
+    blurb: str
+    categories: list[str] = []
+    access: Literal["yes"]
+    methods: list[str] = []
+    docs_url: str | None = None
+    badge: str | None = None
+    enabled_hint: bool = False
+    logo_url: str | None = None
+
+
+class IntegrationDetailOut(IntegrationOut):
+    guide_md: str = ""
+    guide_url: str | None = None
+
+
 class ChatOut(BaseModel):
     id: UUID
     project_id: UUID

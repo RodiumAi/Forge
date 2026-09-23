@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 from unittest.mock import MagicMock
 
 import pytest
@@ -10,7 +9,8 @@ import pytest
 from app.services import publish_esm
 
 
-def test_publish_purges_orphan_keys(monkeypatch, tmp_path):
+@pytest.mark.asyncio
+async def test_publish_purges_orphan_keys(monkeypatch, tmp_path):
     dist = tmp_path / "dist"
     dist.mkdir()
     (dist / "index.html").write_text("<html></html>", encoding="utf-8")
@@ -43,7 +43,7 @@ def test_publish_purges_orphan_keys(monkeypatch, tmp_path):
         ),
     )
 
-    result = asyncio.run(publish_esm.publish_project_esm("proj-1", "brandx", title="Demo"))
+    result = await publish_esm.publish_project_esm("proj-1", "brandx", title="Demo")
 
     assert result["files_uploaded"] == 2
     assert result["orphans_deleted"] == 2

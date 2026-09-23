@@ -1,0 +1,26 @@
+{
+  "id": "tawk-to",
+  "name": "Tawk.to",
+  "categories": [
+    "chat"
+  ],
+  "access": "yes",
+  "methods": [
+    "script"
+  ],
+  "docsUrl": "https://help.tawk.to/article/adding-a-widget-to-your-website",
+  "badge": null,
+  "enabledHint": false,
+  "logo": "logo.png",
+  "simpleIcon": "tawkto",
+  "i18n": {
+    "en": {
+      "title": "Tawk.to",
+      "blurb": "Free live chat script for any site."
+    },
+    "fr": {
+      "title": "Tawk.to",
+      "blurb": "Script de chat gratuit pour tout site."
+    }
+  }
+}

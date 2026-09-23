@@ -1,0 +1,26 @@
+{
+  "id": "openstreetmap",
+  "name": "OpenStreetMap",
+  "categories": [
+    "maps"
+  ],
+  "access": "yes",
+  "methods": [
+    "iframe"
+  ],
+  "docsUrl": "https://wiki.openstreetmap.org/wiki/Browsing#Embedded_maps",
+  "badge": null,
+  "enabledHint": false,
+  "logo": "logo.png",
+  "simpleIcon": "openstreetmap",
+  "i18n": {
+    "en": {
+      "title": "OpenStreetMap",
+      "blurb": "OSM share / embed iframes."
+    },
+    "fr": {
+      "title": "OpenStreetMap",
+      "blurb": "Iframes de partage OSM."
+    }
+  }
+}

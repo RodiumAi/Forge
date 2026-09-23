@@ -1,0 +1,27 @@
+{
+  "id": "tidycal",
+  "name": "TidyCal",
+  "categories": [
+    "booking"
+  ],
+  "access": "yes",
+  "methods": [
+    "iframe",
+    "script"
+  ],
+  "docsUrl": "https://tidycal.com/help/embedding",
+  "badge": null,
+  "enabledHint": false,
+  "logo": "logo.png",
+  "simpleIcon": null,
+  "i18n": {
+    "en": {
+      "title": "TidyCal",
+      "blurb": "Simple booking page embeds."
+    },
+    "fr": {
+      "title": "TidyCal",
+      "blurb": "Pages de réservation simples à embarquer."
+    }
+  }
+}

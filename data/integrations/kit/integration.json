@@ -1,0 +1,27 @@
+{
+  "id": "kit",
+  "name": "Kit (ConvertKit)",
+  "categories": [
+    "email"
+  ],
+  "access": "yes",
+  "methods": [
+    "script",
+    "iframe"
+  ],
+  "docsUrl": "https://help.kit.com/en/articles/2502505-how-to-add-a-kit-form-to-your-site",
+  "badge": null,
+  "enabledHint": false,
+  "logo": "logo.png",
+  "simpleIcon": "kit",
+  "i18n": {
+    "en": {
+      "title": "Kit (ConvertKit)",
+      "blurb": "Creator email forms and modals."
+    },
+    "fr": {
+      "title": "Kit (ConvertKit)",
+      "blurb": "Formulaires e-mail créateurs et modales."
+    }
+  }
+}

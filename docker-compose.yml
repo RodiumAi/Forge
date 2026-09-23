@@ -110,12 +110,14 @@ services:
       SMTP_HOST: mailpit
       SMTP_PORT: "1025"
       TEMPLATES_ROOT: /data/templates
+      INTEGRATIONS_ROOT: /data/integrations
       RUNNER_PARENT_ORIGINS: http://localhost:3100,http://127.0.0.1:3100
       SSE_HEARTBEAT_SECONDS: "15"
       ALB_IDLE_TIMEOUT_SECONDS: "600"
     volumes:
       - ./data/projects:/data/projects
       - ./data/templates:/data/templates:ro
+      - ./data/integrations:/data/integrations:ro
       - ./infra/local:/srv/infra:ro
       # Live-reload API sources while iterating on visual-edit / bridge.
       - ./apps/api/app:/app/app

@@ -1,0 +1,27 @@
+{
+  "id": "typeform",
+  "name": "Typeform",
+  "categories": [
+    "forms"
+  ],
+  "access": "yes",
+  "methods": [
+    "iframe",
+    "script"
+  ],
+  "docsUrl": "https://www.typeform.com/developers/embed/",
+  "badge": null,
+  "enabledHint": false,
+  "logo": "logo.png",
+  "simpleIcon": "typeform",
+  "i18n": {
+    "en": {
+      "title": "Typeform",
+      "blurb": "Conversational forms via embed SDK or iframe."
+    },
+    "fr": {
+      "title": "Typeform",
+      "blurb": "Formulaires conversationnels via SDK ou iframe."
+    }
+  }
+}

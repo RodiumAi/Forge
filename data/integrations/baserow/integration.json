@@ -1,0 +1,26 @@
+{
+  "id": "baserow",
+  "name": "Baserow",
+  "categories": [
+    "data"
+  ],
+  "access": "yes",
+  "methods": [
+    "iframe"
+  ],
+  "docsUrl": "https://baserow.io/docs/",
+  "badge": null,
+  "enabledHint": false,
+  "logo": "logo.png",
+  "simpleIcon": "baserow",
+  "i18n": {
+    "en": {
+      "title": "Baserow",
+      "blurb": "No-code database with public share views."
+    },
+    "fr": {
+      "title": "Baserow",
+      "blurb": "Base no-code avec vues publiques."
+    }
+  }
+}

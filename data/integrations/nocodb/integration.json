@@ -1,0 +1,26 @@
+{
+  "id": "nocodb",
+  "name": "NocoDB",
+  "categories": [
+    "data"
+  ],
+  "access": "yes",
+  "methods": [
+    "iframe"
+  ],
+  "docsUrl": "https://docs.nocodb.com/",
+  "badge": null,
+  "enabledHint": false,
+  "logo": "logo.png",
+  "simpleIcon": "nocodb",
+  "i18n": {
+    "en": {
+      "title": "NocoDB",
+      "blurb": "Open Airtable alternative with share embeds."
+    },
+    "fr": {
+      "title": "NocoDB",
+      "blurb": "Alternative open à Airtable avec embeds."
+    }
+  }
+}
