@@ -8,6 +8,7 @@ from pathlib import Path
 from app.config import get_settings
 
 _ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{1,62}$")
+_LOGO_RE = re.compile(r"^[A-Za-z0-9._-]{1,80}\.(?:svg|png|jpe?g|webp|gif|ico)$")
 # Catalog is drop-in static embeds only (paste iframe / script / link).
 _ACCESS_OK = frozenset({"yes"})
 _EMBED_METHODS = frozenset({"iframe", "script", "link"})
@@ -41,6 +42,17 @@ def integrations_root() -> Path:
         return resolved
     repo_root = Path(__file__).resolve().parents[4]
     return (repo_root / root).resolve()
+
+
+def _safe_under(root: Path, *parts: str) -> Path | None:
+    """Join ``parts`` under ``root`` and reject any path escape."""
+    base = root.resolve()
+    candidate = base.joinpath(*parts).resolve()
+    try:
+        candidate.relative_to(base)
+    except ValueError:
+        return None
+    return candidate
 
 
 _cache: list[IntegrationMeta] | None = None
@@ -77,11 +89,14 @@ def _load_meta(folder: Path) -> IntegrationMeta | None:
     if not method_set.intersection(_EMBED_METHODS):
         return None
     logo = str(data.get("logo") or "logo.svg").strip() or "logo.svg"
-    if ".." in logo.replace("\\", "/").split("/"):
+    if not _LOGO_RE.match(logo):
         return None
-    if not (folder / logo).is_file():
+    logo_file = _safe_under(folder, logo)
+    if logo_file is None or not logo_file.is_file():
         return None
-    if not (folder / "guide.en.md").is_file() or not (folder / "guide.fr.md").is_file():
+    guide_en = _safe_under(folder, "guide.en.md")
+    guide_fr = _safe_under(folder, "guide.fr.md")
+    if guide_en is None or not guide_en.is_file() or guide_fr is None or not guide_fr.is_file():
         return None
     i18n = data.get("i18n") if isinstance(data.get("i18n"), dict) else {}
     en = i18n.get("en") if isinstance(i18n.get("en"), dict) else {}
@@ -135,7 +150,12 @@ def list_integrations(
         for child in children:
             if not child.is_dir() or child.name.startswith("_"):
                 continue
-            meta = _load_meta(child)
+            if not _ID_RE.match(child.name):
+                continue
+            safe = _safe_under(root, child.name)
+            if safe is None or not safe.is_dir():
+                continue
+            meta = _load_meta(safe)
             if meta is not None:
                 out.append(meta)
         _cache = out
@@ -170,8 +190,8 @@ def get_integration(integration_id: str) -> IntegrationMeta | None:
     tid = (integration_id or "").strip()
     if not _ID_RE.match(tid):
         return None
-    folder = integrations_root() / tid
-    if not folder.is_dir():
+    folder = _safe_under(integrations_root(), tid)
+    if folder is None or not folder.is_dir():
         return None
     return _load_meta(folder)
 
@@ -181,19 +201,19 @@ def guide_path(integration_id: str, locale: str) -> Path | None:
     if meta is None:
         return None
     lang = "fr" if locale == "fr" else "en"
-    path = meta.path / f"guide.{lang}.md"
-    if path.is_file():
+    path = _safe_under(meta.path, f"guide.{lang}.md")
+    if path is not None and path.is_file():
         return path
-    fallback = meta.path / "guide.en.md"
-    return fallback if fallback.is_file() else None
+    fallback = _safe_under(meta.path, "guide.en.md")
+    return fallback if fallback is not None and fallback.is_file() else None
 
 
 def logo_path(integration_id: str) -> Path | None:
     meta = get_integration(integration_id)
-    if meta is None:
+    if meta is None or not _LOGO_RE.match(meta.logo):
         return None
-    path = (meta.path / meta.logo).resolve()
-    if not str(path).startswith(str(meta.path.resolve())) or not path.is_file():
+    path = _safe_under(meta.path, meta.logo)
+    if path is None or not path.is_file():
         return None
     return path
 
