@@ -108,6 +108,7 @@ class Settings(BaseSettings):
     projects_root: str = "./data/projects"
     # Forkable starter kits (Vite/React snapshots). Docker: /data/templates
     templates_root: str = "./data/templates"
+    integrations_root: str = "./data/integrations"
     cors_origins: str = "http://localhost:3100,http://127.0.0.1:3100,http://localhost:8080"
     # LLM models (override via .env or the RodiumAi admin platform settings)
     # LITE_MODEL: small edits, classify, coherence
@@ -279,6 +280,12 @@ class Settings(BaseSettings):
     @property
     def templates_path(self) -> Path:
         path = Path(self.templates_root).resolve()
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
+    @property
+    def integrations_path(self) -> Path:
+        path = Path(self.integrations_root).resolve()
         path.mkdir(parents=True, exist_ok=True)
         return path
 

@@ -1,0 +1,27 @@
+{
+  "id": "paypal",
+  "name": "PayPal",
+  "categories": [
+    "payments"
+  ],
+  "access": "yes",
+  "methods": [
+    "script",
+    "link"
+  ],
+  "docsUrl": "https://developer.paypal.com/docs/checkout/",
+  "badge": null,
+  "enabledHint": false,
+  "logo": "logo.png",
+  "simpleIcon": "paypal",
+  "i18n": {
+    "en": {
+      "title": "PayPal",
+      "blurb": "Hosted buttons and payment links."
+    },
+    "fr": {
+      "title": "PayPal",
+      "blurb": "Boutons hébergés et liens de paiement."
+    }
+  }
+}

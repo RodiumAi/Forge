@@ -19,6 +19,7 @@ jobs:
         working-directory: apps/api
     env:
       TEMPLATES_ROOT: ${{ github.workspace }}/data/templates
+      INTEGRATIONS_ROOT: ${{ github.workspace }}/data/integrations
     steps:
       - uses: actions/checkout@v4
 

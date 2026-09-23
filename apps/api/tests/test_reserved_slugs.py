@@ -47,6 +47,7 @@ def api(tmp_path_factory, monkeypatch):
     monkeypatch.setattr(projects_mod.rate_limit, "enforce", lambda *_a, **_k: None)
     monkeypatch.setattr(projects_mod, "scaffold_vite_react", lambda *_a, **_k: None)
     monkeypatch.setattr(projects_mod, "capture_for_user", lambda *_a, **_k: None)
+    monkeypatch.setattr(projects_mod, "purge_site_prefix", lambda *_a, **_k: 0)
     # _project_out asks the ORM which session owns the project; there is none.
     monkeypatch.setattr(sa_orm.Session, "object_session", staticmethod(lambda _obj: None))
 

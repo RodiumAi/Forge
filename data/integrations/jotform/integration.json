@@ -1,0 +1,27 @@
+{
+  "id": "jotform",
+  "name": "Jotform",
+  "categories": [
+    "forms"
+  ],
+  "access": "yes",
+  "methods": [
+    "iframe",
+    "script"
+  ],
+  "docsUrl": "https://www.jotform.com/help/34-embedding-a-form-to-a-web-page/",
+  "badge": null,
+  "enabledHint": false,
+  "logo": "logo.png",
+  "simpleIcon": "jotform",
+  "i18n": {
+    "en": {
+      "title": "Jotform",
+      "blurb": "Drop-in form embeds for any page."
+    },
+    "fr": {
+      "title": "Jotform",
+      "blurb": "Formulaires à coller sur n’importe quelle page."
+    }
+  }
+}

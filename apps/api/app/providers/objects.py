@@ -175,7 +175,13 @@ class ObjectStore:
         return deleted
 
     def delete_prefix(self, bucket: str, prefix: str) -> int:
-        """Best-effort recursive delete of keys under a strict site prefix."""
+        """Delete keys under a strict site prefix (list snapshot, then batch delete).
+
+        Only keys present at list time are removed — never re-list after deletes.
+        Callers must hold the slug uniqueness lock in Postgres until this returns
+        (see ``purge_site_prefix``), otherwise a concurrent publish under the same
+        prefix can be wiped mid-flight.
+        """
         safe_prefix = _require_site_prefix(prefix)
         keys = self.list_prefix(bucket, safe_prefix)
         if not keys:

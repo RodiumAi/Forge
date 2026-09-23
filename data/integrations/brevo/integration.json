@@ -1,0 +1,27 @@
+{
+  "id": "brevo",
+  "name": "Brevo",
+  "categories": [
+    "email"
+  ],
+  "access": "yes",
+  "methods": [
+    "script",
+    "iframe"
+  ],
+  "docsUrl": "https://help.brevo.com/hc/en-us/articles/360001139960",
+  "badge": null,
+  "enabledHint": false,
+  "logo": "logo.png",
+  "simpleIcon": "brevo",
+  "i18n": {
+    "en": {
+      "title": "Brevo",
+      "blurb": "Newsletter / form embeds."
+    },
+    "fr": {
+      "title": "Brevo",
+      "blurb": "Embeds newsletter / formulaires."
+    }
+  }
+}

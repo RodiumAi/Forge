@@ -1,0 +1,26 @@
+{
+  "id": "google-forms",
+  "name": "Google Forms",
+  "categories": [
+    "forms"
+  ],
+  "access": "yes",
+  "methods": [
+    "iframe"
+  ],
+  "docsUrl": "https://support.google.com/docs/answer/2839588",
+  "badge": null,
+  "enabledHint": false,
+  "logo": "logo.png",
+  "simpleIcon": "googleforms",
+  "i18n": {
+    "en": {
+      "title": "Google Forms",
+      "blurb": "Publish a form and embed with an iframe."
+    },
+    "fr": {
+      "title": "Google Forms",
+      "blurb": "Publiez un formulaire et embarquez-le en iframe."
+    }
+  }
+}

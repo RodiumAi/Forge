@@ -1,0 +1,26 @@
+{
+  "id": "spotify",
+  "name": "Spotify",
+  "categories": [
+    "media"
+  ],
+  "access": "yes",
+  "methods": [
+    "iframe"
+  ],
+  "docsUrl": "https://developer.spotify.com/documentation/embeds",
+  "badge": null,
+  "enabledHint": false,
+  "logo": "logo.png",
+  "simpleIcon": "spotify",
+  "i18n": {
+    "en": {
+      "title": "Spotify",
+      "blurb": "Track / album / playlist embeds."
+    },
+    "fr": {
+      "title": "Spotify",
+      "blurb": "Embeds titres / albums / playlists."
+    }
+  }
+}

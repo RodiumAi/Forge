@@ -20,6 +20,7 @@ from app.routers import (
     domains,
     files,
     history,
+    integrations,
     internal_admin,
     plugins,
     preview,
@@ -167,6 +168,7 @@ app.include_router(auth.router)
 app.include_router(settings_router.router)
 app.include_router(plugins.router)
 app.include_router(templates.router)
+app.include_router(integrations.router)
 app.include_router(projects.router)
 app.include_router(design.router)
 app.include_router(seo.router)

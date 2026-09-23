@@ -27,7 +27,7 @@ from app.schemas import (
 from app.services import preview_babel, rate_limit
 from app.services.filesystem import list_files, project_dir, write_bytes
 from app.services.posthog_client import capture_for_user
-from app.services.project_delete import delete_project_full
+from app.services.project_delete import delete_project_full, purge_site_prefix
 from app.services.project_naming import suggest_project_name
 from app.services.scaffold import (
     brand_placeholder_html,
@@ -350,24 +350,26 @@ def update_project(
         if candidate and candidate != project.slug:
             old_slug = project.slug
             project.slug = _unique_slug_excluding(db, candidate, project.id)
-    db.commit()
-    db.refresh(project)
 
-    # Drop the old public prefix so another tenant cannot reclaim leftover objects.
+    # Drop the old public prefix BEFORE commit. Commit frees the uniqueness
+    # constraint; purging after that races another tenant's claim+publish and
+    # can delete their freshly uploaded objects under the same prefix (TOCTOU).
     if old_slug and old_slug != project.slug:
         try:
-            settings = get_settings()
-            from app.providers.objects import get_object_store
-
-            store = get_object_store()
-            bucket = store.bucket_site_assets or settings.bucket_site_assets
-            if bucket:
-                store.delete_prefix(bucket, f"{old_slug}/")
+            purge_site_prefix(old_slug)
         except Exception:
             logger.exception(
-                "Failed to cleanup old published assets slug=%s",
+                "Failed to cleanup old published assets slug=%s — aborting rename",
                 old_slug,
             )
+            db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=t("slug_purge_failed", locale),  # type: ignore[arg-type]
+            ) from None
+
+    db.commit()
+    db.refresh(project)
 
     return _project_out(project)
 

@@ -1,0 +1,26 @@
+{
+  "id": "tidio",
+  "name": "Tidio",
+  "categories": [
+    "chat"
+  ],
+  "access": "yes",
+  "methods": [
+    "script"
+  ],
+  "docsUrl": "https://help.tidio.com/hc/en-us/articles/5408916656284",
+  "badge": null,
+  "enabledHint": false,
+  "logo": "logo.png",
+  "simpleIcon": "tidio",
+  "i18n": {
+    "en": {
+      "title": "Tidio",
+      "blurb": "Chat + bots via website script."
+    },
+    "fr": {
+      "title": "Tidio",
+      "blurb": "Chat et bots via script site."
+    }
+  }
+}

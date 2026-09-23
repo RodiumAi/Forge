@@ -17,6 +17,26 @@ from app.services.filesystem import project_dir
 logger = logging.getLogger("project_delete")
 
 
+def purge_site_prefix(slug: str) -> int:
+    """Delete published objects under ``{slug}/`` in the site-assets bucket.
+
+    Callers MUST invoke this while ``slug`` is still unique in Postgres (before
+    ``db.commit()`` frees it on rename/delete). Purging after the uniqueness
+    constraint is released races a stranger's claim+publish and can wipe their
+    freshly uploaded keys (CWE-367 / cross-tenant TOCTOU).
+    """
+    if not slug:
+        return 0
+    settings = get_settings()
+    from app.providers.objects import get_object_store
+
+    store = get_object_store()
+    bucket = store.bucket_site_assets or settings.bucket_site_assets
+    if not bucket:
+        return 0
+    return store.delete_prefix(bucket, f"{slug}/")
+
+
 def delete_project_full(db: Session, project: Project) -> None:
     """Stop preview, remove workspace files, purge published assets, delete row."""
     pid = str(project.id)
@@ -34,16 +54,15 @@ def delete_project_full(db: Session, project: Project) -> None:
     except Exception:
         logger.exception("Failed to remove project files project=%s", pid)
 
+    # Purge while the slug row still exists so another tenant cannot reclaim
+    # the prefix mid-delete.
     try:
-        settings = get_settings()
-        from app.providers.objects import get_object_store
-
-        store = get_object_store()
-        bucket = store.bucket_site_assets or settings.bucket_site_assets
-        if bucket and slug:
-            store.delete_prefix(bucket, f"{slug}/")
+        if slug:
+            purge_site_prefix(slug)
     except Exception:
         logger.exception("Failed to cleanup published assets slug=%s", slug)
+        db.rollback()
+        raise
 
     domain = db.query(ProjectDomain).filter(ProjectDomain.project_id == project.id).first()
     if domain is not None:

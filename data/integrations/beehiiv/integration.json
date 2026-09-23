@@ -1,0 +1,27 @@
+{
+  "id": "beehiiv",
+  "name": "Beehiiv",
+  "categories": [
+    "email"
+  ],
+  "access": "yes",
+  "methods": [
+    "iframe",
+    "script"
+  ],
+  "docsUrl": "https://www.beehiiv.com/docs",
+  "badge": null,
+  "enabledHint": false,
+  "logo": "logo.png",
+  "simpleIcon": "beehiiv",
+  "i18n": {
+    "en": {
+      "title": "Beehiiv",
+      "blurb": "Newsletter subscribe embeds."
+    },
+    "fr": {
+      "title": "Beehiiv",
+      "blurb": "Embeds d’abonnement newsletter."
+    }
+  }
+}

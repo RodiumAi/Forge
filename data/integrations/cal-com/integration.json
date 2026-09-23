@@ -1,0 +1,27 @@
+{
+  "id": "cal-com",
+  "name": "Cal.com",
+  "categories": [
+    "booking"
+  ],
+  "access": "yes",
+  "methods": [
+    "iframe",
+    "script"
+  ],
+  "docsUrl": "https://cal.com/docs/core-features/bookings/embedding",
+  "badge": null,
+  "enabledHint": false,
+  "logo": "logo.png",
+  "simpleIcon": "caldotcom",
+  "i18n": {
+    "en": {
+      "title": "Cal.com",
+      "blurb": "Open-source scheduling embeds."
+    },
+    "fr": {
+      "title": "Cal.com",
+      "blurb": "Embarquements de planification open source."
+    }
+  }
+}

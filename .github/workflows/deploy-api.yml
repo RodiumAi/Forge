@@ -48,7 +48,7 @@ jobs:
           if ! BASE_SHA="$(git rev-parse "${HEAD_SHA}^" 2>/dev/null)"; then
             echo "api=true" >> "$GITHUB_OUTPUT"
           elif git diff --name-only "${BASE_SHA}" "${HEAD_SHA}" \
-            | grep -Eq '^(apps/api/|data/templates/|\.github/workflows/(ci|deploy-api)\.yml$)'; then
+            | grep -Eq '^(apps/api/|data/templates/|data/integrations/|\.github/workflows/(ci|deploy-api)\.yml$)'; then
             echo "api=true" >> "$GITHUB_OUTPUT"
           else
             echo "api=false" >> "$GITHUB_OUTPUT"
@@ -61,6 +61,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       TEMPLATES_ROOT: ${{ github.workspace }}/data/templates
+      INTEGRATIONS_ROOT: ${{ github.workspace }}/data/integrations
     defaults:
       run:
         working-directory: apps/api

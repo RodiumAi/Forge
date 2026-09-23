@@ -1,0 +1,26 @@
+{
+  "id": "umami",
+  "name": "Umami",
+  "categories": [
+    "analytics"
+  ],
+  "access": "yes",
+  "methods": [
+    "script"
+  ],
+  "docsUrl": "https://umami.is/docs/collect-data",
+  "badge": null,
+  "enabledHint": false,
+  "logo": "logo.png",
+  "simpleIcon": "umami",
+  "i18n": {
+    "en": {
+      "title": "Umami",
+      "blurb": "Self-hostable analytics snippet."
+    },
+    "fr": {
+      "title": "Umami",
+      "blurb": "Snippet analytics auto-hébergeable."
+    }
+  }
+}

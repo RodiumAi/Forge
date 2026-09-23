@@ -28,6 +28,7 @@ RUN pip install --no-cache-dir --require-hashes -r requirements.txt \
 COPY apps/api/app ./app
 COPY apps/api/runtime ./runtime
 COPY data/templates ./data/templates
+COPY data/integrations ./data/integrations
 
 WORKDIR /app/runtime
 # Preview iframe loads /runner/babel.min.js — vendor file is not committed
@@ -42,6 +43,7 @@ WORKDIR /app
 ENV PYTHONUNBUFFERED=1 \
     HOME=/home/forge \
     TEMPLATES_ROOT=/app/data/templates \
+    INTEGRATIONS_ROOT=/app/data/integrations \
     PROJECTS_ROOT=/data/projects
 
 EXPOSE 8000

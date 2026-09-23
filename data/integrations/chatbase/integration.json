@@ -1,0 +1,27 @@
+{
+  "id": "chatbase",
+  "name": "Chatbase",
+  "categories": [
+    "chat"
+  ],
+  "access": "yes",
+  "methods": [
+    "script",
+    "iframe"
+  ],
+  "docsUrl": "https://www.chatbase.co/docs",
+  "badge": null,
+  "enabledHint": false,
+  "logo": "logo.png",
+  "simpleIcon": null,
+  "i18n": {
+    "en": {
+      "title": "Chatbase",
+      "blurb": "AI chatbot embed for your docs/site."
+    },
+    "fr": {
+      "title": "Chatbase",
+      "blurb": "Chatbot IA embarqué pour votre site."
+    }
+  }
+}
