@@ -193,11 +193,6 @@ export default function IntegrationsPage() {
                         {item.badge ? (
                           <span className="integ-badge">{item.badge}</span>
                         ) : null}
-                        {item.access === "partial" ? (
-                          <span className="integ-badge integ-badge-partial">
-                            {t("integPartial")}
-                          </span>
-                        ) : null}
                       </span>
                       <span className="integ-card-blurb">{item.blurb}</span>
                     </span>

@@ -94,13 +94,7 @@ export default function IntegrationDetailPage() {
               </div>
 
               <div className="integ-detail-meta">
-                {detail.access === "partial" ? (
-                  <span className="integ-badge integ-badge-partial">
-                    {t("integPartial")}
-                  </span>
-                ) : (
-                  <span className="integ-badge">{t("integAccessYes")}</span>
-                )}
+                <span className="integ-badge">{t("integAccessYes")}</span>
                 {detail.categories.map((c) => (
                   <span key={c} className="integ-chip">
                     {c}
