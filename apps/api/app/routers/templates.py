@@ -34,7 +34,10 @@ def get_templates(request: Request, kind: str | None = None) -> JSONResponse:
     payload = [_to_out(meta, locale).model_dump() for meta in list_templates(kind=filter_kind)]
     return JSONResponse(
         content=payload,
-        headers={"Cache-Control": "public, max-age=60, stale-while-revalidate=300"},
+        headers={
+            "Cache-Control": "public, max-age=60, stale-while-revalidate=300",
+            "Vary": "Accept-Language",
+        },
     )
 
 

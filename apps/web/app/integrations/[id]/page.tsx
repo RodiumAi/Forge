@@ -39,7 +39,7 @@ export default function IntegrationDetailPage() {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    void api<Detail>(`/integrations/${encodeURIComponent(id)}`)
+    void api<Detail>(`/integrations/${encodeURIComponent(id)}`, {}, locale)
       .then((data) => {
         if (!cancelled) setDetail(data);
       })

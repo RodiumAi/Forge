@@ -14,6 +14,12 @@ from app.services.integrations import (
 
 router = APIRouter(prefix="/integrations", tags=["integrations"])
 
+# Localized JSON/markdown — browsers/CDNs must not reuse a FR body for EN.
+_LOCALE_CACHE_HEADERS = {
+    "Cache-Control": "public, max-age=60, stale-while-revalidate=300",
+    "Vary": "Accept-Language",
+}
+
 
 def _to_out(meta, locale: str) -> IntegrationOut:
     fr = locale == "fr"
@@ -47,10 +53,7 @@ def get_integrations(
         _to_out(meta, locale).model_dump()
         for meta in list_integrations(category=category, q=q, access=access)
     ]
-    return JSONResponse(
-        content=payload,
-        headers={"Cache-Control": "public, max-age=60, stale-while-revalidate=300"},
-    )
+    return JSONResponse(content=payload, headers=_LOCALE_CACHE_HEADERS)
 
 
 @router.get("/{integration_id}", response_model=IntegrationDetailOut)
@@ -67,10 +70,7 @@ def get_integration_detail(request: Request, integration_id: str) -> JSONRespons
         guide_md=guide_md,
         guide_url=f"/integrations/{meta.id}/guide",
     )
-    return JSONResponse(
-        content=detail.model_dump(),
-        headers={"Cache-Control": "public, max-age=60, stale-while-revalidate=300"},
-    )
+    return JSONResponse(content=detail.model_dump(), headers=_LOCALE_CACHE_HEADERS)
 
 
 @router.get("/{integration_id}/logo")
@@ -104,5 +104,5 @@ def integration_guide(request: Request, integration_id: str) -> PlainTextRespons
     return PlainTextResponse(
         path.read_text(encoding="utf-8"),
         media_type="text/markdown; charset=utf-8",
-        headers={"Cache-Control": "public, max-age=60, stale-while-revalidate=300"},
+        headers=_LOCALE_CACHE_HEADERS,
     )

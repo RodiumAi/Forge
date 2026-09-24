@@ -1,4 +1,5 @@
 import { api, getToken } from "@/lib/api";
+import type { Locale } from "@/lib/i18n/dictionaries";
 
 const PROJECTS_KEY = "forge_projects_v1";
 const TEMPLATES_KEY = "forge_templates_v1";
@@ -67,8 +68,8 @@ let projectsMemory: ListEnvelope<CachedProject> | null = null;
 let templatesMemory: ListEnvelope<CachedTemplate> | null = null;
 let integrationsMemory: ListEnvelope<CachedIntegration> | null = null;
 let projectsFlight: Promise<CachedProject[]> | null = null;
-let templatesFlight: Promise<CachedTemplate[]> | null = null;
-let integrationsFlight: Promise<CachedIntegration[]> | null = null;
+const templatesFlightByLocale = new Map<string, Promise<CachedTemplate[]>>();
+const integrationsFlightByLocale = new Map<string, Promise<CachedIntegration[]>>();
 
 function tokenFingerprint(): string | null {
   const token = getToken();
@@ -165,12 +166,14 @@ export function invalidateProjectsCache() {
 
 export function invalidateTemplatesCache() {
   templatesMemory = null;
+  templatesFlightByLocale.clear();
   writeStorage(TEMPLATES_KEY, null);
   notify(templateListeners);
 }
 
 export function invalidateIntegrationsCache() {
   integrationsMemory = null;
+  integrationsFlightByLocale.clear();
   writeStorage(INTEGRATIONS_KEY, null);
   notify(integrationListeners);
 }
@@ -247,31 +250,39 @@ async function fetchProjects(locale: string): Promise<CachedProject[]> {
 }
 
 async function fetchTemplates(locale: string): Promise<CachedTemplate[]> {
-  if (templatesFlight) return templatesFlight;
-  templatesFlight = (async () => {
+  const existing = templatesFlightByLocale.get(locale);
+  if (existing) return existing;
+  const flight = (async () => {
     try {
-      const list = await api<CachedTemplate[]>("/templates");
+      const list = await api<CachedTemplate[]>("/templates", {}, locale as Locale);
       commitTemplates(locale, list);
       return list;
     } finally {
-      templatesFlight = null;
+      templatesFlightByLocale.delete(locale);
     }
   })();
-  return templatesFlight;
+  templatesFlightByLocale.set(locale, flight);
+  return flight;
 }
 
 async function fetchIntegrations(locale: string): Promise<CachedIntegration[]> {
-  if (integrationsFlight) return integrationsFlight;
-  integrationsFlight = (async () => {
+  const existing = integrationsFlightByLocale.get(locale);
+  if (existing) return existing;
+  const flight = (async () => {
     try {
-      const list = await api<CachedIntegration[]>("/integrations");
+      const list = await api<CachedIntegration[]>(
+        "/integrations",
+        {},
+        locale as Locale,
+      );
       commitIntegrations(locale, list);
       return list;
     } finally {
-      integrationsFlight = null;
+      integrationsFlightByLocale.delete(locale);
     }
   })();
-  return integrationsFlight;
+  integrationsFlightByLocale.set(locale, flight);
+  return flight;
 }
 
 /**
