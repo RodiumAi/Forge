@@ -137,3 +137,38 @@ def test_category_and_query_filters():
     # Catalog is drop-in only — no partial kits.
     assert list_integrations(access="partial") == []
     assert all(m.access == "yes" for m in list_integrations())
+
+
+def test_http_locale_switches_title_and_guide_and_varies():
+    """Accept-Language must change body + be listed in Vary (browser/CDN cache)."""
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+
+    client = TestClient(app)
+
+    fr = client.get("/integrations", headers={"Accept-Language": "fr"})
+    en = client.get("/integrations", headers={"Accept-Language": "en"})
+    assert fr.status_code == 200 and en.status_code == 200
+    assert "accept-language" in (fr.headers.get("vary") or "").lower()
+    assert "accept-language" in (en.headers.get("vary") or "").lower()
+
+    fr_tally = next(item for item in fr.json() if item["id"] == "tally")
+    en_tally = next(item for item in en.json() if item["id"] == "tally")
+    assert fr_tally["blurb"] != en_tally["blurb"]
+    assert "formulaire" in fr_tally["blurb"].lower()
+    assert "embed" in en_tally["blurb"].lower()
+
+    fr_detail = client.get("/integrations/tally", headers={"Accept-Language": "fr"})
+    en_detail = client.get("/integrations/tally", headers={"Accept-Language": "en"})
+    assert fr_detail.status_code == 200 and en_detail.status_code == 200
+    assert "accept-language" in (fr_detail.headers.get("vary") or "").lower()
+    assert fr_detail.json()["guide_md"] != en_detail.json()["guide_md"]
+    assert fr_detail.json()["guide_md"].strip()
+    assert en_detail.json()["guide_md"].strip()
+
+    fr_guide = client.get("/integrations/tally/guide", headers={"Accept-Language": "fr"})
+    en_guide = client.get("/integrations/tally/guide", headers={"Accept-Language": "en"})
+    assert fr_guide.status_code == 200 and en_guide.status_code == 200
+    assert "accept-language" in (fr_guide.headers.get("vary") or "").lower()
+    assert fr_guide.text != en_guide.text
