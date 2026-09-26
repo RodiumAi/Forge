@@ -85,7 +85,7 @@ def auth_features() -> dict[str, bool]:
     settings = get_settings()
     return {
         "rodium_oidc": settings.rodium_oidc_configured,
-        "firebase": bool(settings.firebase_api_key and settings.firebase_project_id),
+        "firebase": settings.firebase_enabled,
     }
 
 

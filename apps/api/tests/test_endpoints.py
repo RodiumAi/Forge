@@ -12,6 +12,24 @@ from app.main import app
 client = TestClient(app)
 
 
+class TestAuthFeatures:
+    def test_features_is_public_and_does_not_crash(self, monkeypatch):
+        from app.config import clear_settings_cache, get_settings
+
+        monkeypatch.setenv("RODIUM_OIDC_CLIENT_ID", "forge-prod-client")
+        clear_settings_cache()
+        try:
+            res = client.get("/auth/features")
+            assert res.status_code == 200
+            body = res.json()
+            assert body["rodium_oidc"] is True
+            assert body["firebase"] is False
+            assert "firebase_api_key" not in get_settings().model_fields
+        finally:
+            monkeypatch.delenv("RODIUM_OIDC_CLIENT_ID", raising=False)
+            clear_settings_cache()
+
+
 class TestHealth:
     def test_reports_the_runtime(self):
         res = client.get("/health")
