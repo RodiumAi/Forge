@@ -247,7 +247,18 @@ async def resolve_generation_auth(
     *,
     usage: Literal["paid", "free"] = "paid",
 ) -> RodiumGenerationAuth:
-    """Resolve generation credentials, requiring RODI unless explicitly free."""
+    """Resolve generation credentials, requiring RODI unless explicitly free.
+
+    Forge Cloud (Google / email signup already binds ``rodium_sub`` — no OIDC
+    step for the user):
+
+    1. Gateway with ``billing_uid`` — FRODI first, then the user's RODI wallet
+       inside RodiumAi. Never blocked on expired OIDC leftovers.
+    2. Optional pasted BYOK secret is attached only as a post-quota fallback
+       (``stream_chat_completion`` tries FRODI whenever ``billing_uid`` is set).
+
+    Self-host / no ``rodium_sub``: BYOK secret, else legacy OIDC playground.
+    """
     user = _bound_user(db, user)
     if usage != "free":
         require_rodi_for_paid_capability(user, db)
@@ -259,7 +270,29 @@ async def resolve_generation_auth(
     from app.config import get_settings
 
     cloud = get_settings().forge_cloud_enabled and bool(rodium_sub)
-    if rodium_sub and selected_key:
+
+    secret: str | None = None
+    if row.rodium_api_key_encrypted:
+        try:
+            secret = decrypt_secret(row.rodium_api_key_encrypted)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail="Stored RodiumAi key is unreadable") from exc
+
+    # Cloud account: FRODI/RODI via gateway. OIDC is never required here.
+    if cloud:
+        if secret:
+            return RodiumGenerationAuth(
+                mode="secret",
+                api_key_secret=secret,
+                billing_uid=rodium_sub,
+            )
+        return RodiumGenerationAuth(mode="playground", billing_uid=rodium_sub)
+
+    if secret:
+        return RodiumGenerationAuth(mode="secret", api_key_secret=secret, billing_uid=rodium_sub)
+
+    # Self-host / legacy: selected playground key still needs a live OIDC session.
+    if selected_key:
         access = await ensure_rodium_access_token(db, user, row)
         # Token refresh commits — re-read settings row in case the session moved.
         row = db.get(UserSettings, user.id) or row
@@ -269,12 +302,5 @@ async def resolve_generation_auth(
             api_key_id=row.selected_rodium_api_key_id or selected_key,
             billing_uid=rodium_sub,
         )
-    if row.rodium_api_key_encrypted:
-        try:
-            secret = decrypt_secret(row.rodium_api_key_encrypted)
-        except ValueError as exc:
-            raise HTTPException(status_code=400, detail="Stored RodiumAi key is unreadable") from exc
-        return RodiumGenerationAuth(mode="secret", api_key_secret=secret, billing_uid=rodium_sub)
-    if cloud:
-        return RodiumGenerationAuth(mode="playground", billing_uid=rodium_sub)
+
     raise HTTPException(status_code=400, detail="RodiumAi API key is required")

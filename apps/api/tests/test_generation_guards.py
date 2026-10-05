@@ -68,6 +68,69 @@ def test_generation_auth_allows_explicit_free_usage(monkeypatch: pytest.MonkeyPa
     gate.assert_not_called()
 
 
+def test_cloud_generation_skips_oidc_even_with_selected_key(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Expired OIDC leftovers must not block Forge Cloud (billing_uid + gateway)."""
+    user = SimpleNamespace(id=uuid.uuid4(), rodium_sub="sub_cloud_user")
+    row = SimpleNamespace(
+        selected_rodium_api_key_id="key_from_old_oidc",
+        rodium_api_key_encrypted=None,
+    )
+    db = MagicMock()
+    db.get.return_value = row
+    ensure = AsyncMock(side_effect=AssertionError("OIDC must not run on cloud path"))
+    monkeypatch.setattr(generation_mod, "_bound_user", lambda _db, current: current)
+    monkeypatch.setattr(generation_mod, "require_rodi_for_paid_capability", MagicMock())
+    monkeypatch.setattr(generation_mod, "ensure_rodium_access_token", ensure)
+    import app.config as config_mod
+
+    monkeypatch.setattr(
+        config_mod,
+        "get_settings",
+        lambda: SimpleNamespace(forge_cloud_enabled=True),
+    )
+
+    auth = asyncio.run(generation_mod.resolve_generation_auth(db, user, usage="free"))
+
+    assert auth.mode == "playground"
+    assert auth.billing_uid == "sub_cloud_user"
+    assert auth.access_token is None
+    assert auth.api_key_id is None
+    ensure.assert_not_awaited()
+
+
+def test_cloud_primes_frodi_with_byok_as_quota_fallback(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Cloud + pasted key: billing_uid so FRODI/RODI gateway runs first; secret is fallthrough only."""
+    user = SimpleNamespace(id=uuid.uuid4(), rodium_sub="sub_cloud_user")
+    row = SimpleNamespace(
+        selected_rodium_api_key_id="key_ignored",
+        rodium_api_key_encrypted="encrypted",
+    )
+    db = MagicMock()
+    db.get.return_value = row
+    ensure = AsyncMock(side_effect=AssertionError("OIDC must not run for cloud BYOK"))
+    monkeypatch.setattr(generation_mod, "_bound_user", lambda _db, current: current)
+    monkeypatch.setattr(generation_mod, "require_rodi_for_paid_capability", MagicMock())
+    monkeypatch.setattr(generation_mod, "ensure_rodium_access_token", ensure)
+    monkeypatch.setattr(generation_mod, "decrypt_secret", lambda _value: "rd_sk_byok")
+    import app.config as config_mod
+
+    monkeypatch.setattr(
+        config_mod,
+        "get_settings",
+        lambda: SimpleNamespace(forge_cloud_enabled=True),
+    )
+
+    auth = asyncio.run(generation_mod.resolve_generation_auth(db, user, usage="free"))
+
+    assert auth.billing_uid == "sub_cloud_user"
+    assert auth.api_key_secret == "rd_sk_byok"
+    ensure.assert_not_awaited()
+
+
 def test_project_naming_is_the_only_explicit_free_call_site() -> None:
     app_root = Path(__file__).resolve().parents[1] / "app"
     free_call_sites: list[str] = []

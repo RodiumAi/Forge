@@ -462,10 +462,10 @@ async def stream_chat_completion(
         except RodiumError as exc:
             if exc.code != ERR_QUOTA:
                 raise
+            # FRODI (+ wallet RODI inside the gateway) exhausted — fall through
+            # to optional BYOK / legacy playground credentials if present.
 
-    if auth.mode == "playground":
-        if not auth.access_token or not auth.api_key_id:
-            raise RodiumError(t("rodium_key_required", locale), None, ERR_INVALID_KEY)
+    if auth.mode == "playground" and auth.access_token and auth.api_key_id:
 
         async def playground_factory() -> AsyncIterator[StreamChunk]:
 

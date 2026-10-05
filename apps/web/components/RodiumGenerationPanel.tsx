@@ -2,11 +2,14 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { api, getToken } from "@/lib/api";
+import { planDisplayName } from "@/components/RodiumWalletBadge";
+import { SettingsBlock, SettingsRow } from "@/components/SettingsShell";
 import { rodiumRechargeUrl } from "@/lib/constants/rodium-links";
+import { refreshForgeStatus, useForgeStatus } from "@/lib/forge-status";
+import { frodiUsage } from "@/lib/frodi-usage";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { startRodiumOAuth } from "@/lib/rodium-oauth";
 import { patchSessionCache, getSessionSnapshot } from "@/lib/session-cache";
-import { SettingsBlock, SettingsRow } from "@/components/SettingsShell";
 
 type RodiumAccount = {
   linked: boolean;
@@ -45,11 +48,37 @@ type RodiumKeyStatus = {
   credentials_hint: string | null;
 };
 
+function formatAmount(value: number | string | null | undefined, locale: string): string {
+  if (value == null || value === "") return "—";
+  const n = typeof value === "number" ? value : Number(String(value).replace(",", "."));
+  if (!Number.isFinite(n)) return String(value);
+  try {
+    return new Intl.NumberFormat(locale === "fr" ? "fr-FR" : "en-US", {
+      maximumFractionDigits: 2,
+    }).format(n);
+  } catch {
+    return String(value);
+  }
+}
+
+function frodiResetLabel(
+  resetsAt: string | null,
+  t: (key: "frodiUsageResetsToday" | "frodiUsageResetsOne" | "frodiUsageResetsDays") => string,
+): string {
+  if (!resetsAt) return "";
+  const ms = new Date(resetsAt).getTime() - Date.now();
+  if (!Number.isFinite(ms) || ms <= 0) return t("frodiUsageResetsToday");
+  const days = Math.ceil(ms / 86_400_000);
+  if (days <= 1) return t("frodiUsageResetsOne");
+  return t("frodiUsageResetsDays").replace("{n}", String(days));
+}
+
 /**
  * RodiumAi generation key / wallet controls — Settings → Génération.
  */
 export function RodiumGenerationPanel() {
   const { t, locale } = useI18n();
+  const forge = useForgeStatus();
   const [account, setAccount] = useState<RodiumAccount | null>(null);
   const [keyStatus, setKeyStatus] = useState<RodiumKeyStatus | null>(null);
   const [loading, setLoading] = useState(true);
@@ -77,6 +106,7 @@ export function RodiumGenerationPanel() {
         const [rodium, item] = await Promise.all([
           api<RodiumAccount>("/auth/rodium/account"),
           api<RodiumKeyStatus>("/settings/rodium", {}, locale),
+          refreshForgeStatus(),
         ]);
         if (cancelled) return;
         setAccount(rodium);
@@ -144,6 +174,7 @@ export function RodiumGenerationPanel() {
     const [rodium, item] = await Promise.all([
       api<RodiumAccount>(fresh ? "/auth/rodium/account?fresh=1" : "/auth/rodium/account"),
       api<RodiumKeyStatus>("/settings/rodium", {}, locale),
+      refreshForgeStatus({ fresh }),
     ]);
     setAccount(rodium);
     setKeyStatus(item);
@@ -308,39 +339,23 @@ export function RodiumGenerationPanel() {
     return <p className="settings-panel-loading">{t("loading")}</p>;
   }
 
-  const linked = Boolean(account?.linked);
-  const balanceRaw = account?.wallet?.balance_rodi ?? null;
+  // Cloud account is enough: email signup binds rodium_sub without live OIDC.
+  const cloudLinked = Boolean(account?.rodium_sub || forge?.plan || forge?.frodi != null);
+  const linked = Boolean(account?.linked) || cloudLinked;
+  const balanceRaw = account?.wallet?.balance_rodi ?? (forge?.rodi != null ? String(forge.rodi) : null);
   const providedRaw = account?.wallet?.provided_total_rodi ?? null;
-  const balance =
-    balanceRaw == null || balanceRaw === ""
-      ? "—"
-      : (() => {
-          const n = Number(String(balanceRaw).replace(",", "."));
-          if (!Number.isFinite(n)) return balanceRaw;
-          try {
-            return new Intl.NumberFormat(locale === "fr" ? "fr-FR" : "en-US", {
-              maximumFractionDigits: 2,
-            }).format(n);
-          } catch {
-            return balanceRaw;
-          }
-        })();
-  const provided =
-    providedRaw == null || providedRaw === ""
-      ? null
-      : (() => {
-          const n = Number(String(providedRaw).replace(",", "."));
-          if (!Number.isFinite(n)) return providedRaw;
-          try {
-            return new Intl.NumberFormat(locale === "fr" ? "fr-FR" : "en-US", {
-              maximumFractionDigits: 2,
-            }).format(n);
-          } catch {
-            return providedRaw;
-          }
-        })();
+  const balance = formatAmount(balanceRaw, locale);
+  const provided = providedRaw == null || providedRaw === "" ? null : formatAmount(providedRaw, locale);
   const providedNum = Number(String(providedRaw ?? "").replace(",", "."));
   const showProvided = Number.isFinite(providedNum) && providedNum > 0;
+
+  const usage = frodiUsage(forge);
+  const hasFrodi = usage != null;
+  const planSlug = forge?.plan ?? forge?.entitlements?.plan_slug ?? null;
+  const planName = planDisplayName(planSlug);
+  const monthly = planSlug === "free";
+  const cycleLabel = monthly ? t("frodiUsageMonth") : t("frodiUsageWeek");
+  const frodiReset = usage ? frodiResetLabel(usage.resetsAt, t) : "";
 
   return (
     <>
@@ -367,40 +382,87 @@ export function RodiumGenerationPanel() {
                   <img className="home-connector-avatar" src={account.avatar_url} alt="" />
                 ) : (
                   <div className="rodium-gen-avatar-fallback" aria-hidden>
-                    {(account?.name || account?.email || "R").slice(0, 1).toUpperCase()}
+                    {(account?.name || account?.email || planName || "R").slice(0, 1).toUpperCase()}
                   </div>
                 )}
                 <div>
                   <p className="rodium-gen-name">
-                    <strong>{account?.name || account?.email || "—"}</strong>
+                    <strong>{account?.name || account?.email || planName || "—"}</strong>
                   </p>
                   {account?.email && account?.name ? (
                     <p className="muted rodium-gen-email">{account.email}</p>
+                  ) : planName ? (
+                    <p className="muted rodium-gen-email">{planName}</p>
                   ) : null}
                 </div>
               </div>
 
-              <div className="rodium-gen-wallet-strip">
-                <div>
-                  <span className="rodium-gen-wallet-label">{t("balanceRodi")}</span>
-                  <strong className="rodium-gen-wallet-value">{balance}</strong>
-                  <span className="rodium-gen-wallet-unit">RODI</span>
-                </div>
-                {showProvided ? (
-                  <div>
-                    <span className="rodium-gen-wallet-label">{t("providedRodi")}</span>
-                    <span className="rodium-gen-wallet-value soft">{provided}</span>
+              {hasFrodi && usage ? (
+                <div className="rodium-gen-wallet-strip rodium-gen-wallet-strip-frodi">
+                  <div className="rodium-gen-frodi-primary">
+                    <span className="rodium-gen-wallet-label">
+                      {monthly ? t("frodiUsageTitleMonth") : t("frodiUsageTitle")}
+                      {planName ? ` · ${planName}` : ""}
+                    </span>
+                    <strong className="rodium-gen-wallet-value">
+                      {formatAmount(usage.remaining, locale)}
+                    </strong>
+                    <span className="rodium-gen-wallet-unit">FRODI</span>
+                    <span className="rodium-wallet-meter rodium-gen-frodi-meter" aria-hidden>
+                      <span style={{ width: `${usage.usedPct}%` }} />
+                    </span>
+                    <p className="rodium-gen-frodi-meta muted">
+                      {t("frodiUsageRemaining").replace("{n}", formatAmount(usage.remaining, locale))}
+                      {" · "}
+                      {cycleLabel}
+                      {frodiReset ? ` · ${frodiReset}` : ""}
+                      {" · "}
+                      {usage.usedPct}%
+                    </p>
                   </div>
-                ) : null}
-                <a
-                  className="home-settings-test"
-                  href={rodiumRechargeUrl(account?.rodium_sub)}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  {t("rechargeRodi")}
-                </a>
-              </div>
+                  <div>
+                    <span className="rodium-gen-wallet-label">{t("balanceRodi")}</span>
+                    <strong className="rodium-gen-wallet-value soft">{balance}</strong>
+                    <span className="rodium-gen-wallet-unit">RODI</span>
+                  </div>
+                  {showProvided ? (
+                    <div>
+                      <span className="rodium-gen-wallet-label">{t("providedRodi")}</span>
+                      <span className="rodium-gen-wallet-value soft">{provided}</span>
+                    </div>
+                  ) : null}
+                  <a
+                    className="home-settings-test"
+                    href={rodiumRechargeUrl(account?.rodium_sub)}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {t("rechargeRodi")}
+                  </a>
+                </div>
+              ) : (
+                <div className="rodium-gen-wallet-strip">
+                  <div>
+                    <span className="rodium-gen-wallet-label">{t("balanceRodi")}</span>
+                    <strong className="rodium-gen-wallet-value">{balance}</strong>
+                    <span className="rodium-gen-wallet-unit">RODI</span>
+                  </div>
+                  {showProvided ? (
+                    <div>
+                      <span className="rodium-gen-wallet-label">{t("providedRodi")}</span>
+                      <span className="rodium-gen-wallet-value soft">{provided}</span>
+                    </div>
+                  ) : null}
+                  <a
+                    className="home-settings-test"
+                    href={rodiumRechargeUrl(account?.rodium_sub)}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {t("rechargeRodi")}
+                  </a>
+                </div>
+              )}
 
               <div className="home-settings-actions">
                 <button
