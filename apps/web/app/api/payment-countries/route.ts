@@ -1,12 +1,9 @@
-import { NextResponse } from "next/server";
-
-const NEST_API =
-  process.env.RODIUM_PUBLIC_API_URL?.replace(/\/$/, "") ||
-  "http://127.0.0.1:3001/api/v1";
+﻿import { NextResponse } from "next/server";
+import { nestPublicApiBase } from "@/lib/nest-public-api";
 
 export async function GET() {
   try {
-    const response = await fetch(`${NEST_API}/public/payment-countries`, {
+    const response = await fetch(`${nestPublicApiBase()}/public/payment-countries`, {
       cache: "no-store",
     });
     if (!response.ok) return NextResponse.json([]);
