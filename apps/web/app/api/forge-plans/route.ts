@@ -1,14 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
-
-const NEST_API =
-  process.env.RODIUM_PUBLIC_API_URL?.replace(/\/$/, "") ||
-  "http://127.0.0.1:3001/api/v1";
+﻿import { NextRequest, NextResponse } from "next/server";
+import { nestPublicApiBase } from "@/lib/nest-public-api";
 
 export async function GET(request: NextRequest) {
   const currency = request.nextUrl.searchParams.get("currency") || "XOF";
   try {
     const response = await fetch(
-      `${NEST_API}/public/forge/plans?currency=${encodeURIComponent(currency)}`,
+      `${nestPublicApiBase()}/public/forge/plans?currency=${encodeURIComponent(currency)}`,
       { cache: "no-store" },
     );
     if (!response.ok) {
