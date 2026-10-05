@@ -318,6 +318,21 @@ Corrigez les échecs CI sur votre branche avant de demander une review.
 
 ---
 
+## Facturation / FRODI (périmètre)
+
+**Les prix de plans, le grant Free+500 et les e-mails d'activation de masse**
+appartiennent au plan de contrôle Nest RodiumAi (admin Forge + `/mailing`), pas
+à ce dépôt. Ici vous pouvez :
+
+- Consommer les entitlements dans l'UI (`/auth/forge/status`, badge wallet).
+- Ajuster le copy Cloud et l'affichage FRODI/RODI.
+- Garder le BYOK self-host (clé `rd_sk_…` collée) quand OIDC/Cloud est off.
+
+N'ouvrez **pas** de PR ici pour changer les catalogues Nest, le trésor FRODI
+ou le mailing de campagne — ça va dans les repos Nest / admin.
+
+---
+
 ## Où demander de l'aide
 
 - **Questions & idées :** ouvrez une GitHub Issue avec l'un des modèles

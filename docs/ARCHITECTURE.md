@@ -12,7 +12,7 @@ open.
 apps/web      Next.js 15 App Router — builder UI, SSE consumer
 apps/api      FastAPI — routing, agent orchestration, publishing
   runtime/    Node + browser Babel/ESM toolchain (shared by preview AND publish)
-data/         templates/ (24 starter kits) · projects/ (generated workspaces)
+data/         templates/ (36 starter kits) · integrations/ · projects/ (generated workspaces)
 infra/        local Docker stack · CI helpers · AWS sites gateway
 ```
 
@@ -27,9 +27,10 @@ Three ideas explain most of the design:
 2. **One manifest, two consumers.** `apps/api/runtime/packages.json` is the
    single source of truth for the import map, the import allowlist, and Monaco
    types. Preview and publish read the *same* file through the *same* resolver.
-3. **The API holds no LLM credentials.** For the current path, Forge sends the
+3. **Credentials stay out of the repo.** On Forge Cloud, generation uses the
    user's OAuth access token plus an API **key id** — the key secret never
-   reaches this codebase.
+   reaches this codebase. Self-host pastes a BYOK `rd_sk_…` key into settings
+   (encrypted at rest); Cloud spends **FRODI** first, then **RODI**.
 
 ## A generation run, end to end
 
@@ -214,25 +215,30 @@ expect to handle backfills yourself.
 
 ## Authentication
 
-Two independent layers:
+Two independent layers (plus optional Cloud entitlements):
 
-- **The Forge session** — an HS256 JWT over `SECRET_KEY`, 7 days, issued by
-  `POST /auth/rodium/callback`. `get_current_user` accepts it as a Bearer header
-  *or* an `?access_token=` query param, deliberately, so `<img src>` loads work.
-- **RodiumAI OIDC tokens** — obtained by an authorization-code + PKCE flow
-  (`apps/api/app/services/rodium_oidc.py`). The OAuth `state` is itself a signed
-  JWT carrying the PKCE verifier, so no server-side session store is needed.
-  Access and refresh tokens are stored Fernet-encrypted in `user_settings`.
+- **Local Forge accounts** — `POST /auth/register` creates an email/password
+  user (HTTP 201). The session JWT is HS256 over `SECRET_KEY` (7 days).
+  `get_current_user` accepts Bearer *or* `?access_token=` so `<img src>` loads
+  work. Optional Google uses Firebase ID tokens.
+- **RodiumAI OIDC** — authorization-code + PKCE (`services/rodium_oidc.py`).
+  Appears only when `RODIUM_OIDC_CLIENT_ID` is set; otherwise
+  `/auth/rodium/start` returns 503 and the UI hides the button. Access/refresh
+  tokens are Fernet-encrypted in `user_settings`.
+- **Forge Cloud entitlements** — when `forge_cloud_enabled` is true (OIDC +
+  Forge scopes), the API pulls plan/FRODI from Nest
+  (`GET …/internal/forge/balance`), caches them, and exposes
+  `GET /auth/forge/status`. **FRODI** is the primary reservoir; **RODI** is the
+  wallet fallback. Plan grants and Free+500 live in Nest, not in this repo.
 
 `resolve_generation_auth` (`services/rodium_generation.py`) runs at the top of
-every generation endpoint. In the current path it sends the user's access token
-plus an API **key id** — **the key secret never reaches Forge.** A legacy path
-decrypts a stored key instead.
+every generation endpoint. On the Cloud path it sends the user's access token
+plus an API **key id** — **the key secret never reaches Forge.** Self-host /
+legacy can decrypt a pasted key instead.
 
-> Sign-in requires the RodiumAI OIDC provider, which is **not in this
-> repository**. With `RODIUM_OIDC_CLIENT_ID` unset, `/auth/rodium/start` returns
-> 503 and there is no local fallback: `/auth/register` is permanently `410 Gone`.
-
+> Self-host does **not** require OIDC. Local `/register` works with an empty
+> `RODIUM_OIDC_CLIENT_ID`. Forge Cloud (`forge.rodiumai.io`) uses OIDC SSO and
+> Nest-backed FRODI plans.
 ## Background work
 
 **Everything runs in the API process.** `spawn_plan_job` creates an

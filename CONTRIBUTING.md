@@ -319,6 +319,21 @@ Fix CI failures on your branch before requesting review.
 
 ---
 
+## Billing / FRODI (scope note)
+
+**Plan prices, Free+500 grants, and mass activation emails** are owned by the
+RodiumAi Nest control plane (admin Forge + `/mailing`), not by this repository.
+In this repo you may:
+
+- Consume entitlements in the builder UI (`/auth/forge/status`, wallet badge).
+- Adjust Cloud UX copy and FRODI/RODI display.
+- Keep self-host BYOK (pasted `rd_sk_…` key) working when OIDC/Cloud is off.
+
+Do **not** open PRs here that change Nest plan catalogs, treasury grants, or
+campaign mailing — those belong in the Nest / admin repos.
+
+---
+
 ## Getting help
 
 - **Questions & ideas:** open a GitHub Issue using one of the templates

@@ -12,7 +12,7 @@ ci-dessous pointe vers un fichier que vous pouvez ouvrir.
 apps/web      Next.js 15 App Router — UI du builder, consommateur SSE
 apps/api      FastAPI — routage, orchestration de l'agent, publication
   runtime/    Chaîne Babel/ESM Node + navigateur (partagée preview ET publication)
-data/         templates/ (24 kits de départ) · projects/ (workspaces générés)
+data/         templates/ (36 kits de départ) · integrations/ · projects/ (workspaces générés)
 infra/        stack Docker locale · helpers CI · sites gateway AWS
 ```
 
@@ -29,9 +29,10 @@ Trois idées expliquent l'essentiel de la conception :
    l'unique source de vérité pour l'import map, la liste blanche d'imports et
    les types Monaco. Preview et publication lisent le *même* fichier via le
    *même* resolver.
-3. **L'API ne détient aucun identifiant LLM.** Sur le chemin actuel, Forge
-   envoie le jeton d'accès OAuth de l'utilisateur et un **id** de clé API — le
-   secret de la clé n'atteint jamais ce code.
+3. **Aucun secret LLM dans le dépôt.** Sur Forge Cloud, la génération utilise le
+   jeton OAuth de l'utilisateur et un **id** de clé API — le secret n'atteint
+   jamais ce code. En self-host, on colle une clé BYOK `rd_sk_…` (chiffrée au
+   repos) ; Cloud dépense d'abord les **FRODI**, puis les **RODI**.
 
 ## Un run de génération, de bout en bout
 
@@ -221,24 +222,30 @@ prévoyez de gérer les backfills vous-même.
 
 ## Authentification
 
-Deux couches indépendantes :
+Deux couches indépendantes (plus entitlements Cloud optionnels) :
 
-- **La session Forge** — un JWT HS256 sur `SECRET_KEY`, 7 jours, émis par
-  `POST /auth/rodium/callback`. `get_current_user` l'accepte en en-tête Bearer
-  *ou* en paramètre `?access_token=`, délibérément, pour que les `<img src>`
-  fonctionnent.
-- **Les jetons OIDC RodiumAI** — obtenus par un flux authorization code + PKCE
-  (`apps/api/app/services/rodium_oidc.py`). Le `state` OAuth est lui-même un JWT
-  signé portant le verifier PKCE, ce qui évite tout stockage de session serveur.
-  Les jetons sont chiffrés (Fernet) dans `user_settings`.
+- **Comptes Forge locaux** — `POST /auth/register` crée un utilisateur
+  email/mot de passe (HTTP 201). Le JWT de session est HS256 sur `SECRET_KEY`
+  (7 jours). `get_current_user` accepte Bearer *ou* `?access_token=` pour que
+  les `<img src>` fonctionnent. Google optionnel via jetons Firebase.
+- **OIDC RodiumAI** — authorization code + PKCE (`services/rodium_oidc.py`).
+  N'apparaît que si `RODIUM_OIDC_CLIENT_ID` est renseigné ; sinon
+  `/auth/rodium/start` renvoie 503 et l'UI masque le bouton. Jetons chiffrés
+  (Fernet) dans `user_settings`.
+- **Entitlements Forge Cloud** — quand `forge_cloud_enabled` est vrai (OIDC +
+  scopes Forge), l'API tire plan/FRODI depuis Nest
+  (`GET …/internal/forge/balance`), les met en cache, et expose
+  `GET /auth/forge/status`. **FRODI** est le réservoir principal ; **RODI** le
+  repli wallet. Les grants de plan et Free+500 vivent dans Nest, pas ici.
 
 `resolve_generation_auth` (`services/rodium_generation.py`) s'exécute en tête de
-chaque endpoint de génération. Sur le chemin actuel, il envoie le jeton d'accès
-et un **id** de clé API — **le secret de la clé n'atteint jamais Forge.**
+chaque endpoint de génération. Sur le chemin Cloud, il envoie le jeton d'accès
+et un **id** de clé API — **le secret n'atteint jamais Forge.** En self-host /
+legacy, une clé collée peut être déchiffrée à la place.
 
-> La connexion exige le fournisseur OIDC RodiumAI, **absent de ce dépôt**. Sans
-> `RODIUM_OIDC_CLIENT_ID`, `/auth/rodium/start` renvoie 503 et il n'existe aucun
-> repli local : `/auth/register` renvoie définitivement `410 Gone`.
+> Le self-host **n'exige pas** OIDC. `/register` local fonctionne avec
+> `RODIUM_OIDC_CLIENT_ID` vide. Forge Cloud (`forge.rodiumai.io`) utilise le SSO
+> OIDC et les plans FRODI Nest.
 
 ## Travail de fond
 
