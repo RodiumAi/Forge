@@ -74,6 +74,7 @@ from app.services.rodium_oidc import (
     fetch_wallet,
     generate_pkce,
     parse_oauth_state,
+    resolve_rodium_profile,
     revoke_token,
 )
 
@@ -298,19 +299,20 @@ async def rodium_oauth_callback(
 ) -> TokenResponse:
     """Complete RodiumAi OIDC without pinning a DB connection during Nest I/O.
 
-    Nest token/userinfo can take up to ~24s combined. Holding ``Depends(get_db)``
-    across those awaits exhausted the Forge pool under concurrent logins; we only
-    open a session after the issuer round-trips succeed.
+    Nest token/profile can take several seconds. Holding ``Depends(get_db)``
+    across those awaits can exhaust the Forge pool under concurrent logins; we
+    only open a session after the issuer round-trips succeed.
     """
     locale = resolve_locale(request)
     rate_limit.enforce(request, "oauth-rodium-callback", limit=20, window_seconds=900)
-    # Critical path only: code exchange + userinfo. Keys/wallet hydrate in
-    # background so a slow Nest/ALB cut never surfaces as "Network request failed".
+    # Critical path only: code exchange + profile (id_token preferred over
+    # /userinfo). Keys/wallet hydrate in background so a slow Nest/ALB cut
+    # never surfaces as "Network request failed".
     try:
         verifier = parse_oauth_state(body.state, body.state_binding)
         tokens = await exchange_code(code=body.code, code_verifier=verifier)
         access = tokens["access_token"]
-        info = await fetch_userinfo(access)
+        info = await resolve_rodium_profile(tokens)
     except RodiumOidcError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -835,6 +837,12 @@ async def verify_email(
         raise HTTPException(status_code=400, detail=t("invalid_or_expired_link", locale))
     if user.email_verified_at is None:
         user.email_verified_at = datetime.now(UTC)
+        # The address is only proven now. Until this point an attacker who
+        # registered with the victim's email and chosen a password could still
+        # log in with that registration password. Wipe that credential so only
+        # a fresh password (or SSO) works after verification.
+        user.password_hash = None
+        user.token_version = (user.token_version or 0) + 1
     db.commit()
     db.refresh(user)
 
@@ -1331,12 +1339,12 @@ def change_password(
     locale = resolve_locale(request)
     # Bound credential-change attempts per account (spray / stolen-session abuse).
     rate_limit.enforce(request, "change-password", limit=5, window_seconds=3600, subject=str(user.id))
-    if not user.password_hash:
-        raise HTTPException(status_code=400, detail=t("rodium_oauth_no_password", locale))
-    if not verify_password(body.current_password, user.password_hash):
+    if user.password_hash and not verify_password(body.current_password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=t("invalid_current_password", locale)
         )
+    # First local password (SSO or after verify-email wipe): no current
+    # credential to check when password_hash is absent.
     user.password_hash = hash_password(body.new_password)
     # Revoke every outstanding session, including any the caller does not
     # control. `access_token` below re-authenticates the current browser so

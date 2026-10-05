@@ -231,10 +231,11 @@ def put_file_content(
             )
 
     try:
+        actor_name = (getattr(user, "name", None) or "").strip() or getattr(user, "email", None)
         history.snapshot(
             str(project_id),
             f"before manual edit: {path}",
-            actor=((user.name or "").strip() or user.email, user.email),
+            actor=(actor_name, getattr(user, "email", None)),
         )
         write_file(str(project_id), path, body.content)
     except ValueError as exc:

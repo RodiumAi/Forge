@@ -113,6 +113,9 @@ def _opened(
     return accessible_project(db, user, project_id, locale, require_edit=require_edit)
 
 
+_owned = _opened
+
+
 def _to_out(data: dict) -> SeoMetaOut:
     return SeoMetaOut(**{k: data.get(k) for k in SeoMetaOut.model_fields})
 
@@ -125,7 +128,7 @@ def get_seo(
     db: Session = Depends(get_db),
 ) -> SeoMetaOut:
     locale = resolve_locale(request)
-    project = _opened(db, user, project_id, locale)
+    project = _owned(db, user, project_id, locale)
     return _to_out(read_seo_meta(str(project.id)))
 
 
@@ -138,7 +141,7 @@ def put_seo(
     db: Session = Depends(get_db),
 ) -> SeoMetaOut:
     locale = resolve_locale(request)
-    project = _opened(db, user, project_id, locale, require_edit=True)
+    project = _owned(db, user, project_id, locale, require_edit=True)
     saved = write_seo_meta(str(project.id), body.model_dump())
     return _to_out(saved)
 
@@ -153,7 +156,7 @@ async def upload_seo_asset(
     db: Session = Depends(get_db),
 ) -> SeoAssetResponse:
     locale = resolve_locale(request)
-    project = _opened(db, user, project_id, locale, require_edit=True)
+    project = _owned(db, user, project_id, locale, require_edit=True)
     kind_norm = kind.strip().lower()
     if kind_norm not in {"favicon", "og"}:
         raise HTTPException(status_code=400, detail="kind must be favicon or og")
@@ -164,7 +167,9 @@ async def upload_seo_asset(
     if content_type not in IMAGE_TYPES and ext not in IMAGE_EXTS:
         raise HTTPException(status_code=400, detail="Only PNG/JPEG/WebP images are allowed")
 
-    raw = await file.read()
+    # Read one byte past the limit: enough to detect "too large" without ever
+    # buffering an attacker-sized body in memory.
+    raw = await file.read(8 * 1024 * 1024 + 1)
     if len(raw) > 8 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="Image too large (max 8 MB)")
 
@@ -199,7 +204,7 @@ async def generate_seo_copy(
     db: Session = Depends(get_db),
 ) -> SeoMetaOut:
     locale = resolve_locale(request)
-    project = _opened(db, user, project_id, locale, require_edit=True)
+    project = _owned(db, user, project_id, locale, require_edit=True)
     require_rodi_for_paid_capability(user, db)
     gen_auth = await resolve_generation_auth(db, user)
 
@@ -280,7 +285,7 @@ async def generate_seo_image(
     db: Session = Depends(get_db),
 ) -> SeoAssetResponse:
     locale = resolve_locale(request)
-    project = _opened(db, user, project_id, locale, require_edit=True)
+    project = _owned(db, user, project_id, locale, require_edit=True)
     require_rodi_for_paid_capability(user, db)
     gen_auth = await resolve_generation_auth(db, user)
 

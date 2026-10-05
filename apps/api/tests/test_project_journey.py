@@ -91,6 +91,9 @@ def _build_client(
         def filter(self, *_a, **_k):
             return self
 
+        def join(self, *_a, **_k):
+            return self
+
         def order_by(self, *_a, **_k):
             return self
 
