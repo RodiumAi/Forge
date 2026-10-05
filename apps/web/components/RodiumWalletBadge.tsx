@@ -181,7 +181,8 @@ export function RodiumWalletBadge({
   }
 
   if (!hasWallet && !hasFrodi) {
-    return <PlanSkeleton compact={compact || collapsed} />;
+    // Settled with neither FRODI nor RODI: hide (no infinite skeleton).
+    return null;
   }
 
   // FRODI-primary path: show the plan reservoir up front, with RODI as the

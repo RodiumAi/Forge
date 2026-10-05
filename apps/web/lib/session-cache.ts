@@ -270,14 +270,14 @@ export async function refreshRodiumWallet(): Promise<SessionWallet | null> {
         /* OIDC account may be unavailable — try key path below */
       }
 
-      if (!wallet) {
+      if (!wallet && !linked) {
         try {
           const byKey = await api<SessionWallet>("/settings/rodium/wallet");
           if (byKey && (byKey.balance_rodi != null || byKey.provided_total_rodi != null)) {
             wallet = byKey;
           }
         } catch {
-          /* no pasted key / gateway error */
+          /* no pasted key / gateway error — do not call when OIDC-linked (400 rodium_key_required) */
         }
       }
 

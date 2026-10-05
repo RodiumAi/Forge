@@ -11,6 +11,7 @@ vi.mock("@/lib/firebase", () => ({
     return state.enabled;
   },
   signInWithGoogle: vi.fn(async () => "id-token"),
+  completeGoogleRedirect: vi.fn(async () => null),
   socialErrorKey: (error: unknown) =>
     (error as { code?: string })?.code === "auth/popup-closed-by-user"
       ? null

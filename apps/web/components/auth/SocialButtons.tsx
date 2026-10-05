@@ -8,12 +8,21 @@
  * only rather than a button the server would answer with 503.
  *
  * GitHub is intentionally not offered on login/register — Google only.
+ *
+ * On mount we also finish a redirect round-trip: when the popup is blocked,
+ * `signInWithGoogle` falls back to `signInWithRedirect`, and this page must
+ * call `getRedirectResult` after Google returns here.
  */
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { api, setToken, type ApiError } from "@/lib/api";
-import { firebaseEnabled, signInWithGoogle, socialErrorKey } from "@/lib/firebase";
+import {
+  completeGoogleRedirect,
+  firebaseEnabled,
+  signInWithGoogle,
+  socialErrorKey,
+} from "@/lib/firebase";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import type { MessageKey } from "@/lib/i18n/dictionaries";
 
@@ -30,6 +39,49 @@ export function SocialButtons({
 }) {
   const { t } = useI18n();
   const [busy, setBusy] = useState(false);
+  const redirectHandled = useRef(false);
+
+  async function exchangeIdToken(idToken: string) {
+    const data = await api<TokenResponse>("/auth/oauth/firebase", {
+      method: "POST",
+      body: JSON.stringify({ id_token: idToken }),
+    });
+    setToken(data.access_token);
+    onSuccess(data);
+  }
+
+  function reportError(err: unknown) {
+    const apiMessage = (err as ApiError)?.status ? (err as Error).message : null;
+    if (apiMessage) {
+      onError(apiMessage);
+      return;
+    }
+    const key = socialErrorKey(err);
+    // `null` = the user closed the popup. Not an error worth showing.
+    if (key) onError(t(key as MessageKey));
+  }
+
+  useEffect(() => {
+    if (!firebaseEnabled || redirectHandled.current) return;
+    redirectHandled.current = true;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const idToken = await completeGoogleRedirect();
+        if (!idToken || cancelled) return;
+        setBusy(true);
+        await exchangeIdToken(idToken);
+      } catch (err) {
+        if (!cancelled) reportError(err);
+      } finally {
+        if (!cancelled) setBusy(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot redirect completion
+  }, []);
 
   if (!firebaseEnabled) return null;
 
@@ -37,26 +89,14 @@ export function SocialButtons({
     setBusy(true);
     try {
       const idToken = await signInWithGoogle();
-      const data = await api<TokenResponse>("/auth/oauth/firebase", {
-        method: "POST",
-        body: JSON.stringify({ id_token: idToken }),
-      });
-      setToken(data.access_token);
-      onSuccess(data);
+      await exchangeIdToken(idToken);
     } catch (err) {
       // A server answer (e.g. "sign in with your password first") is more
       // useful than our generic copy, so it wins when present.
       // A 403 here means the provider gave us an address it had not verified;
       // the server has sent a confirmation link. Its message says so, so pass
       // it through rather than replacing it with generic sign-in copy.
-      const apiMessage = (err as ApiError)?.status ? (err as Error).message : null;
-      if (apiMessage) {
-        onError(apiMessage);
-      } else {
-        const key = socialErrorKey(err);
-        // `null` = the user closed the popup. Not an error worth showing.
-        if (key) onError(t(key as MessageKey));
-      }
+      reportError(err);
       setBusy(false);
     }
   }
@@ -90,7 +130,7 @@ function GoogleMark() {
       />
       <path
         fill="#FBBC05"
-        d="M3.97 10.72a5.41 5.41 0 0 1 0-3.44V4.95H.96a9 9 0 0 0 0 8.1l3.01-2.33Z"
+        d="M3.97 10.72a5.41 5.41 0 0 1 0-3.44V4.95H.96a9 0 0 0 0 8.1l3.01-2.33Z"
       />
       <path
         fill="#EA4335"
