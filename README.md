@@ -154,7 +154,7 @@ These are exactly what CI runs, so a green local run means a green pipeline.
 npm run lint && npm run typecheck && npm test
 FORGE_FONT_MODE=fallback npm run build
 
-# apps/api  (TEMPLATES_ROOT must point at data/templates)
+# apps/api  (TEMPLATES_ROOT → data/templates, INTEGRATIONS_ROOT → data/integrations; see CONTRIBUTING)
 ruff check app tests && ruff format --check app tests
 pytest -q
 

@@ -126,7 +126,7 @@ Ce sont exactement les commandes de la CI : un run local vert signifie une CI ve
 npm run lint && npm run typecheck && npm test
 FORGE_FONT_MODE=fallback npm run build
 
-# apps/api  (TEMPLATES_ROOT doit pointer vers data/templates)
+# apps/api  (TEMPLATES_ROOT → data/templates, INTEGRATIONS_ROOT → data/integrations ; voir CONTRIBUTING)
 ruff check app tests && ruff format --check app tests
 pytest -q
 
