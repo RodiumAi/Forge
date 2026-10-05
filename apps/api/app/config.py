@@ -83,6 +83,7 @@ class Settings(BaseSettings):
     @property
     def rodium_oidc_configured(self) -> bool:
         return bool(self.rodium_oidc_client_id)
+
     # Public origin of the RodiumAi user app (avatars often live there locally).
     rodium_user_app_url: str = "http://localhost:3000"
     # Public origin of THIS web app — used to build the links we email out

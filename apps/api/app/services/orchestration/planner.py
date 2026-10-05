@@ -248,7 +248,9 @@ def sanitize_clarify_questions(raw: object) -> list[dict[str, Any]]:
                 if isinstance(opt, str):
                     label, oid = strip_long_dashes(opt.strip(), label=True), f"opt{j + 1}"
                 elif isinstance(opt, dict):
-                    label = strip_long_dashes(str(opt.get("label") or opt.get("text") or "").strip(), label=True)
+                    label = strip_long_dashes(
+                        str(opt.get("label") or opt.get("text") or "").strip(), label=True
+                    )
                     oid = _CLARIFY_ID_RE.sub("_", str(opt.get("id") or f"opt{j + 1}").lower()).strip("_")[:40]
                 else:
                     continue
@@ -313,8 +315,7 @@ async def build_clarify_questions_llm(
         "important first; every question ships 2 to 5 concrete, plausible example "
         "options tailored to the request (the user can always type a custom answer, "
         "so options are smart suggestions, never 'other'); never ask about hosting, "
-        "frameworks, backends or budgets; skip anything the prompt already answers."
-        + " " + NO_LONG_DASH_RULE
+        "frameworks, backends or budgets; skip anything the prompt already answers." + " " + NO_LONG_DASH_RULE
     )
     try:
         raw = await complete_chat(
@@ -451,8 +452,7 @@ async def assess_prompt_clarity(
         "colors, links, business specifics), most important first; every question ships 2 "
         "to 5 concrete, plausible options tailored to the request (the user can always type "
         "a custom answer, so never offer 'other'); never ask about hosting, frameworks, "
-        "backends or budgets; never ask what the request already answers."
-        + " " + NO_LONG_DASH_RULE
+        "backends or budgets; never ask what the request already answers." + " " + NO_LONG_DASH_RULE
     )
     try:
         raw = await complete_chat(
@@ -470,7 +470,11 @@ async def assess_prompt_clarity(
             raise ValueError("clarity gauge: not an object")
         score = round(float(parsed.get("score")))
         score = max(0, min(100, score))
-        missing = [strip_long_dashes(str(m).strip(), label=True)[:120] for m in (parsed.get("missing") or []) if str(m).strip()][:8]
+        missing = [
+            strip_long_dashes(str(m).strip(), label=True)[:120]
+            for m in (parsed.get("missing") or [])
+            if str(m).strip()
+        ][:8]
         questions = sanitize_clarify_questions(parsed.get("questions") or [])
         return ClarityAssessment(score, missing, questions)
     except Exception:
@@ -761,8 +765,7 @@ async def build_plan(
         "A styles_foundation task BEFORE sections is required for scaffolds. "
         "After styles_foundation, never ship orphan TSX without appending matching CSS. "
         "Frontend-only prototype: no backend connector tasks. "
-        "Each task needs a clear acceptance criterion."
-        + " " + NO_LONG_DASH_RULE
+        "Each task needs a clear acceptance criterion." + " " + NO_LONG_DASH_RULE
     )
     request_body = f"{prompt}\n\n{answers_txt}".strip() if answers_txt else prompt
     if carried:
@@ -799,7 +802,9 @@ async def build_plan(
         if isinstance(parsed, dict):
             # New object shape: {"title", "summary", "tasks": [...]}.
             title = strip_long_dashes(str(parsed.get("title") or "").strip(), label=True)[:120]
-            summary = strip_long_dashes(str(parsed.get("summary") or parsed.get("description") or "").strip())[:400]
+            summary = strip_long_dashes(
+                str(parsed.get("summary") or parsed.get("description") or "").strip()
+            )[:400]
             if title:
                 meta["title"] = title
             if summary:
@@ -815,7 +820,9 @@ async def build_plan(
             title = strip_long_dashes(str(item.get("title") or tid).strip(), label=True)[:200]
             if not title:
                 continue
-            acceptance = strip_long_dashes(str(item.get("acceptance") or item.get("done_when") or "").strip())[:240]
+            acceptance = strip_long_dashes(
+                str(item.get("acceptance") or item.get("done_when") or "").strip()
+            )[:240]
             files_raw = item.get("files") or item.get("paths") or []
             files: list[str] = []
             if isinstance(files_raw, list):

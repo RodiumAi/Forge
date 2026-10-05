@@ -215,7 +215,11 @@ def _generation_auth_resolver(user_id: UUID, locale: str, project_id: UUID | Non
                 auth = await resolve_generation_auth(auth_db, fresh)
                 if project_id is not None and auth.billing_uid:
                     project = auth_db.get(Project, project_id)
-                    if project is not None and project.billing_policy == "owner_pays" and project.user_id != fresh.id:
+                    if (
+                        project is not None
+                        and project.billing_policy == "owner_pays"
+                        and project.user_id != fresh.id
+                    ):
                         owner = auth_db.get(User, project.user_id)
                         if owner and owner.rodium_sub:
                             auth.billing_uid = owner.rodium_sub
@@ -225,12 +229,8 @@ def _generation_auth_resolver(user_id: UUID, locale: str, project_id: UUID | Non
                             # could drain the owner's whole balance.
                             auth.actor_uid = fresh.rodium_sub or str(fresh.id)
                             auth.project_id = str(project.id)
-                            collab = auth_db.get(
-                                ProjectCollaborator, (project.id, fresh.id)
-                            )
-                            auth.frodi_cap_per_cycle = (
-                                collab.frodi_cap_per_cycle if collab else None
-                            )
+                            collab = auth_db.get(ProjectCollaborator, (project.id, fresh.id))
+                            auth.frodi_cap_per_cycle = collab.frodi_cap_per_cycle if collab else None
                 return auth
             except HTTPException as exc:
                 detail = exc.detail
@@ -1604,9 +1604,7 @@ async def branch_messages(
     # fresh build (the anchor itself survives the truncation, so counting the
     # whole chat always gave >= 1 and never took the new-project path).
     prior_count = (
-        db.query(Message)
-        .filter(Message.chat_id == chat.id, Message.created_at < anchor.created_at)
-        .count()
+        db.query(Message).filter(Message.chat_id == chat.id, Message.created_at < anchor.created_at).count()
     )
     force_scaffold = prior_count == 0
     route = classify_and_route(user_content, force_scaffold=force_scaffold)

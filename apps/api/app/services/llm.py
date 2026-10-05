@@ -29,6 +29,7 @@ def _forge_billing_context(auth: RodiumGenerationAuth) -> dict[str, Any] | None:
         ctx["cap_per_cycle"] = int(auth.frodi_cap_per_cycle)
     return ctx
 
+
 # ── Error taxonomy ─────────────────────────────────────────────────────────
 #
 # One stable code per cause the user can actually do something about. These

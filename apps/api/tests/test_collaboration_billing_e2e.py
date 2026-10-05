@@ -188,6 +188,7 @@ def _client(monkeypatch, world: World):
         "get_settings",
         lambda: SimpleNamespace(forge_default_collab_frodi_cap=DEFAULT_CAP, forge_cloud_enabled=True),
     )
+
     # list_collaborators reads cycle usage from the gateway → serve it from the
     # same cap counter the reserve stand-in writes.
     def _usage(owner_sub, project_id, actor_uids):
@@ -254,7 +255,7 @@ async def test_full_collaboration_billing_journey(monkeypatch):
     for _ in range(3):
         await _generate(world, world.collab, quoted=500.0)
     assert world.frodi["owner_sub"] == owner_start - 1500  # 3 × 500 off the owner
-    assert world.frodi["collab_sub"] == collab_start        # collaborator untouched
+    assert world.frodi["collab_sub"] == collab_start  # collaborator untouched
 
     # A 4th generation lands exactly on the 2000 cap (allowed).
     await _generate(world, world.collab, quoted=500.0)
@@ -283,7 +284,7 @@ async def test_full_collaboration_billing_journey(monkeypatch):
     owner_before = world.frodi["owner_sub"]
     await _generate(world, world.collab, quoted=500.0)
     assert world.frodi["collab_sub"] == collab_start - 500  # collaborator's own FRODI
-    assert world.frodi["owner_sub"] == owner_before          # owner untouched now
+    assert world.frodi["owner_sub"] == owner_before  # owner untouched now
 
     # each_pays_own is uncapped — several more come straight off the collaborator.
     for _ in range(5):
@@ -292,5 +293,5 @@ async def test_full_collaboration_billing_journey(monkeypatch):
     assert world.frodi["owner_sub"] == owner_before
 
     # ── Final ledger sanity ─────────────────────────────────────────────────
-    assert world.frodi["owner_sub"] == 10_000 - 2000   # only the capped owner_pays spend
-    assert world.frodi["collab_sub"] == 5_000 - 3000   # only the each_pays_own spend
+    assert world.frodi["owner_sub"] == 10_000 - 2000  # only the capped owner_pays spend
+    assert world.frodi["collab_sub"] == 5_000 - 3000  # only the each_pays_own spend

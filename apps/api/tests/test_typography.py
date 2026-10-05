@@ -14,8 +14,16 @@ from app.services.orchestration import planner
     "text,label,expected",
     [
         ("Home page — hero, CTA, video preview strip", True, "Home page: hero, CTA, video preview strip"),
-        ("Global polish — animations, confetti accents & scroll", True, "Global polish: animations, confetti accents & scroll"),
-        ("Un club — le meilleur de Lomé — chaque vendredi.", False, "Un club, le meilleur de Lomé, chaque vendredi."),
+        (
+            "Global polish — animations, confetti accents & scroll",
+            True,
+            "Global polish: animations, confetti accents & scroll",
+        ),
+        (
+            "Un club — le meilleur de Lomé — chaque vendredi.",
+            False,
+            "Un club, le meilleur de Lomé, chaque vendredi.",
+        ),
         ("Ouvert 10–20h, lundi–vendredi, Paris–Lomé", False, "Ouvert 10-20h, lundi-vendredi, Paris-Lomé"),
         ("<p>— Marie, fondatrice</p>", False, "<p>Marie, fondatrice</p>"),
         ('"Rire ensemble —"', False, '"Rire ensemble"'),
@@ -43,8 +51,16 @@ async def test_plan_titles_and_summary_have_no_long_dash(monkeypatch):
                 "title": "Comedy site — v1",
                 "summary": "A showcase — videos, about and contact.",
                 "tasks": [
-                    {"id": "home", "title": "Home page — hero, CTA, video preview strip", "acceptance": "Hero — CTA visible"},
-                    {"id": "videos", "title": "Videos page — gallery grid, filter tabs & lightbox", "acceptance": "Grid renders"},
+                    {
+                        "id": "home",
+                        "title": "Home page — hero, CTA, video preview strip",
+                        "acceptance": "Hero — CTA visible",
+                    },
+                    {
+                        "id": "videos",
+                        "title": "Videos page — gallery grid, filter tabs & lightbox",
+                        "acceptance": "Grid renders",
+                    },
                 ],
             }
         )
@@ -61,7 +77,13 @@ async def test_plan_titles_and_summary_have_no_long_dash(monkeypatch):
 
 def test_questions_are_cleaned():
     qs = planner.sanitize_clarify_questions(
-        [{"id": "tone", "prompt": "Quel ton — drôle ou chic ?", "options": ["Drôle — punchy", "Chic — élégant"]}]
+        [
+            {
+                "id": "tone",
+                "prompt": "Quel ton — drôle ou chic ?",
+                "options": ["Drôle — punchy", "Chic — élégant"],
+            }
+        ]
     )
     blob = json.dumps(qs, ensure_ascii=False)
     assert "\u2014" not in blob

@@ -27,11 +27,7 @@ def accessible_project(
         return project
     if project is not None:
         row = db.get(ProjectCollaborator, (project.id, user.id))
-        if (
-            row is not None
-            and row.accepted_at is not None
-            and (not require_edit or row.role == "editor")
-        ):
+        if row is not None and row.accepted_at is not None and (not require_edit or row.role == "editor"):
             return project
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,

@@ -127,9 +127,7 @@ async def test_owner_generation_is_not_capped_or_switched(monkeypatch):
     owner = _user("owner_sub")
     project = SimpleNamespace(id=uuid.uuid4(), user_id=owner.id, billing_policy="owner_pays")
 
-    auth_db = _fake_auth_db(
-        {"users": {str(owner.id): owner}, "project": project, "collaborators": {}}
-    )
+    auth_db = _fake_auth_db({"users": {str(owner.id): owner}, "project": project, "collaborators": {}})
     resolved = RodiumGenerationAuth(mode="secret", billing_uid=owner.rodium_sub)
     _install(monkeypatch, auth_db=auth_db, resolved_auth=resolved)
 
@@ -191,9 +189,9 @@ def test_forge_billing_context_none_for_owner():
     auth = RodiumGenerationAuth(mode="secret", billing_uid="owner_sub", actor_uid="owner_sub")
     assert llm_mod._forge_billing_context(auth) is None
     # No actor at all (owner's own project) → also None.
-    assert llm_mod._forge_billing_context(
-        RodiumGenerationAuth(mode="secret", billing_uid="owner_sub")
-    ) is None
+    assert (
+        llm_mod._forge_billing_context(RodiumGenerationAuth(mode="secret", billing_uid="owner_sub")) is None
+    )
 
 
 def test_cycle_key_is_iso_week_shaped():
@@ -261,10 +259,10 @@ def test_share_unknown_email_stays_pending(monkeypatch):
     from app.models import ProjectInvite
 
     owner = SimpleNamespace(id=uuid.uuid4(), email="owner@example.com", name="Awa", rodium_sub="owner_sub")
-    project = SimpleNamespace(id=uuid.uuid4(), user_id=owner.id, name="Studio", billing_policy="owner_pays", visibility="private")
-    client, captured = _share_client(
-        monkeypatch, owner=owner, project=project, invitee=None, unknown=True
+    project = SimpleNamespace(
+        id=uuid.uuid4(), user_id=owner.id, name="Studio", billing_policy="owner_pays", visibility="private"
     )
+    client, captured = _share_client(monkeypatch, owner=owner, project=project, invitee=None, unknown=True)
     sent: list[str] = []
     monkeypatch.setattr(
         projects_mod,
@@ -283,17 +281,25 @@ def test_share_unknown_email_stays_pending(monkeypatch):
     assert body["pending"] is True
     assert body["mail_sent"] is True
     assert sent == ["mail"]
-    assert any(isinstance(row, ProjectInvite) and row.email == "new.person@example.com" for row in captured["rows"])
+    assert any(
+        isinstance(row, ProjectInvite) and row.email == "new.person@example.com" for row in captured["rows"]
+    )
     assert not any(getattr(row, "user_id", None) for row in captured["rows"])
 
 
 def test_share_applies_default_cap_when_blank(monkeypatch):
     owner = SimpleNamespace(id=uuid.uuid4(), rodium_sub="owner_sub")
     invitee = SimpleNamespace(id=uuid.uuid4(), email="guest@example.com", rodium_sub="guest_sub")
-    project = SimpleNamespace(id=uuid.uuid4(), user_id=owner.id, billing_policy="owner_pays", visibility="private")
+    project = SimpleNamespace(
+        id=uuid.uuid4(), user_id=owner.id, billing_policy="owner_pays", visibility="private"
+    )
     client, captured = _share_client(monkeypatch, owner=owner, project=project, invitee=invitee)
 
-    r = client.post(f"/projects/{project.id}/share", json={"email": invitee.email, "billing_policy": "owner_pays"}, headers=_EN)
+    r = client.post(
+        f"/projects/{project.id}/share",
+        json={"email": invitee.email, "billing_policy": "owner_pays"},
+        headers=_EN,
+    )
     assert r.status_code == 200
     assert r.json()["frodi_cap_per_cycle"] == 2000
     assert captured["rows"][0].frodi_cap_per_cycle == 2000
@@ -302,30 +308,48 @@ def test_share_applies_default_cap_when_blank(monkeypatch):
 def test_share_explicit_cap_is_respected(monkeypatch):
     owner = SimpleNamespace(id=uuid.uuid4(), rodium_sub="owner_sub")
     invitee = SimpleNamespace(id=uuid.uuid4(), email="guest@example.com", rodium_sub="guest_sub")
-    project = SimpleNamespace(id=uuid.uuid4(), user_id=owner.id, billing_policy="owner_pays", visibility="private")
+    project = SimpleNamespace(
+        id=uuid.uuid4(), user_id=owner.id, billing_policy="owner_pays", visibility="private"
+    )
     client, _captured = _share_client(monkeypatch, owner=owner, project=project, invitee=invitee)
 
-    r = client.post(f"/projects/{project.id}/share", json={"email": invitee.email, "billing_policy": "owner_pays", "frodi_cap_per_cycle": 500}, headers=_EN)
+    r = client.post(
+        f"/projects/{project.id}/share",
+        json={"email": invitee.email, "billing_policy": "owner_pays", "frodi_cap_per_cycle": 500},
+        headers=_EN,
+    )
     assert r.json()["frodi_cap_per_cycle"] == 500
 
 
 def test_share_zero_means_unlimited(monkeypatch):
     owner = SimpleNamespace(id=uuid.uuid4(), rodium_sub="owner_sub")
     invitee = SimpleNamespace(id=uuid.uuid4(), email="guest@example.com", rodium_sub="guest_sub")
-    project = SimpleNamespace(id=uuid.uuid4(), user_id=owner.id, billing_policy="owner_pays", visibility="private")
+    project = SimpleNamespace(
+        id=uuid.uuid4(), user_id=owner.id, billing_policy="owner_pays", visibility="private"
+    )
     client, _captured = _share_client(monkeypatch, owner=owner, project=project, invitee=invitee)
 
-    r = client.post(f"/projects/{project.id}/share", json={"email": invitee.email, "billing_policy": "owner_pays", "frodi_cap_per_cycle": 0}, headers=_EN)
+    r = client.post(
+        f"/projects/{project.id}/share",
+        json={"email": invitee.email, "billing_policy": "owner_pays", "frodi_cap_per_cycle": 0},
+        headers=_EN,
+    )
     assert r.json()["frodi_cap_per_cycle"] == 0
 
 
 def test_share_each_pays_own_ignores_cap(monkeypatch):
     owner = SimpleNamespace(id=uuid.uuid4(), rodium_sub="owner_sub")
     invitee = SimpleNamespace(id=uuid.uuid4(), email="guest@example.com", rodium_sub="guest_sub")
-    project = SimpleNamespace(id=uuid.uuid4(), user_id=owner.id, billing_policy="owner_pays", visibility="private")
+    project = SimpleNamespace(
+        id=uuid.uuid4(), user_id=owner.id, billing_policy="owner_pays", visibility="private"
+    )
     client, captured = _share_client(monkeypatch, owner=owner, project=project, invitee=invitee)
 
-    r = client.post(f"/projects/{project.id}/share", json={"email": invitee.email, "billing_policy": "each_pays_own"}, headers=_EN)
+    r = client.post(
+        f"/projects/{project.id}/share",
+        json={"email": invitee.email, "billing_policy": "each_pays_own"},
+        headers=_EN,
+    )
     assert r.json()["billing_policy"] == "each_pays_own"
     assert captured["rows"][0].frodi_cap_per_cycle is None
 
@@ -333,7 +357,9 @@ def test_share_each_pays_own_ignores_cap(monkeypatch):
 def test_list_collaborators_includes_cycle_usage(monkeypatch):
     owner = SimpleNamespace(id=uuid.uuid4(), rodium_sub="owner_sub")
     member = SimpleNamespace(id=uuid.uuid4(), email="guest@example.com", name="Guest", rodium_sub="guest_sub")
-    project = SimpleNamespace(id=uuid.uuid4(), user_id=owner.id, billing_policy="owner_pays", visibility="shared")
+    project = SimpleNamespace(
+        id=uuid.uuid4(), user_id=owner.id, billing_policy="owner_pays", visibility="shared"
+    )
     collab = SimpleNamespace(role="editor", frodi_cap_per_cycle=2000, invited_at=None, accepted_at=None)
 
     client, _ = _share_client(monkeypatch, owner=owner, project=project, invitee=member)
@@ -348,11 +374,22 @@ def test_list_collaborators_includes_cycle_usage(monkeypatch):
     class Q2:
         def __init__(self, *models):
             self.models = models
-        def filter(self, *_a, **_k): return self
-        def join(self, *_a, **_k): return self
-        def order_by(self, *_a, **_k): return self
-        def all(self): return db_all_rows
-        def one_or_none(self): return None
+
+        def filter(self, *_a, **_k):
+            return self
+
+        def join(self, *_a, **_k):
+            return self
+
+        def order_by(self, *_a, **_k):
+            return self
+
+        def all(self):
+            return db_all_rows
+
+        def one_or_none(self):
+            return None
+
     db.query = lambda *models: Q2(*models)
 
     r = client.get(f"/projects/{project.id}/collaborators", headers=_EN)

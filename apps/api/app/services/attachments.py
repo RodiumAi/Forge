@@ -86,9 +86,7 @@ def carried_reference_markers(
         seen += 1
         if seen > window:
             break
-        markers = [
-            m for m in _REFERENCE_MARKER_RE.findall(content or "") if "intent:asset" not in m.lower()
-        ]
+        markers = [m for m in _REFERENCE_MARKER_RE.findall(content or "") if "intent:asset" not in m.lower()]
         if markers:
             return markers
     return []

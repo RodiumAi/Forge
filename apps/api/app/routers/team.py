@@ -94,8 +94,6 @@ def join_accept(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> SimpleOkResponse:
-    rate_limit.enforce(
-        request, "team-join-accept", limit=10, window_seconds=900, subject=str(user.id)
-    )
+    rate_limit.enforce(request, "team-join-accept", limit=10, window_seconds=900, subject=str(user.id))
     team_seats.accept(db, token, user, resolve_locale(request))
     return SimpleOkResponse()

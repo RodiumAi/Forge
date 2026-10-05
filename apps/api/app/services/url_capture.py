@@ -126,8 +126,10 @@ def _iframe_window_is_embed(window: str) -> bool:
             return False
         # Bound attribute name length to avoid quadratic scans.
         name_end = idx + 5
-        while name_end < len(lower) and name_end - idx < 48 and (
-            lower[name_end].isalnum() or lower[name_end] in "_-"
+        while (
+            name_end < len(lower)
+            and name_end - idx < 48
+            and (lower[name_end].isalnum() or lower[name_end] in "_-")
         ):
             name_end += 1
         if name_end > idx + 5 and lower[idx:name_end].endswith("src"):
@@ -146,7 +148,7 @@ def _script_window_is_embed(window: str) -> bool:
         if hint in lower:
             return True
     # Bare `.js` at end of a quoted URL inside the window.
-    return ".js\"" in lower or ".js'" in lower
+    return '.js"' in lower or ".js'" in lower
 
 
 def looks_like_third_party_embed_snippet(text: str) -> bool:

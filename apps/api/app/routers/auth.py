@@ -93,9 +93,7 @@ def auth_features() -> dict[str, bool]:
     return {
         "rodium_oidc": settings.rodium_oidc_configured,
         "firebase": bool(
-            settings.firebase_project_id
-            and settings.firebase_client_email
-            and settings.firebase_private_key
+            settings.firebase_project_id and settings.firebase_client_email and settings.firebase_private_key
         ),
     }
 
@@ -509,13 +507,14 @@ async def rodium_account(
             except Exception:
                 pass
         if keys:
-            await _ensure_default_generation_key(
-                db, user, row, keys if isinstance(keys, list) else []
-            )
+            await _ensure_default_generation_key(db, user, row, keys if isinstance(keys, list) else [])
     elif not has_generation_key(user, row) and keys:
         await _ensure_default_generation_key(db, user, row, keys if isinstance(keys, list) else [])
 
-    if not (isinstance(wallet, dict) and (wallet.get("balanceRodi") not in (None, "") or wallet.get("balance_rodi") not in (None, ""))):
+    if not (
+        isinstance(wallet, dict)
+        and (wallet.get("balanceRodi") not in (None, "") or wallet.get("balance_rodi") not in (None, ""))
+    ):
         gateway_wallet = _wallet_from_gateway(user)
         if gateway_wallet:
             wallet = {**(wallet if isinstance(wallet, dict) else {}), **gateway_wallet}
@@ -1143,9 +1142,7 @@ def issue_media_token(
     what leaks there scoped to reads and valid for an hour, instead of a
     7-day session that opens the whole API.
     """
-    rate_limit.enforce(
-        request, "media-token", limit=30, window_seconds=900, subject=str(user.id)
-    )
+    rate_limit.enforce(request, "media-token", limit=30, window_seconds=900, subject=str(user.id))
     return MediaTokenResponse(
         token=media_token_for_user(user),
         expires_in=MEDIA_TOKEN_TTL_MINUTES * 60,
@@ -1333,9 +1330,7 @@ def change_password(
 ) -> PasswordChangeResponse:
     locale = resolve_locale(request)
     # Bound credential-change attempts per account (spray / stolen-session abuse).
-    rate_limit.enforce(
-        request, "change-password", limit=5, window_seconds=3600, subject=str(user.id)
-    )
+    rate_limit.enforce(request, "change-password", limit=5, window_seconds=3600, subject=str(user.id))
     if not user.password_hash:
         raise HTTPException(status_code=400, detail=t("rodium_oauth_no_password", locale))
     if not verify_password(body.current_password, user.password_hash):

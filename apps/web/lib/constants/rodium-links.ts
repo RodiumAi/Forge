@@ -63,6 +63,18 @@ export function buildRodiumPayUrl(options: {
 }
 
 /**
+ * Where an "upgrade plan" control sends the user.
+ *
+ * Plans are chosen on Forge itself (the public pricing section). A signed-in
+ * account already has a RodiumAI user behind it, so the pricing buttons open
+ * the pay page with that account. They never send someone to create a second
+ * account on the RodiumAI site.
+ */
+export function rodiumUpgradeUrl(): string {
+  return "/dashboard/pricing";
+}
+
+/**
  * Where a "top up RODI" control sends the user.
  *
  * Preferred: the detached `/pay` page, which credits the account without
@@ -87,4 +99,74 @@ export function rodiumRechargeUrl(
         ? undefined
         : `${window.location.origin}/settings?tab=generation`),
   });
+}
+
+const FORGE_PLAN_SLUGS = new Set([
+  "starter",
+  "builder",
+  "pro",
+  "scale",
+  "team-pro",
+]);
+
+/** Relative path the login page may return to after a pricing CTA. */
+export function forgeSubscribeReturnPath(options: {
+  plan: string;
+  currency: string;
+  country: string;
+  seats?: number | null;
+}): string {
+  const params = new URLSearchParams({
+    subscribe: options.plan,
+    currency: options.currency,
+    country: options.country,
+  });
+  if (options.seats && options.seats > 0) {
+    params.set("seats", String(options.seats));
+  }
+  return `/?${params.toString()}#pricing`;
+}
+
+/**
+ * Detached Forge subscription checkout. `uid` is required: without it the
+ * pay page refuses the link ("missing the account it should credit").
+ */
+export function forgeSubscriptionPayUrl(options: {
+  uid: string;
+  plan: string;
+  currency: string;
+  country: string;
+  seats?: number | null;
+}): string {
+  const url = new URL(`${rodiumUserAppOrigin()}/pay`);
+  url.searchParams.set("uid", options.uid);
+  url.searchParams.set("purpose", "forge_subscription");
+  url.searchParams.set("plan", options.plan);
+  url.searchParams.set("currency", options.currency);
+  url.searchParams.set("country", options.country);
+  const forgeOrigin = (
+    process.env.NEXT_PUBLIC_SITE_URL?.trim() || "http://localhost:3100"
+  ).replace(/\/$/, "");
+  url.searchParams.set("redirect_url", `${forgeOrigin}/dashboard`);
+  if (options.seats && options.seats > 0) {
+    url.searchParams.set("seats", String(options.seats));
+  }
+  return url.toString();
+}
+
+/** Read `?subscribe=` left by the login return and build the pay URL. */
+export function forgeSubscribeResumeUrl(
+  search: string,
+  rodiumSub: string,
+): string | null {
+  const params = new URLSearchParams(search);
+  const plan = params.get("subscribe")?.trim() ?? "";
+  if (!FORGE_PLAN_SLUGS.has(plan)) return null;
+  const currency = (params.get("currency")?.trim() || "XOF").toUpperCase();
+  if (!/^[A-Z]{3}$/.test(currency)) return null;
+  const country = (params.get("country")?.trim() || "").toUpperCase();
+  if (!/^[A-Z]{2}$/.test(country)) return null;
+  const seatsRaw = params.get("seats")?.trim() ?? "";
+  const seats = /^\d+$/.test(seatsRaw) ? Number(seatsRaw) : null;
+  return forgeSubscriptionPayUrl({ uid: rodiumSub, plan, currency, country, seats });
 }

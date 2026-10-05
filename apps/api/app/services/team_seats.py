@@ -72,16 +72,16 @@ def directory(db: Session, user: User) -> dict:
 
 
 def occupied(db: Session, owner: User) -> int:
-    return (
-        db.query(TeamSeat)
-        .filter(TeamSeat.owner_user_id == owner.id, TeamSeat.status.in_(HOLDING))
-        .count()
-    )
+    return db.query(TeamSeat).filter(TeamSeat.owner_user_id == owner.id, TeamSeat.status.in_(HOLDING)).count()
 
 
 def _send_link(row: TeamSeat, raw: str, locale: Locale, *, restore: bool) -> bool:
     url = get_settings().web_url(f"/team/join/{raw}")
-    message = mail.build_team_restore(row.email, url, locale) if restore else mail.build_team_invite(row.email, url, locale)
+    message = (
+        mail.build_team_restore(row.email, url, locale)
+        if restore
+        else mail.build_team_invite(row.email, url, locale)
+    )
     return mail.send(message)
 
 
@@ -93,11 +93,7 @@ def invite(db: Session, owner: User, email: str, seats: int, locale: Locale) -> 
     # The owner always holds the first place.
     if 1 + others >= seats:
         raise HTTPException(status_code=422, detail=t("team_invite_full", locale))
-    row = (
-        db.query(TeamSeat)
-        .filter(TeamSeat.owner_user_id == owner.id, TeamSeat.email == email)
-        .one_or_none()
-    )
+    row = db.query(TeamSeat).filter(TeamSeat.owner_user_id == owner.id, TeamSeat.email == email).one_or_none()
     if row is not None and row.status in ("pending", "accepted", "restore"):
         raise HTTPException(status_code=409, detail=t("team_invite_exists", locale))
     if row is not None and row.status == "removed":
@@ -179,11 +175,7 @@ def cancel(db: Session, owner: User, email: str) -> None:
 
 def mark_removed(db: Session, owner: User, email: str, reason: str) -> None:
     email = email.strip().lower()
-    row = (
-        db.query(TeamSeat)
-        .filter(TeamSeat.owner_user_id == owner.id, TeamSeat.email == email)
-        .one_or_none()
-    )
+    row = db.query(TeamSeat).filter(TeamSeat.owner_user_id == owner.id, TeamSeat.email == email).one_or_none()
     if row is None:
         _nest_seat(owner, email, "revoke")
         return

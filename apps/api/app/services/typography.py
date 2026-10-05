@@ -34,9 +34,23 @@ _COMMA_BEFORE_PUNCT_RE = re.compile(r",\s*([.,;:!?])")
 
 #: Extensions of files whose long dashes are rewritten on write.
 TEXT_EXTS = (
-    ".tsx", ".ts", ".jsx", ".js", ".mjs", ".cjs",
-    ".html", ".htm", ".md", ".mdx", ".txt",
-    ".json", ".webmanifest", ".xml", ".css", ".yml", ".yaml",
+    ".tsx",
+    ".ts",
+    ".jsx",
+    ".js",
+    ".mjs",
+    ".cjs",
+    ".html",
+    ".htm",
+    ".md",
+    ".mdx",
+    ".txt",
+    ".json",
+    ".webmanifest",
+    ".xml",
+    ".css",
+    ".yml",
+    ".yaml",
 )
 
 _LABEL_MAX = 90

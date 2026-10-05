@@ -159,7 +159,12 @@ def _fake_session(run):
 
 
 async def _collect(gen):
-    return [json.loads(line[len("data: "):]) for chunk in [c async for c in gen] for line in chunk.splitlines() if line.startswith("data: ")]
+    return [
+        json.loads(line[len("data: ") :])
+        for chunk in [c async for c in gen]
+        for line in chunk.splitlines()
+        if line.startswith("data: ")
+    ]
 
 
 @pytest.mark.asyncio
@@ -174,8 +179,13 @@ async def test_gate_pauses_with_ai_questions(monkeypatch):
     outcome = {"paused": False}
     events = await _collect(
         chats_mod._clarity_gate(
-            run_pk=uuid.uuid4(), prompt="vitrine comédie", locale="fr", auth=None,
-            build_model="m", force_scaffold=True, outcome=outcome,
+            run_pk=uuid.uuid4(),
+            prompt="vitrine comédie",
+            locale="fr",
+            auth=None,
+            build_model="m",
+            force_scaffold=True,
+            outcome=outcome,
         )
     )
     assert outcome["paused"] is True
@@ -198,8 +208,13 @@ async def test_gate_continues_when_clear(monkeypatch):
     outcome = {"paused": False}
     events = await _collect(
         chats_mod._clarity_gate(
-            run_pk=uuid.uuid4(), prompt="brief complet", locale="fr", auth=None,
-            build_model="m", force_scaffold=True, outcome=outcome,
+            run_pk=uuid.uuid4(),
+            prompt="brief complet",
+            locale="fr",
+            auth=None,
+            build_model="m",
+            force_scaffold=True,
+            outcome=outcome,
         )
     )
     assert outcome["paused"] is False
@@ -279,8 +294,12 @@ async def test_final_brief_receives_all_selections(monkeypatch):
 
     monkeypatch.setattr(planner, "complete_chat", fake)
     await planner.build_final_brief(
-        "vitrine", questions=[QUESTION, MULTI_Q], answers={"sections": ["agenda", "tickets"]},
-        locale="fr", auth=None, model="m",
+        "vitrine",
+        questions=[QUESTION, MULTI_Q],
+        answers={"sections": ["agenda", "tickets"]},
+        locale="fr",
+        auth=None,
+        model="m",
     )
     assert "Quelles sections ? → Agenda + Billetterie" in seen["user"]
 

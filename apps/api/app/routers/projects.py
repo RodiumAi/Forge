@@ -250,10 +250,7 @@ def list_projects(user: User = Depends(get_current_user), db: Session = Depends(
         role = "viewer" if link.role == "viewer" else "editor"
         shared.append((shared_project, role))
     people = _people_by_project(db, list(seen))
-    out = [
-        _project_out(row, collaborators=people.get(row.id, []))
-        for row in rows
-    ]
+    out = [_project_out(row, collaborators=people.get(row.id, [])) for row in rows]
     out.extend(
         _project_out(project, access_role=role, collaborators=people.get(project.id, []))
         for project, role in shared
@@ -503,9 +500,7 @@ def _invite_or_404(db: Session, raw: str, locale: str):
 
 
 @router.get("/invites/preview")
-def preview_project_invite(
-    token: str, request: Request, db: Session = Depends(get_db)
-) -> dict[str, object]:
+def preview_project_invite(token: str, request: Request, db: Session = Depends(get_db)) -> dict[str, object]:
     """Public summary of an invitation. The token is the secret; the page is open."""
     from app.services.project_invites import find_by_token, invite_status
 
@@ -1044,7 +1039,11 @@ def share_project(
             raise HTTPException(status_code=422, detail=t("share_limit", locale, n=limit))
 
     role = _share_role(body.role)
-    policy = body.billing_policy if body.billing_policy in ("owner_pays", "each_pays_own") else project.billing_policy
+    policy = (
+        body.billing_policy
+        if body.billing_policy in ("owner_pays", "each_pays_own")
+        else project.billing_policy
+    )
     cap = _share_cap(policy, body.frodi_cap_per_cycle)
 
     row = None
@@ -1197,9 +1196,7 @@ def list_collaborators(
 
     usage: dict[str, float] = {}
     if project.billing_policy == "owner_pays" and user.rodium_sub:
-        usage = _fetch_collab_usage(
-            user.rodium_sub, project.id, [_actor_uid_for(m) for _c, m in member_rows]
-        )
+        usage = _fetch_collab_usage(user.rodium_sub, project.id, [_actor_uid_for(m) for _c, m in member_rows])
 
     known = {str(member.email).lower() for _collab, member in member_rows}
     listed = [
@@ -1279,11 +1276,7 @@ def remove_collaborator(
     if not deleted_member and not removed_invite:
         raise HTTPException(status_code=404, detail=t("project_not_found", locale))
     db.flush()
-    remaining = (
-        db.query(ProjectCollaborator)
-        .filter(ProjectCollaborator.project_id == project.id)
-        .count()
-    )
+    remaining = db.query(ProjectCollaborator).filter(ProjectCollaborator.project_id == project.id).count()
     if remaining == 0:
         project.visibility = "private"
     db.commit()

@@ -697,7 +697,7 @@ function renderCompareCell(cell: Cell, labels: { yes: string; no: string }) {
       </span>
     );
   }
-  return cell.text;
+  return cell.kind === "text" ? cell.text : "";
 }
 
 const PLAN_RANK: Record<string, number> = {

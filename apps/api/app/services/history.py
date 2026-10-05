@@ -113,6 +113,7 @@ def _actor_from_body(body: str) -> tuple[str, str]:
 
 class HistoryUnavailable(RuntimeError):
     """Git is missing or the repository is unusable."""
+
     """Git is missing or the repository is unusable."""
 
 
@@ -333,8 +334,6 @@ def restore(project_id: str, snapshot_id: str) -> str | None:
     status = _run(repo, ["status", "--porcelain"])
     if not status.stdout.strip():
         return None
-    message = "\n".join(
-        [f"restore checkpoint {short}", "", *_actor_lines(None)]
-    )
+    message = "\n".join([f"restore checkpoint {short}", "", *_actor_lines(None)])
     _run(repo, ["commit", "--quiet", "--no-verify", "-m", message])
     return _run(repo, ["rev-parse", "HEAD"]).stdout.strip()

@@ -141,6 +141,7 @@ def parse_oauth_state(state: str, binding: str | None = None) -> str:
 
     return verifier
 
+
 def build_authorize_url(
     *,
     state: str,

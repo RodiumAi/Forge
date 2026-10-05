@@ -44,7 +44,7 @@ export type CachedIntegration = {
   title: string;
   blurb: string;
   categories: string[];
-  access: "yes";
+  access: "yes" | "partial";
   methods: string[];
   docs_url?: string | null;
   badge?: string | null;

@@ -25,9 +25,7 @@ def entitlements_apply(user: User) -> bool:
     """
     settings = get_settings()
     return bool(
-        user.rodium_sub
-        and settings.provisioning_enabled
-        and settings.rodium_gateway_internal_url.strip()
+        user.rodium_sub and settings.provisioning_enabled and settings.rodium_gateway_internal_url.strip()
     )
 
 

@@ -83,9 +83,7 @@ def _build_client(
     monkeypatch.setattr(projects_mod, "capture_for_user", lambda *_a, **_k: None)
     monkeypatch.setattr(sa_orm.Session, "object_session", staticmethod(lambda _obj: None))
     monkeypatch.setattr(ent_mod, "max_projects_for", lambda _db, _u, _fallback: limit)
-    monkeypatch.setattr(
-        ent_mod, "get_entitlements", lambda _db, _u: SimpleNamespace(plan_slug=plan)
-    )
+    monkeypatch.setattr(ent_mod, "get_entitlements", lambda _db, _u: SimpleNamespace(plan_slug=plan))
 
     collab_ids = {str(c) for c in collaborators}
 

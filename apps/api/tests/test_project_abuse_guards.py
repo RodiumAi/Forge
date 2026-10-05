@@ -97,9 +97,7 @@ def test_project_creation_respects_plan_max_projects(
 
     # Simulate a Free plan whose entitlement cap is 1 project.
     monkeypatch.setattr(ent_mod, "max_projects_for", lambda db, user, fallback: 1)
-    monkeypatch.setattr(
-        ent_mod, "get_entitlements", lambda db, user: SimpleNamespace(plan_slug="free")
-    )
+    monkeypatch.setattr(ent_mod, "get_entitlements", lambda db, user: SimpleNamespace(plan_slug="free"))
     user = _user(verified=True, rodium_sub=None)
     db = MagicMock()
     # Already at the cap (1 non-locked project).
