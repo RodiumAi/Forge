@@ -9,55 +9,60 @@ from app.config import get_settings
 from app.models import SiteUsageDay, StoredObject, User, UserSettings
 
 
-def _parse_wallet_balance(raw_json: str | None) -> float | None:
-    """Return balance when the cache is readable, else None (unknown)."""
-    if not raw_json:
-        return None
-    try:
-        raw = json.loads(raw_json)
-    except Exception:
-        return None
-    if not isinstance(raw, dict):
-        return None
-    value = raw.get("balanceRodi") or raw.get("balance_rodi")
-    if value is None:
+def cached_wallet_balance(user: User, db: Session) -> float:
+    row = db.get(UserSettings, user.id)
+    if row is None or not row.rodium_wallet_json:
         return 0.0
+    try:
+        raw = json.loads(row.rodium_wallet_json)
+    except Exception:
+        return 0.0
+    if not isinstance(raw, dict):
+        return 0.0
+    value = raw.get("balanceRodi") or raw.get("balance_rodi") or 0
     try:
         return float(value)
     except (TypeError, ValueError):
-        return None
-
-
-def cached_wallet_balance(user: User, db: Session) -> float:
-    row = db.get(UserSettings, user.id)
-    if row is None:
         return 0.0
-    parsed = _parse_wallet_balance(row.rodium_wallet_json)
-    return 0.0 if parsed is None else parsed
-
-
-def _has_rodium_oauth_tokens(row: UserSettings | None) -> bool:
-    if row is None:
-        return False
-    return bool(row.rodium_access_token_encrypted or row.rodium_refresh_token_encrypted)
 
 
 def require_rodi_for_paid_capability(user: User, db: Session) -> None:
-    """Gate AI generation on a positive RODI wallet balance.
+    """Gate AI generation.
 
-    Fail closed on a known-zero or missing cache after logout (tokens cleared).
-    After login the wallet is hydrated in the background — an empty cache with
-    live OAuth tokens means "still syncing", not "no funds", so we return
-    WALLET_SYNCING (retry) instead of a false INSUFFICIENT_RODI.
+    Forge Cloud (secrets present): FRODI or RODI must be readable and positive.
+    Open-source clones: the cached RODI wallet must be positive. Unknown balance
+    is a refusal.
     """
-    from app.errors import insufficient_rodi, wallet_syncing
+    from app.config import get_settings
+    from app.errors import SitesError, insufficient_rodi
 
-    row = db.get(UserSettings, user.id)
-    parsed = _parse_wallet_balance(row.rodium_wallet_json if row else None)
-    if parsed is not None and parsed > 0:
+    settings = get_settings()
+    if settings.forge_cloud_enabled and user.rodium_sub:
+        from app.services.entitlements import fetch_credit_balances
+
+        balances = fetch_credit_balances(user)
+        if balances is None:
+            raise insufficient_rodi("Credit balance could not be verified.")
+        frodi, rodi = balances
+        if frodi > 0 or rodi > 0:
+            return
+        # Both reservoirs empty. On Forge Cloud the primary recovery is to move to
+        # a plan with more FRODI (upgrade); recharging RODI is the secondary path.
+        # `actions` lets the client render the right CTAs (upgrade vs recharge).
+        raise SitesError(
+            402,
+            "INSUFFICIENT_CREDITS",
+            "FRODI and RODI balances are empty.",
+            {
+                "reservoir": "both",
+                "frodi": frodi,
+                "rodi": rodi,
+                "actions": ["upgrade", "recharge"],
+            },
+        )
+
+    if cached_wallet_balance(user, db) > 0:
         return
-    if parsed is None and _has_rodium_oauth_tokens(row):
-        raise wallet_syncing()
     raise insufficient_rodi("Insufficient RODI credits. Recharge your RodiumAi wallet to keep generating.")
 
 

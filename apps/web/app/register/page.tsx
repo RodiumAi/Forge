@@ -33,17 +33,34 @@ function RegisterInner() {
   const params = useSearchParams();
   const { t } = useI18n();
 
-  const [email, setEmail] = useState("");
+  const invited = (params.get("email") || "").trim().toLowerCase();
+  const lockedEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(invited) ? invited : "";
+
+  const [email, setEmail] = useState(lockedEmail);
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
+  const [name, setName] = useState(lockedEmail ? lockedEmail.split("@")[0] : "");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   /** Set once the account exists; swaps the form for the inbox notice. */
   const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
 
   useEffect(() => {
-    if (getToken()) router.replace("/dashboard");
-  }, [router]);
+    if (lockedEmail) {
+      setEmail(lockedEmail);
+      setName((current) => current || lockedEmail.split("@")[0]);
+    }
+  }, [lockedEmail]);
+
+  useEffect(() => {
+    if (getToken()) {
+      router.replace(sanitizeReturnTo(params.get("next")) || "/dashboard");
+    }
+  }, [router, params]);
+
+  function goToLogin() {
+    const next = sanitizeReturnTo(params.get("next"));
+    router.push(next ? `/login?next=${encodeURIComponent(next)}` : "/login");
+  }
 
   function land() {
     // Hard navigation: the landing page stashed a pending prompt in
@@ -79,7 +96,7 @@ function RegisterInner() {
         title={t("authCheckInboxTitle")}
         footer={
           <p className="auth-alt" style={{ marginTop: 0 }}>
-            <button type="button" className="auth-link" onClick={() => router.push("/login")}>
+            <button type="button" className="auth-link" onClick={goToLogin}>
               {t("authBackToLogin")}
             </button>
           </p>
@@ -92,8 +109,8 @@ function RegisterInner() {
 
   return (
     <AuthCard title={t("registerTitle")} subtitle={t("authRegisterSub")} error={error}>
-      <SocialButtons onSuccess={land} onError={setError} disabled={loading} />
-      {firebaseEnabled ? <AuthDivider /> : null}
+      {lockedEmail ? null : <SocialButtons onSuccess={land} onError={setError} disabled={loading} />}
+      {firebaseEnabled && !lockedEmail ? <AuthDivider /> : null}
 
       <form onSubmit={(e) => void submit(e)}>
         <AuthField id="register-email" label={t("email")}>
@@ -103,10 +120,15 @@ function RegisterInner() {
             type="email"
             autoComplete="email"
             required
+            readOnly={Boolean(lockedEmail)}
+            aria-readonly={Boolean(lockedEmail)}
             placeholder={t("authEmailPlaceholder")}
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              if (!lockedEmail) setEmail(e.target.value);
+            }}
           />
+          {lockedEmail ? <small className="auth-email-lock">{t("teamJoinEmailLocked")}</small> : null}
         </AuthField>
 
         <AuthField id="register-name" label={t("authNameLabel")}>
@@ -140,7 +162,7 @@ function RegisterInner() {
 
       <p className="auth-alt">
         {t("authHaveAccount")}{" "}
-        <button type="button" className="auth-link" onClick={() => router.push("/login")}>
+        <button type="button" className="auth-link" onClick={goToLogin}>
           {t("authSignInCta")}
         </button>
       </p>

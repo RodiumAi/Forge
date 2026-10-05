@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import { api, getToken, setToken } from "@/lib/api";
@@ -14,6 +13,7 @@ import {
   subscribeSession,
   type SessionProfile,
 } from "@/lib/session-cache";
+import { clearForgeStatus } from "@/lib/forge-status";
 
 function displayNameFromEmail(email: string) {
   const local = email.split("@")[0] || email;
@@ -27,7 +27,6 @@ function initialsFromLabel(label: string) {
 }
 
 export function ProfileMenu() {
-  const router = useRouter();
   const { t } = useI18n();
   const rootRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -35,6 +34,7 @@ export function ProfileMenu() {
     typeof window !== "undefined" ? getSessionSnapshot()?.profile ?? null : null,
   );
   const [avatarBroken, setAvatarBroken] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
 
   useEffect(() => {
     if (!getToken()) return;
@@ -63,6 +63,8 @@ export function ProfileMenu() {
   }, []);
 
   async function logout() {
+    if (signingOut) return;
+    setSigningOut(true);
     try {
       if (getToken()) {
         await api("/auth/logout", { method: "POST" });
@@ -71,8 +73,9 @@ export function ProfileMenu() {
       // Always clear local session even if revoke fails.
     }
     clearSessionCache();
+    clearForgeStatus();
     setToken(null);
-    router.push("/");
+    window.location.assign("/");
   }
 
   const email = profile?.email || "";
@@ -129,12 +132,21 @@ export function ProfileMenu() {
             type="button"
             className="profile-menu-item danger"
             role="menuitem"
+            disabled={signingOut}
             onClick={() => void logout()}
           >
-            {t("logout")}
+            {signingOut ? t("logoutWorking") : t("logout")}
           </button>
         </div>
       )}
+      {signingOut ? (
+        <div className="logout-veil" role="status" aria-live="polite">
+          <div className="logout-veil-card">
+            <span className="logout-veil-dot" aria-hidden />
+            {t("logoutWorking")}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -18,6 +18,7 @@ from app.services import history
 from app.services.cpu_pool import run_cpu
 from app.services.filesystem import write_file
 from app.services.import_validator import ImportViolation, validate_write_content
+from app.services.typography import strip_long_dashes_in_file
 
 logger = logging.getLogger("apply_writes")
 
@@ -136,6 +137,8 @@ def apply_validated_writes(
         if found:
             violations.extend(v.as_dict() for v in found)
             continue
+        # House typography: no long dashes on the generated site (text, SEO, alt…).
+        content = strip_long_dashes_in_file(path, content)
         content, merge_info = _css_preserving_content(project_id, path, content)
         if merge_info:
             violations.append(merge_info)

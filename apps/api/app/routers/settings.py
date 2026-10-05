@@ -1,6 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
+import httpx
+import re
+
 from app.auth import get_current_user
 from app.config import get_settings
 from app.crypto import decrypt_secret, encrypt_secret, mask_api_key
@@ -15,6 +18,8 @@ from app.schemas import (
     RodiumWalletByKeyOut,
     SettingsOut,
     SettingsUpdate,
+    PaymentCountryOut,
+    PaymentCountryUpdate,
 )
 from app.services.llm import RodiumError
 from app.services.rodium import fetch_wallet_balance_by_api_key, verify_rodium_api_key
@@ -84,6 +89,40 @@ def update_settings(
         rodium_key_hint=row.rodium_api_key_hint,
         default_model=row.default_model,
     )
+
+
+@router.patch("/payment-country", response_model=PaymentCountryOut)
+async def set_payment_country(
+    body: PaymentCountryUpdate,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> PaymentCountryOut:
+    iso = body.iso2.strip().upper()
+    if not re.fullmatch(r"[A-Z]{2}", iso):
+        raise HTTPException(status_code=422, detail="Unknown country")
+    row = _get_or_create_settings(db, user)
+    row.payment_country_iso = iso
+    db.commit()
+    if user.rodium_sub:
+        try:
+            from app.services.rodium_generation import ensure_rodium_access_token
+
+            access = await ensure_rodium_access_token(db, user, row)
+            await _remember_platform_country(access, iso)
+        except Exception:
+            pass
+    return PaymentCountryOut(iso2=iso)
+
+
+async def _remember_platform_country(access: str, iso2: str) -> None:
+    settings = get_settings()
+    base = (settings.rodium_oidc_internal_issuer or settings.rodium_oidc_issuer).rstrip("/")
+    async with httpx.AsyncClient(timeout=8) as client:
+        await client.patch(
+            f"{base}/api/v1/me",
+            json={"countryIso2": iso2},
+            headers={"Authorization": f"Bearer {access}"},
+        )
 
 
 @router.get("/rodium", response_model=RodiumKeyOut)

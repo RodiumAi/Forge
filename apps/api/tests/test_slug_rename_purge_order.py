@@ -81,7 +81,7 @@ def rename_api(tmp_path_factory, monkeypatch):
 
 
 def test_slug_rename_purges_before_commit(rename_api):
-    client, project, _db, order = rename_api
+    client, project, db, order = rename_api
 
     response = client.patch(
         f"/projects/{project.id}",

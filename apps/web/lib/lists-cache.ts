@@ -1,5 +1,4 @@
 import { api, getToken } from "@/lib/api";
-import type { Locale } from "@/lib/i18n/dictionaries";
 
 const PROJECTS_KEY = "forge_projects_v1";
 const TEMPLATES_KEY = "forge_templates_v1";
@@ -23,6 +22,8 @@ export type CachedProject = {
   status?: string;
   has_thumbnail?: boolean;
   platform?: "web" | "mobile";
+  access_role?: string;
+  collaborators?: { name: string | null; email: string; avatar_url: string | null }[];
 };
 
 export type CachedTemplate = {
@@ -68,8 +69,8 @@ let projectsMemory: ListEnvelope<CachedProject> | null = null;
 let templatesMemory: ListEnvelope<CachedTemplate> | null = null;
 let integrationsMemory: ListEnvelope<CachedIntegration> | null = null;
 let projectsFlight: Promise<CachedProject[]> | null = null;
-const templatesFlightByLocale = new Map<string, Promise<CachedTemplate[]>>();
-const integrationsFlightByLocale = new Map<string, Promise<CachedIntegration[]>>();
+let templatesFlight: Promise<CachedTemplate[]> | null = null;
+let integrationsFlight: Promise<CachedIntegration[]> | null = null;
 
 function tokenFingerprint(): string | null {
   const token = getToken();
@@ -166,14 +167,12 @@ export function invalidateProjectsCache() {
 
 export function invalidateTemplatesCache() {
   templatesMemory = null;
-  templatesFlightByLocale.clear();
   writeStorage(TEMPLATES_KEY, null);
   notify(templateListeners);
 }
 
 export function invalidateIntegrationsCache() {
   integrationsMemory = null;
-  integrationsFlightByLocale.clear();
   writeStorage(INTEGRATIONS_KEY, null);
   notify(integrationListeners);
 }
@@ -235,13 +234,27 @@ function commitIntegrations(locale: string, items: CachedIntegration[]) {
   notify(integrationListeners);
 }
 
+function mergeProjects(server: CachedProject[], local: CachedProject[]): CachedProject[] {
+  const seen = new Set(server.map((item) => item.id));
+  const extra = local.filter((item) => !seen.has(item.id));
+  return extra.length ? [...extra, ...server] : server;
+}
+
 async function fetchProjects(locale: string): Promise<CachedProject[]> {
   if (projectsFlight) return projectsFlight;
+  const startedAt = Date.now();
   projectsFlight = (async () => {
     try {
       const list = await api<CachedProject[]>("/projects");
-      commitProjects(locale, list);
-      return list;
+      // A create can prepend while this request is in flight. Keep that new
+      // card if the server list was captured before it existed.
+      const local = projectsMemory;
+      const items =
+        local && local.locale === locale && local.updatedAt > startedAt
+          ? mergeProjects(list, local.items)
+          : list;
+      commitProjects(locale, items);
+      return items;
     } finally {
       projectsFlight = null;
     }
@@ -250,39 +263,31 @@ async function fetchProjects(locale: string): Promise<CachedProject[]> {
 }
 
 async function fetchTemplates(locale: string): Promise<CachedTemplate[]> {
-  const existing = templatesFlightByLocale.get(locale);
-  if (existing) return existing;
-  const flight = (async () => {
+  if (templatesFlight) return templatesFlight;
+  templatesFlight = (async () => {
     try {
-      const list = await api<CachedTemplate[]>("/templates", {}, locale as Locale);
+      const list = await api<CachedTemplate[]>("/templates");
       commitTemplates(locale, list);
       return list;
     } finally {
-      templatesFlightByLocale.delete(locale);
+      templatesFlight = null;
     }
   })();
-  templatesFlightByLocale.set(locale, flight);
-  return flight;
+  return templatesFlight;
 }
 
 async function fetchIntegrations(locale: string): Promise<CachedIntegration[]> {
-  const existing = integrationsFlightByLocale.get(locale);
-  if (existing) return existing;
-  const flight = (async () => {
+  if (integrationsFlight) return integrationsFlight;
+  integrationsFlight = (async () => {
     try {
-      const list = await api<CachedIntegration[]>(
-        "/integrations",
-        {},
-        locale as Locale,
-      );
+      const list = await api<CachedIntegration[]>("/integrations");
       commitIntegrations(locale, list);
       return list;
     } finally {
-      integrationsFlightByLocale.delete(locale);
+      integrationsFlight = null;
     }
   })();
-  integrationsFlightByLocale.set(locale, flight);
-  return flight;
+  return integrationsFlight;
 }
 
 /**

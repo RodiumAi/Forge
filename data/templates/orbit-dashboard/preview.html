@@ -2,44 +2,93 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>orbit-dashboard preview</title>
+<title>Orbit Admin Dashboard — preview</title>
 <style>
-  body{margin:0;font-family:"Segoe UI",system-ui,sans-serif;background:#f1f5f9;color:#0f172a;display:flex}
-  .side{width:64px;background:#0f172a;min-height:180px;padding:10px 6px}
-  .dot{width:10px;height:10px;border-radius:50%;background:#2563eb;margin:4px auto 12px}
-  .item{height:8px;border-radius:4px;background:#1e293b;margin:8px 6px}
-  .item.on{background:#2563eb}
-  .main{flex:1;padding:10px}
-  .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
-  .search{background:#fff;border:1px solid #e2e8f0;border-radius:6px;width:55%;height:14px}
-  .av{width:16px;height:16px;border-radius:50%;background:#2563eb;overflow:hidden}
-  .av img{width:100%;height:100%;object-fit:cover;display:block}
-  .kpis{display:flex;gap:8px}
-  .kpi{flex:1;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:8px}
-  .kpi small{display:block;color:#64748b;font-size:7px;text-transform:uppercase}
-  .kpi b{font-size:12px}
-  .kpi span{display:block;font-size:7px;color:#16a34a}
-  .chart{background:#fff;border:1px solid #e2e8f0;border-radius:8px;margin-top:8px;padding:8px;display:flex;align-items:flex-end;gap:4px;height:48px}
-  .chart i{flex:1;background:#2563eb;border-radius:2px 2px 0 0}
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 480px; height: 300px; overflow: hidden; display: flex;
+    background: #f1f5f9; color: #0f172a;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  }
+  /* Sidebar */
+  .side { width: 118px; flex: none; background: #0f172a; color: #94a3b8; padding: 12px 10px; display: flex; flex-direction: column; }
+  .brand { display: flex; align-items: center; gap: 7px; color: #f8fafc; font-weight: 800; font-size: 11px; padding: 2px 6px 14px; }
+  .brand .d { width: 10px; height: 10px; border-radius: 50%; background: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.25); }
+  .nav { display: flex; flex-direction: column; gap: 3px; flex: 1; }
+  .nav a { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 7px; font-size: 8.5px; color: #94a3b8; }
+  .nav a .g { width: 10px; text-align: center; opacity: .8; }
+  .nav a.on { background: #2563eb; color: #fff; }
+  .foot { font-size: 7px; color: #475569; padding: 6px 8px; }
+  /* Main */
+  .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .top { background: #fff; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; }
+  .search { flex: 1; max-width: 190px; height: 15px; border: 1px solid #e2e8f0; border-radius: 6px; background: #f1f5f9; }
+  .top .r { display: flex; align-items: center; gap: 8px; }
+  .bell { font-size: 10px; color: #64748b; }
+  .av { width: 18px; height: 18px; border-radius: 50%; overflow: hidden; background: linear-gradient(135deg,#2563eb,#1e40af); }
+  .av img { width: 100%; height: 100%; object-fit: cover; }
+  .content { padding: 10px 12px; overflow: hidden; }
+  .h1 { font-size: 13px; font-weight: 700; }
+  .sub { font-size: 7.5px; color: #64748b; margin: 1px 0 8px; }
+  .kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-bottom: 8px; }
+  .kpi { background: #fff; border: 1px solid #e2e8f0; border-radius: 9px; padding: 7px 8px; }
+  .kpi small { display: block; color: #64748b; font-size: 6px; text-transform: uppercase; letter-spacing: .04em; }
+  .kpi b { font-size: 12px; font-weight: 800; }
+  .kpi .up { display: block; font-size: 6.5px; color: #16a34a; }
+  .kpi .dn { display: block; font-size: 6.5px; color: #dc2626; }
+  .panel { background: #fff; border: 1px solid #e2e8f0; border-radius: 9px; padding: 8px 9px; }
+  .ph { display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; }
+  .ph b { font-size: 8.5px; }
+  .ph .tag { font-size: 6.5px; color: #64748b; background: #f1f5f9; border-radius: 5px; padding: 1px 6px; }
+  .chart { display: flex; align-items: flex-end; gap: 4px; height: 46px; }
+  .chart .c { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 3px; }
+  .chart .b { width: 100%; border-radius: 3px 3px 0 0; background: linear-gradient(180deg,#3b82f6,#2563eb); }
+  .chart .l { font-size: 5px; color: #94a3b8; }
 </style>
 </head>
 <body>
   <div class="side">
-    <div class="dot"></div>
-    <div class="item on"></div><div class="item"></div><div class="item"></div>
-    <div class="item"></div><div class="item"></div>
+    <div class="brand"><span class="d"></span> Vantage Ops</div>
+    <nav class="nav">
+      <a class="on"><span class="g">◧</span> Overview</a>
+      <a><span class="g">▤</span> Orders</a>
+      <a><span class="g">◎</span> Customers</a>
+      <a><span class="g">◔</span> Reports</a>
+      <a><span class="g">▭</span> Billing</a>
+      <a><span class="g">⚙</span> Settings</a>
+    </nav>
+    <div class="foot">v0.0.1 · demo data</div>
   </div>
   <div class="main">
-    <div class="top"><div class="search"></div><div class="av"><img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=70" alt=""></div></div>
-    <div class="kpis">
-      <div class="kpi"><small>Revenue</small><b>$84,210</b><span>+12.4%</span></div>
-      <div class="kpi"><small>Customers</small><b>3,482</b><span>+5.1%</span></div>
-      <div class="kpi"><small>Tickets</small><b>127</b><span>-8.3%</span></div>
+    <div class="top">
+      <div class="search"></div>
+      <div class="r"><span class="bell">◔</span><span class="av"><img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&q=70" alt=""></span></div>
     </div>
-    <div class="chart">
-      <i style="height:40%"></i><i style="height:55%"></i><i style="height:48%"></i>
-      <i style="height:70%"></i><i style="height:62%"></i><i style="height:88%"></i>
-      <i style="height:75%"></i><i style="height:95%"></i>
+    <div class="content">
+      <div class="h1">Overview</div>
+      <div class="sub">Here's what happened across your workspace this month.</div>
+      <div class="kpis">
+        <div class="kpi"><small>Revenue</small><b>$84,210</b><span class="up">▲ 12.4%</span></div>
+        <div class="kpi"><small>Customers</small><b>3,482</b><span class="up">▲ 5.1%</span></div>
+        <div class="kpi"><small>Open tickets</small><b>127</b><span class="dn">▼ 8.3%</span></div>
+      </div>
+      <div class="panel">
+        <div class="ph"><b>Revenue by month</b><span class="tag">2026</span></div>
+        <div class="chart">
+          <div class="c"><div class="b" style="height:42%"></div><span class="l">J</span></div>
+          <div class="c"><div class="b" style="height:55%"></div><span class="l">F</span></div>
+          <div class="c"><div class="b" style="height:48%"></div><span class="l">M</span></div>
+          <div class="c"><div class="b" style="height:63%"></div><span class="l">A</span></div>
+          <div class="c"><div class="b" style="height:71%"></div><span class="l">M</span></div>
+          <div class="c"><div class="b" style="height:58%"></div><span class="l">J</span></div>
+          <div class="c"><div class="b" style="height:80%"></div><span class="l">J</span></div>
+          <div class="c"><div class="b" style="height:74%"></div><span class="l">A</span></div>
+          <div class="c"><div class="b" style="height:88%"></div><span class="l">S</span></div>
+          <div class="c"><div class="b" style="height:66%"></div><span class="l">O</span></div>
+          <div class="c"><div class="b" style="height:92%"></div><span class="l">N</span></div>
+          <div class="c"><div class="b" style="height:97%"></div><span class="l">D</span></div>
+        </div>
+      </div>
     </div>
   </div>
 </body>

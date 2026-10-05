@@ -1,12 +1,20 @@
 {
-  "id": "atelier-mode",
   "kind": "web",
-  "title": { "en": "Atelier Mode", "fr": "Atelier Mode" },
+  "id": "atelier-mode",
+  "title": {
+    "en": "Atelier Mode",
+    "fr": "Atelier Mode"
+  },
   "description": {
     "en": "Editorial luxury fashion e-commerce: full-bleed photography, fine serif type, offset lookbook grid, minimal product cards and a maison heritage story.",
     "fr": "E-commerce mode luxe éditorial : photos plein cadre, serif fine, lookbook en grille décalée, fiches produit épurées et récit d'héritage de la maison."
   },
-  "tags": ["fashion", "ecommerce", "luxury", "editorial"],
+  "tags": [
+    "fashion",
+    "ecommerce",
+    "luxury",
+    "editorial"
+  ],
   "preview": "preview.html",
   "bootHint": {
     "en": "Adapt atelier-mode: maison name, collection copy, product names and prices.",

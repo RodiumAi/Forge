@@ -29,6 +29,13 @@ class RodiumGenerationAuth:
     access_token: str | None = None
     api_key_id: str | None = None
     api_key_secret: str | None = None
+    billing_uid: str | None = None
+    # Shared-project FRODI billing (owner_pays). When the actor differs from the
+    # payer, these carry the collaborator identity + per-cycle FRODI ceiling so
+    # the gateway can enforce the cap at the reserve chokepoint (F-1).
+    actor_uid: str | None = None
+    project_id: str | None = None
+    frodi_cap_per_cycle: int | None = None
 
 
 def pick_default_api_key_id(keys: list, preferred: str | None = None) -> str | None:
@@ -249,6 +256,9 @@ async def resolve_generation_auth(
         raise HTTPException(status_code=400, detail="RodiumAi API key is required")
     rodium_sub = user.rodium_sub
     selected_key = row.selected_rodium_api_key_id
+    from app.config import get_settings
+
+    cloud = get_settings().forge_cloud_enabled and bool(rodium_sub)
     if rodium_sub and selected_key:
         access = await ensure_rodium_access_token(db, user, row)
         # Token refresh commits — re-read settings row in case the session moved.
@@ -257,11 +267,14 @@ async def resolve_generation_auth(
             mode="playground",
             access_token=access,
             api_key_id=row.selected_rodium_api_key_id or selected_key,
+            billing_uid=rodium_sub,
         )
     if row.rodium_api_key_encrypted:
         try:
             secret = decrypt_secret(row.rodium_api_key_encrypted)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail="Stored RodiumAi key is unreadable") from exc
-        return RodiumGenerationAuth(mode="secret", api_key_secret=secret)
+        return RodiumGenerationAuth(mode="secret", api_key_secret=secret, billing_uid=rodium_sub)
+    if cloud:
+        return RodiumGenerationAuth(mode="playground", billing_uid=rodium_sub)
     raise HTTPException(status_code=400, detail="RodiumAi API key is required")

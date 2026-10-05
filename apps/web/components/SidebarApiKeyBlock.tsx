@@ -5,7 +5,6 @@ import { KeyRound } from "lucide-react";
 import { api, getToken } from "@/lib/api";
 import { Icon } from "@/components/ui/icon";
 import { useI18n } from "@/lib/i18n/I18nProvider";
-import { startRodiumOAuth } from "@/lib/rodium-oauth";
 import { patchSessionCache, refreshRodiumWallet, getSessionSnapshot } from "@/lib/session-cache";
 
 type RodiumAccount = {
@@ -62,7 +61,6 @@ export function SidebarApiKeyBlock() {
   const [showPaste, setShowPaste] = useState(false);
   const [apiKeyPaste, setApiKeyPaste] = useState("");
   const [saving, setSaving] = useState(false);
-  const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -212,30 +210,6 @@ export function SidebarApiKeyBlock() {
     }
   }
 
-  async function onConnect() {
-    setConnecting(true);
-    setError(null);
-    const result = await startRodiumOAuth({
-      returnTo: typeof window !== "undefined" ? window.location.pathname : "/dashboard",
-      unavailableHref: null,
-    });
-    if (!result.ok) {
-      setConnecting(false);
-      if (result.reason === "oidc_unavailable") {
-        setShowPaste(true);
-        setError(t("rodiumManualKeyHelp"));
-      } else if (result.reason === "popup_blocked") {
-        setError(t("authSocialPopupBlocked"));
-      } else if (result.reason === "cancelled") {
-        // User closed the window.
-      } else if (result.error instanceof Error) {
-        setError(result.error.message);
-      } else {
-        setError(t("errorGeneric"));
-      }
-    }
-  }
-
   if (loading) {
     return (
       <div className="home-sidebar-key-block" aria-busy="true">
@@ -298,20 +272,6 @@ export function SidebarApiKeyBlock() {
               <p className="home-sidebar-key-hint muted">{t("rodiumGenerateKeyHint")}</p>
             </>
           ) : null}
-        </>
-      ) : null}
-
-      {!linked ? (
-        <>
-          <button
-            type="button"
-            className="home-sidebar-key-btn"
-            onClick={() => void onConnect()}
-            disabled={connecting}
-          >
-            {connecting ? t("rodiumConnectWorking") : t("connectRodiumAi")}
-          </button>
-          <p className="home-sidebar-key-hint muted">{t("connectRodiumAiHint")}</p>
         </>
       ) : null}
 

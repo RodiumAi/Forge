@@ -6,15 +6,24 @@ import { api } from "@/lib/api";
 import { Icon } from "@/components/ui/icon";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 
+type Actor = {
+  name: string | null;
+  email: string | null;
+  avatar_url: string | null;
+};
+
 type Snapshot = {
   id: string;
   label: string;
   created_at: string;
   files_changed: number;
+  actor?: Actor | null;
 };
 
 type HistoryResponse = {
   available: boolean;
+  limited?: boolean;
+  total?: number;
   snapshots: Snapshot[];
 };
 
@@ -42,14 +51,20 @@ export function HistoryPanel({
   open,
   onClose,
   onRestored,
+  embedded = false,
+  onUpgrade,
 }: {
   projectId: string;
   open: boolean;
   onClose: () => void;
   onRestored: () => void;
+  embedded?: boolean;
+  onUpgrade?: () => void;
 }) {
   const { t, locale } = useI18n();
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
+  const [limited, setLimited] = useState(false);
+  const [total, setTotal] = useState(0);
   const [available, setAvailable] = useState(true);
   const [loading, setLoading] = useState(false);
   const [restoringId, setRestoringId] = useState<string | null>(null);
@@ -62,6 +77,8 @@ export function HistoryPanel({
       const res = await api<HistoryResponse>(`/projects/${projectId}/history`);
       setAvailable(res.available);
       setSnapshots(res.snapshots || []);
+      setLimited(Boolean(res.limited));
+      setTotal(res.total || (res.snapshots || []).length);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("errorGeneric"));
     } finally {
@@ -104,37 +121,8 @@ export function HistoryPanel({
 
   if (!open) return null;
 
-  return (
-    <div className="design-slideover-root">
-      {/* Backdrop: also catches clicks over the preview iframe, which never
-          reach a document-level listener. */}
-      <button
-        type="button"
-        className="design-slideover-backdrop"
-        aria-label={t("close")}
-        onClick={onClose}
-      />
-      <aside
-        className="design-slideover history-slideover"
-        role="dialog"
-        aria-modal="true"
-        aria-label={t("historyTitle")}
-      >
-      <header className="history-panel-head">
-        <span className="history-panel-title">
-          <Icon icon={History} className="ui-icon-sm" />
-          {t("historyTitle")}
-        </span>
-        <button
-          type="button"
-          className="history-panel-close"
-          onClick={onClose}
-          aria-label={t("close")}
-        >
-          <Icon icon={X} className="ui-icon-sm" />
-        </button>
-      </header>
-
+  const body = (
+    <>
       {!available ? (
         <p className="history-panel-empty">{t("historyUnavailable")}</p>
       ) : loading && !snapshots.length ? (
@@ -155,6 +143,18 @@ export function HistoryPanel({
                   {relativeTime(snap.created_at, locale)}
                   {idx === 0 ? ` · ${t("historyCurrent")}` : ""}
                 </span>
+                {snap.actor?.name || snap.actor?.email ? (
+                  <span className="history-actor">
+                    <span className="history-actor-avatar" aria-hidden>
+                      {snap.actor.avatar_url ? (
+                        <img src={snap.actor.avatar_url} alt="" />
+                      ) : (
+                        initials(snap.actor.name || snap.actor.email || "")
+                      )}
+                    </span>
+                    {snap.actor.name || snap.actor.email}
+                  </span>
+                ) : null}
               </div>
               {idx > 0 ? (
                 <button
@@ -172,8 +172,56 @@ export function HistoryPanel({
         </ol>
       )}
 
+      {limited ? (
+        <div className="history-upgrade">
+          <p>{t("historyLimited").replace("{n}", String(snapshots.length || 5))}</p>
+          {onUpgrade ? (
+            <button type="button" className="btn" onClick={onUpgrade}>
+              {t("historyUpgrade")}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
       {error ? <p className="history-panel-error">{error}</p> : null}
+    </>
+  );
+
+  if (embedded) {
+    return <div className="history-embedded">{body}</div>;
+  }
+
+  return (
+    <div className="design-slideover-root">
+      <button
+        type="button"
+        className="design-slideover-backdrop"
+        aria-label={t("close")}
+        onClick={onClose}
+      />
+      <aside
+        className="design-slideover history-slideover"
+        role="dialog"
+        aria-modal="true"
+        aria-label={t("historyTitle")}
+      >
+        <header className="history-panel-head">
+          <span className="history-panel-title">
+            <Icon icon={History} className="ui-icon-sm" />
+            {t("historyTitle")}
+          </span>
+          <button type="button" className="history-panel-close" onClick={onClose} aria-label={t("close")}>
+            <Icon icon={X} className="ui-icon-sm" />
+          </button>
+        </header>
+        {body}
       </aside>
     </div>
   );
+}
+
+function initials(label: string): string {
+  const parts = label.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  return (parts[0]?.slice(0, 2) || "?").toUpperCase();
 }

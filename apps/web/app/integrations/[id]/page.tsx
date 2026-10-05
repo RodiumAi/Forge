@@ -39,7 +39,7 @@ export default function IntegrationDetailPage() {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    void api<Detail>(`/integrations/${encodeURIComponent(id)}`, {}, locale)
+    void api<Detail>(`/integrations/${encodeURIComponent(id)}`)
       .then((data) => {
         if (!cancelled) setDetail(data);
       })
@@ -94,7 +94,13 @@ export default function IntegrationDetailPage() {
               </div>
 
               <div className="integ-detail-meta">
-                <span className="integ-badge">{t("integAccessYes")}</span>
+                {detail.access === "partial" ? (
+                  <span className="integ-badge integ-badge-partial">
+                    {t("integPartial")}
+                  </span>
+                ) : (
+                  <span className="integ-badge">{t("integAccessYes")}</span>
+                )}
                 {detail.categories.map((c) => (
                   <span key={c} className="integ-chip">
                     {c}

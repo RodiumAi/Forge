@@ -17,6 +17,7 @@ import { api, apiBase, getToken } from "@/lib/api";
 import { projectPublicUrl } from "@/lib/asset-url";
 import QRCode from "qrcode";
 import { Icon } from "@/components/ui/icon";
+import { exportAllowed, useForgeStatus } from "@/lib/forge-status";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { topProgressDone, topProgressStart } from "@/lib/top-progress";
 import { sitesBaseDomain, sitesHostLabel, sitesUrlForSlug } from "@/lib/sites-url";
@@ -79,11 +80,19 @@ export function PublishPopover({
   onMetaChange,
 }: Props) {
   const { t, locale } = useI18n();
+  const canExport = exportAllowed(useForgeStatus());
+  const [upgradeNote, setUpgradeNote] = useState<{ text: string; id: number } | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (!upgradeNote) return;
+    const timer = window.setTimeout(() => setUpgradeNote(null), 3200);
+    return () => window.clearTimeout(timer);
+  }, [upgradeNote]);
   const [pos, setPos] = useState<PopoverPos>({ top: 0, right: 0 });
   const [busy, setBusy] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -531,9 +540,16 @@ export function PublishPopover({
             <p className="publish-export-help">{t("optionsExportHelp")}</p>
             <button
               type="button"
-              className="publish-export-btn"
+              className={`publish-export-btn${canExport ? "" : " is-locked"}`}
               disabled={busy || exporting}
-              onClick={() => void exportZip()}
+              onClick={() => {
+                if (!canExport) {
+                  setUpgradeNote({ text: t("optionsExportTease"), id: Date.now() });
+                  return;
+                }
+                setUpgradeNote(null);
+                void exportZip();
+              }}
             >
               <Icon
                 icon={exporting ? Loader2 : Download}
@@ -541,6 +557,7 @@ export function PublishPopover({
               />
               {exporting ? t("optionsExporting") : t("optionsExport")}
             </button>
+            {upgradeNote ? <p className="publish-export-note">{upgradeNote.text}</p> : null}
             {exportNotice ? <p className="publish-export-ok">{exportNotice}</p> : null}
           </div>
 

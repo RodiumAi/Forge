@@ -9,9 +9,8 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
-from app.models import Project, ProjectDomain
+from app.models import Project
 from app.services import preview_babel
-from app.services.domains import cleanup_aws
 from app.services.filesystem import project_dir
 
 logger = logging.getLogger("project_delete")
@@ -63,19 +62,6 @@ def delete_project_full(db: Session, project: Project) -> None:
         logger.exception("Failed to cleanup published assets slug=%s", slug)
         db.rollback()
         raise
-
-    domain = db.query(ProjectDomain).filter(ProjectDomain.project_id == project.id).first()
-    if domain is not None:
-        try:
-            cleanup_aws(domain, get_settings())
-        except Exception:
-            logger.exception("Failed to cleanup custom domain project=%s", pid)
-        try:
-            from app.routers.sites_v1 import clear_resolve_cache
-
-            clear_resolve_cache(domain.hostname)
-        except Exception:
-            logger.exception("Failed to clear custom-domain cache project=%s", pid)
 
     db.delete(project)
     db.commit()

@@ -6,9 +6,10 @@ export type OptionsSubview =
   | "general"
   | "environment"
   | "brand"
+  | "history"
   | "seo"
   | "publishing"
-  | "stats"
+  | "subscription"
   | "danger";
 
 export type BuilderUrlState = {
@@ -27,7 +28,7 @@ const OPTIONS_SUBVIEWS = new Set<string>([
   "brand",
   "seo",
   "publishing",
-  "stats",
+  "subscription",
   "danger",
 ]);
 

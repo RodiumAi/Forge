@@ -1,6 +1,7 @@
 "use client";
 
 import { BrandLogo } from "@/components/BrandLogo";
+import { LandingPricing } from "@/components/landing/LandingPricing";
 import { LandingReveal } from "@/components/landing/LandingReveal";
 import {
   GithubMark,
@@ -11,11 +12,12 @@ import { PromptFileChips } from "@/components/PromptFileChips";
 import { GalleryTemplate, TemplateGallery } from "@/components/TemplateGallery";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { Icon } from "@/components/ui/icon";
-import { getToken } from "@/lib/api";
+import { getToken, ApiError } from "@/lib/api";
 import {
   FORGE_CONTRIBUTE,
   RODIUM_LEGAL,
   RODIUM_SITE,
+  rodiumRechargeUrl,
 } from "@/lib/constants/rodium-links";
 import {
   PENDING_PROMPT_KEY,
@@ -27,10 +29,10 @@ import {
   stashPendingPlatform,
 } from "@/lib/create-project";
 import { LocaleSwitch, useI18n } from "@/lib/i18n/I18nProvider";
+import { getSessionSnapshot } from "@/lib/session-cache";
 import {
   ensureTemplates,
   getCachedTemplates,
-  invalidateProjectsCache,
   prependProject,
   refreshTemplatesIfStale,
 } from "@/lib/lists-cache";
@@ -102,6 +104,14 @@ function LandingPromptBox({
           {error}{" "}
           {error === t("createNeedsKey") ? (
             <Link href="/settings?tab=generation">{t("openSettings")}</Link>
+          ) : error === t("createNeedsRodi") ? (
+            <a
+              href={rodiumRechargeUrl(getSessionSnapshot()?.profile?.rodium_sub)}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {t("rechargeRodi")}
+            </a>
           ) : null}
         </p>
       )}
@@ -261,6 +271,10 @@ export default function LandingPage() {
       }
 
       const gate = await ensureCanGenerate();
+      if (gate === "no_rodi") {
+        setError(t("createNeedsRodi"));
+        return;
+      }
       if (gate === "no_key") {
         setError(t("createNeedsKey"));
         return;
@@ -274,7 +288,6 @@ export default function LandingPage() {
         locale,
         platform,
       );
-      invalidateProjectsCache();
       prependProject(locale, project);
       files.forEach(revokePromptAttachment);
       setFiles([]);
@@ -283,6 +296,8 @@ export default function LandingPage() {
     } catch (err) {
       if (err instanceof PromptTooLongError) {
         setError(t("promptTooLong"));
+      } else if (err instanceof ApiError && err.code === "INSUFFICIENT_RODI") {
+        setError(t("createNeedsRodi"));
       } else {
         setError(err instanceof Error ? err.message : t("errorGeneric"));
       }
@@ -302,17 +317,25 @@ export default function LandingPage() {
     setError(null);
     try {
       const gate = await ensureCanGenerate();
+      if (gate === "no_rodi") {
+        setError(t("createNeedsRodi"));
+        setForkingId(null);
+        return;
+      }
       if (gate === "no_key") {
         setError(t("createNeedsKey"));
         setForkingId(null);
         return;
       }
       const project = await forkProjectFromTemplate(tpl);
-      invalidateProjectsCache();
       prependProject(locale, project);
       router.replace(`/projects/${project.id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("errorGeneric"));
+      if (err instanceof ApiError && err.code === "INSUFFICIENT_RODI") {
+        setError(t("createNeedsRodi"));
+      } else {
+        setError(err instanceof Error ? err.message : t("errorGeneric"));
+      }
       setForkingId(null);
     }
   }
@@ -395,6 +418,7 @@ export default function LandingPage() {
           <BrandLogo alt="" width={132} height={38} priority />
         </Link>
         <nav className="lp-nav-links" aria-label={t("homeNav")}>
+          <a href="#pricing">{t("landingNavPricing")}</a>
           <a href="#templates">{t("landingNavTemplates")}</a>
           <a href="#how">{t("landingNavHow")}</a>
           <a href="#contribute">{t("landingNavContribute")}</a>
@@ -421,6 +445,10 @@ export default function LandingPage() {
       <section className="lp-hero">
         <div className="lp-hero-wash" aria-hidden />
         <div className="lp-hero-inner">
+          <p className="lp-eyebrow">
+            <span className="lp-eyebrow-dot" aria-hidden />
+            {t("landingEyebrow")}
+          </p>
           <h1 className="lp-hero-title">
             <span className="lp-hero-claim">{t("landingTitleClaim")}</span>
           </h1>
@@ -517,6 +545,10 @@ export default function LandingPage() {
       </LandingReveal>
 
       <LandingReveal>
+        <LandingPricing />
+      </LandingReveal>
+
+      <LandingReveal>
         <section className="lp-why">
           <h2 className="lp-section-title">{t("landingWhyTitle")}</h2>
           <div className="lp-why-grid">
@@ -579,6 +611,7 @@ export default function LandingPage() {
           <div className="lp-footer-cols">
             <div>
               <h3>{t("landingFooterProduct")}</h3>
+              <a href="#pricing">{t("landingNavPricing")}</a>
               <a href="#templates">{t("landingNavTemplates")}</a>
               <a href="#how">{t("landingNavHow")}</a>
               <a href="#contribute">{t("landingNavContribute")}</a>

@@ -10,7 +10,7 @@ from app.auth import get_current_user
 from app.config import get_settings
 from app.db import SessionLocal, get_db
 from app.i18n import resolve_locale, t
-from app.models import AgentRun, Chat, Message, Project, User
+from app.models import AgentRun, Chat, Message, Project, ProjectCollaborator, User
 from app.schemas import (
     AgentRunOut,
     BranchMessagesRequest,
@@ -40,8 +40,11 @@ from app.services.orchestration.plan_persist import (
 )
 from app.services.orchestration.plan_worker import iter_run_event_sse, spawn_plan_job
 from app.services.orchestration.planner import (
+    assess_prompt_clarity,
     build_clarify_questions_llm,
+    build_final_brief,
     build_plan,
+    clarity_gauge_eligible,
     effort_label,
     format_answers_for_prompt,
     needs_clarify,
@@ -62,6 +65,66 @@ from app.services.url_capture import enrich_prompt_with_site_url_captures
 router = APIRouter(tags=["chats"])
 
 
+def _can_access_project(db: Session, user: User, project: Project) -> bool:
+    """Owner, or an invited collaborator on a shared project (Canva-style)."""
+    if project.user_id == user.id:
+        return True
+    from app.models import ProjectCollaborator
+
+    row = db.get(ProjectCollaborator, (project.id, user.id))
+    return row is not None and row.accepted_at is not None
+
+
+def _apply_tier_entitlements(route, cached):
+    """Enforce plan model-tier entitlements on a route.
+
+    The strong-model escalation (Claude) requires ``priority_generation`` and,
+    when a tier allowlist is set, membership in it. When not permitted the route
+    is downgraded to the platform default (primary) model rather than refused —
+    image tasks are never downgraded (that would break generation).
+    """
+    from dataclasses import replace
+
+    if cached is None or getattr(route, "is_image", False):
+        return route
+    allowed = None
+    if getattr(cached, "allowed_model_tiers", None):
+        try:
+            parsed = json.loads(cached.allowed_model_tiers)
+            allowed = parsed if isinstance(parsed, list) else None
+        except Exception:
+            allowed = None
+    tier_blocked = allowed is not None and route.tier not in allowed
+    escalation_blocked = route.tier == "escalation" and not bool(
+        getattr(cached, "priority_generation", False)
+    )
+    if tier_blocked or escalation_blocked:
+        return replace(route, model=get_settings().default_model, tier="primary")
+    return route
+
+
+def _route_for_request(route, db: Session, user: User, requested: str | None):
+    """Auto keeps the routed model. An explicit pick is used on plans that allow it."""
+    from dataclasses import replace
+
+    from app.models import ModelCatalog
+    from app.services.entitlements import get_entitlements
+
+    cached = get_entitlements(db, user)
+    slug = (requested or "").strip()
+    if (
+        slug
+        and slug.lower() != "auto"
+        and cached is not None
+        and cached.model_selection
+        and not getattr(route, "is_image", False)
+    ):
+        row = db.get(ModelCatalog, slug)
+        if row is not None and row.status == "active" and row.role == "text":
+            route = replace(route, model=row.slug, tier=row.tier or route.tier)
+    return _apply_tier_entitlements(route, cached)
+
+
 def _owned_chat(
     db: Session,
     user: User,
@@ -70,7 +133,7 @@ def _owned_chat(
     locale: str,
 ) -> tuple[Project, Chat]:
     project = db.get(Project, project_id)
-    if project is None or project.user_id != user.id:
+    if project is None or not _can_access_project(db, user, project):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=t("project_not_found", locale),  # type: ignore[arg-type]
@@ -125,7 +188,7 @@ def _error_sse_code(code: str, message: str) -> str:
     return _sse({"type": "error", "code": code, "message": message[:500]})
 
 
-def _generation_auth_resolver(user_id: UUID, locale: str):
+def _generation_auth_resolver(user_id: UUID, locale: str, project_id: UUID | None = None):
     """Resolve generation auth lazily, from inside the SSE generator.
 
     This used to run before the `StreamingResponse` was returned, and it is the
@@ -149,7 +212,26 @@ def _generation_auth_resolver(user_id: UUID, locale: str):
             if fresh is None:
                 raise RodiumError(t("rodium_session_expired", locale), 401, "auth_expired")  # type: ignore[arg-type]
             try:
-                return await resolve_generation_auth(auth_db, fresh)
+                auth = await resolve_generation_auth(auth_db, fresh)
+                if project_id is not None and auth.billing_uid:
+                    project = auth_db.get(Project, project_id)
+                    if project is not None and project.billing_policy == "owner_pays" and project.user_id != fresh.id:
+                        owner = auth_db.get(User, project.user_id)
+                        if owner and owner.rodium_sub:
+                            auth.billing_uid = owner.rodium_sub
+                            # Carry the collaborator identity + per-cycle FRODI
+                            # ceiling so the gateway enforces the cap on the
+                            # owner's FRODI (F-1). Without this a collaborator
+                            # could drain the owner's whole balance.
+                            auth.actor_uid = fresh.rodium_sub or str(fresh.id)
+                            auth.project_id = str(project.id)
+                            collab = auth_db.get(
+                                ProjectCollaborator, (project.id, fresh.id)
+                            )
+                            auth.frodi_cap_per_cycle = (
+                                collab.frodi_cap_per_cycle if collab else None
+                            )
+                return auth
             except HTTPException as exc:
                 detail = exc.detail
                 message = detail if isinstance(detail, str) else str(detail)
@@ -216,6 +298,93 @@ def _plan_requires_confirm(mode: str, task_class: str, plan: list) -> bool:
     return len(plan) >= 4
 
 
+def _brief_block(brief: str | None) -> str:
+    """How the final brief is handed to every build task."""
+    if not brief:
+        return ""
+    return "Final brief (the request merged with the user's clarification answers):\n" + brief.strip()
+
+
+async def _clarity_gate(
+    *,
+    run_pk: UUID,
+    prompt: str,
+    locale: str,
+    auth,
+    build_model: str,
+    force_scaffold: bool,
+    outcome: dict,
+):
+    """AI clarity gauge, as SSE. Sets ``outcome['paused'] = True`` when the run
+    now waits for the user's answers.
+
+    The AI scores the request 0-100. At or above the threshold the caller goes
+    straight to planning; below it the AI's own questions are sent and the run
+    parks in ``awaiting_clarify`` (answers → final brief → plan → build). A
+    failed gauge never blocks: the caller builds.
+    """
+    settings = get_settings()
+    threshold = max(0, min(100, int(settings.forge_clarity_threshold)))
+    gauge_model = (settings.effective_default_model or "").strip() or build_model
+    yield _sse({"type": "step", "id": "clarity", "label": t("step_clarity", locale), "status": "running"})
+    assessment = await assess_prompt_clarity(
+        prompt,
+        locale,  # type: ignore[arg-type]
+        auth=auth,
+        model=gauge_model,
+        force_scaffold=force_scaffold,
+        threshold=threshold,
+    )
+    if assessment.score is not None:
+        with SessionLocal() as s:
+            live = s.get(AgentRun, run_pk)
+            if live is not None:
+                live.clarity_score = assessment.score
+                s.commit()
+        label = t("step_clarity_score", locale, score=assessment.score)  # type: ignore[arg-type]
+    else:
+        label = t("step_clarity", locale)  # type: ignore[arg-type]
+    yield _sse({"type": "step", "id": "clarity", "label": label, "status": "done"})
+    if not assessment.needs_questions(threshold):
+        return
+
+    yield _sse({"type": "step", "id": "clarify", "label": t("step_clarify", locale), "status": "running"})
+    questions = assessment.questions
+    if not questions:
+        questions = await build_clarify_questions_llm(
+            prompt,
+            locale,  # type: ignore[arg-type]
+            auth=auth,
+            model=gauge_model,
+            force_scaffold=force_scaffold,
+        )
+    if not questions:
+        # Nothing worth asking after all — build rather than stall.
+        yield _sse({"type": "step", "id": "clarify", "label": t("step_clarify", locale), "status": "done"})
+        return
+    with SessionLocal() as s:
+        live = s.get(AgentRun, run_pk)
+        if live is None:
+            return
+        live.clarify_json = json.dumps(questions)
+        live.status = "awaiting_clarify"
+        s.commit()
+    yield _sse(
+        {
+            "type": "clarify",
+            "run_id": str(run_pk),
+            "questions": questions,
+            "clarity": {
+                "score": assessment.score,
+                "threshold": threshold,
+                "missing": assessment.missing,
+            },
+        }
+    )
+    yield _sse({"type": "step", "id": "clarify", "label": t("step_clarify", locale), "status": "done"})
+    outcome["paused"] = True
+
+
 async def _iter_single_pass(
     *,
     db: Session,
@@ -229,8 +398,13 @@ async def _iter_single_pass(
     route_effort: str,
     user_id: UUID | None = None,
     surgical_edit: bool = False,
+    carry_references: bool = True,
 ):
-    """Yield SSE for a direct code edit (no plan panel)."""
+    """Yield SSE for a direct code edit (no plan panel).
+
+    ``carry_references``: a follow-up about a design reproduced from a
+    screenshot is answered WITH that screenshot (off for text-only lite models).
+    """
     steps: list[dict] = []
     thinking_parts: list[str] = []
     full: list[str] = []
@@ -258,6 +432,7 @@ async def _iter_single_pass(
         auth=auth,
         model=model,
         surgical_edit=surgical_edit,
+        carry_references=carry_references,
     )
     # End the read transaction: the LLM stream below can run for minutes and
     # must not pin a pooled DB connection the whole time.
@@ -358,6 +533,7 @@ async def _iter_single_pass(
             auth=auth,
             model=model,
             surgical_edit=surgical_edit,
+            carry_references=carry_references,
         )
         db.commit()
         empty_retry_full: list[str] = []
@@ -414,6 +590,7 @@ async def _iter_single_pass(
             auth=auth,
             model=model,
             surgical_edit=surgical_edit,
+            carry_references=carry_references,
         )
         db.commit()
         retry_full: list[str] = []
@@ -621,7 +798,7 @@ async def send_message(
     # real HTTP status (404 / 402) so the client can act on them before a stream
     # even exists. Generation auth does NOT — see `_generation_auth_resolver`.
     require_rodi_for_paid_capability(user, db)
-    resolve_gen_auth = _generation_auth_resolver(user.id, locale)
+    resolve_gen_auth = _generation_auth_resolver(user.id, locale, project.id)
 
     user_content = body.content.strip()
     mode = (body.mode or "agent").strip().lower()
@@ -643,6 +820,10 @@ async def send_message(
     prior_count = db.query(Message).filter(Message.chat_id == chat.id).count()
     force_scaffold = prior_count == 0
     route = classify_and_route(user_content, force_scaffold=force_scaffold)
+    route = _route_for_request(route, db, user, getattr(body, "model", None))
+    from app.services.history import bind_history_actor
+
+    bind_history_actor(getattr(user, "name", None), user.email)
     has_atts = has_reference_attachments(user_content)
     route_effort = (
         t("effort_attachments", locale)  # type: ignore[arg-type]
@@ -682,6 +863,13 @@ async def send_message(
             force_scaffold=force_scaffold,
             task_class=route.task_class,
         )
+    )
+    # Not obviously vague → let the AI clarity gauge decide (builds only).
+    clarity_gauge = (
+        not use_single_pass
+        and not clarify
+        and get_settings().forge_clarity_gauge_enabled
+        and clarity_gauge_eligible(user_content, force_scaffold=force_scaffold, task_class=route.task_class)
     )
 
     # Prototype mode (FE-only): no connector clarify gate (Resend/Firebase/…).
@@ -995,6 +1183,21 @@ async def send_message(
             # First frames are out; now the slow part can safely fail.
             gen_auth = await resolve_gen_auth()
 
+            if clarity_gauge:
+                outcome = {"paused": False}
+                async for evt in _clarity_gate(
+                    run_pk=run_pk,
+                    prompt=user_content,
+                    locale=locale,
+                    auth=gen_auth,
+                    build_model=route_model,
+                    force_scaffold=force_scaffold,
+                    outcome=outcome,
+                ):
+                    yield evt
+                if outcome["paused"]:
+                    return
+
             if use_single_pass:
                 with SessionLocal() as stream_db:
                     async for chunk in _iter_single_pass(
@@ -1010,6 +1213,7 @@ async def send_message(
                         user_id=stream_user_id,
                         surgical_edit=route_task_class
                         in ("code.edit.small", "text.copy", "text.micro", "code.edit.medium"),
+                        carry_references=route_tier != "lite",
                     ):
                         yield chunk
                 return
@@ -1022,6 +1226,11 @@ async def send_message(
                     "status": "running",
                 }
             )
+            conversation = None
+            if not force_scaffold:
+                # A follow-up is planned as a continuation of this chat.
+                with SessionLocal() as ctx_db:
+                    conversation = _history(ctx_db, chat_id_pk)
             plan, plan_meta = await build_plan(
                 prompt=user_content,
                 answers=None,
@@ -1030,6 +1239,7 @@ async def send_message(
                 model=route_model,
                 locale=locale,  # type: ignore[arg-type]
                 project_id=project_id_str,
+                conversation=conversation,
             )
             with SessionLocal() as stream_db:
                 live = stream_db.get(AgentRun, run_pk)
@@ -1110,7 +1320,7 @@ async def submit_clarify(
     if run.status != "awaiting_clarify":
         raise HTTPException(status_code=400, detail=t("run_invalid_state", locale))  # type: ignore[arg-type]
     require_rodi_for_paid_capability(user, db)
-    resolve_gen_auth = _generation_auth_resolver(user.id, locale)
+    resolve_gen_auth = _generation_auth_resolver(user.id, locale, project.id)
 
     # Snapshot before commit — StreamingResponse runs after ORM instances expire.
     run_pk = run.id
@@ -1137,6 +1347,24 @@ async def submit_clarify(
                     "status": "done",
                 }
             )
+            gen_auth = await resolve_gen_auth()
+            questions = json.loads(clarify_json) if clarify_json else None
+            # Answers + request → ONE final brief the planner and every task read.
+            yield _sse({"type": "step", "id": "brief", "label": t("step_brief", locale), "status": "running"})
+            brief = await build_final_brief(
+                run_prompt,
+                questions=questions,
+                answers=answers,
+                locale=locale,  # type: ignore[arg-type]
+                auth=gen_auth,
+                model=run_model,
+            )
+            brief_row = db.get(AgentRun, run_pk)
+            if brief_row is not None:
+                brief_row.brief = brief
+                db.commit()
+            yield _sse({"type": "step", "id": "brief", "label": t("step_brief", locale), "status": "done"})
+
             yield _sse(
                 {
                     "type": "step",
@@ -1145,14 +1373,17 @@ async def submit_clarify(
                     "status": "running",
                 }
             )
+            history_now = _history(db, chat_id_pk)
             plan, plan_meta = await build_plan(
                 prompt=run_prompt,
                 answers=answers,
                 task_class=run_task_class,
-                auth=await resolve_gen_auth(),
+                auth=gen_auth,
                 model=run_model,
                 locale=locale,  # type: ignore[arg-type]
                 project_id=project_id_str,
+                conversation=history_now if len(history_now) > 1 else None,
+                brief=brief,
             )
             run_row = db.get(AgentRun, run_pk)
             if run_row is None:
@@ -1184,8 +1415,7 @@ async def submit_clarify(
                 return
 
             history = _history(db, chat_id_pk)
-            questions = json.loads(clarify_json) if clarify_json else None
-            answers_block = format_answers_for_prompt(answers, questions)
+            answers_block = _brief_block(brief) or format_answers_for_prompt(answers, questions)
             # Release the DB connection before relaying the whole run.
             db.commit()
             spawn_plan_job(
@@ -1244,7 +1474,7 @@ async def confirm_plan(
     run_prompt = run.prompt or ""
     answers = json.loads(run.answers_json) if run.answers_json else None
     questions = json.loads(run.clarify_json) if run.clarify_json else None
-    answers_block = format_answers_for_prompt(answers, questions)
+    answers_block = _brief_block(run.brief) or format_answers_for_prompt(answers, questions)
     model = run.model_slug or get_settings().effective_default_model
     project_id_str = str(project.id)
     chat_id_pk = chat.id
@@ -1370,9 +1600,20 @@ async def branch_messages(
     db.flush()
 
     resolve_gen_auth = _generation_auth_resolver(user.id, locale)
-    prior_count = db.query(Message).filter(Message.chat_id == chat.id).count()
+    # Messages BEFORE the edited one: editing the very first prompt is still a
+    # fresh build (the anchor itself survives the truncation, so counting the
+    # whole chat always gave >= 1 and never took the new-project path).
+    prior_count = (
+        db.query(Message)
+        .filter(Message.chat_id == chat.id, Message.created_at < anchor.created_at)
+        .count()
+    )
     force_scaffold = prior_count == 0
     route = classify_and_route(user_content, force_scaffold=force_scaffold)
+    route = _route_for_request(route, db, user, getattr(body, "model", None))
+    from app.services.history import bind_history_actor
+
+    bind_history_actor(getattr(user, "name", None), user.email)
     route_effort = (
         t("effort_attachments", locale)  # type: ignore[arg-type]
         if has_reference_attachments(user_content) and not route.is_image
@@ -1407,6 +1648,12 @@ async def branch_messages(
             force_scaffold=force_scaffold,
             task_class=route.task_class,
         )
+    )
+    clarity_gauge = (
+        not use_single_pass
+        and not clarify
+        and get_settings().forge_clarity_gauge_enabled
+        and clarity_gauge_eligible(user_content, force_scaffold=force_scaffold, task_class=route.task_class)
     )
 
     if clarify:
@@ -1486,6 +1733,20 @@ async def branch_messages(
                 }
             )
             gen_auth = await resolve_gen_auth()
+            if clarity_gauge:
+                outcome = {"paused": False}
+                async for evt in _clarity_gate(
+                    run_pk=run_pk,
+                    prompt=user_content,
+                    locale=locale,
+                    auth=gen_auth,
+                    build_model=route.model,
+                    force_scaffold=force_scaffold,
+                    outcome=outcome,
+                ):
+                    yield evt
+                if outcome["paused"]:
+                    return
             if use_single_pass:
                 async for chunk in _iter_single_pass(
                     db=db,
@@ -1500,6 +1761,7 @@ async def branch_messages(
                     user_id=user.id,
                     surgical_edit=route.task_class
                     in ("code.edit.small", "text.copy", "text.micro", "code.edit.medium"),
+                    carry_references=route.tier != "lite",
                 ):
                     yield chunk
                 return
@@ -1520,6 +1782,7 @@ async def branch_messages(
                 model=route.model,
                 locale=locale,  # type: ignore[arg-type]
                 project_id=project_id_str,
+                conversation=None if force_scaffold else _history(db, chat_id_pk),
             )
             live = db.get(AgentRun, run_pk)
             if live is None:

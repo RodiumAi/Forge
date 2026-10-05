@@ -18,7 +18,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import type { ChatErrorAction } from "@/lib/chat-errors";
-import { rodiumRechargeUrl } from "@/lib/constants/rodium-links";
+import { rodiumRechargeUrl, rodiumUpgradeUrl } from "@/lib/constants/rodium-links";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { startRodiumOAuth } from "@/lib/rodium-oauth";
 import { getSessionSnapshot, subscribeSession } from "@/lib/session-cache";
@@ -68,6 +68,29 @@ export function ChatErrorActions({ action, busy, onRetry, onResume, onEditInChat
   }
 
   if (action.kind === "none") return null;
+
+  if (action.kind === "upgrade") {
+    // Plan upgrade is primary (FRODI is plan-gated); RODI top-up stays as the
+    // quiet secondary link, mirroring the server's ["upgrade", "recharge"] order.
+    return (
+      <div className="builder-msg-error-actions">
+        <a
+          className="builder-msg-error-retry"
+          href={rodiumUpgradeUrl()}
+        >
+          {t("chatActionUpgrade")}
+        </a>
+        <a
+          className="builder-msg-error-link"
+          href={rodiumRechargeUrl(rodiumSub, returnHereAbsolute())}
+          target="_blank"
+          rel="noreferrer"
+        >
+          {t("chatActionRecharge")}
+        </a>
+      </div>
+    );
+  }
 
   if (action.kind === "recharge") {
     return (

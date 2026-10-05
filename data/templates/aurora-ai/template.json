@@ -1,12 +1,20 @@
 {
-  "id": "aurora-ai",
   "kind": "web",
-  "title": { "en": "Aurora AI", "fr": "Aurora AI" },
+  "id": "aurora-ai",
+  "title": {
+    "en": "Aurora AI",
+    "fr": "Aurora AI"
+  },
   "description": {
     "en": "Premium AI SaaS landing on deep black with animated aurora gradients, glassmorphism cards, 3D-tilted dashboard mockup, pricing and testimonials.",
     "fr": "Landing SaaS IA haut de gamme sur fond noir profond : aurores animées en dégradés, cartes en verre, mockup dashboard incliné en 3D, pricing et témoignages."
   },
-  "tags": ["ai", "saas", "landing", "dark"],
+  "tags": [
+    "ai",
+    "saas",
+    "landing",
+    "dark"
+  ],
   "preview": "preview.html",
   "bootHint": {
     "en": "Adapt aurora-ai: product name, hero copy, features, pricing tiers.",

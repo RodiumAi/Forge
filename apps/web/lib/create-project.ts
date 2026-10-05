@@ -1,4 +1,5 @@
 import { api } from "@/lib/api";
+import { refreshForgeStatus } from "@/lib/forge-status";
 import { buildPromptWithAttachments, type PromptAttachment, type PromptLabels } from "@/lib/prompt-attachments";
 import { uploadPromptAttachments } from "@/lib/prompt-upload";
 import { clearPendingFiles, loadPendingFiles, savePendingFiles } from "@/lib/pending-files";
@@ -71,11 +72,22 @@ function parseRodiBalance(raw: string | null | undefined): number {
 }
 
 /**
- * Preflight before creating / forking a project.
- * Linked Rodium accounts need a positive RODI balance (fresh wallet) and a
- * generation key. Unlinked accounts pass through (local / legacy).
+ * Preflight before creating or forking a project.
+ *
+ * Forge Cloud spends FRODI through the platform gateway, not the user's API
+ * key. A linked account with FRODI left can create immediately. The key and
+ * the RODI wallet only matter once that credit is gone (or off Forge Cloud).
  */
 export async function ensureCanGenerate(): Promise<GenerateGate> {
+  try {
+    const forge = await refreshForgeStatus();
+    if (forge && typeof forge.frodi === "number" && forge.frodi > 0) {
+      return "ok";
+    }
+  } catch {
+    /* Fall through to the RODI / key path. */
+  }
+
   try {
     const acc = await api<{
       has_generation_key?: boolean;
@@ -96,6 +108,22 @@ export async function ensureCanGenerate(): Promise<GenerateGate> {
   } catch {
     return "no_key";
   }
+}
+
+export type ProjectQuota = {
+  used: number;
+  limit: number | null; // null = unlimited
+  can_create: boolean;
+  plan: string | null;
+};
+
+/**
+ * Preflight the plan's project cap BEFORE creating (template or prompt), so a
+ * Free user at their limit sees an upgrade prompt instead of the generation
+ * starting and then failing. The number comes from the plan's `max_projects`.
+ */
+export async function fetchProjectQuota(): Promise<ProjectQuota> {
+  return api<ProjectQuota>("/projects/quota");
 }
 
 export async function createProjectFromPrompt(

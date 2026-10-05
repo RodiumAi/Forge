@@ -7,7 +7,11 @@ from typing import Any
 
 from app.prompts.system import THEME_QUALITY_HINT, system_prompt_with_design
 from app.services.ai_rules import ensure_ai_rules_md, load_ai_rules_md
-from app.services.attachments import enrich_user_message_with_vision
+from app.services.attachments import (
+    carried_reference_markers,
+    enrich_user_message_with_vision,
+    with_carried_references,
+)
 from app.services.filesystem import list_files, project_dir, read_file
 from app.services.prototype_mode import format_prototype_plugins_layer
 
@@ -308,11 +312,17 @@ async def build_llm_messages(
     model: str | None = None,
     surgical_edit: bool = False,
     focus_paths: list[str] | None = None,
+    carry_references: bool = True,
 ) -> list[dict[str, Any]]:
     """
     history: list of (role, content) including the latest user message.
     Layers 1–2 stable; 3 volatile; 4 compacted; 5 = last user turn already in history.
+
+    ``carry_references``: re-attach the most recent reference screenshot to the
+    final turn when that turn has none, so a follow-up about the same design is
+    answered WITH the image (callers on a text-only lite model pass False).
     """
+    carried = carried_reference_markers(history) if carry_references else []
     ensure_ai_rules_md(project_id)
     files = list_files(project_id)
     design = load_design_md(project_id)
@@ -434,6 +444,8 @@ async def build_llm_messages(
         )
     for idx, (role, content) in enumerate(recent):
         if role == "user" and idx == len(recent) - 1:
+            if carried:
+                content = with_carried_references(content, carried, locale)
             enriched = await enrich_user_message_with_vision(db, project_id, content)
             if isinstance(enriched, str):
                 enriched = _gateway_safe_content(enriched, fallback=user_query or "Continue.")

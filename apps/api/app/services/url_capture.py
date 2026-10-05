@@ -126,10 +126,8 @@ def _iframe_window_is_embed(window: str) -> bool:
             return False
         # Bound attribute name length to avoid quadratic scans.
         name_end = idx + 5
-        while (
-            name_end < len(lower)
-            and name_end - idx < 48
-            and (lower[name_end].isalnum() or lower[name_end] in "_-")
+        while name_end < len(lower) and name_end - idx < 48 and (
+            lower[name_end].isalnum() or lower[name_end] in "_-"
         ):
             name_end += 1
         if name_end > idx + 5 and lower[idx:name_end].endswith("src"):
@@ -148,7 +146,9 @@ def _script_window_is_embed(window: str) -> bool:
         if hint in lower:
             return True
     # Bare `.js` at end of a quoted URL inside the window.
-    return bool('.js"' in lower or ".js'" in lower)
+    if ".js\"" in lower or ".js'" in lower:
+        return True
+    return False
 
 
 def looks_like_third_party_embed_snippet(text: str) -> bool:
@@ -173,12 +173,9 @@ def looks_like_third_party_embed_snippet(text: str) -> bool:
         if lower.startswith("iframe", j) and (j + 6 >= n or not lower[j + 6].isalnum()):
             if _iframe_window_is_embed(window):
                 return True
-        elif (
-            lower.startswith("script", j)
-            and (j + 6 >= n or not lower[j + 6].isalnum())
-            and _script_window_is_embed(window)
-        ):
-            return True
+        elif lower.startswith("script", j) and (j + 6 >= n or not lower[j + 6].isalnum()):
+            if _script_window_is_embed(window):
+                return True
         i = lt + 1
     return False
 
@@ -282,6 +279,12 @@ def _capture_sync(url: str) -> list[tuple[str, bytes]]:
         raise RodiumError(f"Could not capture screenshots for {url}", None, "upstream") from exc
 
     shots: list[tuple[str, bytes]] = []
+    # verify=False is intentional with IP pinning: after net_guard resolves and
+    # blocks private/link-local targets, httpx_get_pinned_sync dials the pinned
+    # IP while keeping the original Host/SNI. Hostname cert checks cannot pass
+    # against a raw IP, so TLS verify is off here — SSRF mitigation is the
+    # resolver allowlist, not the browser's default trust store. Same reason
+    # Playwright ignores HTTPS errors on the (fully routed) context.
     with httpx.Client(
         follow_redirects=False,
         timeout=httpx.Timeout(20.0),

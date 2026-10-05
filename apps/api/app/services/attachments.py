@@ -49,6 +49,67 @@ _REFERENCE_FILENAME_RE = re.compile(
     re.I,
 )
 
+_REFERENCE_MARKER_RE = re.compile(
+    r"\[(?:Reference screenshot|Capture de référence|Image attached|Image jointe):\s*[^\]]+\]",
+    re.I,
+)
+#: How many earlier user turns a reference screenshot stays "live" for.
+CARRY_REFERENCE_WINDOW = 3
+
+
+def carried_reference_markers(
+    history: list[tuple[str, str]],
+    *,
+    window: int = CARRY_REFERENCE_WINDOW,
+) -> list[str]:
+    """Reference-screenshot markers to re-attach to the latest user turn.
+
+    Vision is only sent for the final user turn, so a follow-up such as "keep
+    the design but drop the phone mockup" used to reach the model WITHOUT the
+    screenshot it refers to — and the model invented a brand-new design. When
+    the latest user turn carries no reference image, return the markers of the
+    most recent earlier user turn (within ``window`` user turns) that did.
+    Site assets (``intent:asset``) are not carried: they are files, not specs.
+    """
+    if not history:
+        return []
+    turns = list(history)
+    last_role, last_content = turns[-1]
+    if last_role == "user":
+        if _REFERENCE_MARKER_RE.search(last_content or ""):
+            return []
+        turns = turns[:-1]
+    seen = 0
+    for role, content in reversed(turns):
+        if role != "user":
+            continue
+        seen += 1
+        if seen > window:
+            break
+        markers = [
+            m for m in _REFERENCE_MARKER_RE.findall(content or "") if "intent:asset" not in m.lower()
+        ]
+        if markers:
+            return markers
+    return []
+
+
+def with_carried_references(content: str, markers: list[str], locale: str = "en") -> str:
+    """Append earlier reference markers to a user turn, with a one-line note."""
+    if not markers:
+        return content
+    note = (
+        "(Capture(s) de référence envoyée(s) plus tôt dans cette conversation — "
+        "l'utilisateur continue d'itérer sur CE design : pars de cette image et du code actuel, "
+        "ne réinvente pas un autre design.)"
+        if locale == "fr"
+        else "(Reference screenshot(s) sent earlier in this conversation — the user is still "
+        "iterating on THIS design: work from this image and the current code, do not invent "
+        "a different design.)"
+    )
+    return f"{content}\n\n{note}\n" + "\n".join(markers)
+
+
 REFERENCE_VISION_INSTRUCTION = (
     "This is a REFERENCE screenshot/mockup for visual inspiration. "
     "Match its layout, hierarchy and style as closely as possible while preserving "

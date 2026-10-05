@@ -110,6 +110,9 @@ def put_domain(
 ) -> DomainOut:
     locale = resolve_locale(request)
     project = _owned(db, user, project_id, locale)
+    from app.services.entitlements import require_feature
+
+    require_feature(db, user, "custom_domain")
     settings = get_settings()
     rate_limit.enforce(
         request,

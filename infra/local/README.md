@@ -7,7 +7,7 @@ Stack Docker sans compte cloud. Le code applicatif est identique en local et en 
 | Object storage (S3) | MinIO `:9000` (console `:9001`) | boto3 + `OBJECT_STORE_ENDPOINT` |
 | KMS | `LocalKeyProvider` | `KEY_PROVIDER=local` + `DEV_MASTER_KEY` |
 | Secrets | `.env` | `SECRET_PROVIDER=env` |
-| Valkey / Redis | Valkey `:6380` (hôte) | même implémentation Redis |
+| Valkey / Redis | Valkey `127.0.0.1:6380` + `requirepass` | `REDIS_URL=redis://:…@…` |
 | Hébergement statique | Caddy `:8080` | Host `*.lvh.me` |
 
 ## Démarrage

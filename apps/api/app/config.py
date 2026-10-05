@@ -55,6 +55,19 @@ class Settings(BaseSettings):
     rodium_oidc_client_secret: str = ""
     rodium_oidc_redirect_uri: str = "http://localhost:3100/auth/callback"
     rodium_oidc_scopes: str = "openid profile email api_keys.read wallet.read"
+    # Forge Cloud lane. Empty on open-source clones (BYOK).
+    rodium_forge_gateway_token: str = ""
+    rodium_gateway_internal_url: str = ""
+    # Default per-collaborator weekly FRODI ceiling applied when a project is
+    # shared `owner_pays` and the owner leaves the cap blank. A guardrail so an
+    # invitee can't silently drain the owner's whole balance. The owner can
+    # raise/lower it, or set 0 for "no cap". FRODI units.
+    forge_default_collab_frodi_cap: int = 2000
+    # Clarity gauge: before a new build, the AI scores how clear the request is
+    # (0-100). At or above the threshold Forge builds straight away; below it,
+    # the AI asks targeted questions and merges the answers into a final brief.
+    forge_clarity_gauge_enabled: bool = True
+    forge_clarity_threshold: int = 70
 
     @field_validator("rodium_oidc_client_id", "rodium_oidc_client_secret", mode="before")
     @classmethod
@@ -70,7 +83,6 @@ class Settings(BaseSettings):
     @property
     def rodium_oidc_configured(self) -> bool:
         return bool(self.rodium_oidc_client_id)
-
     # Public origin of the RodiumAi user app (avatars often live there locally).
     rodium_user_app_url: str = "http://localhost:3000"
     # Public origin of THIS web app — used to build the links we email out
@@ -306,10 +318,6 @@ class Settings(BaseSettings):
         return self._rodium_oidc_server_base + "/api/v1/oauth/userinfo"
 
     @property
-    def rodium_oidc_jwks_url(self) -> str:
-        return self._rodium_oidc_server_base + "/api/v1/oauth/jwks"
-
-    @property
     def rodium_oidc_api_keys_url(self) -> str:
         return self._rodium_oidc_server_base + "/api/v1/oauth/api-keys"
 
@@ -334,6 +342,21 @@ class Settings(BaseSettings):
     @property
     def provisioning_enabled(self) -> bool:
         return bool(self.rodium_provision_token.strip())
+
+    @property
+    def forge_cloud_enabled(self) -> bool:
+        return bool(
+            self.rodium_forge_gateway_token.strip()
+            and self.rodium_gateway_internal_url.strip()
+            and self.provisioning_enabled
+        )
+
+    @property
+    def rodium_oidc_scopes_effective(self) -> str:
+        scopes = self.rodium_oidc_scopes.strip()
+        if self.forge_cloud_enabled and "forge.read" not in scopes.split():
+            return f"{scopes} forge.read"
+        return scopes
 
     @property
     def firebase_enabled(self) -> bool:

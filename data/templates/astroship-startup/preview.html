@@ -2,48 +2,92 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Astroship Startup preview</title>
+<title>Astroship Startup — preview</title>
 <style>
-  :root{--bg:#fff;--fg:#0f172a;--muted:#64748b;--accent:#4f46e5;--soft:#eef2ff}
-  *{margin:0;padding:0;box-sizing:border-box}
-  body{background:var(--bg);color:var(--fg);font-family:"Segoe UI",system-ui,sans-serif;padding:18px}
-  .bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px}
-  .brand{font-weight:700;font-size:14px}
-  .nav{display:flex;gap:10px;font-size:9px;color:var(--muted)}
-  .btn{background:var(--fg);color:#fff;font-size:9px;padding:4px 10px;border-radius:5px}
-  .hero{display:flex;gap:18px;align-items:center;margin-bottom:22px}
-  .hero-t{flex:1}
-  h1{font-size:18px;line-height:1.2}
-  .hero-t p{font-size:9px;color:var(--muted);margin:8px 0}
-  .cta{display:inline-block;background:var(--fg);color:#fff;font-size:9px;padding:5px 12px;border-radius:5px}
-  .art{flex:1;height:100px;border-radius:12px;background:radial-gradient(circle at 70% 30%,var(--soft),#f8fafc);overflow:hidden}
-  .art img{width:100%;height:100%;object-fit:cover;display:block}
-  .cards{display:flex;gap:12px}
-  .card{flex:1;border:1px solid #e2e8f0;border-radius:10px;padding:12px}
-  .ic{width:20px;height:20px;border-radius:6px;background:var(--soft);color:var(--accent);
-    display:grid;place-items:center;font-size:10px;margin-bottom:8px}
-  .card h3{font-size:10px;margin-bottom:4px}
-  .card p{font-size:8px;color:var(--muted)}
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 480px; height: 300px; overflow: hidden;
+    background: #ffffff; color: #0f172a;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    position: relative;
+  }
+  .glow {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(70% 60% at 82% -8%, rgba(79,70,229,.16), transparent 60%),
+      radial-gradient(50% 50% at -5% 20%, rgba(129,140,248,.12), transparent 60%);
+    pointer-events: none;
+  }
+  .bar { display: flex; align-items: center; gap: 12px; padding: 12px 18px; position: relative; }
+  .brand { display: flex; align-items: center; gap: 7px; font-weight: 800; font-size: 12.5px; letter-spacing: -.01em; }
+  .brand .m { width: 15px; height: 15px; border-radius: 5px; background: linear-gradient(135deg, #6366f1, #4f46e5); box-shadow: 0 4px 10px rgba(79,70,229,.35); }
+  .nav { display: flex; gap: 13px; font-size: 8.5px; color: #64748b; margin-left: 6px; }
+  .btn { margin-left: auto; background: #0f172a; color: #fff; font-size: 8.5px; font-weight: 700; padding: 5px 11px; border-radius: 6px; }
+  .hero { display: flex; gap: 16px; align-items: center; padding: 6px 18px 12px; position: relative; }
+  .htext { flex: 1.05; }
+  .pill { display: inline-flex; align-items: center; gap: 5px; font-size: 7px; font-weight: 700; color: #4f46e5; background: #eef2ff; padding: 3px 8px; border-radius: 99px; margin-bottom: 8px; }
+  .pill .d { width: 5px; height: 5px; border-radius: 50%; background: #4f46e5; }
+  h1 { font-size: 20px; line-height: 1.08; letter-spacing: -.03em; font-weight: 800; }
+  h1 span { background: linear-gradient(120deg, #4f46e5, #a855f7); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .lead { font-size: 8.5px; color: #64748b; line-height: 1.5; margin: 7px 0 10px; max-width: 210px; }
+  .ctas { display: flex; align-items: center; gap: 8px; }
+  .primary { background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; font-size: 8.5px; font-weight: 700; padding: 6px 13px; border-radius: 7px; box-shadow: 0 6px 14px rgba(79,70,229,.32); }
+  .ghost { font-size: 8.5px; font-weight: 600; color: #0f172a; }
+  .mock { flex: 1; height: 118px; border-radius: 12px; overflow: hidden; position: relative;
+    background: linear-gradient(160deg, #1e1b4b, #4f46e5);
+    box-shadow: 0 20px 40px rgba(30,27,75,.35); border: 1px solid rgba(255,255,255,.14); }
+  .mock .tb { display: flex; gap: 4px; padding: 8px 9px; }
+  .mock .tb i { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,.4); }
+  .mock .win { margin: 0 9px; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.14); border-radius: 8px; padding: 8px; }
+  .mock .row { display: flex; gap: 6px; margin-bottom: 6px; }
+  .mock .k { flex: 1; background: rgba(255,255,255,.14); border-radius: 5px; padding: 6px 7px; }
+  .mock .k b { display: block; color: #fff; font-size: 10px; font-weight: 800; }
+  .mock .k small { color: rgba(255,255,255,.7); font-size: 5.5px; }
+  .mock .chart { display: flex; align-items: flex-end; gap: 4px; height: 34px; }
+  .mock .chart span { flex: 1; border-radius: 3px 3px 0 0; background: linear-gradient(180deg, #a5b4fc, #6366f1); }
+  .feats { display: flex; gap: 8px; padding: 0 18px; position: relative; }
+  .card { flex: 1; border: 1px solid #eef2ff; background: #fbfbff; border-radius: 9px; padding: 8px 9px; }
+  .card .ic { width: 17px; height: 17px; border-radius: 6px; background: #eef2ff; color: #4f46e5; display: flex; align-items: center; justify-content: center; margin-bottom: 5px; }
+  .card b { display: block; font-size: 8.5px; }
+  .card p { font-size: 7px; color: #64748b; margin-top: 2px; line-height: 1.35; }
 </style>
 </head>
 <body>
+  <div class="glow"></div>
   <div class="bar">
-    <span class="brand">Launchpath</span>
-    <span class="nav"><span>Features</span><span>Pricing</span><span>About</span></span>
+    <span class="brand"><span class="m"></span> Launchpath</span>
+    <span class="nav"><span>Features</span><span>Pricing</span><span>Docs</span></span>
     <span class="btn">Sign up</span>
   </div>
   <div class="hero">
-    <div class="hero-t">
-      <h1>Ship your startup site before lunch</h1>
-      <p>A fast, friendly starter kit for founders and marketing pages.</p>
-      <span class="cta">Get Started Free</span>
+    <div class="htext">
+      <span class="pill"><span class="d"></span> New · v2 launch kit</span>
+      <h1>Ship your <span>startup</span> before lunch</h1>
+      <p class="lead">A fast, friendly starter for founders — landing, pricing and docs, ready to deploy.</p>
+      <div class="ctas">
+        <span class="primary">Get started free</span>
+        <span class="ghost">Live demo →</span>
+      </div>
     </div>
-    <div class="art"><img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=400&q=70" alt=""></div>
+    <div class="mock">
+      <div class="tb"><i></i><i></i><i></i></div>
+      <div class="win">
+        <div class="row">
+          <div class="k"><small>MRR</small><b>$24.8k</b></div>
+          <div class="k"><small>Signups</small><b>1,204</b></div>
+        </div>
+        <div class="chart">
+          <span style="height:40%"></span><span style="height:58%"></span><span style="height:49%"></span>
+          <span style="height:70%"></span><span style="height:62%"></span><span style="height:88%"></span>
+          <span style="height:76%"></span><span style="height:96%"></span>
+        </div>
+      </div>
+    </div>
   </div>
-  <div class="cards">
-    <div class="card"><div class="ic">◆</div><h3>Composable Blocks</h3><p>Assemble pages from prebuilt sections.</p></div>
-    <div class="card"><div class="ic">⚡</div><h3>Zero-Weight Pages</h3><p>Lean static markup, instant loads.</p></div>
-    <div class="card"><div class="ic">▲</div><h3>Search Ready</h3><p>Sitemaps and metadata built in.</p></div>
+  <div class="feats">
+    <div class="card"><div class="ic"><svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M4 5h7v7H4zM13 5h7v4h-7zM13 12h7v7h-7zM4 15h7v4H4z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></div><b>Composable blocks</b><p>Assemble pages from prebuilt sections.</p></div>
+    <div class="card"><div class="ic"><svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M13 3L4 14h6l-1 7 9-11h-6l1-7z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></div><b>Zero-weight pages</b><p>Lean static markup, instant loads.</p></div>
+    <div class="card"><div class="ic"><svg width="11" height="11" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="M20 20l-3.5-3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div><b>Search ready</b><p>Sitemaps and metadata built in.</p></div>
   </div>
 </body>
 </html>

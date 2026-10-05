@@ -179,7 +179,11 @@ def fallback_model(model: str) -> str | None:
 def classify_and_route(user_text: str, *, force_scaffold: bool = False) -> Route:
     raw = user_text or ""
     text = strip_attachment_noise(raw)
-    if force_scaffold and text and not _IMAGE_GENERATE_RE.search(text):
+    # The first chat message is planned as a full build. A short edit of something
+    # already on screen ("change this button to green") is not that build, and
+    # sending it to the scaffold planner produces a response the plan parser rejects.
+    small_edit = len(text) < 180 and bool(_SMALL_RE.search(text))
+    if force_scaffold and text and not small_edit and not _IMAGE_GENERATE_RE.search(text):
         if has_reference_attachments(raw) and extract_image_urls(raw):
             # Mockup-driven first build: Gemini vision, not Claude escalation.
             return route_task("code.scaffold.with_vision")

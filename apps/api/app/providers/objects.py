@@ -37,7 +37,9 @@ def _is_safe_site_object_key(key: str, *, under_prefix: str | None = None) -> bo
         return False
     if not _SITE_OBJECT_KEY_RE.fullmatch(key):
         return False
-    return under_prefix is None or key.startswith(under_prefix)
+    if under_prefix is not None and not key.startswith(under_prefix):
+        return False
+    return True
 
 
 def _resolve_static_credentials() -> tuple[str, str]:

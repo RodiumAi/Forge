@@ -2,18 +2,22 @@
 
 import { BrandLogo } from "@/components/BrandLogo";
 import { ProfileMenu } from "@/components/ProfileMenu";
-import { RodiumWalletBadge } from "@/components/RodiumWalletBadge";
-import { SidebarApiKeyBlock } from "@/components/SidebarApiKeyBlock";
+import { nextPlanName, RodiumWalletBadge } from "@/components/RodiumWalletBadge";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { Icon } from "@/components/ui/icon";
+import { rodiumUpgradeUrl } from "@/lib/constants/rodium-links";
+import { useForgeStatus } from "@/lib/forge-status";
 import { LocaleSwitch, useI18n } from "@/lib/i18n/I18nProvider";
 import {
   Blocks,
   ChevronLeft,
   ChevronRight,
+  CircleHelp,
   Home,
   LayoutTemplate,
   Settings,
+  Users,
+  Zap,
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -21,7 +25,7 @@ import { useEffect, useState } from "react";
 export const SIDEBAR_KEY = "forge_home_sidebar";
 export const BUILDER_SIDEBAR_KEY = "forge_builder_sidebar";
 
-export type HomeNavItem = "projects" | "templates" | "integrations" | "settings" | null;
+export type HomeNavItem = "projects" | "templates" | "integrations" | "how" | "settings" | "team" | null;
 
 type HomeShellProps = {
   children: React.ReactNode;
@@ -41,6 +45,10 @@ export function HomeShell({
   defaultOpen = true,
 }: HomeShellProps) {
   const { t } = useI18n();
+  const forge = useForgeStatus();
+  const planSlug = forge?.plan ?? forge?.entitlements?.plan_slug ?? "";
+  const showTeam = planSlug.startsWith("team");
+  const nextPlan = nextPlanName(planSlug);
   const [sidebarOpen, setSidebarOpen] = useState(defaultOpen);
 
   useEffect(() => {
@@ -123,6 +131,28 @@ export function HomeShell({
             <span className="home-sidebar-label">{t("navIntegrations")}</span>
           </Link>
           <Link
+            href="/dashboard/how"
+            className={`home-sidebar-btn ${activeNav === "how" ? "active" : ""}`}
+            title={t("landingNavHow")}
+          >
+            <span className="home-sidebar-icon" aria-hidden>
+              <Icon icon={CircleHelp} />
+            </span>
+            <span className="home-sidebar-label">{t("landingNavHow")}</span>
+          </Link>
+          {showTeam ? (
+            <Link
+              href="/team"
+              className={`home-sidebar-btn ${activeNav === "team" ? "active" : ""}`}
+              title="Team"
+            >
+              <span className="home-sidebar-icon" aria-hidden>
+                <Icon icon={Users} />
+              </span>
+              <span className="home-sidebar-label">Team</span>
+            </Link>
+          ) : null}
+          <Link
             href="/settings"
             className={`home-sidebar-btn ${activeNav === "settings" ? "active" : ""}`}
             title={t("settings")}
@@ -135,9 +165,32 @@ export function HomeShell({
         </nav>
 
         <hr className="home-sidebar-divider" />
-        <SidebarApiKeyBlock />
         <div className="home-sidebar-wallet">
           <RodiumWalletBadge compact collapsed={!sidebarOpen} />
+          {nextPlan && !showTeam ? (
+            <Link
+              href={rodiumUpgradeUrl()}
+              className="home-sidebar-upgrade"
+              title={t("upgradeToPlan").replace("{plan}", nextPlan)}
+            >
+              <span className="home-sidebar-upgrade-copy">
+                <strong className="home-sidebar-label">
+                  {t("upgradeToPlan").replace("{plan}", nextPlan)}
+                </strong>
+                <span className="home-sidebar-label">{t("upgradeUnlock")}</span>
+              </span>
+              <span className="home-sidebar-upgrade-bolt" aria-hidden>
+                <Icon icon={Zap} className="ui-icon-sm" />
+              </span>
+            </Link>
+          ) : null}
+          <Link
+            href="/settings?tab=generation"
+            className="home-sidebar-rodi-link"
+            title={t("useRodiBalance")}
+          >
+            <span className="home-sidebar-label">{t("useRodiBalance")}</span>
+          </Link>
         </div>
 
         <button
@@ -177,7 +230,7 @@ export function HomeShell({
 
 type HomeLayoutProps = {
   children: React.ReactNode;
-  activeNav: Exclude<HomeNavItem, null>;
+  activeNav: HomeNavItem;
   fillMain?: boolean;
 };
 

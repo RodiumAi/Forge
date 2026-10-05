@@ -20,13 +20,17 @@ def runtime_public_dir() -> Path:
 
 
 def runner_url(project_id: str | None = None) -> str:
-    settings = get_settings()
-    base = settings.api_base_url.rstrip("/")
+    """Return a path-relative runner URL.
+
+    Absolute hosts (`API_BASE_URL`) drift from the web client's
+    `NEXT_PUBLIC_API_URL` (localhost vs 127.0.0.1). The builder rewrites via
+    `apiBase()`, so a relative path is always correct.
+    """
     # ?p= extends the shell's import map with the project's own package.json
     # dependencies — import maps cannot be modified after document load, so
     # the extension has to happen at shell render time.
     suffix = f"?p={project_id}" if project_id else ""
-    return f"{base}/runner/{suffix}"
+    return f"/runner/{suffix}"
 
 
 def render_runner_shell(
@@ -92,7 +96,7 @@ def render_runner_shell(
 <body>
   <div id="root"></div>
   <script src="/runner/bridge.js?v=thumb-persist1"></script>
-  <script type="module" src="/runner/runner.js?v=thumb-persist1"></script>
+  <script type="module" src="/runner/runner.js?v=thumb-mobile4"></script>
 </body>
 </html>
 """

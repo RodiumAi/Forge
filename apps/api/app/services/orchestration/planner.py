@@ -9,9 +9,15 @@ from typing import Any
 
 from app.db import SessionLocal
 from app.i18n import Locale, t
-from app.services.attachments import count_markers_by_intent, enrich_user_message_with_vision
+from app.services.attachments import (
+    carried_reference_markers,
+    count_markers_by_intent,
+    enrich_user_message_with_vision,
+    with_carried_references,
+)
 from app.services.llm import RodiumError, complete_chat
 from app.services.rodium_generation import RodiumGenerationAuth
+from app.services.typography import NO_LONG_DASH_RULE, strip_long_dashes
 
 logger = logging.getLogger("planner")
 
@@ -57,18 +63,18 @@ def needs_clarify(
     force_scaffold: bool = False,
     task_class: str | None = None,
 ) -> bool:
-    """Ask clarify only for major ambiguity — never for scoped micro-edits."""
+    """Ask clarify only for major ambiguity, never for scoped micro-edits."""
     from app.services.orchestration.router import strip_attachment_noise
 
     text = strip_attachment_noise(prompt or "")
     if not text:
-        # Attachments alone are enough context — skip clarify.
+        # Attachments alone are enough context, skip clarify.
         return False
 
     if task_class in _SMALL_TASK_CLASSES:
         return False
 
-    # Explicit full redesign — execute, don't ask.
+    # Explicit full redesign, execute, don't ask.
     if _FULL_REDESIGN_RE.search(text):
         return False
 
@@ -97,7 +103,7 @@ def build_clarify_questions(
     *,
     force_scaffold: bool = False,
 ) -> list[dict[str, Any]]:
-    """Template questions — scoped for existing projects, fuller for scaffold."""
+    """Template questions, scoped for existing projects, fuller for scaffold."""
     existing_project = not force_scaffold
 
     if existing_project:
@@ -192,6 +198,17 @@ def build_clarify_questions(
     ]
 
 
+_QUESTION_TYPE_RULE = (
+    'Set "type" per question: "multiple" when several options can be wanted together '
+    "(pages or sections to include, features, social networks, languages, content types) "
+    'and the prompt then says the user may pick several; "single" when the choices '
+    "exclude each other (the name, the kind of project, the main tone, the overall style). "
+)
+
+#: Clarify answers keyed by question id: an option id or free text for a
+#: single-choice question, a list of those for a multiple-choice one.
+ClarifyAnswers = dict[str, str | list[str]]
+
 MAX_CLARIFY_QUESTIONS = 10
 _CLARIFY_ID_RE = re.compile(r"[^a-z0-9_]+")
 
@@ -199,8 +216,10 @@ _CLARIFY_ID_RE = re.compile(r"[^a-z0-9_]+")
 def sanitize_clarify_questions(raw: object) -> list[dict[str, Any]]:
     """Validate/normalize LLM-generated questions; empty list = unusable.
 
-    Contract kept end-to-end: {id, prompt, options: [{id, label}]} with unique
-    slug ids, 2-6 options each, capped at MAX_CLARIFY_QUESTIONS. The web layer
+    Contract kept end-to-end: {id, prompt, type, options: [{id, label}]} with
+    unique slug ids, 2-6 options each, capped at MAX_CLARIFY_QUESTIONS.
+    ``type`` is ``"single"`` (one choice) or ``"multiple"`` (several choices
+    apply together); anything unknown falls back to ``"single"``. The web layer
     always offers a free-text answer on top, so options are suggestions, not
     a closed set.
     """
@@ -213,7 +232,7 @@ def sanitize_clarify_questions(raw: object) -> list[dict[str, Any]]:
             break
         if not isinstance(item, dict):
             continue
-        prompt = str(item.get("prompt") or item.get("question") or "").strip()[:200]
+        prompt = strip_long_dashes(str(item.get("prompt") or item.get("question") or "").strip())[:200]
         if not prompt:
             continue
         qid = _CLARIFY_ID_RE.sub("_", str(item.get("id") or f"q{i + 1}").strip().lower()).strip("_")[:40]
@@ -227,9 +246,9 @@ def sanitize_clarify_questions(raw: object) -> list[dict[str, Any]]:
         if isinstance(options_raw, list):
             for j, opt in enumerate(options_raw[:6]):
                 if isinstance(opt, str):
-                    label, oid = opt.strip(), f"opt{j + 1}"
+                    label, oid = strip_long_dashes(opt.strip(), label=True), f"opt{j + 1}"
                 elif isinstance(opt, dict):
-                    label = str(opt.get("label") or opt.get("text") or "").strip()
+                    label = strip_long_dashes(str(opt.get("label") or opt.get("text") or "").strip(), label=True)
                     oid = _CLARIFY_ID_RE.sub("_", str(opt.get("id") or f"opt{j + 1}").lower()).strip("_")[:40]
                 else:
                     continue
@@ -240,7 +259,29 @@ def sanitize_clarify_questions(raw: object) -> list[dict[str, Any]]:
         if len(options) < 2:
             continue
         seen_ids.add(qid)
-        out.append({"id": qid, "prompt": prompt, "options": options})
+        out.append({"id": qid, "prompt": prompt, "type": _question_type(item), "options": options})
+    return out
+
+
+_MULTI_TYPES = frozenset({"multiple", "multi", "multi_select", "multiselect", "checkbox", "checkboxes"})
+
+
+def _question_type(item: dict[str, Any]) -> str:
+    raw = str(item.get("type") or item.get("kind") or "").strip().lower()
+    if raw in _MULTI_TYPES or item.get("multiple") is True:
+        return "multiple"
+    return "single"
+
+
+def answer_labels(qid: str, value: object, label_by_opt: dict[str, str]) -> list[str]:
+    """Human labels for one answer: an option id, free text, or a list of either
+    (a multiple-choice question)."""
+    values = value if isinstance(value, list) else [value]
+    out: list[str] = []
+    for v in values:
+        text = str(v or "").strip()
+        if text:
+            out.append(label_by_opt.get(f"{qid}:{text}", text))
     return out
 
 
@@ -255,7 +296,7 @@ async def build_clarify_questions_llm(
     """Contextual questionnaire generated from the actual prompt.
 
     "Build a developer portfolio" should ask for the developer's NAME, title,
-    projects to feature — not the same three generic template questions. Falls
+    projects to feature, not the same three generic template questions. Falls
     back to the static templates on any failure.
     """
     fallback = build_clarify_questions(prompt, locale, force_scaffold=force_scaffold)
@@ -263,7 +304,9 @@ async def build_clarify_questions_llm(
     system = (
         "You prepare a SHORT clarification questionnaire before building a website. "
         "Output ONLY a valid JSON array (no markdown fences) of question objects: "
-        '{"id":"snake_case","prompt":"the question","options":[{"id":"snake_case","label":"choice"}]}. '
+        '{"id":"snake_case","prompt":"the question","type":"single|multiple",'
+        '"options":[{"id":"snake_case","label":"choice"}]}. '
+        f"{_QUESTION_TYPE_RULE}"
         f"All prompts and labels in {lang}. "
         "Rules: 3 to 8 questions maximum; ask about the CONTENT the site needs "
         "(names, titles, sections, tone, colors, links, business specifics), most "
@@ -271,6 +314,7 @@ async def build_clarify_questions_llm(
         "options tailored to the request (the user can always type a custom answer, "
         "so options are smart suggestions, never 'other'); never ask about hosting, "
         "frameworks, backends or budgets; skip anything the prompt already answers."
+        + " " + NO_LONG_DASH_RULE
     )
     try:
         raw = await complete_chat(
@@ -290,6 +334,214 @@ async def build_clarify_questions_llm(
         questions = sanitize_clarify_questions(json.loads(cleaned))
         return questions or fallback
     except Exception:
+        return fallback
+
+
+_CLARITY_SKIP_RE = re.compile(
+    r"\b(sans\s+(?:poser\s+de\s+)?questions?|pas\s+de\s+questions?|no\s+questions?|"
+    r"skip\s+(?:the\s+)?questions?|construis\s+directement|build\s+(?:it\s+)?directly|"
+    r"just\s+build|vas-?y\s+directement|lance\s+directement)\b",
+    re.I,
+)
+
+
+def clarity_gauge_eligible(
+    prompt: str,
+    *,
+    force_scaffold: bool,
+    task_class: str | None,
+) -> bool:
+    """Should the AI clarity gauge run on this request?
+
+    Only for builds, the first message of a project or a scaffold-class ask.
+    Never for scoped edits (an existing project already defines the brand),
+    never when a reference screenshot is attached (the image IS the spec), and
+    never when the user explicitly asked to build without questions.
+    """
+    from app.services.orchestration.router import (
+        has_reference_attachments,
+        strip_attachment_noise,
+    )
+
+    text = strip_attachment_noise(prompt or "")
+    if not text:
+        return False
+    if has_reference_attachments(prompt or ""):
+        return False
+    if _CLARITY_SKIP_RE.search(text):
+        return False
+    if task_class in _SMALL_TASK_CLASSES:
+        return False
+    if _EDIT_VERB_RE.search(text) and _SECTION_RE.search(text):
+        return False
+    return force_scaffold or str(task_class or "").startswith(("code.scaffold", "plan.scaffold"))
+
+
+class ClarityAssessment:
+    """Result of the clarity gauge. ``score`` is None when the gauge failed."""
+
+    __slots__ = ("score", "missing", "questions")
+
+    def __init__(self, score: int | None, missing: list[str], questions: list[dict[str, Any]]):
+        self.score = score
+        self.missing = missing
+        self.questions = questions
+
+    def needs_questions(self, threshold: int) -> bool:
+        return self.score is not None and self.score < threshold
+
+
+def _parse_json_object(raw: str) -> Any:
+    cleaned = (raw or "").strip()
+    if cleaned.startswith("```"):
+        cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned)
+        cleaned = re.sub(r"\s*```$", "", cleaned)
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError:
+        # Tolerate a sentence around the object: keep the outermost {...}.
+        start, end = cleaned.find("{"), cleaned.rfind("}")
+        if start == -1 or end <= start:
+            raise
+        return json.loads(cleaned[start : end + 1])
+
+
+async def assess_prompt_clarity(
+    prompt: str,
+    locale: Locale = "en",
+    *,
+    auth: RodiumGenerationAuth,
+    model: str,
+    force_scaffold: bool = True,
+    threshold: int = 70,
+) -> ClarityAssessment:
+    """AI clarity gauge: score how buildable the request is WITHOUT guessing.
+
+    One call returns the score (0-100), what is missing, and, only when the
+    score is under ``threshold`` the tailored questions to fill the gaps.
+    Never raises: on any failure it returns ``score=None`` so the caller builds
+    instead of blocking the user.
+    """
+    lang = "French" if locale == "fr" else "English"
+    context_rule = (
+        "This is a NEW project: nothing exists yet, so brand, content and structure "
+        "must come from the request."
+        if force_scaffold
+        else "This is an EXISTING project: its brand and structure already exist in code. "
+        "Only score low if the requested change itself is ambiguous."
+    )
+    system = (
+        "You are Forge's request analyst. Before anything is built, rate how clear and "
+        "complete the user's request is. Score 0-100 = how well a designer could build "
+        "exactly what the user wants WITHOUT guessing. Judge: the kind of site/app and "
+        "its purpose; the brand or project NAME; the audience; the key pages/sections or "
+        "features; concrete content (names, offers, texts, links); the style/tone/colors. "
+        "Typos do not lower the score. Calibration: 'a comedy showcase platform' (type only, "
+        "no name, audience, sections or content) is about 35; a request giving name + "
+        "purpose + sections + style is 80 or more. "
+        f"{context_rule} "
+        "Output ONLY a JSON object (no markdown fences): "
+        '{"score": <int 0-100>, "missing": ["short item"...], "questions": [ '
+        '{"id":"snake_case","prompt":"the question","type":"single|multiple",'
+        '"options":[{"id":"snake_case","label":"choice"}]} ]}. '
+        f"{_QUESTION_TYPE_RULE}"
+        f"Write missing items, prompts and labels in {lang}. "
+        f"Include 3 to 8 questions ONLY when score < {threshold} (otherwise an empty list): "
+        "ask about the CONTENT the site needs (name, audience, sections, key texts, tone, "
+        "colors, links, business specifics), most important first; every question ships 2 "
+        "to 5 concrete, plausible options tailored to the request (the user can always type "
+        "a custom answer, so never offer 'other'); never ask about hosting, frameworks, "
+        "backends or budgets; never ask what the request already answers."
+        + " " + NO_LONG_DASH_RULE
+    )
+    try:
+        raw = await complete_chat(
+            auth=auth,
+            model=model,
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": f"Request:\n{(prompt or '').strip()[:4000]}"},
+            ],
+            locale=locale,
+            temperature=0.2,
+        )
+        parsed = _parse_json_object(raw)
+        if not isinstance(parsed, dict):
+            raise ValueError("clarity gauge: not an object")
+        score = int(round(float(parsed.get("score"))))
+        score = max(0, min(100, score))
+        missing = [strip_long_dashes(str(m).strip(), label=True)[:120] for m in (parsed.get("missing") or []) if str(m).strip()][:8]
+        questions = sanitize_clarify_questions(parsed.get("questions") or [])
+        return ClarityAssessment(score, missing, questions)
+    except Exception:
+        logger.warning("clarity gauge failed, building without questions", exc_info=True)
+        return ClarityAssessment(None, [], [])
+
+
+async def build_final_brief(
+    prompt: str,
+    *,
+    questions: list[dict[str, Any]] | None,
+    answers: ClarifyAnswers | None,
+    locale: Locale = "en",
+    auth: RodiumGenerationAuth,
+    model: str,
+) -> str:
+    """Merge the request and the user's answers into ONE clear build brief.
+
+    The planner and every build task then read a complete, human-readable brief
+    instead of the vague first sentence plus raw ``question_id: option_id``
+    pairs. Falls back to request + labelled answers on any failure.
+    """
+    answers_block = format_answers_for_prompt(answers, questions)
+    fallback = f"{(prompt or '').strip()}\n\n{answers_block}".strip()
+    if not answers:
+        return (prompt or "").strip()
+    qa_lines = []
+    label_by_opt: dict[str, str] = {}
+    prompt_by_q: dict[str, str] = {}
+    for q in questions or []:
+        prompt_by_q[str(q.get("id"))] = str(q.get("prompt") or q.get("id"))
+        for opt in q.get("options") or []:
+            label_by_opt[f"{q.get('id')}:{opt.get('id')}"] = str(opt.get("label") or opt.get("id"))
+    for qid, value in answers.items():
+        question = prompt_by_q.get(str(qid), str(qid))
+        labels = answer_labels(str(qid), value, label_by_opt)
+        if not labels:
+            continue
+        # A multiple-choice answer lists every selection, each one is wanted.
+        qa_lines.append(f"- {question} → {' + '.join(labels) if len(labels) > 1 else labels[0]}")
+    lang = "French" if locale == "fr" else "English"
+    system = (
+        "You write the FINAL BUILD BRIEF for a website/app, from the user's request and "
+        "their answers to clarification questions. An answer listing several choices "
+        "joined by ' + ' means the user wants ALL of them. Produce one clear, complete brief the "
+        "planner can build from: project name, purpose, audience, pages/sections (in "
+        "order), the key content of each, style/tone/colors, and any links or specifics. "
+        "Keep every fact the user gave, verbatim where it is a name or text. Do not invent "
+        "facts; where something is still unknown, choose a sensible default and label it "
+        "'(default)'. Forge builds a FRONTEND prototype: describe features as UI (a booking "
+        "form, a calendar, a map embed), never promise backends, payments, real-time data "
+        "or security. Plain text with short headed lines, no markdown fences, max 1800 "
+        f"characters, in {lang}. {NO_LONG_DASH_RULE}"
+    )
+    user = f"Request:\n{(prompt or '').strip()[:4000]}\n\nAnswers:\n" + "\n".join(qa_lines)
+    try:
+        raw = await complete_chat(
+            auth=auth,
+            model=model,
+            messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
+            locale=locale,
+            temperature=0.3,
+        )
+        brief = (raw or "").strip()
+        if brief.startswith("```"):
+            brief = re.sub(r"^```\w*\s*", "", brief)
+            brief = re.sub(r"\s*```$", "", brief)
+        brief = strip_long_dashes(brief.strip())[:2400]
+        return brief or fallback
+    except Exception:
+        logger.warning("final brief failed, using request + answers", exc_info=True)
         return fallback
 
 
@@ -409,14 +661,22 @@ def _default_edit_plan(locale: Locale) -> list[dict[str, Any]]:
 async def build_plan(
     *,
     prompt: str,
-    answers: dict[str, str] | None,
+    answers: ClarifyAnswers | None,
     task_class: str,
     auth: RodiumGenerationAuth,
     model: str,
     locale: Locale = "en",
     project_id: str | None = None,
+    conversation: list[tuple[str, str]] | None = None,
+    brief: str | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, str]]:
     """Build a short task plan plus display meta (title/summary).
+
+    ``conversation`` (the chat history, current turn included) gives the planner
+    the recent turns so a follow-up is planned as a continuation, not as a
+    brand-new request, and re-attaches the latest reference screenshot.
+    ``brief`` (the merged request + clarification answers) replaces the raw
+    ``answers`` pairs when present.
 
     Returns ``(tasks, meta)`` where ``meta`` is ``{"title","summary"}`` (either
     key may be missing when the LLM answer lacks them).
@@ -443,8 +703,32 @@ async def build_plan(
         min_tasks = max(min_tasks, min(ref_count + 1, max_tasks))
 
     answers_txt = ""
-    if answers:
-        answers_txt = "User clarifications:\n" + "\n".join(f"- {k}: {v}" for k, v in answers.items())
+    if brief:
+        answers_txt = "Final brief (request + the user's clarification answers):\n" + brief.strip()
+    elif answers:
+        answers_txt = "User clarifications:\n" + "\n".join(
+            f"- {k}: {', '.join(v) if isinstance(v, list) else v}" for k, v in answers.items()
+        )
+
+    conversation_txt = ""
+    carried: list[str] = []
+    if conversation:
+        from app.services.orchestration.router import strip_attachment_noise
+
+        turns = list(conversation)
+        if turns and turns[-1][0] == "user":
+            turns = turns[:-1]
+        lines = []
+        for role, content in turns[-4:]:
+            clean = strip_attachment_noise(content or "")[: 500 if role == "assistant" else 700]
+            if clean:
+                lines.append(f"{role}: {clean}")
+        if lines:
+            conversation_txt = (
+                "Recent conversation (the new request CONTINUES this work on the existing "
+                "project, plan it as a follow-up, never start over):\n" + "\n".join(lines)
+            )
+        carried = carried_reference_markers(conversation)
 
     multi_page_rule = ""
     if ref_count >= 2:
@@ -469,28 +753,32 @@ async def build_plan(
         "For scoped requests, tasks must name the target section/file only. "
         + multi_page_rule
         + "For scaffolds, use this ORDER: "
-        "(1) architecture — App/Context/shell, "
-        "(2) styles_foundation — complete index.css tokens/layout/navbar base BEFORE content, "
-        "(3) home / primary_sections / flows — each page brings its OWN src/styles/<page>.css "
+        "(1) architecture, App/Context/shell, "
+        "(2) styles_foundation, complete index.css tokens/layout/navbar base BEFORE content, "
+        "(3) home / primary_sections / flows, each page brings its OWN src/styles/<page>.css "
         "(never rewrite index.css after the foundation), "
         "(4) final coherence (Context + CSS + scroll). "
         "A styles_foundation task BEFORE sections is required for scaffolds. "
         "After styles_foundation, never ship orphan TSX without appending matching CSS. "
         "Frontend-only prototype: no backend connector tasks. "
         "Each task needs a clear acceptance criterion."
+        + " " + NO_LONG_DASH_RULE
     )
     request_body = f"{prompt}\n\n{answers_txt}".strip() if answers_txt else prompt
-    user: str | list[dict[str, Any]] = f"Request:\n{request_body}".strip()
+    if carried:
+        request_body = with_carried_references(request_body, carried, locale)
+    request_text = f"Request:\n{request_body}".strip()
+    if conversation_txt:
+        request_text = f"{conversation_txt}\n\n{request_text}"
+    user: str | list[dict[str, Any]] = request_text
     if project_id:
         with SessionLocal() as vision_db:
-            user = await enrich_user_message_with_vision(
-                vision_db, project_id, f"Request:\n{request_body}".strip()
-            )
+            user = await enrich_user_message_with_vision(vision_db, project_id, request_text)
             vision_db.commit()
     plan_failed_en = "Planning failed. Check your generation key and try again."
     plan_failed_fr = "Échec du plan. Vérifie ta clé de génération et réessaie."
-    plan_unusable_en = "Planning failed — the model returned an unusable response. Try again."
-    plan_unusable_fr = "Échec du plan — la réponse du modèle est inutilisable. Réessaie."
+    plan_unusable_en = "Planning failed, the model returned an unusable response. Try again."
+    plan_unusable_fr = "Échec du plan, la réponse du modèle est inutilisable. Réessaie."
     try:
         raw = await complete_chat(
             auth=auth,
@@ -510,8 +798,8 @@ async def build_plan(
         meta: dict[str, str] = {}
         if isinstance(parsed, dict):
             # New object shape: {"title", "summary", "tasks": [...]}.
-            title = str(parsed.get("title") or "").strip()[:120]
-            summary = str(parsed.get("summary") or parsed.get("description") or "").strip()[:400]
+            title = strip_long_dashes(str(parsed.get("title") or "").strip(), label=True)[:120]
+            summary = strip_long_dashes(str(parsed.get("summary") or parsed.get("description") or "").strip())[:400]
             if title:
                 meta["title"] = title
             if summary:
@@ -524,10 +812,10 @@ async def build_plan(
             if not isinstance(item, dict):
                 continue
             tid = str(item.get("id") or f"task_{i + 1}").strip()[:64]
-            title = str(item.get("title") or tid).strip()[:200]
+            title = strip_long_dashes(str(item.get("title") or tid).strip(), label=True)[:200]
             if not title:
                 continue
-            acceptance = str(item.get("acceptance") or item.get("done_when") or "").strip()[:240]
+            acceptance = strip_long_dashes(str(item.get("acceptance") or item.get("done_when") or "").strip())[:240]
             files_raw = item.get("files") or item.get("paths") or []
             files: list[str] = []
             if isinstance(files_raw, list):
@@ -590,7 +878,7 @@ async def build_plan(
         raise RodiumError(plan_failed_fr if locale == "fr" else plan_failed_en) from exc
 
 
-def format_answers_for_prompt(answers: dict[str, str] | None, questions: list[dict] | None) -> str:
+def format_answers_for_prompt(answers: ClarifyAnswers | None, questions: list[dict] | None) -> str:
     if not answers:
         return ""
     label_by_opt: dict[str, str] = {}
@@ -598,9 +886,10 @@ def format_answers_for_prompt(answers: dict[str, str] | None, questions: list[di
         for opt in q.get("options") or []:
             label_by_opt[f"{q.get('id')}:{opt.get('id')}"] = str(opt.get("label") or opt.get("id"))
     lines = []
-    for qid, oid in answers.items():
-        label = label_by_opt.get(f"{qid}:{oid}", oid)
-        lines.append(f"- {qid}: {label}")
+    for qid, value in answers.items():
+        labels = answer_labels(str(qid), value, label_by_opt)
+        if labels:
+            lines.append(f"- {qid}: {', '.join(labels)}")
     return "Clarifications:\n" + "\n".join(lines)
 
 
