@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getToken } from "@/lib/api";
 import { useI18n } from "@/lib/i18n/I18nProvider";
@@ -206,19 +207,23 @@ export function RodiumWalletBadge({
     if (collapsed) {
       return (
         <div className="rodium-wallet-wrap rodium-wallet-wrap-compact rodium-wallet-wrap-rail">
-          <span className="rodium-wallet-badge rodium-wallet-badge-rail" title={frodiTitle}>
+          <Link
+            href="/settings?tab=generation"
+            className="rodium-wallet-badge rodium-wallet-badge-rail"
+            title={frodiTitle}
+          >
             {meter}
-          </span>
+          </Link>
         </div>
       );
     }
 
     return (
       <div className={`rodium-wallet-wrap${compact ? " rodium-wallet-wrap-compact" : ""}`}>
-        <span className="rodium-wallet-badge" title={frodiTitle}>
+        <Link href="/settings?tab=generation" className="rodium-wallet-badge" title={frodiTitle}>
           {planName ? <span className="rodium-wallet-plan">{planName}</span> : <span>…</span>}
           {meter}
-        </span>
+        </Link>
       </div>
     );
   }
@@ -235,16 +240,20 @@ export function RodiumWalletBadge({
     const compactBalance = formatRodiCompact(wallet?.balance_rodi);
     return (
       <div className="rodium-wallet-wrap rodium-wallet-wrap-compact rodium-wallet-wrap-rail">
-        <span className="rodium-wallet-badge rodium-wallet-badge-rail" title={balanceTitle}>
+        <Link
+          href="/settings?tab=generation"
+          className="rodium-wallet-badge rodium-wallet-badge-rail"
+          title={balanceTitle}
+        >
           <strong className="rodium-wallet-rail-amount">{compactBalance}</strong>
-        </span>
+        </Link>
       </div>
     );
   }
 
   return (
     <div className={`rodium-wallet-wrap${compact ? " rodium-wallet-wrap-compact" : ""}`}>
-      <span className="rodium-wallet-badge" title={balanceTitle}>
+      <Link href="/settings?tab=generation" className="rodium-wallet-badge" title={balanceTitle}>
         <span className="rodium-wallet-main">
           <strong>{balance}</strong>
           <span>RODI</span>
@@ -254,7 +263,7 @@ export function RodiumWalletBadge({
             {provided} {t("walletProvidedShort")}
           </span>
         ) : null}
-      </span>
+      </Link>
     </div>
   );
 }
