@@ -13,6 +13,7 @@ import {
   usageLevel,
 } from "@/lib/frodi-usage";
 import { useI18n } from "@/lib/i18n/I18nProvider";
+import type { MessageKey } from "@/lib/i18n/dictionaries";
 
 function formatAmount(value: number, locale: string): string {
   try {
@@ -36,6 +37,11 @@ function resetPhrase(
   return t("frodiUsageResetsDays").replace("{n}", String(days));
 }
 
+/** Free allotment is monthly; paid plans are weekly. */
+function isMonthlyPlan(plan: string | null): boolean {
+  return plan === "free";
+}
+
 export function FrodiUsageBanner({ onOpenSettings }: { onOpenSettings: () => void }) {
   const { t, locale } = useI18n();
   const forge = useForgeStatus();
@@ -48,11 +54,17 @@ export function FrodiUsageBanner({ onOpenSettings }: { onOpenSettings: () => voi
 
   if (!usage || level == null || hidden) return null;
 
+  const monthly = isMonthlyPlan(usage.plan);
   const atLimit = level === 100;
   const reset = resetPhrase(usage.resetsAt, t);
+  const usedKey: MessageKey = monthly ? "frodiUsageUsedMonth" : "frodiUsageUsed";
+  const limitKey: MessageKey = monthly ? "frodiUsageLimitMonth" : "frodiUsageLimit";
+  const titleKey: MessageKey = monthly ? "frodiUsageTitleMonth" : "frodiUsageTitle";
+  const cycleKey: MessageKey = monthly ? "frodiUsageMonth" : "frodiUsageWeek";
+  const hintKey: MessageKey = monthly ? "frodiUsageLimitHintMonth" : "frodiUsageLimitHint";
   const headline = atLimit
-    ? t("frodiUsageLimit")
-    : t("frodiUsageUsed").replace("{pct}", String(usage.usedPct));
+    ? t(limitKey)
+    : t(usedKey).replace("{pct}", String(usage.usedPct));
   const plan = planDisplayName(usage.plan);
 
   return (
@@ -84,13 +96,13 @@ export function FrodiUsageBanner({ onOpenSettings }: { onOpenSettings: () => voi
         </button>
       )}
       {open ? (
-        <div className="frodi-usage-pop" role="dialog" aria-label={t("frodiUsageTitle")}>
+        <div className="frodi-usage-pop" role="dialog" aria-label={t(titleKey)}>
           <header>
-            <strong>{t("frodiUsageTitle")}</strong>
+            <strong>{t(titleKey)}</strong>
             {plan ? <span>{plan}</span> : null}
           </header>
           <div className="frodi-usage-row">
-            <span>{t("frodiUsageWeek")}</span>
+            <span>{t(cycleKey)}</span>
             <span>{usage.usedPct}%</span>
           </div>
           <div className="frodi-usage-track" aria-hidden>
@@ -100,7 +112,7 @@ export function FrodiUsageBanner({ onOpenSettings }: { onOpenSettings: () => voi
             {reset ? <span>{reset}</span> : null}
             <span>{t("frodiUsageRemaining").replace("{n}", formatAmount(usage.remaining, locale))}</span>
           </p>
-          {atLimit ? <p className="frodi-usage-hint">{t("frodiUsageLimitHint")}</p> : null}
+          {atLimit ? <p className="frodi-usage-hint">{t(hintKey)}</p> : null}
           <button
             type="button"
             className="frodi-usage-settings"
