@@ -16,12 +16,12 @@ from app.models import Project, User
 from app.services import history
 from app.services.attachments import ResolvedImage, resolve_image_part
 from app.services.capabilities import require_rodi_for_paid_capability
-from app.services.typography import strip_long_dashes
 from app.services.design_colors import apply_brand_color, merge_palettes, parse_palette
 from app.services.filesystem import project_dir, read_file, write_bytes, write_file
 from app.services.llm import RodiumError, complete_chat
 from app.services.orchestration.context import DESIGN_PATH
 from app.services.rodium_generation import resolve_generation_auth
+from app.services.typography import strip_long_dashes
 
 router = APIRouter(prefix="/projects", tags=["design"])
 

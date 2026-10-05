@@ -7,13 +7,13 @@ endpoints let the UI list those checkpoints and roll back to any of them.
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
 from app.db import get_db
-from app.i18n import resolve_locale, t
+from app.i18n import resolve_locale
 from app.models import Project, User
 from app.services import history
 from app.services.entitlements import history_snapshot_cap

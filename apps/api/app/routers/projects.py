@@ -8,7 +8,6 @@ from urllib.parse import quote
 from uuid import UUID, uuid4
 
 import httpx
-
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel, Field
@@ -32,10 +31,10 @@ from app.schemas import (
 )
 from app.services import preview_babel, rate_limit
 from app.services.capabilities import require_rodi_for_paid_capability
-from app.services.frodi_cycle import current_frodi_cycle_key
 from app.services.filesystem import list_files, project_dir, write_bytes
-from app.services.project_access import accessible_project
+from app.services.frodi_cycle import current_frodi_cycle_key
 from app.services.posthog_client import capture_for_user
+from app.services.project_access import accessible_project
 from app.services.project_delete import delete_project_full, purge_site_prefix
 from app.services.project_naming import suggest_project_name
 from app.services.scaffold import (
@@ -673,7 +672,7 @@ def update_project(
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail=t("slug_purge_failed", locale),  # type: ignore[arg-type]
-            )
+            ) from None
 
     db.commit()
     db.refresh(project)

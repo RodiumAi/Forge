@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
-from sqlalchemy.orm import Session
+import re
 
 import httpx
-import re
+from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
 from app.config import get_settings
@@ -11,6 +11,8 @@ from app.db import get_db
 from app.i18n import resolve_locale, t
 from app.models import User, UserSettings
 from app.schemas import (
+    PaymentCountryOut,
+    PaymentCountryUpdate,
     RodiumKeyOut,
     RodiumKeyUpdate,
     RodiumTestRequest,
@@ -18,8 +20,6 @@ from app.schemas import (
     RodiumWalletByKeyOut,
     SettingsOut,
     SettingsUpdate,
-    PaymentCountryOut,
-    PaymentCountryUpdate,
 )
 from app.services.llm import RodiumError
 from app.services.rodium import fetch_wallet_balance_by_api_key, verify_rodium_api_key

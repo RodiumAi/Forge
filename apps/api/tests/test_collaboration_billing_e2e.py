@@ -37,7 +37,7 @@ from fastapi.testclient import TestClient
 
 from app.auth import get_current_user
 from app.db import get_db
-from app.models import ProjectCollaborator, Project, User
+from app.models import Project, ProjectCollaborator, User
 from app.routers import chats as chats_mod
 from app.routers import projects as projects_mod
 from app.services.frodi_cycle import current_frodi_cycle_key

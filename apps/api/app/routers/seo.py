@@ -2,20 +2,20 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
 from app.config import get_settings
 from app.db import get_db
-from app.i18n import resolve_locale, t
+from app.i18n import resolve_locale
 from app.models import Project, User
 from app.services.capabilities import require_rodi_for_paid_capability
 from app.services.filesystem import project_dir
 from app.services.llm import RodiumError, complete_chat
-from app.services.typography import NO_LONG_DASH_RULE, strip_long_dashes
 from app.services.orchestration.images import generate_project_image
+from app.services.project_access import accessible_project
 from app.services.rodium_generation import resolve_generation_auth
 from app.services.seo_meta import (
     extract_json_object,
@@ -25,7 +25,7 @@ from app.services.seo_meta import (
     save_og_asset,
     write_seo_meta,
 )
-from app.services.project_access import accessible_project
+from app.services.typography import NO_LONG_DASH_RULE, strip_long_dashes
 
 router = APIRouter(prefix="/projects", tags=["seo"])
 

@@ -22,6 +22,7 @@ import { api, apiBase, getToken } from "@/lib/api";
 import { removeProject } from "@/lib/lists-cache";
 import { Icon } from "@/components/ui/icon";
 import { useI18n } from "@/lib/i18n/I18nProvider";
+import { CustomDomainSection } from "@/components/builder/CustomDomainSection";
 import { HistoryPanel } from "@/components/builder/HistoryPanel";
 import { SeoOptionsSection } from "@/components/builder/SeoOptionsSection";
 import { SubscriptionPanel } from "@/components/builder/SubscriptionPanel";
@@ -75,7 +76,7 @@ export function OptionsPane({
   onSectionChange,
   onNameSaved,
   onOpenDesign,
-  onOpenHistory,
+  onOpenHistory: _onOpenHistory,
   canManageSite = true,
 }: Props) {
   const { t, locale } = useI18n();

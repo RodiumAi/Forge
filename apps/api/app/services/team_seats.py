@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 import secrets
 from datetime import UTC, datetime
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import httpx
 from fastapi import HTTPException

@@ -5,8 +5,8 @@ import uuid
 from datetime import UTC, datetime
 from urllib.parse import quote
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 import httpx
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -25,8 +25,8 @@ from app.i18n import resolve_locale, t
 from app.models import AuthToken, OauthAccount, User, UserSettings
 from app.schemas import (
     ForgeEntitlementsOut,
-    ForgeModelChoicesOut,
     ForgeModelChoice,
+    ForgeModelChoicesOut,
     ForgeStatusOut,
     ForgotPasswordRequest,
     LoginRequest,

@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from fastapi.responses import RedirectResponse, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
@@ -13,7 +13,6 @@ from app.i18n import resolve_locale, t
 from app.models import Project, User
 from app.providers.objects import get_object_store
 from app.schemas import FileContent, FileNode
-from app.services.project_access import accessible_project
 from app.services import history
 from app.services.asset_storage import (
     asset_display_name,
@@ -35,6 +34,7 @@ from app.services.filesystem import (
     safe_resolve,
     write_file,
 )
+from app.services.project_access import accessible_project
 from app.services.visual_edit import apply_visual_text_edit
 from app.services.visual_image import apply_visual_image_replace
 

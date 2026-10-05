@@ -64,7 +64,6 @@ export function HistoryPanel({
   const { t, locale } = useI18n();
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
   const [limited, setLimited] = useState(false);
-  const [total, setTotal] = useState(0);
   const [available, setAvailable] = useState(true);
   const [loading, setLoading] = useState(false);
   const [restoringId, setRestoringId] = useState<string | null>(null);
@@ -78,7 +77,6 @@ export function HistoryPanel({
       setAvailable(res.available);
       setSnapshots(res.snapshots || []);
       setLimited(Boolean(res.limited));
-      setTotal(res.total || (res.snapshots || []).length);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("errorGeneric"));
     } finally {

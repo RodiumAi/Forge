@@ -16,7 +16,6 @@ import uuid
 from datetime import UTC, datetime
 from types import SimpleNamespace
 
-import pytest
 import sqlalchemy.orm as sa_orm
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -36,7 +35,7 @@ def _user(**over) -> SimpleNamespace:
         id=over.get("id", uuid.uuid4()),
         email=over.get("email", "owner@example.com"),
         email_verified_at=datetime.now(UTC),
-        rodium_sub=over.get("rodium_sub", None),
+        rodium_sub=over.get("rodium_sub"),
     )
 
 

@@ -7,7 +7,7 @@ the SAME key, so it lives in one lightweight module with no heavy imports.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 
 def current_frodi_cycle_key() -> str:
@@ -17,5 +17,5 @@ def current_frodi_cycle_key() -> str:
     fresh each week — matching the weekly cadence of paid FRODI allotments
     without reading the owner's exact cycle boundary.
     """
-    now = datetime.now(timezone.utc).isocalendar()
+    now = datetime.now(UTC).isocalendar()
     return f"{now.year}-W{now.week:02d}"

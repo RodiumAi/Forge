@@ -14,12 +14,18 @@ from __future__ import annotations
 
 import uuid
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from types import SimpleNamespace
 
 import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+from app.auth import get_current_user
+from app.db import get_db
 from app.models import Project, ProjectCollaborator, User
 from app.routers import chats as chats_mod
+from app.routers import projects as projects_mod
 from app.services import llm as llm_mod
 from app.services.rodium_generation import RodiumGenerationAuth
 
@@ -195,21 +201,11 @@ def test_cycle_key_is_iso_week_shaped():
     year, _, week = key.partition("-W")
     assert year.isdigit() and len(year) == 4
     assert week.isdigit() and 1 <= int(week) <= 53
-    now = datetime.now(timezone.utc).isocalendar()
+    now = datetime.now(UTC).isocalendar()
     assert key == f"{now.year}-W{now.week:02d}"
 
 
 # ── share_project: default cap guardrail (b) ─────────────────────────────────
-
-import uuid as _uuid
-from types import SimpleNamespace as _NS
-
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
-from app.auth import get_current_user
-from app.db import get_db
-from app.models import Project, ProjectCollaborator
-from app.routers import projects as projects_mod
 
 _EN = {"Accept-Language": "en"}
 
@@ -241,7 +237,7 @@ def _share_client(monkeypatch, *, owner, project, invitee, existing_collab=None,
         def all(self):
             return captured["rows"]
 
-    db = _NS()
+    db = SimpleNamespace()
     db.query = lambda model, *rest: Q(model)
     db.get = lambda model, key: project if model is Project and str(key) == str(project.id) else None
     db.add = lambda row: captured["rows"].append(row)
@@ -250,7 +246,7 @@ def _share_client(monkeypatch, *, owner, project, invitee, existing_collab=None,
     monkeypatch.setattr(
         projects_mod,
         "get_settings",
-        lambda: _NS(forge_default_collab_frodi_cap=2000, forge_cloud_enabled=cloud),
+        lambda: SimpleNamespace(forge_default_collab_frodi_cap=2000, forge_cloud_enabled=cloud),
     )
     monkeypatch.setattr(projects_mod, "_notify_project_invite", lambda *_a, **_k: True)
 
@@ -264,8 +260,8 @@ def _share_client(monkeypatch, *, owner, project, invitee, existing_collab=None,
 def test_share_unknown_email_stays_pending(monkeypatch):
     from app.models import ProjectInvite
 
-    owner = _NS(id=_uuid.uuid4(), email="owner@example.com", name="Awa", rodium_sub="owner_sub")
-    project = _NS(id=_uuid.uuid4(), user_id=owner.id, name="Studio", billing_policy="owner_pays", visibility="private")
+    owner = SimpleNamespace(id=uuid.uuid4(), email="owner@example.com", name="Awa", rodium_sub="owner_sub")
+    project = SimpleNamespace(id=uuid.uuid4(), user_id=owner.id, name="Studio", billing_policy="owner_pays", visibility="private")
     client, captured = _share_client(
         monkeypatch, owner=owner, project=project, invitee=None, unknown=True
     )
@@ -292,9 +288,9 @@ def test_share_unknown_email_stays_pending(monkeypatch):
 
 
 def test_share_applies_default_cap_when_blank(monkeypatch):
-    owner = _NS(id=_uuid.uuid4(), rodium_sub="owner_sub")
-    invitee = _NS(id=_uuid.uuid4(), email="guest@example.com", rodium_sub="guest_sub")
-    project = _NS(id=_uuid.uuid4(), user_id=owner.id, billing_policy="owner_pays", visibility="private")
+    owner = SimpleNamespace(id=uuid.uuid4(), rodium_sub="owner_sub")
+    invitee = SimpleNamespace(id=uuid.uuid4(), email="guest@example.com", rodium_sub="guest_sub")
+    project = SimpleNamespace(id=uuid.uuid4(), user_id=owner.id, billing_policy="owner_pays", visibility="private")
     client, captured = _share_client(monkeypatch, owner=owner, project=project, invitee=invitee)
 
     r = client.post(f"/projects/{project.id}/share", json={"email": invitee.email, "billing_policy": "owner_pays"}, headers=_EN)
@@ -304,29 +300,29 @@ def test_share_applies_default_cap_when_blank(monkeypatch):
 
 
 def test_share_explicit_cap_is_respected(monkeypatch):
-    owner = _NS(id=_uuid.uuid4(), rodium_sub="owner_sub")
-    invitee = _NS(id=_uuid.uuid4(), email="guest@example.com", rodium_sub="guest_sub")
-    project = _NS(id=_uuid.uuid4(), user_id=owner.id, billing_policy="owner_pays", visibility="private")
-    client, captured = _share_client(monkeypatch, owner=owner, project=project, invitee=invitee)
+    owner = SimpleNamespace(id=uuid.uuid4(), rodium_sub="owner_sub")
+    invitee = SimpleNamespace(id=uuid.uuid4(), email="guest@example.com", rodium_sub="guest_sub")
+    project = SimpleNamespace(id=uuid.uuid4(), user_id=owner.id, billing_policy="owner_pays", visibility="private")
+    client, _captured = _share_client(monkeypatch, owner=owner, project=project, invitee=invitee)
 
     r = client.post(f"/projects/{project.id}/share", json={"email": invitee.email, "billing_policy": "owner_pays", "frodi_cap_per_cycle": 500}, headers=_EN)
     assert r.json()["frodi_cap_per_cycle"] == 500
 
 
 def test_share_zero_means_unlimited(monkeypatch):
-    owner = _NS(id=_uuid.uuid4(), rodium_sub="owner_sub")
-    invitee = _NS(id=_uuid.uuid4(), email="guest@example.com", rodium_sub="guest_sub")
-    project = _NS(id=_uuid.uuid4(), user_id=owner.id, billing_policy="owner_pays", visibility="private")
-    client, captured = _share_client(monkeypatch, owner=owner, project=project, invitee=invitee)
+    owner = SimpleNamespace(id=uuid.uuid4(), rodium_sub="owner_sub")
+    invitee = SimpleNamespace(id=uuid.uuid4(), email="guest@example.com", rodium_sub="guest_sub")
+    project = SimpleNamespace(id=uuid.uuid4(), user_id=owner.id, billing_policy="owner_pays", visibility="private")
+    client, _captured = _share_client(monkeypatch, owner=owner, project=project, invitee=invitee)
 
     r = client.post(f"/projects/{project.id}/share", json={"email": invitee.email, "billing_policy": "owner_pays", "frodi_cap_per_cycle": 0}, headers=_EN)
     assert r.json()["frodi_cap_per_cycle"] == 0
 
 
 def test_share_each_pays_own_ignores_cap(monkeypatch):
-    owner = _NS(id=_uuid.uuid4(), rodium_sub="owner_sub")
-    invitee = _NS(id=_uuid.uuid4(), email="guest@example.com", rodium_sub="guest_sub")
-    project = _NS(id=_uuid.uuid4(), user_id=owner.id, billing_policy="owner_pays", visibility="private")
+    owner = SimpleNamespace(id=uuid.uuid4(), rodium_sub="owner_sub")
+    invitee = SimpleNamespace(id=uuid.uuid4(), email="guest@example.com", rodium_sub="guest_sub")
+    project = SimpleNamespace(id=uuid.uuid4(), user_id=owner.id, billing_policy="owner_pays", visibility="private")
     client, captured = _share_client(monkeypatch, owner=owner, project=project, invitee=invitee)
 
     r = client.post(f"/projects/{project.id}/share", json={"email": invitee.email, "billing_policy": "each_pays_own"}, headers=_EN)
@@ -335,23 +331,19 @@ def test_share_each_pays_own_ignores_cap(monkeypatch):
 
 
 def test_list_collaborators_includes_cycle_usage(monkeypatch):
-    owner = _NS(id=_uuid.uuid4(), rodium_sub="owner_sub")
-    member = _NS(id=_uuid.uuid4(), email="guest@example.com", name="Guest", rodium_sub="guest_sub")
-    project = _NS(id=_uuid.uuid4(), user_id=owner.id, billing_policy="owner_pays", visibility="shared")
-    collab = _NS(role="editor", frodi_cap_per_cycle=2000, invited_at=None, accepted_at=None)
+    owner = SimpleNamespace(id=uuid.uuid4(), rodium_sub="owner_sub")
+    member = SimpleNamespace(id=uuid.uuid4(), email="guest@example.com", name="Guest", rodium_sub="guest_sub")
+    project = SimpleNamespace(id=uuid.uuid4(), user_id=owner.id, billing_policy="owner_pays", visibility="shared")
+    collab = SimpleNamespace(role="editor", frodi_cap_per_cycle=2000, invited_at=None, accepted_at=None)
 
     client, _ = _share_client(monkeypatch, owner=owner, project=project, invitee=member)
-    # Inject the collaborator row into the list query result.
-    client.app.dependency_overrides  # keep ref
     # Patch the gateway usage fetch (avoid real httpx) → 12.5 FRODI for the member.
     monkeypatch.setattr(projects_mod, "_fetch_collab_usage", lambda *_a, **_k: {"guest_sub": 12.5})
 
     # The Q.all() returns captured["rows"]; seed it with (collab, member).
     # Re-wire db.query to yield our row for the 2-arg list query.
-    from app.db import get_db as _gd
-    db = client.app.dependency_overrides[_gd]()
+    db = client.app.dependency_overrides[get_db]()
     db_all_rows = [(collab, member)]
-    orig_query = db.query
 
     class Q2:
         def __init__(self, *models):

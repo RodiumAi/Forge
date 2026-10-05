@@ -43,7 +43,7 @@ export default function TeamJoinPage() {
   const sameAccount = Boolean(account && email && account.toLowerCase() === email.toLowerCase());
   const otherAccount = Boolean(account && email && !sameAccount);
 
-  async function useInvitedAccount() {
+  async function switchToInvitedAccount() {
     try {
       if (getToken()) await api("/auth/logout", { method: "POST" });
     } catch {
@@ -98,7 +98,7 @@ export default function TeamJoinPage() {
             {t("teamJoinOpen")}
           </a>
         ) : otherAccount ? (
-          <button type="button" className="join-go" onClick={() => void useInvitedAccount()}>
+          <button type="button" className="join-go" onClick={() => void switchToInvitedAccount()}>
             {t("teamJoinSwitch")}
           </button>
         ) : (

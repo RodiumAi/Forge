@@ -380,7 +380,7 @@ def clarity_gauge_eligible(
 class ClarityAssessment:
     """Result of the clarity gauge. ``score`` is None when the gauge failed."""
 
-    __slots__ = ("score", "missing", "questions")
+    __slots__ = ("missing", "questions", "score")
 
     def __init__(self, score: int | None, missing: list[str], questions: list[dict[str, Any]]):
         self.score = score
@@ -468,7 +468,7 @@ async def assess_prompt_clarity(
         parsed = _parse_json_object(raw)
         if not isinstance(parsed, dict):
             raise ValueError("clarity gauge: not an object")
-        score = int(round(float(parsed.get("score"))))
+        score = round(float(parsed.get("score")))
         score = max(0, min(100, score))
         missing = [strip_long_dashes(str(m).strip(), label=True)[:120] for m in (parsed.get("missing") or []) if str(m).strip()][:8]
         questions = sanitize_clarify_questions(parsed.get("questions") or [])
