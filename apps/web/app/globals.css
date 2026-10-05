@@ -12020,6 +12020,27 @@ body:has(.home) [data-next-mark] {
   background: #fafafa;
 }
 
+.rodium-gen-wallet-strip-frodi {
+  align-items: flex-end;
+}
+
+.rodium-gen-frodi-primary {
+  flex: 1 1 12rem;
+  min-width: 10rem;
+}
+
+.rodium-gen-frodi-meter {
+  width: 100%;
+  max-width: 14rem;
+  margin-top: 0.45rem;
+}
+
+.rodium-gen-frodi-meta {
+  margin: 0.35rem 0 0;
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
 [data-theme="dark"] .rodium-gen-wallet-strip {
   background: var(--home-panel);
 }
