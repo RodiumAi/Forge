@@ -60,7 +60,7 @@ export function AuthCard({
         </div>
 
         {error ? (
-          <p className="error" style={{ marginBottom: "0.75rem" }} role="alert">
+          <p className="auth-error" role="alert">
             {error}
           </p>
         ) : null}

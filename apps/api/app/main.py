@@ -28,6 +28,7 @@ from app.routers import (
     publish,
     seo,
     sites_v1,
+    team,
     templates,
 )
 from app.routers import settings as settings_router
@@ -165,6 +166,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
 
 
 app.include_router(auth.router)
+app.include_router(team.router)
 app.include_router(settings_router.router)
 app.include_router(plugins.router)
 app.include_router(templates.router)

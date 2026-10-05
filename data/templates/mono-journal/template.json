@@ -1,12 +1,20 @@
 {
-  "id": "mono-journal",
   "kind": "web",
-  "title": { "en": "Monochrome Journal", "fr": "Journal Monochrome" },
+  "id": "mono-journal",
+  "title": {
+    "en": "Monochrome Journal",
+    "fr": "Journal Monochrome"
+  },
   "description": {
     "en": "Radically minimal typographic magazine: pure black on white, editorial columns, drop caps, numbered article index, full-page pull quote — one restrained red accent.",
     "fr": "Magazine typographique radicalement minimal : noir sur blanc pur, colonnes éditoriales, lettrines, sommaire numéroté, citation pleine page — un seul accent rouge, dosé."
   },
-  "tags": ["magazine", "blog", "editorial", "minimal"],
+  "tags": [
+    "magazine",
+    "blog",
+    "editorial",
+    "minimal"
+  ],
   "preview": "preview.html",
   "bootHint": {
     "en": "Adapt mono-journal: publication name, articles, essay excerpt, quote.",

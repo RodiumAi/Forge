@@ -11,11 +11,13 @@ import {
 } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowUp, Plus, Search, Monitor, Smartphone } from "lucide-react";
+import { createPortal } from "react-dom";
+import { ArrowUp, Plus, Search, Monitor, Smartphone, TriangleAlert, X, FolderOpen } from "lucide-react";
 import { apiBase, getToken, ApiError } from "@/lib/api";
 import { useMediaToken } from "@/lib/media-token";
 import { projectThumbnailUrl } from "@/lib/project-thumbnail";
 import { VerifyEmailBanner } from "@/components/auth/VerifyEmailBanner";
+import { TeamInviteNotice } from "@/components/TeamInviteNotice";
 import { HomeLayout } from "@/components/HomeLayout";
 import { PlatformToggle, type ProjectPlatform } from "@/components/PlatformToggle";
 import { PromptFileChips } from "@/components/PromptFileChips";
@@ -28,6 +30,7 @@ import {
   PENDING_TEMPLATE_KEY,
   createProjectWithAttachments,
   ensureCanGenerate,
+  fetchProjectQuota,
   forkProjectFromTemplate,
   readPendingPlatform,
   restorePendingFilesAsAttachments,
@@ -38,9 +41,7 @@ import {
   ensureTemplates,
   getCachedProjects,
   getCachedTemplates,
-  invalidateProjectsCache,
   prependProject,
-  refreshProjectsIfStale,
   refreshTemplatesIfStale,
 } from "@/lib/lists-cache";
 import { topProgressDone, topProgressStart } from "@/lib/top-progress";
@@ -72,6 +73,8 @@ type Project = {
   public_url?: string | null;
   has_thumbnail?: boolean;
   platform?: "web" | "mobile";
+  access_role?: string;
+  collaborators?: { name: string | null; email: string; avatar_url: string | null }[];
 };
 
 type Tab = "mine" | "recent" | "templates";
@@ -100,6 +103,13 @@ function projectInitials(name: string): string {
   return `${parts[0][0] || ""}${parts[1][0] || ""}`.toUpperCase();
 }
 
+type ProjectFace = { name: string | null; email: string; avatar_url: string | null };
+
+function collaboratorFaces(people: ProjectFace[]) {
+  if (people.length <= 4) return { shown: people, extra: 0 };
+  return { shown: people.slice(0, 3), extra: people.length - 3 };
+}
+
 function DashboardInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -118,6 +128,7 @@ function DashboardInner() {
   const PAGE_SIZE = 24;
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ text: string; id: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [forkingId, setForkingId] = useState<string | null>(null);
@@ -225,9 +236,11 @@ function DashboardInner() {
           router.replace("/dashboard?tab=templates");
         }
 
-        // Soft-stale: finish background refresh when it completes.
+        // Always re-read projects from the server. A create used to replace
+        // the cached list with the new project alone and mark it fresh, so a
+        // reload kept showing that one card until the next login.
         void Promise.all([
-          refreshProjectsIfStale(locale),
+          ensureProjects(locale, { force: true }),
           refreshTemplatesIfStale(locale),
         ]).then(([freshProjects, freshTemplates]) => {
           setProjects(freshProjects as Project[]);
@@ -258,6 +271,27 @@ function DashboardInner() {
     } else {
       router.replace("/dashboard");
     }
+  }
+
+  useEffect(() => {
+    if (!notice) return;
+    const timer = window.setTimeout(() => setNotice(null), 10000);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
+
+  function pushNotice(text: string) {
+    setNotice({ text, id: Date.now() });
+  }
+
+  function quotaNotice(quota: { plan?: string | null; limit: number | null }) {
+    const limit = String(quota.limit ?? "");
+    const plan = quota.plan
+      ? quota.plan.charAt(0).toUpperCase() + quota.plan.slice(1)
+      : "";
+    if (plan) {
+      return t("projectQuota").replace("{plan}", plan).replace("{limit}", limit);
+    }
+    return t("projectQuotaPlain").replace("{limit}", limit);
   }
 
   function promptLabels(): PromptLabels {
@@ -293,6 +327,14 @@ function DashboardInner() {
         setCreating(false);
         return;
       }
+      // Plan project cap: warn BEFORE the prompt runs (number from the plan's
+      // max_projects). A Free user at 1 project sees the upgrade prompt here.
+      const quota = await fetchProjectQuota();
+      if (!quota.can_create) {
+        pushNotice(quotaNotice(quota));
+        setCreating(false);
+        return;
+      }
       const project = await createProjectWithAttachments(
         trimmed,
         attachmentList,
@@ -301,7 +343,6 @@ function DashboardInner() {
         locale,
         projectPlatform,
       );
-      invalidateProjectsCache();
       prependProject(locale, project);
       invalidateThumbCache(project.id);
       attachmentList.forEach(revokePromptAttachment);
@@ -310,6 +351,8 @@ function DashboardInner() {
     } catch (err) {
       if (err instanceof PromptTooLongError) {
         setError(t("promptTooLong"));
+      } else if (err instanceof ApiError && err.code === "project_quota_exceeded") {
+        pushNotice(t("projectQuotaReached"));
       } else if (err instanceof ApiError && err.code === "INSUFFICIENT_RODI") {
         setError(t("createNeedsRodi"));
       } else {
@@ -335,13 +378,22 @@ function DashboardInner() {
         setForkingId(null);
         return;
       }
+      // Plan project cap: warn before forking a template (a Free user with a
+      // project already gets the upgrade prompt instead of a failed create).
+      const quota = await fetchProjectQuota();
+      if (!quota.can_create) {
+        pushNotice(quotaNotice(quota));
+        setForkingId(null);
+        return;
+      }
       const project = await forkProjectFromTemplate(tpl);
-      invalidateProjectsCache();
       prependProject(locale, project);
       invalidateThumbCache(project.id);
       router.replace(`/projects/${project.id}`);
     } catch (err) {
-      if (err instanceof ApiError && err.code === "INSUFFICIENT_RODI") {
+      if (err instanceof ApiError && err.code === "project_quota_exceeded") {
+        pushNotice(t("projectQuotaReached"));
+      } else if (err instanceof ApiError && err.code === "INSUFFICIENT_RODI") {
         setError(t("createNeedsRodi"));
       } else {
         setError(err instanceof Error ? err.message : t("errorGeneric"));
@@ -496,8 +548,26 @@ function DashboardInner() {
 
   return (
     <HomeLayout activeNav={showTemplates ? "templates" : "projects"}>
+      {notice && typeof document !== "undefined"
+        ? createPortal(
+            <div key={notice.id} className="home-push-toast" role="alert">
+              <TriangleAlert className="home-push-toast-icon" aria-hidden />
+              <p>{notice.text}</p>
+              <button
+                type="button"
+                className="home-push-toast-close"
+                aria-label={t("frodiUsageDismiss")}
+                onClick={() => setNotice(null)}
+              >
+                <X aria-hidden />
+              </button>
+            </div>,
+            document.body,
+          )
+        : null}
       <section className={`home-hero${showTemplates ? " is-compact" : ""}`}>
         <h1 className="home-greeting">{t("dashboardGreeting")}</h1>
+        <TeamInviteNotice />
 
         <form
           className="landing-prompt home-prompt"
@@ -586,6 +656,29 @@ function DashboardInner() {
             </button>
           </div>
         </form>
+        <div className="home-prompt-suggestions" aria-label={t("promptSuggestLabel")}>
+          {(platform === "mobile"
+            ? (["promptSuggestMobile1", "promptSuggestMobile2", "promptSuggestMobile3", "promptSuggestMobile4", "promptSuggestMobile5"] as const)
+            : (["promptSuggest1", "promptSuggest2", "promptSuggest3", "promptSuggest4", "promptSuggest5"] as const)
+          ).map((key) => {
+              const full = t(key);
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  className="home-prompt-suggest"
+                  title={full}
+                  disabled={creating}
+                  onClick={() => {
+                    setPrompt(full);
+                    textareaRef.current?.focus();
+                  }}
+                >
+                  <span>{full}</span>
+                </button>
+              );
+            })}
+        </div>
       </section>
 
       <section className="home-panel">
@@ -680,6 +773,19 @@ function DashboardInner() {
                   thumb.thumbViewport?.h ??
                   (p.platform === "mobile" ? 244 : 800);
                 const ownerLabel = profile?.name?.trim() || profile?.email || p.name;
+                const shared = p.access_role === "viewer" || p.access_role === "editor";
+                const collabs = p.collaborators || [];
+                const pile =
+                  collabs.length > 0
+                    ? collabs
+                    : [
+                        {
+                          name: ownerLabel,
+                          email: profile?.email || ownerLabel,
+                          avatar_url: avatarUrl || null,
+                        },
+                      ];
+                const faces = collaboratorFaces(pile);
                 return (
                   <button
                     key={p.id}
@@ -715,18 +821,54 @@ function DashboardInner() {
                         viewportWidth={thumbVw}
                         viewportHeight={thumbVh}
                       />
+                      {shared ? (
+                        <span className="home-card-badge home-card-badge-shared">
+                          {t("projectShared")}
+                        </span>
+                      ) : null}
                       {isPublished ? (
                         <span className="home-card-badge">{t("projectPublishedBadge")}</span>
                       ) : null}
                     </div>
                     <div className="home-card-body">
-                      <span className="home-card-avatar" aria-hidden>
-                        {avatarUrl ? (
-                          <img src={avatarUrl} alt="" />
-                        ) : (
-                          <span>{projectInitials(ownerLabel)}</span>
-                        )}
-                      </span>
+                      {faces.shown.length > 0 ? (
+                        <div className="home-card-faces" aria-hidden>
+                          {faces.shown.map((person, index) => {
+                            const label = person.name?.trim() || person.email;
+                            return (
+                              <span
+                                key={person.email}
+                                className="home-card-avatar"
+                                title={label}
+                                style={{ zIndex: index + 1 }}
+                              >
+                                {person.avatar_url ? (
+                                  <img src={person.avatar_url} alt="" />
+                                ) : (
+                                  <span>{projectInitials(label)}</span>
+                                )}
+                              </span>
+                            );
+                          })}
+                          {faces.extra > 0 ? (
+                            <span
+                              className="home-card-avatar is-more"
+                              style={{ zIndex: faces.shown.length + 1 }}
+                              title={t("projectCollabMore").replace("{n}", String(faces.extra))}
+                            >
+                              {t("projectCollabMore").replace("{n}", String(faces.extra))}
+                            </span>
+                          ) : null}
+                        </div>
+                      ) : (
+                        <span className="home-card-avatar" aria-hidden>
+                          {avatarUrl ? (
+                            <img src={avatarUrl} alt="" />
+                          ) : (
+                            <span>{projectInitials(ownerLabel)}</span>
+                          )}
+                        </span>
+                      )}
                       <div className="home-card-meta">
                         <strong className="home-card-title-row" title={p.name}>
                           <span className="home-card-title-text">{p.name}</span>
@@ -759,7 +901,13 @@ function DashboardInner() {
               })}
             </div>
             {filteredProjects.length === 0 && (
-              <p className="home-panel-empty">{t("noProjects")}</p>
+              <div className="home-empty">
+                <span className="home-empty-mark" aria-hidden>
+                  <Icon icon={FolderOpen} />
+                </span>
+                <strong>{t("noProjects")}</strong>
+                <p>{query.trim() ? t("noProjectsSearch") : t("noProjectsHint")}</p>
+              </div>
             )}
             {filteredProjects.length > visibleCount && (
               <div className="home-panel-more">

@@ -63,11 +63,21 @@ export class ApiError extends Error {
    */
   code?: string;
 
-  constructor(message: string, status: number, code?: string) {
+  /**
+   * Recovery actions the API attached to this failure, in priority order.
+   *
+   * `INSUFFICIENT_CREDITS` carries `["upgrade", "recharge"]` so the client can
+   * offer the plan upgrade first and the RODI top-up second. `lib/chat-errors.ts`
+   * reads this to pick which button family to show.
+   */
+  actions?: string[];
+
+  constructor(message: string, status: number, code?: string, actions?: string[]) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.code = code;
+    this.actions = actions;
   }
 }
 
@@ -107,7 +117,7 @@ function localeHeader(explicit?: Locale): string {
   return localStorage.getItem("forge_locale") === "en" ? "en" : "fr";
 }
 
-export type ApiErrorBody = { message: string; code?: string };
+export type ApiErrorBody = { message: string; code?: string; actions?: string[] };
 
 export function detailFromBody(data: unknown, fallback: string): ApiErrorBody {
   if (!data || typeof data !== "object") return { message: fallback };
@@ -134,10 +144,17 @@ export function detailFromBody(data: unknown, fallback: string): ApiErrorBody {
   // "message": "…"}}. Both halves matter — the message is what the user reads
   // when we have no better wording, the code is what earns them a button.
   if (detail && typeof detail === "object") {
-    const obj = detail as { message?: unknown; code?: unknown };
+    const obj = detail as { message?: unknown; code?: unknown; actions?: unknown };
     const message = typeof obj.message === "string" ? obj.message : fallback;
     const code = typeof obj.code === "string" ? obj.code : undefined;
-    if (message !== fallback || code) return { message, code };
+    // `actions` lets a failure offer the right recovery buttons (e.g.
+    // INSUFFICIENT_CREDITS → ["upgrade", "recharge"]). Keep only string entries.
+    const actions = Array.isArray(obj.actions)
+      ? obj.actions.filter((item): item is string => typeof item === "string")
+      : undefined;
+    if (message !== fallback || code || actions?.length) {
+      return { message, code, actions: actions?.length ? actions : undefined };
+    }
   }
   // Anything else is a shape we did not anticipate. Showing raw JSON is worse
   // than saying nothing useful, so fall back to the status text.
@@ -165,7 +182,7 @@ export async function readApiError(res: Response): Promise<ApiError> {
       /* keep the status text */
     }
   }
-  return new ApiError(body.message || res.statusText, res.status, body.code);
+  return new ApiError(body.message || res.statusText, res.status, body.code, body.actions);
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -253,10 +270,12 @@ export async function api<T>(
 
     let detail: string = res.statusText;
     let code: string | undefined;
+    let actions: string[] | undefined;
     try {
       const body = detailFromBody(await res.json(), detail);
       detail = body.message;
       code = body.code;
+      actions = body.actions;
     } catch {
       /* keep statusText */
     }
@@ -283,7 +302,7 @@ export async function api<T>(
       throw new ApiError(detail, 403, code);
     }
 
-    lastError = new ApiError(detail, res.status, code);
+    lastError = new ApiError(detail, res.status, code, actions);
     if (RETRY_STATUSES.has(res.status) && attempt < maxAttempts - 1) {
       await sleep(2 ** attempt * 300);
       continue;

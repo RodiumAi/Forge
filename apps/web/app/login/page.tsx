@@ -3,15 +3,10 @@
 /**
  * Sign in.
  *
- * "Continue with RodiumAi" stays the primary action — on the hosted instance
- * it is the path that brings a wallet and a generation key with it. Below it
- * sit the options that work without RodiumAi at all: Google and
- * email/password. On a clone the RodiumAi button is hidden (the API answers
- * 503 without an OIDC client id), so the local options become the whole page.
- *
- * `?autostart=1` skips straight to the RodiumAi redirect — that is how the
- * "Forge" card on the RodiumAi dashboard opens the builder in one click.
- * Manual clicks use a centered popup (same shape as Google/Firebase).
+ * Email, Google and GitHub are the ways to sign in. Confirming the address
+ * creates the matching RodiumAI account, so this page has no "connect
+ * RodiumAI" button. `?autostart=1` still opens RodiumAI OIDC: that is how
+ * the Forge card on the RodiumAI dashboard opens the builder.
  */
 
 import { Suspense, useEffect, useRef, useState } from "react";
@@ -167,21 +162,6 @@ function LoginInner() {
 
   return (
     <AuthCard title={t("loginTitle")} subtitle={t("authLoginSub")} error={error}>
-      {rodiumAvailable === true ? (
-        <>
-          <button
-            className="btn"
-            type="button"
-            style={{ width: "100%" }}
-            disabled={busy}
-            onClick={() => void loginWithRodium()}
-          >
-            {redirecting ? t("loginRodiumRedirecting") : t("loginWithRodium")}
-          </button>
-          <AuthDivider />
-        </>
-      ) : null}
-
       <SocialButtons onSuccess={land} onError={setError} disabled={busy} />
       {firebaseEnabled ? <AuthDivider /> : null}
 
@@ -225,7 +205,14 @@ function LoginInner() {
 
       <p className="auth-alt">
         {t("authNoAccount")}{" "}
-        <button type="button" className="auth-link" onClick={() => router.push("/register")}>
+        <button
+          type="button"
+          className="auth-link"
+          onClick={() => {
+            const next = sanitizeReturnTo(params.get("next"));
+            router.push(next ? `/register?next=${encodeURIComponent(next)}` : "/register");
+          }}
+        >
           {t("authSignUpCta")}
         </button>
       </p>

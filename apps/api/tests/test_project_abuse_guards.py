@@ -16,10 +16,11 @@ from app.routers import publish as publish_mod
 from app.schemas import ProjectCreate
 
 
-def _user(*, verified: bool):
+def _user(*, verified: bool, rodium_sub: str | None = None):
     return SimpleNamespace(
         id=uuid.uuid4(),
         email_verified_at=datetime.now(UTC) if verified else None,
+        rodium_sub=rodium_sub,
     )
 
 
@@ -63,7 +64,8 @@ def test_project_creation_enforces_rate_and_total_quota(
         )
 
     assert exc.value.status_code == 403
-    assert exc.value.detail == "project_quota_exceeded"
+    detail = exc.value.detail
+    assert (detail["code"] if isinstance(detail, dict) else detail) == "project_quota_exceeded"
     assert enforce.call_count == 2
     enforce.assert_has_calls(
         [
@@ -82,6 +84,40 @@ def test_project_creation_enforces_rate_and_total_quota(
             ),
         ]
     )
+    db.add.assert_not_called()
+
+
+def test_project_creation_respects_plan_max_projects(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Per-plan cap: at the plan's max_projects, creation is refused with the
+    plan + limit in the error (what the Forge UI turns into an upgrade prompt)."""
+    monkeypatch.setattr(projects_mod.rate_limit, "enforce", MagicMock())
+    import app.services.entitlements as ent_mod
+
+    # Simulate a Free plan whose entitlement cap is 1 project.
+    monkeypatch.setattr(ent_mod, "max_projects_for", lambda db, user, fallback: 1)
+    monkeypatch.setattr(ent_mod, "get_entitlements", lambda db, user: SimpleNamespace(plan_slug="free"))
+    user = _user(verified=True, rodium_sub=None)
+    db = MagicMock()
+    # Already at the cap (1 non-locked project).
+    db.query.return_value.filter.return_value.scalar.return_value = 1
+
+    with pytest.raises(HTTPException) as exc:
+        asyncio.run(
+            projects_mod.create_project(
+                body=ProjectCreate(name="Demo", template_id="portfolio"),
+                request=MagicMock(),
+                user=user,
+                db=db,
+            )
+        )
+
+    assert exc.value.status_code == 403
+    assert isinstance(exc.value.detail, dict)
+    assert exc.value.detail["code"] == "project_quota_exceeded"
+    assert exc.value.detail["limit"] == 1
+    assert exc.value.detail["plan"] == "free"
     db.add.assert_not_called()
 
 

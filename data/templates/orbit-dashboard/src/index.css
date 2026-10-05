@@ -36,7 +36,7 @@ a { text-decoration: none; color: inherit; }
 }
 .side-link:hover { background: #1e293b; color: #e2e8f0; }
 .side-link.active { background: var(--accent); color: #fff; }
-.side-icon { width: 20px; text-align: center; }
+.side-icon { width: 20px; display: inline-flex; align-items: center; justify-content: center; color: currentColor; }
 .side-foot { font-size: 0.75rem; padding: 10px 12px; color: #475569; }
 
 /* Main column */
@@ -54,7 +54,7 @@ a { text-decoration: none; color: inherit; }
 }
 .search:focus { outline: 2px solid var(--accent); border-color: transparent; }
 .top-actions { display: flex; align-items: center; gap: 16px; }
-.bell { cursor: pointer; }
+.bell { cursor: pointer; display: inline-flex; align-items: center; color: var(--muted); }
 .avatar {
   width: 36px; height: 36px; border-radius: 50%;
   background: linear-gradient(135deg, var(--accent), #1e40af);

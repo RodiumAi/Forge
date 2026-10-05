@@ -1,12 +1,20 @@
 {
-  "id": "vertex-crypto",
   "kind": "web",
-  "title": { "en": "Vertex Crypto", "fr": "Vertex Crypto" },
+  "id": "vertex-crypto",
+  "title": {
+    "en": "Vertex Crypto",
+    "fr": "Vertex Crypto"
+  },
   "description": {
     "en": "Dark fintech/crypto exchange landing: glass cards with gradient borders, pure-CSS charts and sparklines, live-style price tickers, stats grid, security section and neon CTA.",
     "fr": "Landing fintech/crypto sombre : cartes en verre à bordures dégradées, graphiques en pur CSS, tickers de prix, grille de stats, section sécurité et CTA néon."
   },
-  "tags": ["crypto", "fintech", "landing", "dark"],
+  "tags": [
+    "crypto",
+    "fintech",
+    "landing",
+    "dark"
+  ],
   "preview": "preview.html",
   "bootHint": {
     "en": "Adapt vertex-crypto: exchange name, ticker data, stats, security claims.",

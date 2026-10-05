@@ -1,4 +1,4 @@
-"""Per-project AI_RULES.md — standing conventions injected into every LLM turn."""
+"""Per-project AI_RULES.md, standing conventions injected into every LLM turn."""
 
 from __future__ import annotations
 
@@ -19,16 +19,18 @@ Standing conventions for this Forge project. Follow on every edit.
 
 ## Prototype mode (frontend-only)
 - Mock data + localStorage for cart, wishlist, preferences
-- Forms: full UI validation + success/error states — no real third-party API calls
+- Forms: full UI validation + success/error states, no real third-party API calls
 - Never wire Resend / Firebase Admin / payment secrets / connector backends
-- Deliver navigable end-to-end flows (empty states, responsive, 2–3 micro-interactions max)
+- Deliver navigable end-to-end flows (empty states, responsive, 2-3 micro-interactions max)
 
 ## Design
 - Obey `DESIGN.md` colors/typography/spacing/brand name when present (LOCKED)
 - Never rewrite `DESIGN.md` or replace `public/logo.*` unless the user explicitly asks to change the brand
-- Use the logo path from DESIGN.md (e.g. `/logo.png`) — do not invent a new mark
+- Use the logo path from DESIGN.md (e.g. `/logo.png`), do not invent a new mark
 - Default accent: #F2620A on dark background (only when no DESIGN.md)
-- Keep TSX class names in sync with `src/index.css` (same naming scheme; no parallel prefixes)
+- `src/index.css` = foundation only; page styles in `src/styles/<page>.css`
+- Scope page rules under a unique root (`.search-screen .x`), all CSS loads globally
+- Keep TSX classNames in sync with that page CSS + foundation (no parallel prefixes, no orphans)
 - One section = TSX + CSS in the same turn (never orphan components)
 
 ## Scroll

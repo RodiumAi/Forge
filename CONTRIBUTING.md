@@ -89,7 +89,7 @@ git rebase origin/main   # or: git merge origin/main
 ### 2. Branch & commits
 
 1. Fork the repository (external contributors) or branch from `main` (org members).
-2. Use a clear branch name: `feat/…`, `fix/…`, `design/…`, `security/…`, `template/…`.
+2. Use a clear branch name: `feat/…`, `fix/…`, `design/…`, `security/…`, `template/…`, `integration/…`.
 3. Write commit messages in the form `type(scope): summary` (English or French).
 
 ### 3. Pull request requirements (strict)

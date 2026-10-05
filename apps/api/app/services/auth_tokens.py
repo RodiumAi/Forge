@@ -56,6 +56,30 @@ def issue_password_reset(db: Session, user_id: UUID) -> str:
     return issue(db, user_id, AuthToken.KIND_PASSWORD_RESET, PASSWORD_RESET_TTL)
 
 
+TEAM_SEAT_REMOVE_TTL = timedelta(minutes=10)
+
+
+def seat_removal_material(code: str, member_email: str, reason: str) -> str:
+    """Bind a mailed code to one person and one reason, so it cannot confirm another removal."""
+    return "\n".join([code.strip(), member_email.strip().lower(), reason.strip()])
+
+
+def issue_team_seat_removal(db: Session, user_id: UUID, member_email: str, reason: str) -> str:
+    """Mint a 6-digit code. Only the code is returned; the database stores a hash."""
+    invalidate_outstanding(db, user_id, AuthToken.KIND_TEAM_SEAT_REMOVE)
+    code = f"{secrets.randbelow(1_000_000):06d}"
+    db.add(
+        AuthToken(
+            user_id=user_id,
+            kind=AuthToken.KIND_TEAM_SEAT_REMOVE,
+            token_hash=hash_token(seat_removal_material(code, member_email, reason)),
+            expires_at=datetime.now(UTC) + TEAM_SEAT_REMOVE_TTL,
+        )
+    )
+    db.flush()
+    return code
+
+
 def lookup_user_id(db: Session, raw: str, kind: str) -> UUID | None:
     """Return the user id for a token even if it is expired or already used.
 

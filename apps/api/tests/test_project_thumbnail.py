@@ -16,7 +16,7 @@ from app.db import get_db
 from app.routers import projects as projects_router
 from app.services.filesystem import project_dir, write_bytes
 
-# Tiny valid JPEG (1x1).
+# Tiny valid JPEG (1x1), padded past THUMBNAIL_MIN_BYTES so the size gate passes.
 _JPEG = (
     b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00"
     b"\xff\xdb\x00C\x00\x08\x06\x06\x07\x06\x05\x08\x07\x07\x07\t\t"
@@ -27,6 +27,7 @@ _JPEG = (
     b"\x00\x00\x00\x00\x00\x00\x01\x02\x03\x04\x05\x06\x07\x08\t\n\x0b"
     b"\xff\xda\x00\x08\x01\x01\x00\x00?\x00\x7f\xbf\xff\xd9"
 )
+_JPEG = _JPEG + (b"\x00" * max(0, 2500 - len(_JPEG)))
 
 
 @pytest.fixture

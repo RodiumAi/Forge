@@ -158,7 +158,7 @@ def _coherence_task(locale: Locale) -> dict[str, Any]:
             "id": "coherence",
             "title": "Passe cohérence finale App + CSS + DESIGN + Context API",
             "acceptance": (
-                "Provider keys = useX() consumers; classes TSX↔index.css; "
+                "Provider keys = useX() consumers; classes TSX↔styles/<page>.css + foundation; "
                 "createRoot nommé; pas de crash mount"
             ),
             "files": files,
@@ -168,7 +168,7 @@ def _coherence_task(locale: Locale) -> dict[str, Any]:
         "id": "coherence",
         "title": "Final coherence pass App + CSS + DESIGN + Context API",
         "acceptance": (
-            "Provider keys match useX() consumers; TSX↔index.css classes; "
+            "Provider keys match useX() consumers; TSX↔styles/<page>.css + foundation; "
             "named createRoot; app mounts without throw"
         ),
         "files": files,
@@ -231,7 +231,9 @@ def _task_prompt_block(task: dict[str, Any], *, idx: int, total: int) -> str:
             "COHERENCE PASS (black-preview prevention):\n"
             "1) Align Context Provider value keys with every useX() destructuring "
             "(add aliases; do NOT rename half the consumers).\n"
-            "2) Align TSX classNames with src/index.css (same naming scheme).\n"
+            "2) Align TSX classNames with each page's src/styles/<page>.css and "
+            "foundation utilities in src/index.css (scope page rules under "
+            ".<page>-screen; no unscoped collisions across pages).\n"
             "3) Ensure src/main.tsx uses: import { createRoot } from 'react-dom/client'.\n"
             "4) Ensure arrays from context default to [] so .filter/.map never throw.\n"
             "5) Do not add new product features — only fix coherence."

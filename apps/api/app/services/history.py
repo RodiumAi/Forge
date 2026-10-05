@@ -23,6 +23,7 @@ import os
 import shutil
 import subprocess
 import tempfile
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -67,6 +68,8 @@ class Snapshot:
     created_at: str
     files_changed: int = 0
     stats: dict[str, int] = field(default_factory=dict)
+    actor_name: str = ""
+    actor_email: str = ""
 
     def as_dict(self) -> dict:
         return {
@@ -74,10 +77,43 @@ class Snapshot:
             "label": self.label,
             "created_at": self.created_at,
             "files_changed": self.files_changed,
+            "actor_name": self.actor_name,
+            "actor_email": self.actor_email,
         }
 
 
+_history_actor: ContextVar[tuple[str, str] | None] = ContextVar("forge_history_actor", default=None)
+
+
+def bind_history_actor(name: str | None, email: str | None) -> None:
+    """Remember who is writing, so the next checkpoint can name them."""
+    clean_email = (email or "").strip()
+    clean_name = (name or "").strip() or clean_email
+    if clean_email:
+        _history_actor.set((clean_name, clean_email))
+
+
+def _actor_lines(actor: tuple[str, str] | None) -> list[str]:
+    who = actor or _history_actor.get()
+    if not who or not who[1]:
+        return []
+    return [f"forge-actor-name: {who[0]}", f"forge-actor-email: {who[1]}"]
+
+
+def _actor_from_body(body: str) -> tuple[str, str]:
+    name = ""
+    email = ""
+    for line in body.splitlines():
+        if line.startswith("forge-actor-name:"):
+            name = line.split(":", 1)[1].strip()
+        elif line.startswith("forge-actor-email:"):
+            email = line.split(":", 1)[1].strip()
+    return name, email
+
+
 class HistoryUnavailable(RuntimeError):
+    """Git is missing or the repository is unusable."""
+
     """Git is missing or the repository is unusable."""
 
 
@@ -178,7 +214,7 @@ def ensure_repo(project_id: str, initial_label: str = "initial state") -> tuple[
     return repo, True
 
 
-def snapshot(project_id: str, label: str) -> str | None:
+def snapshot(project_id: str, label: str, *, actor: tuple[str, str] | None = None) -> str | None:
     """Commit the current workspace state. Returns the snapshot id, or None.
 
     Returns None when nothing changed (no empty checkpoints in the timeline) or
@@ -192,7 +228,9 @@ def snapshot(project_id: str, label: str) -> str | None:
         status = _run(repo, ["status", "--porcelain"])
         if not status.stdout.strip():
             return None
-        message = f"{label}\n\nforge-snapshot-at: {datetime.now(UTC).isoformat()}"
+        message = "\n".join(
+            [label, "", f"forge-snapshot-at: {datetime.now(UTC).isoformat()}", *_actor_lines(actor)]
+        )
         _run(repo, ["commit", "--quiet", "--no-verify", "-m", message])
         head = _run(repo, ["rev-parse", "HEAD"])
         return head.stdout.strip()
@@ -212,18 +250,31 @@ def list_snapshots(project_id: str, limit: int = 50) -> list[Snapshot]:
     try:
         out = _run(
             repo,
-            ["log", f"-{limit}", "--pretty=format:%H%x1f%s%x1f%cI", "--no-merges"],
+            ["log", f"-{limit}", "--pretty=format:%H%x1f%s%x1f%aI%x1f%b%x1e", "--no-merges"],
         )
     except (HistoryUnavailable, OSError, subprocess.SubprocessError):
         return []
 
     snapshots: list[Snapshot] = []
-    for line in out.stdout.splitlines():
-        parts = line.split("\x1f")
-        if len(parts) != 3:
+    for record in out.stdout.split("\x1e"):
+        record = record.strip("\n")
+        if not record.strip():
             continue
-        commit, subject, created = parts
-        snapshots.append(Snapshot(id=commit, label=subject, created_at=created))
+        parts = record.split("\x1f", 3)
+        if len(parts) < 3:
+            continue
+        commit, subject, created = parts[0], parts[1], parts[2]
+        body = parts[3] if len(parts) > 3 else ""
+        actor_name, actor_email = _actor_from_body(body)
+        snapshots.append(
+            Snapshot(
+                id=commit.strip(),
+                label=subject.strip(),
+                created_at=created.strip(),
+                actor_name=actor_name,
+                actor_email=actor_email,
+            )
+        )
     return snapshots
 
 
@@ -283,5 +334,6 @@ def restore(project_id: str, snapshot_id: str) -> str | None:
     status = _run(repo, ["status", "--porcelain"])
     if not status.stdout.strip():
         return None
-    _run(repo, ["commit", "--quiet", "--no-verify", "-m", f"restore checkpoint {short}"])
+    message = "\n".join([f"restore checkpoint {short}", "", *_actor_lines(None)])
+    _run(repo, ["commit", "--quiet", "--no-verify", "-m", message])
     return _run(repo, ["rev-parse", "HEAD"]).stdout.strip()

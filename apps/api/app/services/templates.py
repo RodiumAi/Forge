@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from app.config import get_settings
+from app.services.typography import TEXT_EXTS, strip_long_dashes
 
 _SKIP_NAMES = {"node_modules", ".git", "dist", ".vite", "__pycache__"}
 _ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{1,62}$")
@@ -159,6 +160,19 @@ def fork_template(template_id: str, project_id: str, app_name: str | None = None
     tpl = dest / "template.json"
     if tpl.is_file():
         tpl.unlink()
+
+    # House typography: the user's copy of a template carries no long dashes
+    # (the template sources are left untouched).
+    for file in dest.rglob("*"):
+        if not file.is_file() or not file.name.lower().endswith(TEXT_EXTS):
+            continue
+        try:
+            text = file.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        cleaned = strip_long_dashes(text)
+        if cleaned != text:
+            file.write_text(cleaned, encoding="utf-8")
 
     if app_name:
         pkg = dest / "package.json"

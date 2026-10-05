@@ -17,6 +17,8 @@ export type SessionProfile = {
    * which identifies the account to credit by that id.
    */
   rodium_sub?: string | null;
+  /** Default payment country chosen on pricing. Null until the person picks one. */
+  payment_country_iso?: string | null;
 };
 
 export type SessionWallet = {
@@ -168,6 +170,7 @@ export async function ensureSession(options?: { force?: boolean }): Promise<Sess
           avatar_url: me.avatar_url,
           rodium_linked: me.rodium_linked,
           rodium_sub: me.rodium_sub ?? null,
+          payment_country_iso: me.payment_country_iso ?? null,
         };
         const distinctId = me.rodium_sub ?? (me.id ? String(me.id) : null);
         if (distinctId) {

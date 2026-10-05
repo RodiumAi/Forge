@@ -17,6 +17,11 @@ export function LandingReveal({ children, className = "", delayMs = 0 }: Props) 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+    const hash = window.location.hash;
+    if (hash && el.querySelector(hash)) {
+      setVisible(true);
+      return;
+    }
     const io = new IntersectionObserver(
       ([entry]) => {
         if (entry?.isIntersecting) {

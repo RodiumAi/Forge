@@ -8,6 +8,8 @@
  * Default mode is a centered popup (Firebase-style). The OIDC round-trip must
  * start *inside* that popup so the sessionStorage state binding stays valid.
  * `mode: "redirect"` keeps the full-page flow for `?autostart=1`.
+ * If the browser blocks the popup, we automatically fall back to redirect —
+ * sites cannot force a popup-permission prompt.
  */
 
 import { api, ApiError, getToken } from "@/lib/api";
@@ -246,7 +248,8 @@ function waitForPopupCompletion(popup: Window): Promise<StartRodiumOAuthResult> 
  * Begin OIDC.
  *
  * - `popup` (default): opens `/auth/rodium-popup`, waits for token, then lands
- *   on the stashed return path (or `/dashboard`).
+ *   on the stashed return path (or `/dashboard`). If `window.open` is blocked,
+ *   falls back to full-page redirect (browsers never prompt for popup permission).
  * - `redirect`: full-page navigation (autostart from the RodiumAi dashboard).
  *
  * On 503 (no OIDC client), optionally redirects to settings; otherwise returns.
@@ -280,24 +283,24 @@ export async function startRodiumOAuth(options?: {
   }
 
   const popupQs = prompt ? `?prompt=${encodeURIComponent(prompt)}` : "";
-  const popup = window.open(
-    `/auth/rodium-popup${popupQs}`,
-    OAUTH_POPUP_WINDOW_NAME,
-    popupFeatures(),
-  );
-  if (!popup) {
+  // Open about:blank first so a blocked popup never starts a second OIDC
+  // round-trip (some browsers still open the URL then return null — which used
+  // to race with the redirect fallback and burn two state bindings).
+  const popup = window.open("about:blank", OAUTH_POPUP_WINDOW_NAME, popupFeatures());
+  if (!popup || popup.closed) {
+    // No Permission API for pop-ups — continue in this tab instead.
+    return startRodiumOAuthRedirect({ ...options, prompt });
+  }
+  try {
+    popup.location.href = `/auth/rodium-popup${popupQs}`;
+    popup.focus();
+  } catch {
     try {
-      sessionStorage.removeItem(RETURN_TO_KEY);
+      popup.close();
     } catch {
       // ignore
     }
-    return { ok: false, reason: "popup_blocked" };
-  }
-
-  try {
-    popup.focus();
-  } catch {
-    // ignore
+    return startRodiumOAuthRedirect({ ...options, prompt });
   }
 
   return waitForPopupCompletion(popup);

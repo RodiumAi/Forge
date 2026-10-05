@@ -15,11 +15,13 @@ from app.i18n import resolve_locale, t
 from app.models import Project, User
 from app.services import history
 from app.services.attachments import ResolvedImage, resolve_image_part
+from app.services.capabilities import require_rodi_for_paid_capability
 from app.services.design_colors import apply_brand_color, merge_palettes, parse_palette
 from app.services.filesystem import project_dir, read_file, write_bytes, write_file
 from app.services.llm import RodiumError, complete_chat
 from app.services.orchestration.context import DESIGN_PATH
 from app.services.rodium_generation import resolve_generation_auth
+from app.services.typography import strip_long_dashes
 
 router = APIRouter(prefix="/projects", tags=["design"])
 
@@ -272,6 +274,7 @@ async def generate_design_charter(
 ) -> DesignCharterResponse:
     locale = resolve_locale(request)
     project = _owned(db, user, project_id, locale)
+    require_rodi_for_paid_capability(user, db)
     try:
         gen_auth = await resolve_generation_auth(db, user)
     except HTTPException as exc:
@@ -360,6 +363,7 @@ async def generate_design_charter(
         if lines and lines[-1].strip() == "```":
             lines = lines[:-1]
         markdown = "\n".join(lines).strip()
+    markdown = strip_long_dashes(markdown)  # house typography: no long dashes
 
     write_file(str(project.id), DESIGN_PATH, markdown + "\n")
     project.design_brief = brief_text

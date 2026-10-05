@@ -14,6 +14,7 @@ from app.models import Project, User
 from app.services import rate_limit
 from app.services.domains import get_project_domain, sites_url_for_project
 from app.services.export_project import build_export_zip
+from app.services.project_access import accessible_project
 from app.services.publish_esm import publish_project_esm
 
 router = APIRouter(prefix="/projects", tags=["publish"])
@@ -114,7 +115,10 @@ def export_project_zip(
     db: Session = Depends(get_db),
 ) -> StreamingResponse:
     locale = resolve_locale(request)
-    project = _owned(db, user, project_id, locale)
+    project = accessible_project(db, user, project_id, locale)
+    from app.services.entitlements import require_feature
+
+    require_feature(db, user, "export_enabled")
     try:
         data, filename = build_export_zip(
             project_id=str(project.id),

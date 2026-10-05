@@ -114,6 +114,11 @@ services:
       RUNNER_PARENT_ORIGINS: http://localhost:3100,http://127.0.0.1:3100
       SSE_HEARTBEAT_SECONDS: "15"
       ALB_IDLE_TIMEOUT_SECONDS: "600"
+      # FastAPI internal lane. Forge reads the weekly FRODI balance and the
+      # plan with the shared token plus the platform uid.
+      RODIUM_GATEWAY_INTERNAL_URL: http://host.docker.internal:8001
+      # Official FRODI generation lane. Empty on a clone (BYOK).
+      RODIUM_FORGE_GATEWAY_TOKEN: ${RODIUM_FORGE_GATEWAY_TOKEN:-}
     volumes:
       - ./data/projects:/data/projects
       - ./data/templates:/data/templates:ro

@@ -1,11 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Plus } from "lucide-react";
 import { getToken } from "@/lib/api";
-import { Icon } from "@/components/ui/icon";
-import { rodiumRechargeUrl } from "@/lib/constants/rodium-links";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import {
   getSessionSnapshot,
@@ -13,6 +9,13 @@ import {
   subscribeSession,
   type SessionWallet,
 } from "@/lib/session-cache";
+import {
+  isForgeStatusSettled,
+  refreshForgeStatus,
+  subscribeForgeStatus,
+  useForgeStatus,
+} from "@/lib/forge-status";
+import { frodiUsage } from "@/lib/frodi-usage";
 
 const POLL_MS = 45_000;
 
@@ -41,8 +44,11 @@ function formatRodiCompact(value: string | null | undefined): string {
       .toFixed(n >= 10 || Number.isInteger(n) ? 0 : 1)
       .replace(/\.0$/, "");
   if (abs >= 1_000_000) return `${trim(asNumber / 1_000_000)}M`;
-  if (abs >= 1_000) return `${trim(asNumber / 1_000)}k`;
-  return trim(asNumber);
+  if (abs >= 10_000) return `${trim(asNumber / 1_000)}k`;
+  // Below 10k the rail shows the figure itself. Rounding 1989.6 up to "2k"
+  // hid a debit that should be visible after every prompt.
+  if (Number.isInteger(asNumber)) return String(Math.trunc(asNumber));
+  return asNumber.toFixed(1);
 }
 
 function initialFromCache() {
@@ -50,7 +56,6 @@ function initialFromCache() {
     return {
       linked: false,
       wallet: null as SessionWallet | null,
-      rodiumSub: null as string | null,
     };
   }
   const snap = getSessionSnapshot();
@@ -58,8 +63,38 @@ function initialFromCache() {
   return {
     linked,
     wallet: snap?.rodium?.wallet ?? null,
-    rodiumSub: snap?.profile?.rodium_sub ?? null,
   };
+}
+
+const NEXT_PLAN: Record<string, string> = {
+  free: "Starter",
+  starter: "Builder",
+  builder: "Pro",
+  pro: "Scale",
+};
+
+export function planDisplayName(slug: string | null | undefined): string | null {
+  if (!slug) return null;
+  if (slug === "team-pro") return "Team (Pro)";
+  if (slug === "team-scale") return "Team (Scale)";
+  return slug.charAt(0).toUpperCase() + slug.slice(1);
+}
+
+export function nextPlanName(slug: string | null | undefined): string | null {
+  if (!slug) return null;
+  return NEXT_PLAN[slug] ?? null;
+}
+
+function PlanSkeleton({ compact }: { compact?: boolean }) {
+  return (
+    <span
+      className={`rodium-wallet-badge rodium-wallet-pending${compact ? " rodium-wallet-connect-compact" : ""}`}
+      aria-busy="true"
+    >
+      <span className="home-skel rodium-wallet-skel-name" />
+      <span className="home-skel rodium-wallet-skel-meter" />
+    </span>
+  );
 }
 
 export function RodiumWalletBadge({
@@ -71,12 +106,17 @@ export function RodiumWalletBadge({
   collapsed?: boolean;
 }) {
   const { t, locale } = useI18n();
+  const forge = useForgeStatus();
+  const [forgeSettled, setForgeSettled] = useState(isForgeStatusSettled);
   const [wallet, setWallet] = useState<SessionWallet | null>(() => initialFromCache().wallet);
   const [linked, setLinked] = useState(() => initialFromCache().linked);
-  const [rodiumSub, setRodiumSub] = useState<string | null>(
-    () => initialFromCache().rodiumSub,
-  );
   const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    const unsub = subscribeForgeStatus(() => setForgeSettled(isForgeStatusSettled()));
+    setForgeSettled(isForgeStatusSettled());
+    return unsub;
+  }, []);
 
   useEffect(() => {
     setHydrated(true);
@@ -85,7 +125,6 @@ export function RodiumWalletBadge({
     const apply = (snap: ReturnType<typeof getSessionSnapshot>) => {
       const nextLinked = Boolean(snap?.rodium?.linked || snap?.profile?.rodium_linked);
       setLinked(nextLinked);
-      setRodiumSub(snap?.profile?.rodium_sub ?? null);
       if (snap?.rodium?.wallet !== undefined) {
         setWallet(snap.rodium.wallet ?? null);
       }
@@ -97,6 +136,7 @@ export function RodiumWalletBadge({
       if (!getToken()) return;
       if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
       void refreshRodiumWallet();
+      void refreshForgeStatus();
     };
 
     pull();
@@ -121,31 +161,64 @@ export function RodiumWalletBadge({
     wallet != null &&
     (wallet.balance_rodi != null || wallet.provided_total_rodi != null);
 
-  // Avoid flashing the connect CTA before session cache has spoken.
-  if (!hydrated && !linked && !hasWallet) return null;
+  // FRODI is the primary reservoir on Forge Cloud; RODI is the fallback wallet.
+  // Off Forge Cloud (open-source / unlinked) `frodi` is null and this badge
+  // behaves exactly as before, showing RODI only.
+  const frodi = forge?.frodi ?? null;
+  const hasFrodi = frodi != null;
 
-  if (!hasWallet && !linked) {
-    return (
-      <Link
-        href="/settings?tab=generation"
-        className={`rodium-wallet-connect${compact || collapsed ? " rodium-wallet-connect-compact" : ""}`}
-        title={t("connectRodiumAiHint")}
-      >
-        {collapsed ? null : compact ? t("connectRodiumAiShort") : t("connectRodiumAi")}
-      </Link>
-    );
+  // Avoid flashing the connect CTA before session cache has spoken.
+  // The session cache has RODI immediately. Wait for the Forge status fetch
+  // so the sidebar does not flash RODI and then jump to FRODI.
+  if (!forgeSettled && !hasFrodi) {
+    return <PlanSkeleton compact={compact || collapsed} />;
   }
 
-  if (!hasWallet) {
-    // Linked but wallet still hydrating — never flash the Connect CTA.
-    return (
-      <span
-        className={`rodium-wallet-connect rodium-wallet-pending${compact || collapsed ? " rodium-wallet-connect-compact" : ""}`}
-        aria-busy="true"
-        title={t("balanceRodi")}
-      >
-        {collapsed ? null : "…"}
+  if (!hydrated && !linked && !hasWallet && !hasFrodi) return null;
+
+  if (!hasWallet && !linked && !hasFrodi) {
+    return null;
+  }
+
+  if (!hasWallet && !hasFrodi) {
+    return <PlanSkeleton compact={compact || collapsed} />;
+  }
+
+  // FRODI-primary path: show the plan reservoir up front, with RODI as the
+  // fallback line, while keeping the same recharge deep-link.
+  const planSlug = forge?.plan ?? forge?.entitlements?.plan_slug ?? null;
+  const planName = planDisplayName(planSlug);
+
+  if (hasFrodi) {
+    const usage = frodiUsage(forge);
+    const usedPct = usage?.usedPct ?? 0;
+    const frodiFull = formatRodi(String(frodi), locale);
+    const frodiTitle = planName
+      ? `${planName} · ${t("balanceFrodi")}: ${frodiFull}`
+      : `${t("balanceFrodi")}: ${frodiFull}`;
+    const meter = (
+      <span className="rodium-wallet-meter" aria-hidden>
+        <span style={{ width: `${usedPct}%` }} />
       </span>
+    );
+
+    if (collapsed) {
+      return (
+        <div className="rodium-wallet-wrap rodium-wallet-wrap-compact rodium-wallet-wrap-rail">
+          <span className="rodium-wallet-badge rodium-wallet-badge-rail" title={frodiTitle}>
+            {meter}
+          </span>
+        </div>
+      );
+    }
+
+    return (
+      <div className={`rodium-wallet-wrap${compact ? " rodium-wallet-wrap-compact" : ""}`}>
+        <span className="rodium-wallet-badge" title={frodiTitle}>
+          {planName ? <span className="rodium-wallet-plan">{planName}</span> : <span>…</span>}
+          {meter}
+        </span>
+      </div>
     );
   }
 
@@ -161,35 +234,16 @@ export function RodiumWalletBadge({
     const compactBalance = formatRodiCompact(wallet?.balance_rodi);
     return (
       <div className="rodium-wallet-wrap rodium-wallet-wrap-compact rodium-wallet-wrap-rail">
-        <Link
-          href="/settings?tab=generation"
-          className="rodium-wallet-badge rodium-wallet-badge-rail"
-          title={balanceTitle}
-          aria-label={balanceTitle}
-        >
+        <span className="rodium-wallet-badge rodium-wallet-badge-rail" title={balanceTitle}>
           <strong className="rodium-wallet-rail-amount">{compactBalance}</strong>
-        </Link>
-        <a
-          href={rodiumRechargeUrl(rodiumSub)}
-          className="rodium-wallet-recharge"
-          title={t("rechargeRodi")}
-          aria-label={t("rechargeRodi")}
-          target="_blank"
-          rel="noreferrer"
-        >
-          <Icon icon={Plus} className="ui-icon-sm" />
-        </a>
+        </span>
       </div>
     );
   }
 
   return (
     <div className={`rodium-wallet-wrap${compact ? " rodium-wallet-wrap-compact" : ""}`}>
-      <Link
-        href="/settings?tab=generation"
-        className="rodium-wallet-badge"
-        title={balanceTitle}
-      >
+      <span className="rodium-wallet-badge" title={balanceTitle}>
         <span className="rodium-wallet-main">
           <strong>{balance}</strong>
           <span>RODI</span>
@@ -199,17 +253,7 @@ export function RodiumWalletBadge({
             {provided} {t("walletProvidedShort")}
           </span>
         ) : null}
-      </Link>
-      <a
-        href={rodiumRechargeUrl(rodiumSub)}
-        className="rodium-wallet-recharge"
-        title={t("rechargeRodi")}
-        aria-label={t("rechargeRodi")}
-        target="_blank"
-        rel="noreferrer"
-      >
-        <Icon icon={Plus} className="ui-icon-sm" />
-      </a>
+      </span>
     </div>
   );
 }

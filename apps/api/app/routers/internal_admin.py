@@ -111,3 +111,75 @@ def admin_restore_by_rodium_sub(
         user.access_blocked_at = None
     db.commit()
     return {"restored": len(users), "rodium_sub": body.rodium_sub}
+
+
+class EntitlementsSyncBody(BaseModel):
+    rodium_sub: str
+    plan: str = "free"
+    status: str = "active"
+    maxProjects: int | None = None
+    entitlements: dict = {}
+    frodi: str | float | None = None
+
+
+class ProjectLockBody(BaseModel):
+    project_ids: list[str]
+    locked: bool = True
+
+
+class DomainSuspendBody(BaseModel):
+    project_id: str
+
+
+@router.post("/entitlements/sync")
+def admin_sync_entitlements(
+    body: EntitlementsSyncBody,
+    _: None = Depends(_require_admin_secret),
+    db: Session = Depends(get_db),
+) -> dict[str, str]:
+    user = db.query(User).filter(User.rodium_sub == body.rodium_sub).one_or_none()
+    if user is None:
+        raise HTTPException(status_code=404, detail="user_not_found")
+    from app.services.entitlements import upsert_entitlements
+
+    upsert_entitlements(db, user, body.model_dump())
+    db.commit()
+    return {"synced": body.rodium_sub}
+
+
+@router.post("/projects/lock")
+def admin_lock_projects(
+    body: ProjectLockBody,
+    _: None = Depends(_require_admin_secret),
+    db: Session = Depends(get_db),
+) -> dict[str, int]:
+    from app.models import Project
+
+    updated = 0
+    for raw_id in body.project_ids:
+        try:
+            project = db.get(Project, UUID(raw_id))
+        except ValueError:
+            project = None
+        if project is None:
+            continue
+        project.status = "locked" if body.locked else "ready"
+        updated += 1
+    db.commit()
+    return {"updated": updated}
+
+
+@router.post("/domains/suspend")
+def admin_suspend_domain(
+    body: DomainSuspendBody,
+    _: None = Depends(_require_admin_secret),
+    db: Session = Depends(get_db),
+) -> dict[str, str]:
+    from app.models import ProjectDomain
+
+    domain = db.query(ProjectDomain).filter(ProjectDomain.project_id == body.project_id).one_or_none()
+    if domain is None:
+        return {"status": "absent"}
+    domain.status = "suspended"
+    db.commit()
+    return {"status": "suspended"}

@@ -12,7 +12,7 @@ import {
 } from "react";
 import Link from "next/link";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ArrowUp, ListTodo, Pencil, Plus, RotateCcw, Square, X } from "lucide-react";
+import { ArrowUp, Pencil, Plus, RotateCcw, Square, X } from "lucide-react";
 import { api, apiBase, ApiError, getToken, logoutToHome, readApiError } from "@/lib/api";
 import {
   classifyChatError,
@@ -31,6 +31,7 @@ import {
   clearBootPrompt,
   peekBootPrompt,
 } from "@/lib/create-project";
+import { refreshForgeStatus, useForgeStatus } from "@/lib/forge-status";
 import { refreshRodiumWallet } from "@/lib/session-cache";
 import { topProgressDone, topProgressStart } from "@/lib/top-progress";
 import { Icon } from "@/components/ui/icon";
@@ -40,7 +41,7 @@ import {
   type AgentStep,
   type FileOp,
 } from "@/components/AgentActivityPanel";
-import { ClarifyCard, type ClarifyQuestion } from "@/components/ClarifyCard";
+import { ClarifyCard, type ClarifyAnswers, type ClarifyQuestion } from "@/components/ClarifyCard";
 import { DesignCharterSlideover } from "@/components/DesignCharterSlideover";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { HistoryPanel } from "@/components/builder/HistoryPanel";
@@ -54,6 +55,7 @@ import { BUILDER_SIDEBAR_KEY, HomeShell } from "@/components/HomeLayout";
 import { CodePane } from "@/components/builder/CodePane";
 import { CommentsPanel } from "@/components/builder/CommentsPanel";
 import { ResizableChatPanel } from "@/components/builder/ResizableChatPanel";
+import { FrodiUsageBanner } from "@/components/FrodiUsageBanner";
 import { FilesPane } from "@/components/builder/FilesPane";
 import { ImageEditPanel } from "@/components/builder/ImageEditPanel";
 import { OptionsPane } from "@/components/builder/OptionsPane";
@@ -115,6 +117,8 @@ type Project = {
   sites_url?: string | null;
   published_at?: string | null;
   platform?: "web" | "mobile";
+  access_role?: string;
+  collaborators?: { name: string | null; email: string; avatar_url: string | null }[];
 };
 
 type Chat = { id: string; title: string | null };
@@ -154,7 +158,7 @@ type ChatRetryAction =
   | { kind: "boot"; prompt: string }
   | { kind: "send"; content: string; attachments: PromptAttachment[]; opts: SendOpts }
   | { kind: "plan" }
-  | { kind: "clarify"; answers: Record<string, string> }
+  | { kind: "clarify"; answers: ClarifyAnswers }
   | { kind: "subscribe"; runId: string };
 
 type AgentMode = "agent" | "plan";
@@ -302,6 +306,80 @@ function isNetworkStreamError(err: unknown): boolean {
   return /aborted/i.test(raw);
 }
 
+function ComposerPick({
+  label,
+  value,
+  options,
+  disabled,
+  solid,
+  narrow,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: { value: string; label: string }[];
+  disabled?: boolean;
+  solid?: boolean;
+  narrow?: boolean;
+  onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const current = options.find((item) => item.value === value)?.label ?? value;
+
+  useEffect(() => {
+    if (!open) return;
+    function onDoc(event: MouseEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    }
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  return (
+    <div className={`builder-pick${solid ? " is-solid" : ""}${narrow ? " is-narrow" : ""}`} ref={rootRef}>
+      <button
+        type="button"
+        className="builder-pick-trigger"
+        disabled={disabled}
+        aria-label={label}
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        onClick={() => setOpen((next) => !next)}
+      >
+        <span>{current}</span>
+      </button>
+      {open ? (
+        <ul className="builder-pick-menu" role="listbox" aria-label={label}>
+          {options.map((item) => (
+            <li key={item.value}>
+              <button
+                type="button"
+                role="option"
+                aria-selected={item.value === value}
+                className={item.value === value ? "is-selected" : ""}
+                onClick={() => {
+                  onChange(item.value);
+                  setOpen(false);
+                }}
+              >
+                {item.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
 export default function ProjectPage() {
   const params = useParams<{ id: string }>();
   const projectId = params.id;
@@ -379,6 +457,50 @@ export default function ProjectPage() {
   );
   const [bootRetryPrompt, setBootRetryPrompt] = useState<string | null>(null);
   const [planMode, setPlanMode] = useState(false);
+  const forge = useForgeStatus();
+  const canPickModel = Boolean(forge?.entitlements?.model_selection);
+  const [chatModel, setChatModel] = useState("auto");
+  const [modelChoices, setModelChoices] = useState<{ slug: string; label: string }[]>([]);
+  const chatModelRef = useRef("auto");
+  const canPickModelRef = useRef(false);
+  canPickModelRef.current = canPickModel;
+
+  useEffect(() => {
+    const stored = localStorage.getItem("forge.chatModel") || "auto";
+    chatModelRef.current = stored;
+    setChatModel(stored);
+  }, []);
+
+  useEffect(() => {
+    if (!canPickModel) return;
+    let cancelled = false;
+    void api<{ selectable: boolean; models: { slug: string; label: string }[] }>("/auth/forge/models")
+      .then((body) => {
+        if (cancelled) return;
+        const models = body.models || [];
+        setModelChoices(models);
+        const current = chatModelRef.current;
+        if (current !== "auto" && !models.some((item) => item.slug === current)) {
+          chatModelRef.current = "auto";
+          setChatModel("auto");
+          localStorage.setItem("forge.chatModel", "auto");
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [canPickModel]);
+
+  function chooseChatModel(slug: string) {
+    chatModelRef.current = slug;
+    setChatModel(slug);
+    try {
+      localStorage.setItem("forge.chatModel", slug);
+    } catch {
+      /* private mode */
+    }
+  }
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
   const [clarifyQuestions, setClarifyQuestions] = useState<ClarifyQuestion[]>([]);
   const [planTasks, setPlanTasks] = useState<PlanTask[]>([]);
@@ -1447,6 +1569,7 @@ export default function ProjectPage() {
           streamingRunIdRef.current = null;
         }
         void refreshRodiumWallet();
+        void refreshForgeStatus({ fresh: true });
       }
     },
     [chatId, handleStreamEvent, locale, projectId, pushStreamError, seedStreamState],
@@ -1606,6 +1729,7 @@ export default function ProjectPage() {
     );
     setActiveRunId(null);
     void refreshRodiumWallet();
+    void refreshForgeStatus({ fresh: true });
   }, [chatId, locale, projectId]);
 
   const sendMessage = useCallback(
@@ -1786,11 +1910,14 @@ export default function ProjectPage() {
             Authorization: `Bearer ${getToken()}`,
             "Accept-Language": locale,
           },
-          body: JSON.stringify(
-            isBranch
-              ? { from_message_id: branchFromId, content: payload, mode }
-              : { content: payload, mode },
-          ),
+          body: JSON.stringify({
+            content: payload,
+            mode,
+            ...(isBranch ? { from_message_id: branchFromId } : {}),
+            ...(canPickModelRef.current && chatModelRef.current !== "auto"
+              ? { model: chatModelRef.current }
+              : {}),
+          }),
         });
         if (!res.ok || !res.body) {
           // `readApiError` reads the body the same way `api()` does. The
@@ -1891,6 +2018,7 @@ export default function ProjectPage() {
           setBusy(false);
         }
         void refreshRodiumWallet();
+        void refreshForgeStatus({ fresh: true });
       }
     },
     [busy, chatId, editingMessageId, elementSelection, handleStreamEvent, locale, planMode, previewTool, projectId, pushChatError, pushStreamError, seedStreamState, subscribeRunEvents, syncBuilderUrl, t],
@@ -1963,7 +2091,7 @@ export default function ProjectPage() {
   }, [previewTool, syncBuilderUrl]);
 
   const submitClarify = useCallback(
-    async (answers: Record<string, string>) => {
+    async (answers: ClarifyAnswers) => {
       if (!chatId || !activeRunId) return;
       setBusy(true);
       setError(null);
@@ -2001,6 +2129,7 @@ export default function ProjectPage() {
         setStreamActive(false);
         setBusy(false);
         void refreshRodiumWallet();
+        void refreshForgeStatus({ fresh: true });
       }
     },
     [activeRunId, chatId, handleStreamEvent, locale, projectId, pushStreamError, seedStreamState],
@@ -2120,6 +2249,7 @@ export default function ProjectPage() {
         setBusy(false);
       }
       void refreshRodiumWallet();
+        void refreshForgeStatus({ fresh: true });
     }
   }, [activeRunId, chatId, handleStreamEvent, locale, planTasks, projectId, pushStreamError, seedStreamState, subscribeRunEvents, t]);
 
@@ -2258,6 +2388,8 @@ export default function ProjectPage() {
         slug={project?.slug}
         sitesUrl={project?.sites_url}
         publishedAt={project?.published_at}
+        canShare={project?.access_role === "owner"}
+        collaborators={project?.collaborators}
         onNameSaved={(meta) =>
           setProject((p) =>
             p
@@ -2319,11 +2451,6 @@ export default function ProjectPage() {
         onRefreshPreview={() => {
           void forcePreviewRefresh({ restart: true });
         }}
-        onOpenDesign={() => {
-          setDesignOpen(true);
-          syncBuilderUrl({ designOpen: true });
-        }}
-                onOpenHistory={() => setHistoryOpen((v) => !v)}
         onOpenDraftExternal={async () => {
           // Standalone draft page: the runner shell with the bundle embedded.
           // Opening the bare runner URL showed an empty page (it waits for a
@@ -2607,6 +2734,18 @@ export default function ProjectPage() {
           </div>
 
           <form className="builder-composer" onSubmit={onSend}>
+            <FrodiUsageBanner
+              onOpenSettings={() => {
+                setMainMode("options");
+                setMobilePane("workspace");
+                setOptionsSection("subscription");
+                syncBuilderUrl({
+                  mainMode: "options",
+                  mobilePane: "workspace",
+                  optionsSection: "subscription",
+                });
+              }}
+            />
             <div
               className={`builder-composer-box${attachments.length ? " has-attachments" : ""}${dragActive ? " is-dragging" : ""}`}
               onDragEnter={onDragEnter}
@@ -2728,31 +2867,31 @@ export default function ProjectPage() {
                 aria-busy={busy}
               />
               <div className="builder-composer-actions">
-                <div
-                  className="builder-mode-segment"
-                  role="group"
-                  aria-label={t("agentModeGroup")}
-                >
-                  <button
-                    type="button"
-                    className={`builder-mode-segment-btn${!planMode ? " active" : ""}`}
-                    aria-pressed={!planMode}
+                <div className="builder-composer-picks">
+                  <ComposerPick
+                    solid
+                    label={t("agentModeGroup")}
+                    value={planMode ? "plan" : "agent"}
                     disabled={busy}
-                    onClick={() => setPlanMode(false)}
-                  >
-                    {t("agentMode")}
-                  </button>
-                  <button
-                    type="button"
-                    className={`builder-mode-segment-btn${planMode ? " active" : ""}`}
-                    aria-pressed={planMode}
-                    title={t("planModeHint")}
-                    disabled={busy}
-                    onClick={() => setPlanMode(true)}
-                  >
-                    <Icon icon={ListTodo} className="ui-icon-sm" />
-                    {t("planMode")}
-                  </button>
+                    options={[
+                      { value: "agent", label: t("agentMode") },
+                      { value: "plan", label: t("planMode") },
+                    ]}
+                    onChange={(value) => setPlanMode(value === "plan")}
+                  />
+                  {canPickModel && modelChoices.length > 0 ? (
+                    <ComposerPick
+                      narrow
+                      label={t("modelPicker")}
+                      value={chatModel}
+                      disabled={busy}
+                      options={[
+                        { value: "auto", label: t("modelAuto") },
+                        ...modelChoices.map((item) => ({ value: item.slug, label: item.label })),
+                      ]}
+                      onChange={chooseChatModel}
+                    />
+                  ) : null}
                 </div>
                 <div className="builder-composer-actions-end">
                   {/* The file input must NOT live inside the button: nested
@@ -2941,6 +3080,7 @@ export default function ProjectPage() {
             projectSlug={project?.slug || ""}
             sitesUrl={project?.sites_url ?? null}
             publishedAt={project?.published_at ?? null}
+            canManageSite={project?.access_role === "owner"}
             section={optionsSection}
             onSectionChange={(section) => {
               setOptionsSection(section);
@@ -2962,6 +3102,7 @@ export default function ProjectPage() {
               setDesignOpen(true);
               syncBuilderUrl({ designOpen: true });
             }}
+            onOpenHistory={() => setHistoryOpen(true)}
           />
           </ErrorBoundary>
         )}

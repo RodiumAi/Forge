@@ -71,6 +71,7 @@ def init_db() -> None:
         "ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS rodium_wallet_json TEXT",
         "ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS rodium_api_keys_json TEXT",
         "ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS selected_rodium_api_key_id VARCHAR(64)",
+        "ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS payment_country_iso VARCHAR(2)",
         """
         CREATE TABLE IF NOT EXISTS auth_tokens (
             id UUID PRIMARY KEY,
@@ -188,6 +189,8 @@ def init_db() -> None:
         """,
         "CREATE INDEX IF NOT EXISTS ix_agent_runs_chat_id ON agent_runs (chat_id)",
         "ALTER TABLE agent_runs ADD COLUMN IF NOT EXISTS plan_meta_json TEXT",
+        "ALTER TABLE agent_runs ADD COLUMN IF NOT EXISTS brief TEXT",
+        "ALTER TABLE agent_runs ADD COLUMN IF NOT EXISTS clarity_score INTEGER",
         """
         CREATE TABLE IF NOT EXISTS model_catalog (
             slug VARCHAR(128) PRIMARY KEY,
@@ -303,6 +306,82 @@ def init_db() -> None:
           END IF;
         END $$;
         """,
+        "ALTER TABLE projects ADD COLUMN IF NOT EXISTS visibility VARCHAR(16) NOT NULL DEFAULT 'private'",
+        "ALTER TABLE projects ADD COLUMN IF NOT EXISTS billing_policy VARCHAR(32) NOT NULL DEFAULT 'owner_pays'",
+        """
+        CREATE TABLE IF NOT EXISTS forge_entitlement_cache (
+            user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+            plan_slug VARCHAR(32) NOT NULL DEFAULT 'free',
+            status VARCHAR(32) NOT NULL DEFAULT 'active',
+            max_projects INTEGER,
+            model_selection BOOLEAN NOT NULL DEFAULT false,
+            custom_domain BOOLEAN NOT NULL DEFAULT false,
+            export_enabled BOOLEAN NOT NULL DEFAULT false,
+            history_enabled BOOLEAN NOT NULL DEFAULT false,
+            history_limit INTEGER,
+            priority_generation BOOLEAN NOT NULL DEFAULT false,
+            allowed_model_tiers TEXT,
+            frodi_balance INTEGER NOT NULL DEFAULT 0,
+            refreshed_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+        """,
+        "ALTER TABLE forge_entitlement_cache ADD COLUMN IF NOT EXISTS history_limit INTEGER",
+        """
+        CREATE TABLE IF NOT EXISTS project_collaborators (
+            project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+            user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            role VARCHAR(16) NOT NULL DEFAULT 'editor',
+            invited_by UUID,
+            invited_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            accepted_at TIMESTAMPTZ,
+            frodi_cap_per_cycle INTEGER,
+            PRIMARY KEY (project_id, user_id)
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS project_invites (
+            id UUID PRIMARY KEY,
+            project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+            email VARCHAR(320) NOT NULL,
+            role VARCHAR(16) NOT NULL DEFAULT 'editor',
+            invited_by UUID,
+            invited_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            expires_at TIMESTAMPTZ NOT NULL,
+            accepted_at TIMESTAMPTZ,
+            declined_at TIMESTAMPTZ,
+            token_hash VARCHAR(64) NOT NULL,
+            frodi_cap_per_cycle INTEGER
+        )
+        """,
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_project_invites_project_email ON project_invites (project_id, email)",
+        "CREATE UNIQUE INDEX IF NOT EXISTS ix_project_invites_token_hash ON project_invites (token_hash)",
+        """
+        DO $$
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM forge_schema_migrations WHERE version = 'collab-accepted-backfill-v1'
+          ) THEN
+            UPDATE project_collaborators
+               SET accepted_at = COALESCE(invited_at, now())
+             WHERE accepted_at IS NULL;
+            INSERT INTO forge_schema_migrations (version) VALUES ('collab-accepted-backfill-v1');
+          END IF;
+        END $$;
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS team_seats (
+            id UUID PRIMARY KEY,
+            owner_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            email VARCHAR(320) NOT NULL,
+            status VARCHAR(16) NOT NULL,
+            token_hash VARCHAR(64),
+            reason TEXT,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+        """,
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_team_seats_owner_email ON team_seats (owner_user_id, email)",
+        "CREATE INDEX IF NOT EXISTS ix_team_seats_token_hash ON team_seats (token_hash)",
     ]
     with engine.begin() as conn:
         for sql in statements:

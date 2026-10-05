@@ -4,16 +4,17 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
-  BarChart3,
   Download,
   ExternalLink,
   Globe2,
+  History,
   KeyRound,
   Loader2,
   Palette,
   Save,
   Search,
   Settings2,
+  Sparkles,
   Trash2,
   type LucideIcon,
 } from "lucide-react";
@@ -22,29 +23,21 @@ import { removeProject } from "@/lib/lists-cache";
 import { Icon } from "@/components/ui/icon";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { CustomDomainSection } from "@/components/builder/CustomDomainSection";
+import { HistoryPanel } from "@/components/builder/HistoryPanel";
 import { SeoOptionsSection } from "@/components/builder/SeoOptionsSection";
+import { SubscriptionPanel } from "@/components/builder/SubscriptionPanel";
+import { forgeFeatureEnabled, exportAllowed, useForgeStatus } from "@/lib/forge-status";
 import { sitesBaseDomain, sitesScheme, sitesUrlForSlug } from "@/lib/sites-url";
 
-type OptionsSection = "general" | "environment" | "brand" | "seo" | "publishing" | "stats" | "danger";
-
-type ProjectStats = {
-  slug: string;
-  status: string;
-  preview_running: boolean;
-  published: boolean;
-  published_at: string | null;
-  sites_url: string | null;
-  created_at: string;
-  updated_at: string;
-  visitors_total: number;
-  visitors_7d: number;
-  files_count: number;
-  messages_count: number;
-  agent_runs_count: number;
-  comments_count: number;
-  storage_bytes: number;
-  tracking_ready: boolean;
-};
+  type OptionsSection =
+  | "general"
+  | "environment"
+  | "brand"
+  | "history"
+  | "seo"
+  | "publishing"
+  | "subscription"
+  | "danger";
 
 type Props = {
   projectId: string;
@@ -56,14 +49,10 @@ type Props = {
   onSectionChange?: (section: OptionsSection) => void;
   onNameSaved?: (meta: { name: string; slug?: string; sites_url?: string | null }) => void;
   onOpenDesign: () => void;
+  onOpenHistory: () => void;
+  /** Public URL and custom domain stay with the owner. */
+  canManageSite?: boolean;
 };
-
-function formatBytes(n: number): string {
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-  if (n < 1024 * 1024 * 1024) return `${(n / (1024 * 1024)).toFixed(1)} MB`;
-  return `${(n / (1024 * 1024 * 1024)).toFixed(2)} GB`;
-}
 
 function formatDate(value: string | null | undefined, locale: string): string {
   if (!value) return "—";
@@ -87,9 +76,14 @@ export function OptionsPane({
   onSectionChange,
   onNameSaved,
   onOpenDesign,
+  onOpenHistory: _onOpenHistory,
+  canManageSite = true,
 }: Props) {
   const { t, locale } = useI18n();
   const router = useRouter();
+  const forge = useForgeStatus();
+  const customDomainEnabled = forgeFeatureEnabled(forge, "custom_domain");
+  const exportEnabled = exportAllowed(forge);
   const [internalSection, setInternalSection] = useState<OptionsSection>("general");
   const section = sectionProp ?? internalSection;
   const selectSection = (next: OptionsSection) => {
@@ -103,8 +97,6 @@ export function OptionsPane({
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [stats, setStats] = useState<ProjectStats | null>(null);
-  const [statsLoading, setStatsLoading] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -149,27 +141,6 @@ export function OptionsPane({
     };
   }, [projectId]);
 
-  useEffect(() => {
-    if (section !== "stats") return;
-    let cancelled = false;
-    setStatsLoading(true);
-    void api<ProjectStats>(`/projects/${projectId}/stats`)
-      .then((res) => {
-        if (!cancelled) setStats(res);
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : t("errorGeneric"));
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setStatsLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [section, projectId, t]);
-
   const nav = useMemo(
     () =>
       [
@@ -179,6 +150,7 @@ export function OptionsPane({
             { id: "general" as const, label: t("optionsNavGeneral"), icon: Settings2 },
             { id: "environment" as const, label: t("optionsNavEnv"), icon: KeyRound },
             { id: "brand" as const, label: t("optionsNavBrand"), icon: Palette },
+            { id: "history" as const, label: t("historyTitle"), icon: History },
           ],
         },
         {
@@ -186,7 +158,12 @@ export function OptionsPane({
           items: [
             { id: "seo" as const, label: t("optionsNavSeo"), icon: Search },
             { id: "publishing" as const, label: t("optionsNavPublish"), icon: Globe2 },
-            { id: "stats" as const, label: t("optionsNavStats"), icon: BarChart3 },
+          ],
+        },
+        {
+          group: t("optionsGroupAccount"),
+          items: [
+            { id: "subscription" as const, label: t("optionsNavSubscription"), icon: Sparkles },
           ],
         },
         {
@@ -223,7 +200,7 @@ export function OptionsPane({
       const nextName = name.trim();
       const nextSlug = slug.trim();
       if (nextName && nextName !== projectName) body.name = nextName;
-      if (nextSlug && nextSlug !== projectSlug) body.slug = nextSlug;
+      if (canManageSite && nextSlug && nextSlug !== projectSlug) body.slug = nextSlug;
       if (!body.name && !body.slug) {
         flashOk(t("optionsSaved"));
         return;
@@ -328,9 +305,10 @@ export function OptionsPane({
     general: { title: t("optionsNavGeneral"), subtitle: t("optionsGeneralSub") },
     environment: { title: t("optionsNavEnv"), subtitle: t("optionsEnvSub") },
     brand: { title: t("optionsNavBrand"), subtitle: t("optionsBrandSub") },
+    history: { title: t("historyTitle"), subtitle: t("historySectionSub") },
     seo: { title: t("optionsNavSeo"), subtitle: t("optionsSeoSub") },
     publishing: { title: t("optionsNavPublish"), subtitle: t("optionsPublishSub") },
-    stats: { title: t("optionsNavStats"), subtitle: t("optionsStatsSub") },
+    subscription: { title: t("optionsNavSubscription"), subtitle: t("optionsSubscriptionSub") },
     danger: { title: t("optionsNavDanger"), subtitle: t("optionsDangerSub") },
   };
 
@@ -351,8 +329,13 @@ export function OptionsPane({
                   type="button"
                   className={`options-shell-item ${section === item.id ? "active" : ""} ${
                     item.id === "danger" ? "danger" : ""
-                  }`}
+                  } ${item.id === "danger" && !canManageSite ? "is-disabled" : ""}`}
+                  disabled={item.id === "danger" && !canManageSite}
+                  title={
+                    item.id === "danger" && !canManageSite ? t("optionsDangerGuest") : undefined
+                  }
                   onClick={() => {
+                    if (item.id === "danger" && !canManageSite) return;
                     selectSection(item.id);
                     setMessage(null);
                     setError(null);
@@ -397,7 +380,9 @@ export function OptionsPane({
             </div>
             <div className="options-field">
               <label htmlFor="options-slug">{t("optionsProjectSlug")}</label>
-              <p className="options-help">{t("optionsProjectSlugHelp")}</p>
+              <p className="options-help">
+                {canManageSite ? t("optionsProjectSlugHelp") : t("optionsProjectSlugLocked")}
+              </p>
               <div className="options-slug-row">
                 <span className="options-slug-prefix">{sitesScheme()}://</span>
                 <input
@@ -405,6 +390,8 @@ export function OptionsPane({
                   value={slug}
                   onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))}
                   autoComplete="off"
+                  readOnly={!canManageSite}
+                  disabled={!canManageSite}
                 />
                 <span className="options-slug-suffix">.{sitesBaseDomain()}</span>
               </div>
@@ -459,6 +446,19 @@ export function OptionsPane({
           </div>
         )}
 
+        {section === "history" && (
+          <HistoryPanel
+            embedded
+            projectId={projectId}
+            open
+            onClose={() => selectSection("general")}
+            onRestored={() => {
+              flashOk(t("historyRestored"));
+            }}
+            onUpgrade={() => selectSection("subscription")}
+          />
+        )}
+
         {section === "seo" && (
           <SeoOptionsSection
             projectId={projectId}
@@ -488,7 +488,9 @@ export function OptionsPane({
                 {sitesUrl || (slug ? sitesUrlForSlug(slug) : "—")}
               </strong>
             </div>
-            <p className="options-help">{t("optionsPublishHelp")}</p>
+            <p className="options-help">
+              {canManageSite ? t("optionsPublishHelp") : t("optionsPublishGuestHelp")}
+            </p>
             {sitesUrl && (
               <div className="options-actions">
                 <a className="btn btn-ghost" href={sitesUrl} target="_blank" rel="noreferrer">
@@ -498,89 +500,53 @@ export function OptionsPane({
               </div>
             )}
 
-            <CustomDomainSection
-              projectId={projectId}
-              onOk={flashOk}
-              onError={(msg) => {
-                setError(msg);
-                setMessage(null);
-              }}
-            />
-
-            <div className="options-seo-block">
-              <h4>{t("optionsExportTitle")}</h4>
-              <p className="options-help">{t("optionsExportHelp")}</p>
-              <div className="options-actions">
-                <button
-                  type="button"
-                  className="btn"
-                  disabled={exporting}
-                  onClick={() => void exportProject()}
-                >
-                  <Icon
-                    icon={exporting ? Loader2 : Download}
-                    className={`ui-icon-sm ${exporting ? "agent-spin" : ""}`}
-                  />
-                  {exporting ? t("optionsExporting") : t("optionsExport")}
-                </button>
+            {canManageSite && customDomainEnabled ? (
+              <CustomDomainSection
+                projectId={projectId}
+                onOk={flashOk}
+                onError={(msg) => {
+                  setError(msg);
+                  setMessage(null);
+                }}
+              />
+            ) : canManageSite ? (
+              <div className="options-seo-block options-locked">
+                <h4>{t("optionsCustomDomainTitle")}</h4>
+                <p className="options-help">{t("optionsCustomDomainLocked")}</p>
               </div>
-            </div>
-          </div>
-        )}
+            ) : null}
 
-        {section === "stats" && (
-          <div className="options-card">
-            {statsLoading && <p className="options-help">{t("loading")}</p>}
-            {!statsLoading && stats && (
-              <>
-                <div className="options-stats-grid">
-                  <article className="options-stat-card">
-                    <p>{t("optionsStatVisitors")}</p>
-                    <strong>{stats.visitors_total.toLocaleString(locale === "en" ? "en-US" : "fr-FR")}</strong>
-                    <span>
-                      {t("optionsStatVisitors7d").replace(
-                        "{n}",
-                        stats.visitors_7d.toLocaleString(locale === "en" ? "en-US" : "fr-FR"),
-                      )}
-                    </span>
-                  </article>
-                  <article className="options-stat-card">
-                    <p>{t("optionsStatFiles")}</p>
-                    <strong>{stats.files_count}</strong>
-                    <span>{formatBytes(stats.storage_bytes)}</span>
-                  </article>
-                  <article className="options-stat-card">
-                    <p>{t("optionsStatMessages")}</p>
-                    <strong>{stats.messages_count}</strong>
-                    <span>
-                      {t("optionsStatRuns").replace("{n}", String(stats.agent_runs_count))}
-                    </span>
-                  </article>
-                  <article className="options-stat-card">
-                    <p>{t("optionsStatComments")}</p>
-                    <strong>{stats.comments_count}</strong>
-                    <span>{stats.preview_running ? t("optionsStatPreviewOn") : t("optionsStatPreviewOff")}</span>
-                  </article>
+            {exportEnabled ? (
+              <div className="options-seo-block">
+                <h4>{t("optionsExportTitle")}</h4>
+                <p className="options-help">{t("optionsExportHelp")}</p>
+                <div className="options-actions">
+                  <button
+                    type="button"
+                    className="btn"
+                    disabled={exporting}
+                    onClick={() => void exportProject()}
+                  >
+                    <Icon
+                      icon={exporting ? Loader2 : Download}
+                      className={`ui-icon-sm ${exporting ? "agent-spin" : ""}`}
+                    />
+                    {exporting ? t("optionsExporting") : t("optionsExport")}
+                  </button>
                 </div>
-                <div className="options-stack" style={{ marginTop: "1rem" }}>
-                  <div className="options-stat-row">
-                    <span>{t("optionsStatCreated")}</span>
-                    <strong>{formatDate(stats.created_at, locale)}</strong>
-                  </div>
-                  <div className="options-stat-row">
-                    <span>{t("optionsStatUpdated")}</span>
-                    <strong>{formatDate(stats.updated_at, locale)}</strong>
-                  </div>
-                </div>
-                {!stats.tracking_ready && (
-                  <p className="options-help options-note">{t("optionsStatsTrackingHint")}</p>
-                )}
-              </>
+              </div>
+            ) : (
+              <div className="options-seo-block options-locked">
+                <h4>{t("optionsExportTitle")}</h4>
+                <p className="options-help">{t("optionsExportLocked")}</p>
+              </div>
             )}
           </div>
         )}
 
-        {section === "danger" && (
+        {section === "subscription" && <SubscriptionPanel />}
+
+        {section === "danger" && canManageSite && (
           <div className="options-card options-danger">
             <div className="options-danger-banner">
               <Icon icon={AlertTriangle} className="ui-icon-md" />

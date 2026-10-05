@@ -9,7 +9,26 @@ import httpx
 
 from app.config import get_settings
 from app.i18n import Locale, t
+from app.services.frodi_cycle import current_frodi_cycle_key
 from app.services.rodium_generation import RodiumGenerationAuth
+
+
+def _current_frodi_cycle_key() -> str:
+    """Rolling weekly window key for the collaborator FRODI cap counter (F-1)."""
+    return current_frodi_cycle_key()
+
+
+def _forge_billing_context(auth: RodiumGenerationAuth) -> dict[str, Any] | None:
+    """Build the lane ``forge_context`` for a capped shared-project generation."""
+    if not auth.actor_uid or auth.actor_uid == auth.billing_uid:
+        return None
+    ctx: dict[str, Any] = {"cycle_key": _current_frodi_cycle_key()}
+    if auth.project_id:
+        ctx["project_id"] = auth.project_id
+    if auth.frodi_cap_per_cycle:
+        ctx["cap_per_cycle"] = int(auth.frodi_cap_per_cycle)
+    return ctx
+
 
 # ── Error taxonomy ─────────────────────────────────────────────────────────
 #
@@ -36,7 +55,6 @@ ERR_INTERNAL = "internal"
 # token, forever". A stream that has sent nothing for a minute is dead; the
 # dispatcher's own wall-clock budget covers the legitimately-slow case.
 _STREAM_TIMEOUT = httpx.Timeout(60.0, connect=15.0, pool=30.0)
-_COMPLETE_TIMEOUT = httpx.Timeout(90.0, connect=15.0, pool=30.0)
 
 
 class RodiumError(Exception):
@@ -383,6 +401,44 @@ async def _stream_with_retries(
         raise _network_rodium_error(last_error, locale)
 
 
+async def _stream_frodi_chat(
+    *,
+    billing_uid: str,
+    model: str,
+    messages: list[dict[str, Any]],
+    locale: Locale,
+    actor_uid: str | None = None,
+    forge_context: dict[str, Any] | None = None,
+) -> AsyncIterator[StreamChunk]:
+    settings = get_settings()
+    url = settings.rodium_gateway_internal_url.rstrip("/") + "/internal/forge/chat/completions"
+    headers = {
+        "X-Forge-Gateway-Token": settings.rodium_forge_gateway_token,
+        "Content-Type": "application/json",
+    }
+    payload: dict[str, Any] = {
+        "billing_uid": billing_uid,
+        "model": model,
+        "messages": messages,
+        "stream": True,
+    }
+    if actor_uid and actor_uid != billing_uid:
+        payload["actor_uid"] = actor_uid
+    if forge_context:
+        payload["forge_context"] = forge_context
+    async with httpx.AsyncClient(timeout=_STREAM_TIMEOUT) as client:
+        async with client.stream("POST", url, headers=headers, json=payload) as response:
+            if response.status_code >= 400:
+                body = await response.aread()
+                _raise_rodium_error(httpx.Response(response.status_code, content=body), locale)
+            async for line in response.aiter_lines():
+                if not line:
+                    continue
+                chunk = _parse_stream_line(line)
+                if chunk:
+                    yield chunk
+
+
 async def stream_chat_completion(
     *,
     auth: RodiumGenerationAuth,
@@ -390,6 +446,22 @@ async def stream_chat_completion(
     messages: list[dict[str, Any]],
     locale: Locale = "fr",
 ) -> AsyncIterator[StreamChunk]:
+    settings = get_settings()
+    if settings.forge_cloud_enabled and auth.billing_uid:
+        try:
+            async for chunk in _stream_frodi_chat(
+                billing_uid=auth.billing_uid,
+                model=model,
+                messages=messages,
+                locale=locale,
+                actor_uid=auth.actor_uid,
+                forge_context=_forge_billing_context(auth),
+            ):
+                yield chunk
+            return
+        except RodiumError as exc:
+            if exc.code != ERR_QUOTA:
+                raise
 
     if auth.mode == "playground":
         if not auth.access_token or not auth.api_key_id:
@@ -436,83 +508,35 @@ async def complete_chat(
     locale: Locale = "fr",
     temperature: float = 0.4,
 ) -> str:
+    """Non-streaming completion used by the planner and the other short calls.
 
-    if auth.mode == "playground":
-        last_error: BaseException | None = None
-
-        for attempt in range(3):
-            parts: list[str] = []
-
-            try:
-                async for chunk in _stream_playground_chat(
-                    access_token=auth.access_token or "",
-                    api_key_id=auth.api_key_id or "",
-                    model=model,
-                    messages=messages,
-                    locale=locale,
-                ):
-                    if chunk.kind == "token":
-                        parts.append(chunk.content)
-
-                return "".join(parts)
-
-            except RodiumError as exc:
-                last_error = exc
-
-                if not is_transient_network_error(exc) or attempt >= 2:
-                    raise
-
-                await asyncio.sleep(0.6 * (attempt + 1))
-
-        if isinstance(last_error, RodiumError):
-            raise last_error
-
-        raise RodiumError(t("rodium_error", locale, code="network", body="retry failed"), None, ERR_NETWORK)
-
-    headers = {
-        "Authorization": f"Bearer {auth.api_key_secret}",
-        "Content-Type": "application/json",
-    }
-
-    payload: dict[str, Any] = {
-        "model": model,
-        "messages": messages,
-        "stream": False,
-        "temperature": temperature,
-    }
-
-    last_http: BaseException | None = None
-
+    Must share the stream path. A FRODI account has no user API key, and the
+    old playground branch sent ``Authorization: Bearer `` (empty token). httpx
+    rejects that header before the request leaves, and the chat showed it as
+    "Connection interrupted".
+    """
+    # The shared stream does not take a temperature; callers still pass one.
+    del temperature
+    parts: list[str] = []
+    last_error: BaseException | None = None
     for attempt in range(3):
+        parts = []
         try:
-            async with httpx.AsyncClient(timeout=_COMPLETE_TIMEOUT) as client:
-                response = await client.post(_gateway_chat_url(), headers=headers, json=payload)
-
-            if response.status_code >= 400:
-                _raise_rodium_error(response, locale)
-
-            data = response.json()
-
-            try:
-                return str(data["choices"][0]["message"]["content"] or "")
-
-            except (KeyError, IndexError, TypeError) as exc:
-                raise RodiumError(
-                    "Invalid completion payload", response.status_code, ERR_EMPTY_RESPONSE
-                ) from exc
-
-        except RodiumError:
-            raise
-
-        except httpx.HTTPError as exc:
-            last_http = exc
-
+            async for chunk in stream_chat_completion(
+                auth=auth,
+                model=model,
+                messages=messages,
+                locale=locale,
+            ):
+                if chunk.kind == "token":
+                    parts.append(chunk.content)
+            return "".join(parts)
+        except RodiumError as exc:
+            last_error = exc
             if not is_transient_network_error(exc) or attempt >= 2:
-                raise _network_rodium_error(exc, locale) from exc
-
+                raise
             await asyncio.sleep(0.6 * (attempt + 1))
 
-    if last_http is not None:
-        raise _network_rodium_error(last_http, locale)
-
+    if isinstance(last_error, RodiumError):
+        raise last_error
     raise RodiumError(t("rodium_error", locale, code="network", body="retry failed"), None, ERR_NETWORK)

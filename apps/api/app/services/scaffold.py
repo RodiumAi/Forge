@@ -10,7 +10,7 @@ from app.services.filesystem import project_dir, write_bytes, write_file
 _FORGE_FAVICON = Path(__file__).resolve().parent.parent / "assets" / "forge-favicon.png"
 _FORGE_LOGO = Path(__file__).resolve().parent.parent / "assets" / "forge-logo.png"
 
-# Legacy text watermark ("F" orange + "orge") — replaced by the real wordmark.
+# Legacy text watermark ("F" orange + "orge"), replaced by the real wordmark.
 _TEXT_BRAND_MARKERS = (
     '<span className="accent">F</span>orge',
     '<span class="accent">F</span>orge',
@@ -100,7 +100,7 @@ _BRAND_LOGO_CSS = """
 def upgrade_text_brand_placeholder(project_id: str) -> None:
     """Replace legacy orange-F text watermark with the Forge wordmark (idempotent).
 
-    Touches only projects still on the default scaffold placeholder — real apps
+    Touches only projects still on the default scaffold placeholder, real apps
     that happen to mention Forge are left alone unless they use the exact marker.
     """
     root = project_dir(project_id)
@@ -156,7 +156,7 @@ PACKAGE_JSON = """{
   "private": true,
   "version": "0.0.1",
   "type": "module",
-  "description": "Forge Babel/ESM app — preview & publish without Vite or node_modules",
+  "description": "Forge Babel/ESM app, preview & publish without Vite or node_modules",
   "dependencies": {
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -329,7 +329,7 @@ This file is the graphic charter for the app. Forge injects it into every AI cal
 - Direct, modern, product-focused.
 
 ## Logo
-- None yet — configure via the Charte graphique panel.
+- None yet, configure via the Charte graphique panel.
 
 ## Do / Don't
 - Do use CSS variables from this file.
@@ -372,7 +372,7 @@ const SLIDES = [
   },
   {
     title: "Ready when you are",
-    body: "Describe screens in chat — Forge keeps the app patterns.",
+    body: "Describe screens in chat, Forge keeps the app patterns.",
   },
 ];
 
@@ -459,7 +459,7 @@ export default function App() {
             </section>
             <section className="card">
               <h2>Quick actions</h2>
-              <p>Primary CTAs belong on Home — not on a marketing hero.</p>
+              <p>Primary CTAs belong on Home, not on a marketing hero.</p>
             </section>
           </>
         )}
@@ -589,7 +589,7 @@ html, body, #root {
   font-size: 1rem;
 }
 
-.card p, .onboard-body p {
+.card p.onboard-body p {
   margin: 0;
   color: var(--muted);
   line-height: 1.5;
@@ -650,7 +650,7 @@ html, body, #root {
   gap: 0.6rem;
 }
 
-.btn-primary, .btn-ghost {
+.btn-primary.btn-ghost {
   appearance: none;
   border: 0;
   border-radius: 0.9rem;
@@ -678,7 +678,7 @@ This file is the graphic charter for the **mobile app** prototype. Forge injects
 ## Platform
 - Target: mobile-first web app (phone), optionally tablet.
 - UI pattern: onboarding (first launch) → top navbar + Home → bottom tab bar.
-- Secondary: stack screens with back, sheets, lists, forms — still inside the app shell.
+- Secondary: stack screens with back, sheets, lists, forms, still inside the app shell.
 
 ## Colors
 - `--bg`: #0a0a0a
@@ -693,7 +693,7 @@ This file is the graphic charter for the **mobile app** prototype. Forge injects
 - Direct, product-focused, touch-friendly.
 
 ## Logo
-- None yet — configure via the Charte graphique panel.
+- None yet, configure via the Charte graphique panel.
 
 ## Do / Don't
 - Do keep onboarding + top navbar + bottom tabs as the default IA when the user asks for an app.

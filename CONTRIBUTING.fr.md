@@ -89,7 +89,7 @@ git rebase origin/main   # ou : git merge origin/main
 ### 2. Branche & commits
 
 1. Forkez le dépôt (contributeurs externes) ou créez une branche depuis `main` (membres de l'org).
-2. Nom de branche explicite : `feat/…`, `fix/…`, `design/…`, `security/…`, `template/…`.
+2. Nom de branche explicite : `feat/…`, `fix/…`, `design/…`, `security/…`, `template/…`, `integration/…`.
 3. Messages de commit au format `type(scope): résumé` (français ou anglais).
 
 ### 3. Exigences pull request (strict)

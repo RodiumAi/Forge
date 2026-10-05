@@ -20,6 +20,24 @@ function firebaseAuthOrigin(): string {
 }
 
 const apiOrigin = httpOrigin(process.env.NEXT_PUBLIC_API_URL, "http://localhost:8100");
+/** localhost ↔ 127.0.0.1 are distinct origins; Windows often needs both. */
+function loopbackSibling(origin: string): string | null {
+  try {
+    const url = new URL(origin);
+    if (url.hostname === "localhost") {
+      url.hostname = "127.0.0.1";
+      return url.origin;
+    }
+    if (url.hostname === "127.0.0.1") {
+      url.hostname = "localhost";
+      return url.origin;
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+const apiOrigins = [apiOrigin, loopbackSibling(apiOrigin)].filter(Boolean).join(" ");
 const posthogOrigin = httpOrigin(
   process.env.NEXT_PUBLIC_POSTHOG_HOST,
   "https://eu.i.posthog.com",
@@ -28,12 +46,12 @@ const scriptEval = process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : "
 const contentSecurityPolicy = [
   "default-src 'self'",
   "base-uri 'self'",
-  `connect-src 'self' ${apiOrigin} ${posthogOrigin} https://*.i.posthog.com https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebaseapp.com`,
+  `connect-src 'self' ${apiOrigins} ${posthogOrigin} https://*.i.posthog.com https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebaseapp.com`,
   "font-src 'self' data: https://fonts.gstatic.com",
   "form-action 'self'",
   "frame-ancestors 'none'",
-  `frame-src 'self' ${apiOrigin} ${firebaseAuthOrigin()} https://accounts.google.com https://*.firebaseapp.com`,
-  "img-src 'self' data: blob: https:",
+  `frame-src 'self' ${apiOrigins} ${firebaseAuthOrigin()} https://accounts.google.com https://*.firebaseapp.com`,
+  `img-src 'self' data: blob: https: ${apiOrigins}`,
   "object-src 'none'",
   `script-src 'self' 'unsafe-inline'${scriptEval} ${posthogOrigin} https://*.i.posthog.com https://apis.google.com https://accounts.google.com https://*.firebaseapp.com https://*.googleapis.com`,
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",

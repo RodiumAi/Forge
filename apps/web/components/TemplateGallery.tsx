@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { Monitor, Search, Smartphone } from "lucide-react";
 import { SiteThumb } from "@/components/SiteThumb";
 import { TemplatePreviewModal } from "@/components/TemplatePreviewModal";
 import { Icon } from "@/components/ui/icon";
@@ -80,7 +80,8 @@ export function TemplateGallery({
             aria-pressed={kind === "web"}
             onClick={() => setKind("web")}
           >
-            {t("templatesKindWeb")}
+            <Icon icon={Monitor} className="ui-icon-sm" />
+            <span>{t("templatesKindWeb")}</span>
           </button>
           <button
             type="button"
@@ -88,7 +89,8 @@ export function TemplateGallery({
             aria-pressed={kind === "mobile"}
             onClick={() => setKind("mobile")}
           >
-            {t("templatesKindApp")}
+            <Icon icon={Smartphone} className="ui-icon-sm" />
+            <span>{t("templatesKindApp")}</span>
           </button>
         </div>
         <label className="tpl-gallery-search">

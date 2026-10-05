@@ -9,7 +9,7 @@ browser receives the source bundle over postMessage and transforms it in-page.
 import time
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -17,10 +17,11 @@ from sqlalchemy.orm import Session
 from app.auth import get_current_user, get_media_user
 from app.config import get_settings
 from app.db import get_db
-from app.i18n import resolve_locale, t
+from app.i18n import resolve_locale
 from app.models import Project, User
 from app.schemas import PreviewStatus
 from app.services import preview_babel
+from app.services.project_access import accessible_project
 
 router = APIRouter(tags=["preview"])
 
@@ -41,13 +42,7 @@ class SourceBundle(BaseModel):
 
 
 def _owned(db: Session, user: User, project_id: UUID, locale: str = "fr") -> Project:
-    project = db.get(Project, project_id)
-    if project is None or project.user_id != user.id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=t("project_not_found", locale),  # type: ignore[arg-type]
-        )
-    return project
+    return accessible_project(db, user, project_id, locale)
 
 
 def _project_extra_imports(project_id: str) -> dict[str, str]:

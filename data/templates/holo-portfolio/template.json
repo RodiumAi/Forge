@@ -1,12 +1,20 @@
 {
-  "id": "holo-portfolio",
   "kind": "web",
-  "title": { "en": "Holo Portfolio", "fr": "Holo Portfolio" },
+  "id": "holo-portfolio",
+  "title": {
+    "en": "Holo Portfolio",
+    "fr": "Holo Portfolio"
+  },
   "description": {
     "en": "Futuristic creative portfolio on black: holographic project cards with animated iridescent gradients, giant animated gradient titles, neon tag pills and a skills section.",
     "fr": "Portfolio créatif futuriste sur fond noir : cartes projets holographiques aux dégradés iridescents animés, titres géants en dégradé animé, tags néon et section compétences."
   },
-  "tags": ["portfolio", "creative", "futuristic", "dark"],
+  "tags": [
+    "portfolio",
+    "creative",
+    "futuristic",
+    "dark"
+  ],
   "preview": "preview.html",
   "bootHint": {
     "en": "Adapt holo-portfolio: designer name, project cards, skills, contact.",

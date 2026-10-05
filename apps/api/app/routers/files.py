@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from fastapi.responses import RedirectResponse, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
@@ -34,6 +34,7 @@ from app.services.filesystem import (
     safe_resolve,
     write_file,
 )
+from app.services.project_access import accessible_project
 from app.services.visual_edit import apply_visual_text_edit
 from app.services.visual_image import apply_visual_image_replace
 
@@ -156,14 +157,15 @@ class VisualImageResponse(BaseModel):
     occurrences: int = 1
 
 
-def _owned(db: Session, user: User, project_id: UUID, locale: str = "fr") -> Project:
-    project = db.get(Project, project_id)
-    if project is None or project.user_id != user.id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=t("project_not_found", locale),  # type: ignore[arg-type]
-        )
-    return project
+def _owned(
+    db: Session,
+    user: User,
+    project_id: UUID,
+    locale: str = "fr",
+    *,
+    require_edit: bool = False,
+) -> Project:
+    return accessible_project(db, user, project_id, locale, require_edit=require_edit)
 
 
 @router.get("/{project_id}/files", response_model=list[FileNode])
@@ -212,7 +214,7 @@ def put_file_content(
     db: Session = Depends(get_db),
 ) -> FileContent:
     locale = resolve_locale(request)
-    _owned(db, user, project_id, locale)
+    _owned(db, user, project_id, locale, require_edit=True)
     path = body.path.strip().lstrip("/")
     if not path or ".." in path.split("/"):
         raise HTTPException(status_code=400, detail=t("file_not_found", locale))
@@ -229,7 +231,12 @@ def put_file_content(
             )
 
     try:
-        history.snapshot(str(project_id), f"before manual edit: {path}")
+        actor_name = (getattr(user, "name", None) or "").strip() or getattr(user, "email", None)
+        history.snapshot(
+            str(project_id),
+            f"before manual edit: {path}",
+            actor=(actor_name, getattr(user, "email", None)),
+        )
         write_file(str(project_id), path, body.content)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -254,7 +261,7 @@ def rename_file(
     db: Session = Depends(get_db),
 ) -> dict:
     locale = resolve_locale(request)
-    _owned(db, user, project_id, locale)
+    _owned(db, user, project_id, locale, require_edit=True)
     src = body.from_path.strip().lstrip("/")
     dst = body.to_path.strip().lstrip("/")
     if not src or not dst or ".." in src.split("/") or ".." in dst.split("/"):
@@ -334,7 +341,7 @@ def remove_file(
     db: Session = Depends(get_db),
 ) -> dict:
     locale = resolve_locale(request)
-    _owned(db, user, project_id, locale)
+    _owned(db, user, project_id, locale, require_edit=True)
     rel = path.strip().lstrip("/")
     try:
         history.snapshot(str(project_id), f"before delete: {rel}")
@@ -473,7 +480,7 @@ async def upload_project_image(
     db: Session = Depends(get_db),
 ) -> FileUploadResponse:
     locale = resolve_locale(request)
-    project = _owned(db, user, project_id, locale)
+    project = _owned(db, user, project_id, locale, require_edit=True)
     filename = (file.filename or "image.png").replace("\\", "/").split("/")[-1]
     # Read one byte past the limit: enough to detect "too large" without ever
     # buffering an attacker-sized body in memory.
@@ -540,7 +547,7 @@ def visual_edit_text(
     db: Session = Depends(get_db),
 ) -> VisualEditResponse:
     locale = resolve_locale(request)
-    _owned(db, user, project_id, locale)
+    _owned(db, user, project_id, locale, require_edit=True)
     # Visual edits rewrite source files just like the agent does; without a
     # checkpoint they were the only irreversible mutation in the product.
     history.snapshot(str(project_id), "before visual text edit")
@@ -569,7 +576,7 @@ def visual_edit_image(
     db: Session = Depends(get_db),
 ) -> VisualImageResponse:
     locale = resolve_locale(request)
-    _owned(db, user, project_id, locale)
+    _owned(db, user, project_id, locale, require_edit=True)
     history.snapshot(str(project_id), "before visual image replace")
     new_path = body.new_public_path
     # The uploads bucket is private: writing its URL into JSX gives AccessDenied

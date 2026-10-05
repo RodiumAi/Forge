@@ -2,18 +2,20 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
 from app.config import get_settings
 from app.db import get_db
-from app.i18n import resolve_locale, t
+from app.i18n import resolve_locale
 from app.models import Project, User
+from app.services.capabilities import require_rodi_for_paid_capability
 from app.services.filesystem import project_dir
 from app.services.llm import RodiumError, complete_chat
 from app.services.orchestration.images import generate_project_image
+from app.services.project_access import accessible_project
 from app.services.rodium_generation import resolve_generation_auth
 from app.services.seo_meta import (
     extract_json_object,
@@ -23,6 +25,7 @@ from app.services.seo_meta import (
     save_og_asset,
     write_seo_meta,
 )
+from app.services.typography import NO_LONG_DASH_RULE, strip_long_dashes
 
 router = APIRouter(prefix="/projects", tags=["seo"])
 
@@ -33,7 +36,7 @@ COPY_SYSTEM = """You write SEO metadata for a website.
 Output ONLY a valid JSON object (no markdown fences, no preamble) with these string keys:
 title, description, keywords, og_title, og_description, twitter_title, twitter_description, robots.
 Rules:
-- EVERY key MUST be present with a non-empty string value — never omit a field, never return ""
+- EVERY key MUST be present with a non-empty string value, never omit a field, never return ""
 - title: 50-60 characters ideal
 - description: 140-160 characters ideal
 - keywords: comma-separated, 5-12 phrases
@@ -42,6 +45,7 @@ Rules:
 - Write in the language requested by the user message
 - Do not invent absolute URLs
 """
+COPY_SYSTEM = COPY_SYSTEM + "- " + NO_LONG_DASH_RULE + "\n"
 
 
 class SeoMetaOut(BaseModel):
@@ -98,11 +102,18 @@ class SeoAssetResponse(BaseModel):
     meta: SeoMetaOut | None = None
 
 
-def _owned(db: Session, user: User, project_id: UUID, locale: str) -> Project:
-    project = db.get(Project, project_id)
-    if project is None or project.user_id != user.id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=t("project_not_found", locale))
-    return project
+def _opened(
+    db: Session,
+    user: User,
+    project_id: UUID,
+    locale: str,
+    *,
+    require_edit: bool = False,
+) -> Project:
+    return accessible_project(db, user, project_id, locale, require_edit=require_edit)
+
+
+_owned = _opened
 
 
 def _to_out(data: dict) -> SeoMetaOut:
@@ -130,7 +141,7 @@ def put_seo(
     db: Session = Depends(get_db),
 ) -> SeoMetaOut:
     locale = resolve_locale(request)
-    project = _owned(db, user, project_id, locale)
+    project = _owned(db, user, project_id, locale, require_edit=True)
     saved = write_seo_meta(str(project.id), body.model_dump())
     return _to_out(saved)
 
@@ -145,7 +156,7 @@ async def upload_seo_asset(
     db: Session = Depends(get_db),
 ) -> SeoAssetResponse:
     locale = resolve_locale(request)
-    project = _owned(db, user, project_id, locale)
+    project = _owned(db, user, project_id, locale, require_edit=True)
     kind_norm = kind.strip().lower()
     if kind_norm not in {"favicon", "og"}:
         raise HTTPException(status_code=400, detail="kind must be favicon or og")
@@ -193,7 +204,8 @@ async def generate_seo_copy(
     db: Session = Depends(get_db),
 ) -> SeoMetaOut:
     locale = resolve_locale(request)
-    project = _owned(db, user, project_id, locale)
+    project = _owned(db, user, project_id, locale, require_edit=True)
+    require_rodi_for_paid_capability(user, db)
     gen_auth = await resolve_generation_auth(db, user)
 
     lang = (body.locale if body else None) or locale
@@ -234,9 +246,9 @@ async def generate_seo_copy(
     ):
         val = parsed.get(key)
         if isinstance(val, str) and val.strip():
-            current[key] = val.strip()
+            current[key] = strip_long_dashes(val.strip(), label=key.endswith("title"))
 
-    # Never leave core fields empty after an AI fill — deterministic fallbacks.
+    # Never leave core fields empty after an AI fill, deterministic fallbacks.
     is_fr = lang_label == "French"
     title = (current.get("title") or "").strip() or (project.name or "").strip() or "Site"
     current["title"] = title
@@ -273,7 +285,8 @@ async def generate_seo_image(
     db: Session = Depends(get_db),
 ) -> SeoAssetResponse:
     locale = resolve_locale(request)
-    project = _owned(db, user, project_id, locale)
+    project = _owned(db, user, project_id, locale, require_edit=True)
+    require_rodi_for_paid_capability(user, db)
     gen_auth = await resolve_generation_auth(db, user)
 
     current = read_seo_meta(str(project.id))
