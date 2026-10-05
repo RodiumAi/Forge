@@ -9031,12 +9031,16 @@ body:has(.home) [data-next-mark] {
 
 .home-pricing {
   --lp-ink: var(--home-text, #1c1917);
-  --lp-muted: rgba(28, 25, 23, 0.58);
-  --lp-soft: #efeae3;
-  --lp-panel: #ffffff;
-  --lp-line: rgba(28, 25, 23, 0.1);
+  --lp-muted: var(--home-text-muted, rgba(28, 25, 23, 0.58));
+  --lp-soft: var(--home-chip, #efeae3);
+  --lp-panel: var(--home-panel, #ffffff);
+  --lp-line: var(--home-border, rgba(28, 25, 23, 0.1));
   --lp-ember: #d4540a;
   padding: 1.25rem 1.5rem 3rem;
+}
+
+[data-theme="dark"] .home-pricing {
+  --lp-ember: #f2620a;
 }
 
 .home-pricing .lp-pricing {

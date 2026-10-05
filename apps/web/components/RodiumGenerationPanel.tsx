@@ -336,7 +336,47 @@ export function RodiumGenerationPanel() {
   }
 
   if (loading) {
-    return <p className="settings-panel-loading">{t("loading")}</p>;
+    return (
+      <>
+        <SettingsBlock title={t("rodiumAccountTitle")}>
+          <div
+            className="rodium-gen-card rodium-gen-skel"
+            aria-busy="true"
+            aria-label={t("rodiumAccountSyncing")}
+          >
+            <div className="rodium-gen-card-head">
+              <span className="home-skel rodium-gen-skel-badge" />
+            </div>
+            <div className="rodium-gen-identity">
+              <span className="home-skel rodium-gen-skel-avatar" />
+              <div className="rodium-gen-skel-copy">
+                <span className="home-skel rodium-gen-skel-line is-name" />
+                <span className="home-skel rodium-gen-skel-line is-email" />
+              </div>
+            </div>
+            <div className="rodium-gen-wallet-strip rodium-gen-skel-wallet">
+              <span className="home-skel rodium-gen-skel-metric" />
+              <span className="home-skel rodium-gen-skel-metric" />
+              <span className="home-skel rodium-gen-skel-btn" />
+            </div>
+            <div className="home-settings-actions">
+              <span className="home-skel rodium-gen-skel-btn is-wide" />
+            </div>
+          </div>
+        </SettingsBlock>
+        <SettingsBlock title={t("rodiumManualKeyTitle")}>
+          <div
+            className="rodium-gen-skel-key"
+            aria-busy="true"
+            aria-label={t("rodiumAccountSyncing")}
+          >
+            <span className="home-skel rodium-gen-skel-line is-row" />
+            <span className="home-skel rodium-gen-skel-line is-field" />
+            <span className="home-skel rodium-gen-skel-btn is-wide" />
+          </div>
+        </SettingsBlock>
+      </>
+    );
   }
 
   // Cloud account is enough: email signup binds rodium_sub without live OIDC.
