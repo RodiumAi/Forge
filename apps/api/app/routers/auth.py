@@ -739,6 +739,29 @@ async def _reissue_rodium_tokens(db: Session, user: User) -> str | None:
     return str(result.tokens.get("access_token") or "") or None
 
 
+async def _retry_link_rodium_account(user_id: uuid.UUID) -> None:
+    """Second chance when Nest was briefly unreachable during verify/login."""
+    try:
+        with SessionLocal() as db:
+            user = db.get(User, user_id)
+            if user is None or user.rodium_sub:
+                return
+            access = await _link_rodium_account(db, user)
+            if access:
+                await _hydrate_rodium_account_cache(user_id, access)
+            else:
+                logger.warning(
+                    "rodium.provision.retry_still_unlinked",
+                    extra={"user_id": str(user_id), "email": getattr(user, "email", None)},
+                )
+    except Exception:
+        logger.warning(
+            "rodium.provision.retry_failed",
+            extra={"user_id": str(user_id)},
+            exc_info=True,
+        )
+
+
 async def _ensure_rodium_tokens_after_login(
     db: Session, user: User, background_tasks: BackgroundTasks
 ) -> None:
@@ -750,6 +773,10 @@ async def _ensure_rodium_tokens_after_login(
         db.refresh(user)
     if access:
         background_tasks.add_task(_hydrate_rodium_account_cache, user.id, access)
+    elif not user.rodium_sub and rodium_provisioning.enabled():
+        # Failures are still non-fatal for Forge login, but retry once off the
+        # request so a blip on Nest does not leave the account permanently unlinked.
+        background_tasks.add_task(_retry_link_rodium_account, user.id)
 
 
 def _send_verification_email(db: Session, user: User, locale: str) -> None:
@@ -895,10 +922,16 @@ def forgot_password(
     rate_limit.enforce(request, "forgot-password", limit=3, window_seconds=900, subject=email)
 
     user = db.query(User).filter(User.email == email).first()
-    # Always return the same success payload (membership oracle). SSO-only
-    # accounts still get an email explaining how to sign in, so the inbox
-    # matches what the UI promised.
-    if user is not None and user.password_hash:
+    # Always return the same success payload (membership oracle).
+    #
+    # Send a real reset link when the mailbox is proven (`email_verified_at`)
+    # even if `password_hash` is None: verify-email wipes the registration
+    # password (anti pre-hijack), so treating that as "SSO-only" locked out
+    # legitimate email signups. Reset proves the same mailbox control.
+    #
+    # SSO hint only for unverified accounts with no local password (edge /
+    # invite seats that never completed email proof).
+    if user is not None and (user.password_hash or user.email_verified_at):
         auth_tokens.invalidate_outstanding(db, user.id, AuthToken.KIND_PASSWORD_RESET)
         raw = auth_tokens.issue_password_reset(db, user.id)
         db.commit()

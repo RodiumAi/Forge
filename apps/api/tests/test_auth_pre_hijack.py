@@ -12,7 +12,12 @@ import pytest
 from fastapi import BackgroundTasks, HTTPException
 
 from app.routers import auth as auth_mod
-from app.schemas import LoginRequest, PasswordChangeRequest, VerifyEmailRequest
+from app.schemas import (
+    ForgotPasswordRequest,
+    LoginRequest,
+    PasswordChangeRequest,
+    VerifyEmailRequest,
+)
 
 
 def _request() -> MagicMock:
@@ -162,3 +167,97 @@ def test_login_rejects_wiped_password_after_verify(monkeypatch):
         )
 
     assert exc.value.status_code == 401
+
+
+def test_forgot_password_sends_reset_after_verify_wipe(monkeypatch):
+    """Verified local signup with wiped hash must get a reset link, not SSO hint."""
+    user = SimpleNamespace(
+        id=uuid.uuid4(),
+        email="user@example.com",
+        password_hash=None,
+        email_verified_at=datetime.now(UTC),
+    )
+
+    class _Q:
+        def filter(self, *_a, **_k):
+            return self
+
+        def first(self):
+            return user
+
+    db = MagicMock()
+    db.query.return_value = _Q()
+
+    sent: list = []
+
+    monkeypatch.setattr(auth_mod.rate_limit, "enforce", lambda *a, **k: None)
+    monkeypatch.setattr(auth_mod.auth_tokens, "invalidate_outstanding", lambda *a, **k: None)
+    monkeypatch.setattr(auth_mod.auth_tokens, "issue_password_reset", lambda *_a, **_k: "reset-raw")
+    monkeypatch.setattr(
+        auth_mod,
+        "get_settings",
+        lambda: SimpleNamespace(web_url=lambda path: f"https://forge.test{path}"),
+    )
+    monkeypatch.setattr(
+        auth_mod.mail,
+        "build_reset_password",
+        lambda *a, **k: SimpleNamespace(kind="reset"),
+    )
+    monkeypatch.setattr(
+        auth_mod.mail,
+        "build_reset_password_sso_hint",
+        lambda *a, **k: SimpleNamespace(kind="sso"),
+    )
+    monkeypatch.setattr(auth_mod.mail, "send", lambda msg: sent.append(msg))
+
+    auth_mod.forgot_password(
+        body=ForgotPasswordRequest(email="user@example.com"),
+        request=_request(),
+        db=db,
+    )
+
+    assert len(sent) == 1
+    assert sent[0].kind == "reset"
+
+
+def test_forgot_password_sso_hint_only_when_unverified_without_hash(monkeypatch):
+    user = SimpleNamespace(
+        id=uuid.uuid4(),
+        email="invite@example.com",
+        password_hash=None,
+        email_verified_at=None,
+    )
+
+    class _Q:
+        def filter(self, *_a, **_k):
+            return self
+
+        def first(self):
+            return user
+
+    db = MagicMock()
+    db.query.return_value = _Q()
+
+    sent: list = []
+
+    monkeypatch.setattr(auth_mod.rate_limit, "enforce", lambda *a, **k: None)
+    monkeypatch.setattr(
+        auth_mod,
+        "get_settings",
+        lambda: SimpleNamespace(web_url=lambda path: f"https://forge.test{path}"),
+    )
+    monkeypatch.setattr(
+        auth_mod.mail,
+        "build_reset_password_sso_hint",
+        lambda *a, **k: SimpleNamespace(kind="sso"),
+    )
+    monkeypatch.setattr(auth_mod.mail, "send", lambda msg: sent.append(msg))
+
+    auth_mod.forgot_password(
+        body=ForgotPasswordRequest(email="invite@example.com"),
+        request=_request(),
+        db=db,
+    )
+
+    assert len(sent) == 1
+    assert sent[0].kind == "sso"

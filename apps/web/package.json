@@ -51,7 +51,8 @@
   "overrides": {
     "postcss": "^8.5.28",
     "dompurify": "^3.4.15",
-    "sharp": "0.35.4",
+    "sharp": "0.35.5",
+    "source-map-js": "1.2.2",
     "@grpc/grpc-js": "1.14.5"
   }
 }
