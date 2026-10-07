@@ -76,6 +76,10 @@ jobs:
     needs: verify
     runs-on: ubuntu-latest
     environment: production
+    env:
+      TRIVY_IMAGE: aquasec/trivy:0.75.0
+      TRIVY_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-db:2
+      TRIVY_JAVA_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-java-db:1
     outputs:
       image: ${{ steps.build-image.outputs.image }}
     steps:
@@ -110,22 +114,28 @@ jobs:
       - name: Generate CycloneDX SBOM
         run: |
           docker run --rm \
+            -e TRIVY_DB_REPOSITORY \
+            -e TRIVY_JAVA_DB_REPOSITORY \
             -v trivy-cache:/root/.cache/trivy \
             -v /var/run/docker.sock:/var/run/docker.sock \
             -v "${{ github.workspace }}:/work" \
-            aquasec/trivy:0.74.0 \
+            "${TRIVY_IMAGE}" \
             image --format cyclonedx \
+            --skip-version-check \
             --output /work/forge-gateway-sbom.cdx.json \
             "${IMAGE}"
 
       - name: Generate full vulnerability report
         run: |
           docker run --rm \
+            -e TRIVY_DB_REPOSITORY \
+            -e TRIVY_JAVA_DB_REPOSITORY \
             -v trivy-cache:/root/.cache/trivy \
             -v /var/run/docker.sock:/var/run/docker.sock \
             -v "${{ github.workspace }}:/work" \
-            aquasec/trivy:0.74.0 \
+            "${TRIVY_IMAGE}" \
             image --scanners vuln --format json \
+            --skip-version-check \
             --output /work/forge-gateway-trivy.json \
             "${IMAGE}"
 
@@ -145,10 +155,13 @@ jobs:
       - name: Report gateway HIGH and CRITICAL vulnerabilities
         run: |
           docker run --rm \
+            -e TRIVY_DB_REPOSITORY \
+            -e TRIVY_JAVA_DB_REPOSITORY \
             -v trivy-cache:/root/.cache/trivy \
             -v /var/run/docker.sock:/var/run/docker.sock \
-            aquasec/trivy:0.74.0 \
+            "${TRIVY_IMAGE}" \
             image --scanners vuln \
+            --skip-version-check \
             --severity CRITICAL,HIGH \
             --ignore-unfixed \
             --exit-code 0 \
