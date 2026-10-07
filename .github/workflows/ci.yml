@@ -163,17 +163,24 @@ jobs:
     name: Trivy
     needs: gitleaks
     runs-on: ubuntu-latest
+    env:
+      TRIVY_IMAGE: aquasec/trivy:0.75.0
+      TRIVY_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-db:2
+      TRIVY_JAVA_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-java-db:1
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - name: Filesystem vulnerability scan
         run: |
           docker run --rm \
+            -e TRIVY_DB_REPOSITORY \
+            -e TRIVY_JAVA_DB_REPOSITORY \
             -v "${{ github.workspace }}:/repo" \
             -w /repo \
-            aquasec/trivy:0.74.0 \
+            "${TRIVY_IMAGE}" \
             fs \
             --scanners vuln \
+            --skip-version-check \
             --severity CRITICAL,HIGH \
             --ignore-unfixed \
             --exit-code 1 \
