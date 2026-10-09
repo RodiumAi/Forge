@@ -142,7 +142,7 @@ def content_version(project_id: str, relative: str) -> str:
 def list_files(project_id: str) -> dict[str, str]:
     base = project_dir(project_id)
     files: dict[str, str] = {}
-    skip = {"node_modules", ".git", "dist", ".vite"}
+    skip = {"node_modules", ".git", "dist", ".vite", ".forge"}
     # .gitignore belongs to the private history repo, not to the user project.
     hidden_files = {".gitignore"}
     for path in base.rglob("*"):
@@ -162,7 +162,7 @@ def list_files(project_id: str) -> dict[str, str]:
 
 def file_tree(project_id: str) -> list[FileNode]:
     base = project_dir(project_id)
-    skip = {"node_modules", ".git", "dist", ".vite"}
+    skip = {"node_modules", ".git", "dist", ".vite", ".forge"}
     # .gitignore belongs to the private history repo, not to the user project.
     hidden_files = {".gitignore"}
 

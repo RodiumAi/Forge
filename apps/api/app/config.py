@@ -132,7 +132,21 @@ class Settings(BaseSettings):
     default_model: str = "google/gemini-3.7-flash"
     default_image_model: str = "openai/gpt-image-2"
     enable_pro_escalation: bool = True
-    escalation_model: str = "anthropic/claude-sonnet-4-6"
+    escalation_model: str = "anthropic/claude-sonnet-5-5"
+    # Code-generation sampling. Without an explicit max_tokens the gateway caps
+    # Claude/Gemini output at 4096 tokens, far below a multi-file task.
+    generation_max_output_tokens: int = 32_000
+    generation_temperature: float = 0.4
+    # Wall-clock ceiling for one plan task, continuations included.
+    forge_task_budget_seconds: float = 360.0
+    # Full-content layer of every code prompt (characters). index.css gets its
+    # own reserved share so later tasks always see the foundation in full.
+    context_full_files_max_chars: int = 160_000
+    context_css_reserved_chars: int = 48_000
+    # First build of a blank project: write a project-specific DESIGN.md (palette
+    # + web fonts) from the brief, and generate this many brand images.
+    forge_auto_charter_enabled: bool = True
+    forge_scaffold_images: int = 2
     access_token_expire_minutes: int = 60 * 24 * 7
     preview_port_start: int = 5200
     preview_port_end: int = 5299

@@ -80,7 +80,9 @@ class RodiumError(Exception):
         self.code = code
 
 
-StreamKind = Literal["token", "thinking"]
+# "notice" chunks carry machine-readable progress from the continuation layer
+# (`stream_with_continuation`): JSON in `content`, never shown as model text.
+StreamKind = Literal["token", "thinking", "notice"]
 
 
 _TRANSIENT_NETWORK_MARKERS = (
@@ -165,7 +167,7 @@ def _raise_rodium_error(response: httpx.Response, locale: Locale) -> None:
     )
 
 
-def _parse_stream_line(line: str) -> StreamChunk | None:
+def _parse_stream_line(line: str, meta: dict[str, Any] | None = None) -> StreamChunk | None:
 
     if not line.startswith("data: "):
         return None
@@ -180,7 +182,14 @@ def _parse_stream_line(line: str) -> StreamChunk | None:
 
         parsed = json.loads(data)
 
-        delta = parsed["choices"][0].get("delta") or {}
+        choice = parsed["choices"][0]
+        # "length" is the only signal that the output limit cut the answer
+        # mid-file; the continuation layer reads it from `meta`.
+        finish = choice.get("finish_reason")
+        if meta is not None and isinstance(finish, str) and finish:
+            meta["finish_reason"] = finish
+
+        delta = choice.get("delta") or {}
 
         reasoning = delta.get("reasoning") or delta.get("reasoning_content") or delta.get("thinking")
 
@@ -251,6 +260,20 @@ def _network_rodium_error(exc: BaseException, locale: Locale) -> RodiumError:
     )
 
 
+def _generation_params(temperature: float | None, max_tokens: int | None) -> dict[str, Any]:
+    """Sampling fields for the OpenAI-shaped gateway payloads.
+
+    Without `max_tokens` the gateway falls back to a 4096-token output cap for
+    Claude and Gemini, which cut multi-file tasks in the middle of a file.
+    """
+    params: dict[str, Any] = {}
+    if temperature is not None:
+        params["temperature"] = temperature
+    if max_tokens:
+        params["max_tokens"] = int(max_tokens)
+    return params
+
+
 async def _stream_playground_chat(
     *,
     access_token: str,
@@ -258,6 +281,7 @@ async def _stream_playground_chat(
     model: str,
     messages: list[dict[str, Any]],
     locale: Locale,
+    meta: dict[str, Any] | None = None,
 ) -> AsyncIterator[StreamChunk]:
 
     url = _playground_base() + "/chat/completions"
@@ -268,6 +292,8 @@ async def _stream_playground_chat(
         "Accept": "text/event-stream",
     }
 
+    # The playground DTO rejects unknown fields, so sampling params are not
+    # sent on this legacy lane.
     payload: dict[str, Any] = {
         "apiKeyId": api_key_id,
         "model": model,
@@ -289,7 +315,7 @@ async def _stream_playground_chat(
                     if not line:
                         continue
 
-                    chunk = _parse_stream_line(line)
+                    chunk = _parse_stream_line(line, meta)
 
                     if chunk:
                         yield chunk
@@ -304,6 +330,9 @@ async def _stream_secret_chat(
     model: str,
     messages: list[dict[str, Any]],
     locale: Locale,
+    temperature: float | None = None,
+    max_tokens: int | None = None,
+    meta: dict[str, Any] | None = None,
 ) -> AsyncIterator[StreamChunk]:
 
     headers = {
@@ -315,7 +344,7 @@ async def _stream_secret_chat(
         "model": model,
         "messages": messages,
         "stream": True,
-        "temperature": 0.4,
+        **_generation_params(temperature, max_tokens),
     }
 
     try:
@@ -332,7 +361,7 @@ async def _stream_secret_chat(
                     if not line:
                         continue
 
-                    chunk = _parse_stream_line(line)
+                    chunk = _parse_stream_line(line, meta)
 
                     if chunk:
                         yield chunk
@@ -409,6 +438,9 @@ async def _stream_frodi_chat(
     locale: Locale,
     actor_uid: str | None = None,
     forge_context: dict[str, Any] | None = None,
+    temperature: float | None = None,
+    max_tokens: int | None = None,
+    meta: dict[str, Any] | None = None,
 ) -> AsyncIterator[StreamChunk]:
     settings = get_settings()
     url = settings.rodium_gateway_internal_url.rstrip("/") + "/internal/forge/chat/completions"
@@ -421,6 +453,7 @@ async def _stream_frodi_chat(
         "model": model,
         "messages": messages,
         "stream": True,
+        **_generation_params(temperature, max_tokens),
     }
     if actor_uid and actor_uid != billing_uid:
         payload["actor_uid"] = actor_uid
@@ -434,7 +467,7 @@ async def _stream_frodi_chat(
             async for line in response.aiter_lines():
                 if not line:
                     continue
-                chunk = _parse_stream_line(line)
+                chunk = _parse_stream_line(line, meta)
                 if chunk:
                     yield chunk
 
@@ -445,7 +478,11 @@ async def stream_chat_completion(
     model: str,
     messages: list[dict[str, Any]],
     locale: Locale = "fr",
+    temperature: float | None = None,
+    max_tokens: int | None = None,
+    meta: dict[str, Any] | None = None,
 ) -> AsyncIterator[StreamChunk]:
+    """Stream one completion. ``meta`` (optional) receives ``finish_reason``."""
     settings = get_settings()
     if settings.forge_cloud_enabled and auth.billing_uid:
         try:
@@ -456,6 +493,9 @@ async def stream_chat_completion(
                 locale=locale,
                 actor_uid=auth.actor_uid,
                 forge_context=_forge_billing_context(auth),
+                temperature=temperature,
+                max_tokens=max_tokens,
+                meta=meta,
             ):
                 yield chunk
             return
@@ -475,6 +515,7 @@ async def stream_chat_completion(
                 model=model,
                 messages=messages,
                 locale=locale,
+                meta=meta,
             ):
                 yield chunk
 
@@ -493,11 +534,115 @@ async def stream_chat_completion(
             model=model,
             messages=messages,
             locale=locale,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            meta=meta,
         ):
             yield chunk
 
     async for chunk in _stream_with_retries(factory=secret_factory, locale=locale):
         yield chunk
+
+
+# ── Output-limit continuation ───────────────────────────────────────────────
+#
+# A code task can legitimately need more output than one completion allows.
+# When the stream stops on the output limit (finish_reason "length") or leaves
+# a <forge-write>/<forge-edit> tag open, the model is asked to pick up where it
+# stopped. Re-emitted files win over the truncated ones (see `tags.py`), so the
+# caller can keep concatenating tokens and parse the whole text once.
+
+CONTINUATION_MAX_ROUNDS = 2
+_CONTINUATION_ASSISTANT_MAX_CHARS = 120_000
+
+
+def _continuation_prompt(open_paths: list[str]) -> str:
+    if open_paths:
+        listed = ", ".join(open_paths[:6])
+        return (
+            "Your previous answer stopped at the output limit before it finished. "
+            f"These files were cut off and are NOT applied: {listed}. "
+            "Continue now: first re-emit each of them in full (a complete <forge-write> "
+            "from the first line, or a complete <forge-edit>), then write any remaining "
+            "files of this task you had not started. Do not repeat files you already "
+            "closed. No prose."
+        )
+    return (
+        "Your previous answer stopped at the output limit. Every closed tag is applied. "
+        "Continue with the remaining files of this task, if any, using forge-write or "
+        "forge-edit tags. Do not repeat files you already closed. If nothing is left, "
+        "reply with the single word DONE."
+    )
+
+
+def generation_defaults() -> dict[str, Any]:
+    """Sampling defaults for code-generation streams (settings-driven)."""
+    settings = get_settings()
+    return {
+        "temperature": settings.generation_temperature,
+        "max_tokens": settings.generation_max_output_tokens or None,
+    }
+
+
+async def stream_with_continuation(
+    *,
+    auth: RodiumGenerationAuth,
+    model: str,
+    messages: list[dict[str, Any]],
+    locale: Locale = "fr",
+    max_rounds: int = CONTINUATION_MAX_ROUNDS,
+    stream_fn: Any = None,
+) -> AsyncIterator[StreamChunk]:
+    """`stream_chat_completion` that resumes an answer cut by the output limit.
+
+    Yields the same token/thinking chunks, plus `notice` chunks (JSON) when a
+    continuation starts (``{"event": "continue", "open": [...]}``) or when the
+    output is still truncated after the last round
+    (``{"event": "truncated", "open": [...]}``). ``stream_fn`` defaults to
+    `stream_chat_completion` (callers pass their own module-level reference so
+    it stays patchable in tests).
+    """
+    import json
+
+    from app.services.tags import unclosed_paths
+
+    stream = stream_fn or stream_chat_completion
+    params = generation_defaults()
+    convo = list(messages)
+    produced: list[str] = []
+    for round_idx in range(max_rounds + 1):
+        meta: dict[str, Any] = {}
+        async for chunk in stream(
+            auth=auth,
+            model=model,
+            messages=convo,
+            locale=locale,
+            meta=meta,
+            **params,
+        ):
+            if chunk.kind == "token":
+                produced.append(chunk.content)
+            yield chunk
+        text = "".join(produced)
+        open_paths = unclosed_paths(text)
+        if not open_paths and meta.get("finish_reason") != "length":
+            return
+        if round_idx >= max_rounds:
+            if open_paths:
+                yield StreamChunk(
+                    kind="notice", content=json.dumps({"event": "truncated", "open": open_paths})
+                )
+            return
+        yield StreamChunk(kind="notice", content=json.dumps({"event": "continue", "open": open_paths}))
+        # Separate the continuation from the cut text so a re-emitted tag
+        # always starts on its own line.
+        produced.append("\n")
+        yield StreamChunk(kind="token", content="\n")
+        convo = [
+            *messages,
+            {"role": "assistant", "content": text[-_CONTINUATION_ASSISTANT_MAX_CHARS:]},
+            {"role": "user", "content": _continuation_prompt(open_paths)},
+        ]
 
 
 async def complete_chat(
@@ -507,6 +652,7 @@ async def complete_chat(
     messages: list[dict[str, Any]],
     locale: Locale = "fr",
     temperature: float = 0.4,
+    max_tokens: int | None = 8192,
 ) -> str:
     """Non-streaming completion used by the planner and the other short calls.
 
@@ -515,8 +661,6 @@ async def complete_chat(
     rejects that header before the request leaves, and the chat showed it as
     "Connection interrupted".
     """
-    # The shared stream does not take a temperature; callers still pass one.
-    del temperature
     parts: list[str] = []
     last_error: BaseException | None = None
     for attempt in range(3):
@@ -527,6 +671,8 @@ async def complete_chat(
                 model=model,
                 messages=messages,
                 locale=locale,
+                temperature=temperature,
+                max_tokens=max_tokens,
             ):
                 if chunk.kind == "token":
                     parts.append(chunk.content)

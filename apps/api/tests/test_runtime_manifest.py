@@ -10,8 +10,10 @@ from app.runtime_manifest import (
     allowed_packages,
     browser_import_map,
     browser_packages,
+    css_import_map,
     is_relative_or_alias,
     package_version,
+    virtual_packages,
 )
 from app.services.import_validator import validate_write_content
 
@@ -25,7 +27,21 @@ class TestManifest:
             k.split("/")[0] if not k.startswith("@") else "/".join(k.split("/")[:2])
             for k in browser_import_map()
         }
-        assert browser_packages() <= mapped
+        # Virtual packages (@forge/forms) are mapped by the runner / publish host.
+        assert browser_packages() - virtual_packages() <= mapped
+        assert not (virtual_packages() & set(browser_import_map()))
+
+    def test_manifest_deps_are_pinned_through_the_cdn(self):
+        # @gsap/react must share the app's gsap instance, fiber the app's three.
+        imports = browser_import_map()
+        assert "gsap@" in imports["@gsap/react"].split("deps=", 1)[1]
+        assert "three@" in imports["@react-three/fiber"].split("deps=", 1)[1]
+        assert imports["three/"].endswith("/")
+
+    def test_bare_stylesheets_map_to_package_files(self):
+        css = css_import_map()
+        assert css["swiper/css"].endswith("swiper-bundle.min.css")
+        assert "swiper/css/*" in css
 
     def test_versions_are_caret_pinned(self):
         assert all(v.startswith("^") for v in allowed_packages().values())

@@ -54,7 +54,7 @@ def stub_dispatcher(monkeypatch):
         calls.setdefault("prompts", []).append(kwargs.get("user_query", ""))
         return [{"role": "user", "content": kwargs.get("user_query", "")}]
 
-    async def fake_apply(project_id, writes, snapshot_label=None):
+    async def fake_apply(project_id, writes, snapshot_label=None, **_kwargs):
         applied = [{"op": "write", "path": w.path} for w in writes]
         calls["writes"].extend(applied)
         return applied, []

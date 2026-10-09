@@ -1,5 +1,5 @@
 {
-  "$comment": "SINGLE SOURCE OF TRUTH for the closed package manifest of generated apps. Read by app/runtime_manifest.py (AST allowlist) AND runtime/importmap.mjs (browser import map). Never edit one without the other -- there is no other list.",
+  "$comment": "SINGLE SOURCE OF TRUTH for the closed package manifest of generated apps. Read by app/runtime_manifest.py (AST allowlist) AND runtime/importmap.mjs (browser import map). Never edit one without the other -- there is no other list. Fields: subpaths (explicit entries), deps (other manifest packages to pin through esm.sh so every module shares one copy), prefix (trailing-slash entry for deep imports; only for packages without React peers), css (bare stylesheet specifiers -> file inside the package, '*' suffix matches any subpath), virtual (provided by Forge itself, never by the CDN).",
   "reactVersion": "18.3.1",
   "cdn": "https://esm.sh",
   "packages": {
@@ -33,6 +33,39 @@
     "tailwind-merge": { "version": "2.6.0", "browser": true },
     "class-variance-authority": { "version": "0.7.1", "browser": true },
     "date-fns": { "version": "4.1.0", "browser": true },
+
+    "gsap": {
+      "version": "3.15.0",
+      "browser": true,
+      "subpaths": ["ScrollTrigger", "ScrollToPlugin", "Flip", "SplitText", "Observer"]
+    },
+    "@gsap/react": { "version": "2.1.2", "browser": true, "peerReact": true, "deps": ["gsap"] },
+    "lenis": {
+      "version": "1.3.26",
+      "browser": true,
+      "peerReact": true,
+      "subpaths": ["react"],
+      "css": { "lenis/dist/lenis.css": "dist/lenis.css" }
+    },
+    "swiper": {
+      "version": "11.2.10",
+      "browser": true,
+      "peerReact": true,
+      "subpaths": ["react", "modules"],
+      "css": { "swiper/css": "swiper-bundle.min.css", "swiper/css/*": "swiper-bundle.min.css" }
+    },
+    "three": { "version": "0.170.0", "browser": true, "prefix": true },
+    "@react-three/fiber": { "version": "8.18.0", "browser": true, "peerReact": true, "deps": ["three"] },
+    "@react-three/drei": {
+      "version": "9.122.0",
+      "browser": true,
+      "peerReact": true,
+      "deps": ["three", "@react-three/fiber"]
+    },
+    "i18next": { "version": "25.10.10", "browser": true },
+    "react-i18next": { "version": "15.7.4", "browser": true, "peerReact": true, "deps": ["i18next"] },
+    "react-helmet-async": { "version": "2.0.5", "browser": true, "peerReact": true },
+    "@forge/forms": { "version": "1.0.0", "browser": true, "virtual": true },
 
     "vite": { "version": "5.4.21", "browser": false },
     "@vitejs/plugin-react": { "version": "4.3.4", "browser": false },

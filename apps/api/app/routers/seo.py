@@ -12,9 +12,8 @@ from app.db import get_db
 from app.i18n import resolve_locale
 from app.models import Project, User
 from app.services.capabilities import require_rodi_for_paid_capability
-from app.services.filesystem import project_dir
 from app.services.llm import RodiumError, complete_chat
-from app.services.orchestration.images import generate_project_image
+from app.services.orchestration.images import request_image_bytes
 from app.services.project_access import accessible_project
 from app.services.rodium_generation import resolve_generation_auth
 from app.services.seo_meta import (
@@ -301,10 +300,11 @@ async def generate_seo_image(
 
     settings = get_settings()
     try:
-        result = await generate_project_image(
+        # Landscape straight away: the OG crop is 1200x630.
+        raw = await request_image_bytes(
             auth=gen_auth,
-            project_id=str(project.id),
             prompt=brief,
+            size="1536x1024",
             model=settings.effective_default_image_model,
             locale=locale,
         )
@@ -312,8 +312,6 @@ async def generate_seo_image(
         raise HTTPException(status_code=exc.status_code or 502, detail=str(exc)) from exc
 
     try:
-        gen_path = project_dir(str(project.id)) / result["path"]
-        raw = gen_path.read_bytes()
         paths = save_og_asset(str(project.id), raw)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed to prepare OG image: {exc}") from exc

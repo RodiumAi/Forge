@@ -312,7 +312,8 @@ p {
 }
 """
 
-DESIGN_MD = """# Design charter
+DESIGN_MD = """<!-- forge:default-charter -->
+# Design charter
 
 This file is the graphic charter for the app. Forge injects it into every AI call.
 
@@ -589,7 +590,8 @@ html, body, #root {
   font-size: 1rem;
 }
 
-.card p.onboard-body p {
+.card p,
+.onboard-body p {
   margin: 0;
   color: var(--muted);
   line-height: 1.5;
@@ -650,7 +652,8 @@ html, body, #root {
   gap: 0.6rem;
 }
 
-.btn-primary.btn-ghost {
+.btn-primary,
+.btn-ghost {
   appearance: none;
   border: 0;
   border-radius: 0.9rem;
@@ -671,7 +674,8 @@ html, body, #root {
 }
 """
 
-DESIGN_MD_MOBILE = """# Design charter
+DESIGN_MD_MOBILE = """<!-- forge:default-charter -->
+# Design charter
 
 This file is the graphic charter for the **mobile app** prototype. Forge injects it into every AI call.
 
@@ -734,7 +738,8 @@ def scaffold_vite_react(project_id: str, app_name: str, platform: str = "web") -
         write_file(project_id, "src/App.tsx", APP_TSX_MOBILE)
         write_file(project_id, "src/index.css", INDEX_CSS_MOBILE)
         write_file(project_id, "DESIGN.md", DESIGN_MD_MOBILE)
-        write_file(project_id, "manifest.webmanifest", _manifest_webmanifest(app_name))
+        # Under public/: publish only ships public/ verbatim.
+        write_file(project_id, "public/manifest.webmanifest", _manifest_webmanifest(app_name))
     else:
         write_file(project_id, "src/App.tsx", APP_TSX)
         write_file(project_id, "src/index.css", INDEX_CSS)

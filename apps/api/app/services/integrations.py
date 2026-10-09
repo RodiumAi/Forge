@@ -198,6 +198,37 @@ def logo_path(integration_id: str) -> Path | None:
     return path
 
 
+def format_integrations_prompt_block(locale: str = "en") -> str:
+    """Compact embed catalog for the agent prompt (one line per provider)."""
+    rows = list_integrations()
+    if not rows:
+        return ""
+    by_category: dict[str, list[str]] = {}
+    for meta in rows:
+        methods = "/".join(m for m in meta.methods if m in _EMBED_METHODS)
+        by_category.setdefault(meta.categories[0], []).append(f"{meta.name} ({methods})")
+    lines = ["Integrations catalog (drop-in embeds, no backend needed):"]
+    for category in sorted(by_category):
+        lines.append(f"- {category}: " + ", ".join(sorted(by_category[category])))
+    if locale == "fr":
+        lines.append(
+            'Embeds : iframe en JSX (title, width 100%, loading="lazy", hauteur fixée par le '
+            "conteneur) ; widget script dans un composant qui ajoute le <script> une seule fois "
+            "dans un useEffect (vérifier qu'il n'existe pas déjà). N'invente jamais d'identifiant "
+            "de compte : sans l'URL ou l'id fourni par l'utilisateur, affiche une carte de "
+            "remplacement explicite et demande-le en une phrase."
+        )
+    else:
+        lines.append(
+            'Embeds: iframes as JSX (title, width 100%, loading="lazy", height set by the '
+            "container); script widgets in a component that appends the <script> once in a "
+            "useEffect (skip when it already exists). Never invent account ids: without the "
+            "URL or id from the user, render an explicit placeholder card and ask for it in one "
+            "sentence."
+        )
+    return "\n".join(lines)
+
+
 def clear_integrations_cache() -> None:
     global _cache, _cache_mtime
     _cache = None
