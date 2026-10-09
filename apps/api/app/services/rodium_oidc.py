@@ -205,6 +205,36 @@ async def exchange_code(*, code: str, code_verifier: str) -> dict[str, Any]:
     return await _token_request(data)
 
 
+SESSION_HANDOFF_GRANT = "urn:rodiumai:params:oauth:grant-type:session-handoff"
+
+
+def handoff_configured() -> bool:
+    """Handoff redemption needs a confidential client (id + secret)."""
+    settings = get_settings()
+    return bool(settings.rodium_oidc_client_id and settings.rodium_oidc_client_secret)
+
+
+async def exchange_handoff_code(code: str, binding: str) -> dict[str, Any]:
+    """Redeem a dashboard → Forge handoff code for a RodiumAi token set.
+
+    ``binding`` is the secret this browser tab generated before asking the
+    dashboard for the code (only its sha256 left the tab). The issuer refuses
+    the code without it, so a forwarded link signs nobody in.
+    """
+    settings = get_settings()
+    if not handoff_configured():
+        raise RodiumOidcError("RodiumAi handoff is not configured on the Forge API")
+    data = {
+        "grant_type": SESSION_HANDOFF_GRANT,
+        "code": code,
+        "code_verifier": binding,
+        "client_id": settings.rodium_oidc_client_id,
+        "client_secret": settings.rodium_oidc_client_secret,
+        "scope": settings.rodium_oidc_scopes,
+    }
+    return await _token_request(data)
+
+
 async def refresh_access_token(refresh_token: str) -> dict[str, Any]:
     settings = get_settings()
     data = {
