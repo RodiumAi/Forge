@@ -48,7 +48,7 @@ export function extractSeoHead(html) {
   }
   // Structured data and third-party snippets (analytics...) the user put in
   // index.html; the preview import map and the dev entry are not carried.
-  const scriptRe = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
+  const scriptRe = /<script\b([^>]*)>([\s\S]*?)<\/script\b[^>]*>/gi;
   while ((m = scriptRe.exec(head))) {
     const attrs = m[1] || "";
     if (/type=["'](importmap|module)["']/i.test(attrs)) continue;

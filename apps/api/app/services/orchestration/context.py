@@ -342,11 +342,34 @@ def load_design_md(project_id: str) -> str | None:
     return text
 
 
+def _omit_blocks(text: str, tag: str, placeholder: str) -> str:
+    """Replace each `<tag ...>...</tag>` span with `placeholder`.
+
+    A plain scan rather than a lazy regex: a reply with many opening tags and
+    no closing one would otherwise be rescanned from every opening.
+    """
+    opening, closing = f"<{tag}", f"</{tag}>"
+    parts: list[str] = []
+    pos = 0
+    while True:
+        start = text.find(opening, pos)
+        if start < 0:
+            break
+        end = text.find(closing, start + len(opening))
+        if end < 0:
+            break
+        parts.append(text[pos:start])
+        parts.append(placeholder)
+        pos = end + len(closing)
+    parts.append(text[pos:])
+    return "".join(parts)
+
+
 def _sanitize_turn(role: str, content: str, *, limit: int) -> str:
     text = content or ""
     if role == "assistant":
-        text = re.sub(r"<forge-write[\s\S]*?</forge-write>", "[file write omitted]", text)
-        text = re.sub(r"<forge-edit[\s\S]*?</forge-edit>", "[file edit omitted]", text)
+        text = _omit_blocks(text, "forge-write", "[file write omitted]")
+        text = _omit_blocks(text, "forge-edit", "[file edit omitted]")
         text = re.sub(r"<forge-delete[^>]*\/?>", "", text)
         text = re.sub(r"\n{3,}", "\n\n", text).strip()
         if not text:

@@ -351,6 +351,25 @@ class TestRouting:
         )
         assert prompts and "croissants" in prompts[0]
 
+    def test_image_sentences_split_on_punctuation_and_conjunction(self):
+        from app.services.orchestration.router import requested_image_prompts
+
+        prompts = requested_image_prompts(
+            "Build a bakery website. Use warm colours and generate an image of a baguette"
+        )
+        assert prompts == ["generate an image of a baguette"]
+        assert requested_image_prompts("a" + " " * 50_000 + "b") == []
+
+    def test_history_turns_drop_file_blocks(self):
+        from app.services.orchestration.context import _sanitize_turn
+
+        reply = 'Done.\n<forge-write path="a.tsx">x</forge-write>\n<forge-edit path="b.tsx">y</forge-edit>'
+        assert _sanitize_turn("assistant", reply, limit=500) == (
+            "Done.\n[file write omitted]\n[file edit omitted]"
+        )
+        unclosed = "<forge-edit" * 20_000
+        assert _sanitize_turn("assistant", unclosed, limit=50) == unclosed[:50]
+
     def test_repairs_use_the_model_that_wrote_the_code(self):
         import inspect
 

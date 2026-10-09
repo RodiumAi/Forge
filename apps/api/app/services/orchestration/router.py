@@ -199,15 +199,20 @@ def is_image_only_request(text: str) -> bool:
     return not (_SCAFFOLD_RE.search(clean) or _SITE_BUILD_RE.search(clean) or len(clean) > 220)
 
 
+_SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?\n])\s+")
+# Anchored on the conjunction, not on the spaces before it, so a long run of
+# spaces is not retried from every position.
+_AND_IMAGE_SPLIT_RE = re.compile(r"\b(?:et|and)\s+(?=g[ée]n[èe]re|generate|cr[ée]e|create|dessine|draw)")
+
+
 def requested_image_prompts(text: str) -> list[str]:
     """Sentences of a build request that explicitly ask for an image."""
     clean = strip_attachment_noise(text or "")
     out = []
-    for sentence in re.split(
-        r"(?<=[.!?\n])\s+|\s+(?:et|and)\s+(?=g[ée]n[èe]re|generate|cr[ée]e|create|dessine|draw)", clean
-    ):
-        if _IMAGE_GENERATE_RE.search(sentence):
-            out.append(sentence.strip()[:400])
+    for chunk in _SENTENCE_SPLIT_RE.split(clean):
+        for sentence in _AND_IMAGE_SPLIT_RE.split(chunk):
+            if _IMAGE_GENERATE_RE.search(sentence):
+                out.append(sentence.strip()[:400])
     return out[:2]
 
 
