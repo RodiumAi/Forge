@@ -45,7 +45,7 @@
     "eslint": "^9.39.5",
     "eslint-config-next": "^15.5.24",
     "jsdom": "^25.0.1",
-    "typescript": "^5.8.2",
+    "typescript": "^7.0.2",
     "vitest": "^4.1.11"
   },
   "overrides": {
