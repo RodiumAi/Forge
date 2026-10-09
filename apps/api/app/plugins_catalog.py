@@ -176,23 +176,6 @@ PLUGINS: tuple[PluginDefinition, ...] = (
         import_example='import { zodResolver } from "@hookform/resolvers/zod";',
     ),
     PluginDefinition(
-        id="forge-forms",
-        family="forms",
-        package="@forge/forms",
-        when_to_use_en=(
-            "Real submissions for contact, quote, newsletter and booking-request forms: "
-            "await submitForm(name, data) delivers to the owner's Forge inbox on the published "
-            "site (it resolves immediately in preview). Show the success/error state it returns."
-        ),
-        when_to_use_fr=(
-            "Envois réels pour les formulaires de contact, devis, newsletter et demande de "
-            "réservation : await submitForm(nom, données) arrive dans la boîte Forge du "
-            "propriétaire sur le site publié (résolu tout de suite en preview). Afficher l'état "
-            "succès/erreur renvoyé."
-        ),
-        import_example='import { submitForm } from "@forge/forms";',
-    ),
-    PluginDefinition(
         id="recharts",
         family="data",
         package="recharts",

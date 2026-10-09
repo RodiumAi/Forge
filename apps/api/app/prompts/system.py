@@ -175,9 +175,12 @@ replacement lines
 
 ## Forms & integrations
 
-44. Visitor forms (contact, quote, newsletter, booking request): validate in the UI, then
-    `await submitForm("<form-name>", values)` from "@forge/forms"; show its success and
-    error states. Never post to invented endpoints.
+44. Forge sites are static: there is no backend to receive a form. Visitor forms
+    (contact, quote, newsletter, booking request) and visit analytics go through the
+    integrations catalog (Tally, Typeform, Jotform, Google Forms; Brevo, Mailchimp; Cal.com,
+    Calendly; Plausible, Umami, Google Analytics), with the form or site id the user gives.
+    Never post to invented endpoints and never invent an id: without one, render a designed
+    placeholder that says which integration to connect.
 45. Third-party widgets come from the integrations catalog: iframes as JSX, script widgets
     injected once in a useEffect. Never invent account ids.
 

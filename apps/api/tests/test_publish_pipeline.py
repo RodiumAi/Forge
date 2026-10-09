@@ -96,7 +96,7 @@ class TestSeoHelpers:
         assert 'property="og:url" content="https://fournil.example/carte"' in out
         assert 'content="https://fournil.example/seo/og-image.png"' in out
         assert 'og:locale" content="fr_FR"' in out
-        assert "/_rodium/v1/sites/hit" in out
+        assert "/_rodium/" not in out, "no call back to Forge from a published page"
         assert "application/ld+json" not in out, "structured data only on the home page"
         home = site_seo.finalize_page_head(
             doc, site_url="https://fournil.example", route="/", lang="fr", site_name="F"

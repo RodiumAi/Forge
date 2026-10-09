@@ -4,7 +4,7 @@ Integrations are **catalog entries** for third-party embeds (forms, booking, cha
 
 ## How the agent uses them
 
-The catalog is part of every code prompt (`format_integrations_prompt_block` in `apps/api/app/services/integrations.py`): one line per provider and the embed rules (iframes as JSX, script widgets injected once in a `useEffect`, never an invented account id). Plain visitor forms do not need a provider at all: `@forge/forms` delivers them to the project inbox (Options > Forms).
+The catalog is part of every code prompt (`format_integrations_prompt_block` in `apps/api/app/services/integrations.py`): one line per provider and the embed rules (iframes as JSX, script widgets injected once in a `useEffect`, never an invented account id). Published sites are static, with no Forge backend behind them: visitor forms, newsletters, bookings and analytics are always one of these embeds, wired with the user's own form or site id.
 
 ## Policy
 

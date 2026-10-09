@@ -2,7 +2,7 @@
 
 Each test pins one failure: pre-render writing outside the build, a page that
 blocks rendering forever, forge-edit edge cases, the brand lock opening on a
-negation, a continuation corrupting a file, and the visitor intake.
+negation and a continuation corrupting a file.
 """
 
 from __future__ import annotations
@@ -213,70 +213,6 @@ class TestContinuationJoin:
         )
         assert '\n<forge-write path="a.txt">full' in text
         assert {op.path: op.content for op in parse_forge_output(text).writes} == {"a.txt": "full"}
-
-
-class TestVisitorIntake:
-    def test_form_key_round_trip_and_tampering(self, monkeypatch):
-        import uuid
-
-        from app.services import site_events
-
-        project_id = uuid.uuid4()
-        key = site_events.project_form_key(project_id)
-
-        class DB:
-            def get(self, _model, pid):
-                return {"id": pid}
-
-        assert site_events.project_from_form_key(DB(), key) == {"id": project_id}
-        tampered = ("A" if key[0] != "A" else "B") + key[1:]
-        assert site_events.project_from_form_key(DB(), tampered) is None
-        assert site_events.project_from_form_key(DB(), "not-a-key") is None
-
-    def test_visitor_ip_trusts_the_gateway_only_with_its_secret(self, monkeypatch):
-        from types import SimpleNamespace
-
-        from app.config import clear_settings_cache
-        from app.services import site_events
-
-        monkeypatch.setenv("SITES_GATEWAY_SECRET", "s3cr3t")
-        clear_settings_cache()
-        try:
-
-            def req(headers):
-                return SimpleNamespace(headers=headers, client=SimpleNamespace(host="10.0.0.5"))
-
-            good = req({"x-forge-gateway-secret": "s3cr3t", "x-forge-visitor-ip": "203.0.113.7"})
-            assert site_events.visitor_ip(good) == "203.0.113.7"
-            forged = req({"x-forge-gateway-secret": "nope", "x-forge-visitor-ip": "203.0.113.7"})
-            assert site_events.visitor_ip(forged) != "203.0.113.7"
-        finally:
-            clear_settings_cache()
-
-    def test_ipv6_rate_buckets_are_per_64(self):
-        from app.services.site_events import rate_subject
-
-        assert rate_subject("2001:db8:1:2:aaaa::1") == rate_subject("2001:db8:1:2:bbbb::9")
-        assert rate_subject("203.0.113.7") == "203.0.113.7"
-
-    def test_control_characters_never_reach_the_database(self):
-        from app.services.site_events import clean_path, clean_submission
-
-        _, fields = clean_submission("contact", {"msg\x00": "a\x00b"})
-        assert fields == {"msg": "ab"}
-        assert "\x00" not in clean_path("/a\x00b")
-
-    def test_long_referrers_are_cut_not_rejected(self):
-        from app.routers.site_events import HitIn
-
-        assert len(HitIn.model_validate({"p": "/", "r": "x" * 5000}).r) == 500
-
-    def test_csv_header_cells_are_escaped_too(self):
-        import inspect
-
-        from app.routers import site_events
-
-        assert "_csv_cell(k) for k in keys" in inspect.getsource(site_events.export_submissions)
 
 
 class TestVerifyImages:

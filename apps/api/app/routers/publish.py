@@ -16,7 +16,6 @@ from app.services.domains import get_project_domain, sites_url_for_project
 from app.services.export_project import build_export_zip
 from app.services.project_access import accessible_project
 from app.services.publish_esm import publish_project_esm
-from app.services.site_events import project_form_key
 
 router = APIRouter(prefix="/projects", tags=["publish"])
 PUBLISH_LIMIT_PER_HOUR = 20
@@ -131,7 +130,6 @@ def export_project_zip(
             project_id=str(project.id),
             project_name=project.name or project.slug,
             locale=locale,
-            form_key=project_form_key(project.id),
         )
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)[:2000]) from exc

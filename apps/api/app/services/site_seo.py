@@ -153,14 +153,6 @@ _STOPWORDS = {
 _OG_LOCALE = {"fr": "fr_FR", "en": "en_US", "es": "es_ES", "de": "de_DE", "it": "it_IT", "pt": "pt_PT"}
 _TAG_RE = re.compile(r"<[^>]+>")
 _WORD_RE = re.compile(r"[a-zàâäçéèêëîïôöùûüÿñœæß]+", re.I)
-_BEACON = (
-    "<script>(function(){if(navigator.webdriver)return;var e='/_rodium/v1/sites/hit',"
-    "s=function(){try{var b=JSON.stringify({p:location.pathname,r:document.referrer||''});"
-    "if(navigator.sendBeacon){navigator.sendBeacon(e,new Blob([b],{type:'application/json'}))}"
-    "else{fetch(e,{method:'POST',body:b,keepalive:true,headers:{'Content-Type':'application/json'}})}"
-    "}catch(x){}},h=history.pushState;s();history.pushState=function(){h.apply(this,arguments);"
-    "setTimeout(s,0)};addEventListener('popstate',s)})();</script>"
-)
 
 
 def detect_language(text: str, fallback: str = "en") -> str:
@@ -211,7 +203,6 @@ def finalize_page_head(
     lang: str,
     site_name: str,
     description: str = "",
-    analytics: bool = True,
     indexable: bool = True,
 ) -> str:
     """Inject per-page SEO into one built HTML page (idempotent).
@@ -268,11 +259,6 @@ def finalize_page_head(
             doc = doc.replace("<!--forge:head-->", "\n".join(extra) + "\n<!--forge:head-->", 1)
         else:
             doc = re.sub(r"</head>", "\n".join(extra) + "\n</head>", doc, count=1, flags=re.I)
-    if analytics and "/_rodium/v1/sites/hit" not in doc:
-        if "<!--forge:body-->" in doc:
-            doc = doc.replace("<!--forge:body-->", _BEACON + "\n<!--forge:body-->", 1)
-        else:
-            doc = re.sub(r"</body>", _BEACON + "\n</body>", doc, count=1, flags=re.I)
     return doc
 
 

@@ -30,7 +30,7 @@ def main() -> None:
     print("Valkey          redis://:****@localhost:6380/0 (requirepass)")
     print()
     print("Checklist:")
-    print("  curl http://boutique.lvh.me:8080/_rodium/v1/health")
+    print("  curl -I http://boutique.lvh.me:8080/")
     print("  curl http://localhost:8100/health")
 
 

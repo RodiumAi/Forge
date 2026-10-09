@@ -59,15 +59,6 @@ curl -H "Host: www.client.com" http://127.0.0.1:8080/
 curl -H "X-Rodium-Forwarded-Host: www.client.com" http://localhost:8100/v1/authorize-host -i
 ```
 
-## Formulaires, visites et adresse du visiteur
-
-Les sites publiés envoient leurs formulaires (`@forge/forms`) et leurs visites vers `/_rodium/v1/sites/*` sur leur propre domaine ; le gateway les relaie à l'API.
-
-| Variable (tâche ECS du gateway) | Rôle |
-|---|---|
-| `SITES_GATEWAY_SECRET` | Même valeur que `SITES_GATEWAY_SECRET` côté API : l'API ne fait confiance à l'adresse du visiteur transmise (`X-Forge-Visitor-IP`) qu'avec ce secret. Sans lui, les limites « par visiteur » s'appliquent à l'adresse du gateway, donc à tous les sites à la fois. |
-| `SITES_TRUSTED_PROXIES` | Plages en amont dont `X-Forwarded-For` est lu (par défaut `private_ranges`, c'est-à-dire l'ALB du VPC). Ajoutez les plages CloudFront si une distribution précède l'ALB. |
-
 ## Sécurité
 
 Ne jamais committer de task definitions ECS avec secrets en clair. Utiliser

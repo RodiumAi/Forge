@@ -196,41 +196,6 @@ def build_project_invite(
     )
 
 
-def build_form_submission(
-    to: str,
-    *,
-    project_name: str,
-    form_name: str,
-    fields: dict[str, str],
-    url: str,
-    locale: Locale = "en",
-) -> MailMessage:
-    """A visitor sent a form on the owner's published site."""
-    project_plain = _mail_plain(project_name)
-    form_plain = _mail_plain(form_name)
-    title = t("mail_form_subject", locale, project=project_plain, form=form_plain)
-    rows = [(str(k)[:64], str(v)[:1000]) for k, v in list(fields.items())[:20]]
-    text_rows = "\n".join(f"{k}: {v}" for k, v in rows)
-    text = f"{title}\n\n{text_rows}\n\n{url}\n"
-    html_rows = "".join(
-        f'<p style="margin:0 0 8px;font-size:14px;line-height:1.5"><strong>{html.escape(k)}</strong><br>'
-        f"{html.escape(v).replace(chr(10), '<br>')}</p>"
-        for k, v in rows
-    )
-    return MailMessage(
-        to=to,
-        subject=title,
-        text=text,
-        html=_html_document(
-            html.escape(title),
-            html_rows,
-            t("mail_form_cta", locale),
-            url,
-            t("mail_form_footer", locale),
-        ),
-    )
-
-
 def build_reset_password_sso_hint(to: str, login_url: str, locale: Locale = "en") -> MailMessage:
     """Inform SSO-only accounts that there is no local password to reset."""
     title = t("mail_reset_sso_subject", locale)

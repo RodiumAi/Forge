@@ -230,8 +230,7 @@ API image (`playwright install --with-deps chromium`).
 3. **SEO** (`services/site_seo.py`): `<html lang>` detected from the text,
    per-page canonical and og:url, absolute og/twitter images, og:site_name,
    og:locale, schema.org WebSite on the home page, `sitemap.xml` and
-   `robots.txt` (unless the project ships its own), and the cookie-free visit
-   beacon.
+   `robots.txt` (unless the project ships its own).
 4. **Upload** under `{slug}/` with `Cache-Control` (hashed assets immutable,
    pages revalidated), pages last, then stale keys are removed.
 
@@ -242,12 +241,8 @@ Caddy is a **pure reverse proxy to the bucket** (`infra/local/Caddyfile`,
 (sites published before pre-rendering). 403 counts as missing. Responses are
 compressed (zstd/gzip); SVGs render as images but are sandboxed when opened.
 
-`/_rodium/*` on a site's origin proxies to the API: published sites post their
-forms (`@forge/forms` → `POST /v1/sites/forms`) and visits
-(`POST /v1/sites/hit`) there, same-origin. The owner reads them under
-Options › Forms and Options › Audience (`routers/site_events.py`).
-
-The visitor address reaches the API in `X-Forge-Visitor-IP`, trusted only with `SITES_GATEWAY_SECRET` (set on the gateway and the API). A ZIP export posts to `/v1/sites/forms?key=…`, a per-project key that survives slug changes. Pre-rendering runs in a child process with a scrubbed environment and a hard deadline (`services/prerender.py`).
+A published site is static: the gateway never forwards anything from it to the
+API. Forms and analytics are integration-catalog embeds. Pre-rendering runs in a child process with a scrubbed environment and a hard deadline (`services/prerender.py`).
 
 `/v1/authorize-host` exists **only for custom domains**: Caddy's `forward_auth`
 asks the API whether a hostname maps to a validated `ProjectDomain`, and gets
@@ -260,7 +255,7 @@ changes routing, never storage.
 `User → Project → Chat → Message`, with `AgentRun` recording each generation
 (status, plan, clarify answers, and `cursor_task_index` so a run can resume).
 `UserSettings` holds encrypted RodiumAI tokens. `ProjectDomain`, `StoredObject`,
-`SiteUsageDay`, `SitePageDay`, `FormSubmission`, `PreviewComment` and `ModelCatalog` round it out.
+`SiteUsageDay`, `PreviewComment` and `ModelCatalog` round it out.
 
 **There is no Alembic.** `apps/api/app/db.py` runs `create_all()` followed by a
 hand-written list of idempotent statements (`ADD COLUMN IF NOT EXISTS`, …), run
@@ -315,7 +310,7 @@ Honest notes for anyone reading the code and wondering:
   **no importers**; the encryption actually in use is Fernet in `app/crypto.py`.
   Production config still asserts KMS/Secrets Manager.
 - `providers/queue.py` defines a full Redis Streams usage queue that nothing
-  publishes to or consumes; visits are written by `POST /v1/sites/hit` instead.
+  publishes to or consumes; `SiteUsageDay` is written synchronously instead.
 - `Project.preview_port` / `preview_running` are vestigial from a Vite-dev-server
   era.
 - `apps/web/lib/preview-host.ts` rewrites to `/preview-by-slug/{slug}`, for which

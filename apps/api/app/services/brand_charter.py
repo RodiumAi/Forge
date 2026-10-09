@@ -429,8 +429,14 @@ async def bootstrap_project_brand(
     if not plan:
         return
     yield {"type": "step", "id": "brand_images", "label": t("step_brand_images", locale), "status": "running"}  # type: ignore[arg-type]
+    # Images are requested in parallel; writing them into the project goes one
+    # at a time (same media folder and manifest).
+    save_lock = asyncio.Lock()
     results = await asyncio.gather(
-        *(_generate_brand_image(project_id, item, auth=auth, locale=locale) for item in plan),
+        *(
+            _generate_brand_image(project_id, item, auth=auth, locale=locale, save_lock=save_lock)
+            for item in plan
+        ),
         return_exceptions=True,
     )
     written = 0
@@ -445,16 +451,22 @@ async def bootstrap_project_brand(
 
 
 async def _generate_brand_image(
-    project_id: str, item: dict[str, str], *, auth: Any, locale: str
+    project_id: str,
+    item: dict[str, str],
+    *,
+    auth: Any,
+    locale: str,
+    save_lock: asyncio.Lock | None = None,
 ) -> str | None:
     from app.services.orchestration.images import request_image_bytes
     from app.services.project_media import record_media, save_webp_with_variants
 
     raw = await request_image_bytes(auth=auth, prompt=item["prompt"], size=item["size"], locale=locale)
     stem = f"{item['role']}-{uuid4().hex[:8]}"
-    entry = await asyncio.to_thread(save_webp_with_variants, project_id, raw, stem=stem)
-    entry.kind = "generated"
-    entry.role = item["role"]
-    entry.alt = item.get("alt") or re.sub(r"\s+", " ", item["prompt"]).strip()[:140]
-    record_media(project_id, entry)
+    async with save_lock or asyncio.Lock():
+        entry = await asyncio.to_thread(save_webp_with_variants, project_id, raw, stem=stem)
+        entry.kind = "generated"
+        entry.role = item["role"]
+        entry.alt = item.get("alt") or re.sub(r"\s+", " ", item["prompt"]).strip()[:140]
+        record_media(project_id, entry)
     return entry.path

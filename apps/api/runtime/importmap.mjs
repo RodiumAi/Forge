@@ -9,7 +9,7 @@
 import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
-/** @type {{reactVersion: string, cdn: string, packages: Record<string, {version: string, browser?: boolean, peerReact?: boolean, subpaths?: string[], deps?: string[], prefix?: boolean, css?: Record<string, string>, virtual?: boolean}>}} */
+/** @type {{reactVersion: string, cdn: string, packages: Record<string, {version: string, browser?: boolean, peerReact?: boolean, subpaths?: string[], deps?: string[], prefix?: boolean, css?: Record<string, string>}>}} */
 const MANIFEST = require("./packages.json");
 
 /**
@@ -46,7 +46,7 @@ export const DEFAULT_CDN_IMPORTS = (() => {
   /** @type {Record<string, string>} */
   const out = {};
   for (const [name, spec] of Object.entries(MANIFEST.packages)) {
-    if (!spec.browser || spec.virtual) continue;
+    if (!spec.browser) continue;
     out[name] = cdnUrl(name, spec);
     for (const subpath of spec.subpaths || []) {
       out[`${name}/${subpath}`] = cdnUrl(name, spec, subpath);
@@ -57,11 +57,6 @@ export const DEFAULT_CDN_IMPORTS = (() => {
   }
   return out;
 })();
-
-/** Manifest packages Forge provides itself (e.g. `@forge/forms`). */
-export const VIRTUAL_PACKAGES = Object.entries(MANIFEST.packages)
-  .filter(([, spec]) => spec.virtual)
-  .map(([name]) => name);
 
 /**
  * CDN stylesheet URL for a bare CSS import (`import "swiper/css"`), or null.

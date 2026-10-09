@@ -25,7 +25,8 @@ Standing conventions for this Forge project. Follow on every edit.
 
 ## Frontend-only
 - Mock data + localStorage for cart, wishlist, preferences
-- Visitor forms: validate, then `submitForm()` from `@forge/forms` with success/error states
+- Visitor forms and analytics: embeds from the integrations catalog (Tally, Typeform, Google
+  Forms, Plausible...) with the user's own id, never a form posting to an invented endpoint
 - Never wire Resend / Firebase Admin / payment secrets / connector backends
 - Deliver navigable end-to-end flows: empty states, responsive, purposeful motion that
   respects prefers-reduced-motion

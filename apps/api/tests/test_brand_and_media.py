@@ -191,7 +191,6 @@ class TestCatalogPrompt:
             "@react-three/fiber",
             "react-i18next",
             "react-helmet-async",
-            "@forge/forms",
         ):
             assert package in block, package
         assert "css-only hacks" not in block

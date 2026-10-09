@@ -277,41 +277,6 @@ class SiteUsageDay(Base):
     __table_args__ = (UniqueConstraint("user_id", "project_id", "day", name="uq_site_usage_day"),)
 
 
-class SitePageDay(Base):
-    """Page views per path and day for a published site (top pages)."""
-
-    __tablename__ = "site_page_days"
-
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    project_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), index=True, nullable=False
-    )
-    day: Mapped[str] = mapped_column(String(10), nullable=False)
-    path: Mapped[str] = mapped_column(String(300), nullable=False)
-    views: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-
-    __table_args__ = (UniqueConstraint("project_id", "day", "path", name="uq_site_page_day"),)
-
-
-class FormSubmission(Base):
-    """A visitor form sent from a published site (`@forge/forms`)."""
-
-    __tablename__ = "form_submissions"
-
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    project_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), index=True, nullable=False
-    )
-    form_name: Mapped[str] = mapped_column(String(64), nullable=False)
-    data_json: Mapped[str] = mapped_column(Text, nullable=False)
-    page: Mapped[str] = mapped_column(String(300), nullable=False, default="")
-    visitor_hash: Mapped[str] = mapped_column(String(32), nullable=False, default="")
-    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), index=True
-    )
-
-
 class StoredObject(Base):
     __tablename__ = "stored_objects"
 

@@ -13,7 +13,6 @@ from app.runtime_manifest import (
     css_import_map,
     is_relative_or_alias,
     package_version,
-    virtual_packages,
 )
 from app.services.import_validator import validate_write_content
 
@@ -27,9 +26,7 @@ class TestManifest:
             k.split("/")[0] if not k.startswith("@") else "/".join(k.split("/")[:2])
             for k in browser_import_map()
         }
-        # Virtual packages (@forge/forms) are mapped by the runner / publish host.
-        assert browser_packages() - virtual_packages() <= mapped
-        assert not (virtual_packages() & set(browser_import_map()))
+        assert browser_packages() <= mapped
 
     def test_manifest_deps_are_pinned_through_the_cdn(self):
         # @gsap/react must share the app's gsap instance, fiber the app's three.

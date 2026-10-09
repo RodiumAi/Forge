@@ -655,7 +655,7 @@ async def build_plan(
         "rewrites src/index.css; "
         "(4) final coherence (Context + CSS + routes + scroll). "
         "A styles_foundation task BEFORE sections is required for scaffolds. "
-        "Frontend-only: no backend connector tasks (visitor forms use @forge/forms). "
+        "Frontend-only: no backend connector tasks (visitor forms and analytics are integration-catalog embeds). "
         "Each task needs a clear acceptance criterion." + " " + NO_LONG_DASH_RULE
     )
     request_body = f"{prompt}\n\n{answers_txt}".strip() if answers_txt else prompt

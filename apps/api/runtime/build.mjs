@@ -20,7 +20,7 @@ import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as esbuild from "esbuild";
 
-import { cssCdnUrl, DEFAULT_CDN_IMPORTS, VIRTUAL_PACKAGES } from "./importmap.mjs";
+import { cssCdnUrl, DEFAULT_CDN_IMPORTS } from "./importmap.mjs";
 import { resolveSpecifier } from "./resolve.mjs";
 import { transform } from "./transform.mjs";
 
@@ -31,9 +31,6 @@ const CDN_ORIGIN = new URL(MANIFEST.cdn).origin;
 const SOURCE_RE = /\.(tsx|ts|jsx|js)$/i;
 const STYLE_RE = /\.(css|scss|sass|less)(\?.*)?$/i;
 export const ASSET_RE = /\.(png|jpe?g|gif|webp|avif|svg|ico|woff2?|ttf|otf|eot|mp4|webm|mp3|wav)(\?.*)?$/i;
-const VIRTUAL_SOURCES = {
-  "@forge/forms": join(HERE, "virtual", "forge-forms.mjs"),
-};
 const NPM_BUNDLED = new Set(
   Object.entries(MANIFEST.packages)
     .filter(([, spec]) => spec.npm)
@@ -140,7 +137,7 @@ export async function buildSite(input) {
     for (const imp of r.imports) {
       if (imp.kind !== "bare") continue;
       const spec = imp.specifier;
-      if (VIRTUAL_PACKAGES.includes(spec) || cssCdnUrl(spec) || lookupImportMap(imports, spec)) continue;
+      if (cssCdnUrl(spec) || lookupImportMap(imports, spec)) continue;
       errors.push({ path, message: `IMPORT_NOT_IN_MANIFEST: "${spec}" is not in the CDN import map` });
     }
     transformed.set(path, r.code);
@@ -200,7 +197,6 @@ export async function buildSite(input) {
             cssImports.add(cssUrl);
             return { path: spec, namespace: "empty" };
           }
-          if (VIRTUAL_SOURCES[spec]) return { path: spec, namespace: "virtual" };
           if (NPM_BUNDLED.has(packageRoot(spec))) {
             // Tree-shaken from the real package (sideEffects: false), so only
             // the icons the site uses ship.
@@ -236,10 +232,6 @@ export async function buildSite(input) {
       build.onLoad({ filter: /.*/, namespace: "empty" }, () => ({ contents: "", loader: "js" }));
       build.onLoad({ filter: /.*/, namespace: "asset" }, (args) => ({
         contents: `export default ${JSON.stringify("/" + args.path)};`,
-        loader: "js",
-      }));
-      build.onLoad({ filter: /.*/, namespace: "virtual" }, (args) => ({
-        contents: readFileSync(VIRTUAL_SOURCES[args.path], "utf8"),
         loader: "js",
       }));
       build.onLoad({ filter: /.*/, namespace: "cdn" }, async (args) => ({

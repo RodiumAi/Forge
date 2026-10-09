@@ -30,7 +30,7 @@ Les URL présignées doivent être signées avec `OBJECT_STORE_PUBLIC_ENDPOINT=h
 
 ### Caddy contre le CDN / hébergeur statique
 
-Caddy reproduit le contrat de routage (`/_rodium/*` → API, le reste → MinIO), pas le cache CDN, le WAF ni le rate limit de bord.
+Caddy reproduit le contrat de routage (fichiers et pages des sites → MinIO), pas le cache CDN, le WAF ni le rate limit de bord.
 
 ### Valkey local contre Valkey/Redis managé
 
@@ -38,7 +38,7 @@ Aucun écart : la même implémentation Redis Streams tourne en local et en prod
 
 ### Preview
 
-Le live preview dashboard reste sur `{slug}.lvh.me:3100` (middleware Next). Caddy `:8080` sert le contrat Sites Gateway (assets publiés + `/_rodium`).
+Le live preview dashboard reste sur `{slug}.lvh.me:3100` (middleware Next). Caddy `:8080` sert le contrat Sites Gateway (assets publiés).
 
 Les aperçus s'exécutent dans le navigateur via le runner Babel/ESM : l'API ne lance ni Vite ni npm. Le seul sous-processus est `git`, pour les snapshots par projet.
 

@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import get_settings
 from app.db import init_db
-from app.middleware import MAX_BODY_BYTES, MaxBodySizeMiddleware, PublicSiteCorsMiddleware
+from app.middleware import MAX_BODY_BYTES, MaxBodySizeMiddleware
 from app.routers import (
     auth,
     chats,
@@ -27,7 +27,6 @@ from app.routers import (
     projects,
     publish,
     seo,
-    site_events,
     sites_v1,
     team,
     templates,
@@ -125,10 +124,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-# Outside the main CORS middleware: published sites (and their ZIP exports)
-# post forms and visits from any origin. Bodies there are tiny.
-app.add_middleware(MaxBodySizeMiddleware, max_bytes=64 * 1024, path_regex=r"^/v1/sites/(forms|hit)")
-app.add_middleware(PublicSiteCorsMiddleware)
 
 
 @app.middleware("http")
@@ -186,8 +181,6 @@ app.include_router(comments.router)
 app.include_router(publish.router)
 app.include_router(domains.router)
 app.include_router(sites_v1.router)
-app.include_router(site_events.public_router)
-app.include_router(site_events.router)
 app.include_router(preview.router)
 app.include_router(internal_admin.router)
 

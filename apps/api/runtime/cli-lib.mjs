@@ -7,7 +7,7 @@ import { transform } from "./transform.mjs";
 import { topoSort } from "./topo.mjs";
 import { rewriteSpecifiers } from "./rewrite.mjs";
 import { toPublishJsPath } from "./resolve.mjs";
-import { cssCdnUrl, DEFAULT_CDN_IMPORTS, VIRTUAL_PACKAGES } from "./importmap.mjs";
+import { cssCdnUrl, DEFAULT_CDN_IMPORTS } from "./importmap.mjs";
 
 /**
  * SEO head carried from the project's index.html into the published page.
@@ -75,12 +75,10 @@ export function buildGraph(files, entry, mode = "preview", extraImports = {}) {
   const importKeys = [...Object.keys(DEFAULT_CDN_IMPORTS), ...Object.keys(extraImports)];
   const exactBare = new Set(importKeys);
   const prefixBare = importKeys.filter((k) => k.endsWith("/"));
-  // Package stylesheets (`swiper/css`) and Forge-provided modules
-  // (`@forge/forms`) are served by the host, not by the import map.
+  // Package stylesheets (`swiper/css`) are served by the host, not by the import map.
   const isAllowedBare = (spec) =>
     exactBare.has(spec) ||
     prefixBare.some((prefix) => spec.startsWith(prefix)) ||
-    VIRTUAL_PACKAGES.includes(spec) ||
     Boolean(cssCdnUrl(spec));
 
   for (const [path, content] of Object.entries(files)) {

@@ -150,9 +150,6 @@ class Settings(BaseSettings):
     # Publish: render every route to HTML in headless Chromium (falls back to a
     # client-rendered site when no browser is available).
     forge_prerender_enabled: bool = True
-    # Shared with the sites gateway (Caddy): with it, the visitor address the
-    # gateway forwards (X-Forge-Visitor-IP) is trusted for per-visitor limits.
-    sites_gateway_secret: str = ""
     access_token_expire_minutes: int = 60 * 24 * 7
     preview_port_start: int = 5200
     preview_port_end: int = 5299

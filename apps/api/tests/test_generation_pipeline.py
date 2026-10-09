@@ -395,4 +395,4 @@ class TestScaffoldAndRules:
 
         numbers = [int(n) for n in re.findall(r"^(\d+)\. ", SYSTEM_PROMPT, re.M)]
         assert numbers == list(range(1, len(numbers) + 1))
-        assert "forge-edit" in SYSTEM_PROMPT and "@forge/forms" in SYSTEM_PROMPT
+        assert "forge-edit" in SYSTEM_PROMPT and "@forge/forms" not in SYSTEM_PROMPT

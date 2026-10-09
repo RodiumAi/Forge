@@ -1,12 +1,6 @@
 {
 	admin off
 	auto_https off
-	# {client_ip} = the visitor, read right-to-left from X-Forwarded-For past
-	# trusted hops only (the load balancer), never a client-supplied value.
-	servers {
-		trusted_proxies static {$SITES_TRUSTED_PROXIES:private_ranges}
-		trusted_proxies_strict
-	}
 }
 
 # One published site, served from the assets bucket.
@@ -103,19 +97,6 @@
 	log {
 		output stdout
 		format console
-	}
-
-	handle /_rodium/* {
-		uri strip_prefix /_rodium
-		reverse_proxy api:8000 {
-			header_up X-Rodium-Forwarded-Host {http.request.host}
-			header_up X-Forwarded-Proto http
-			header_up X-Forwarded-Host {http.request.host}
-			# Visitor address for the API's per-visitor limits, trusted there only
-			# with the shared secret (SITES_GATEWAY_SECRET on both sides).
-			header_up X-Forge-Visitor-IP {client_ip}
-			header_up X-Forge-Gateway-Secret {$SITES_GATEWAY_SECRET:unset}
-		}
 	}
 
 	@lvh host *.lvh.me

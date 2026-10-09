@@ -238,7 +238,7 @@ dans l'image API (`playwright install --with-deps chromium`).
 3. **SEO** (`services/site_seo.py`) : `<html lang>` détecté depuis le texte,
    canonical et og:url par page, images og/twitter absolues, og:site_name,
    og:locale, WebSite schema.org sur l'accueil, `sitemap.xml` et `robots.txt`
-   (sauf si le projet fournit les siens), et la balise de visite sans cookie.
+   (sauf si le projet fournit les siens).
 4. **Téléversement** sous `{slug}/` avec `Cache-Control` (assets hashés
    immuables, pages revalidées), pages en dernier, puis suppression des clés
    périmées.
@@ -251,12 +251,8 @@ un chemin de fichier sert le fichier ou un 404 simple ; un chemin de page sert
 sont compressées (zstd/gzip) ; les SVG s'affichent comme images mais sont isolés
 quand on les ouvre.
 
-`/_rodium/*` sur l'origine d'un site mène à l'API : les sites publiés y envoient
-leurs formulaires (`@forge/forms` → `POST /v1/sites/forms`) et leurs visites
-(`POST /v1/sites/hit`), en même origine. Le propriétaire les consulte dans
-Options › Formulaires et Options › Audience (`routers/site_events.py`).
-
-L'adresse du visiteur arrive à l'API dans `X-Forge-Visitor-IP`, acceptée seulement avec `SITES_GATEWAY_SECRET` (défini sur le gateway et l'API). Un export ZIP envoie vers `/v1/sites/forms?key=…`, une clé par projet qui survit aux changements de slug. Le pré-rendu tourne dans un processus enfant à l'environnement épuré, avec une échéance stricte (`services/prerender.py`).
+Un site publié est statique : le gateway ne relaie rien de sa part vers l'API.
+Formulaires et statistiques sont des embeds du catalogue d'intégrations. Le pré-rendu tourne dans un processus enfant à l'environnement épuré, avec une échéance stricte (`services/prerender.py`).
 
 `/v1/authorize-host` n'existe **que pour les domaines custom** : le
 `forward_auth` de Caddy demande à l'API si un hostname correspond à un
@@ -269,7 +265,7 @@ toujours la clé S3 ; un domaine custom change le routage, jamais le stockage.
 `User → Project → Chat → Message`, avec `AgentRun` qui enregistre chaque
 génération (statut, plan, réponses de clarification, et `cursor_task_index` pour
 la reprise). `UserSettings` contient les jetons RodiumAI chiffrés.
-`ProjectDomain`, `StoredObject`, `SiteUsageDay`, `SitePageDay`, `FormSubmission`, `PreviewComment` et
+`ProjectDomain`, `StoredObject`, `SiteUsageDay`, `PreviewComment` et
 `ModelCatalog` complètent l'ensemble.
 
 **Il n'y a pas d'Alembic.** `apps/api/app/db.py` exécute `create_all()` suivi
@@ -327,7 +323,7 @@ Notes honnêtes pour qui lit le code et s'interroge :
   **sans importateur** ; le chiffrement réellement utilisé est Fernet dans
   `app/crypto.py`. La config de production impose pourtant KMS/Secrets Manager.
 - `providers/queue.py` définit une file d'usage Redis Streams complète que rien
-  n'alimente ni ne consomme ; les visites sont écrites par `POST /v1/sites/hit` à la place.
+  n'alimente ni ne consomme ; `SiteUsageDay` est écrit en synchrone à la place.
 - `Project.preview_port` / `preview_running` sont des vestiges de l'époque du
   serveur de développement Vite.
 - `apps/web/lib/preview-host.ts` réécrit vers `/preview-by-slug/{slug}`, pour

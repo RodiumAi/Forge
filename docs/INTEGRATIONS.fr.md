@@ -4,7 +4,7 @@ Les intégrations sont des **entrées de catalogue** pour des embeds tiers (form
 
 ## Comment l'agent les utilise
 
-Le catalogue fait partie de chaque prompt de code (`format_integrations_prompt_block` dans `apps/api/app/services/integrations.py`) : une ligne par fournisseur et les règles d'embed (iframes en JSX, widgets script injectés une fois dans un `useEffect`, jamais d'identifiant de compte inventé). Les simples formulaires de visiteurs n'ont besoin d'aucun fournisseur : `@forge/forms` les livre dans la boîte du projet (Options > Formulaires).
+Le catalogue fait partie de chaque prompt de code (`format_integrations_prompt_block` dans `apps/api/app/services/integrations.py`) : une ligne par fournisseur et les règles d'embed (iframes en JSX, widgets script injectés une fois dans un `useEffect`, jamais d'identifiant de compte inventé). Les sites publiés sont statiques, sans backend Forge derrière : formulaires de visiteurs, newsletters, réservations et statistiques passent toujours par l'un de ces embeds, avec l'identifiant de formulaire ou de site de l'utilisateur.
 
 ## Politique
 

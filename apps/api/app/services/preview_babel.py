@@ -59,11 +59,8 @@ def render_runner_shell(
     from app.runtime_manifest import browser_import_map, css_import_map
 
     settings = get_settings()
-    # Forge-provided modules: the preview gets a local stand-in (forms resolve
-    # without sending anything); publish bundles the real client.
-    virtual = {"@forge/forms": "/runner/forge-forms.js?v=1"}
     import_map = json.dumps(
-        {"imports": {**browser_import_map(), **virtual, **(extra_imports or {})}},
+        {"imports": {**browser_import_map(), **(extra_imports or {})}},
         indent=2,
     )
     package_css = json.dumps(css_import_map())

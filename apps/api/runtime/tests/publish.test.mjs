@@ -27,9 +27,9 @@ test("asset imports become root URLs instead of disappearing", () => {
   assert.match(r.modules["src/main.js"], /const logo = "\/src\/assets\/logo\.png";/);
 });
 
-test("package stylesheets and Forge modules pass the import check", () => {
+test("package stylesheets pass the import check", () => {
   const files = {
-    "src/main.tsx": 'import "swiper/css";\nimport { submitForm } from "@forge/forms";\nexport default submitForm;',
+    "src/main.tsx": 'import "swiper/css";\nexport const ok = true;',
   };
   const r = buildGraph(files, "src/main.tsx", "publish");
   assert.equal(r.ok, true, JSON.stringify(r.errors));

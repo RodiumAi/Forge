@@ -60,12 +60,11 @@ def browser_import_map() -> dict[str, str]:
     Mirrors `runtime/importmap.mjs`; both read the same packages.json and CI
     asserts they produce byte-identical maps. The runner shell used to carry a
     hand-written copy of this map, which silently drifted: packages accepted by
-    the AST validator failed to resolve in the browser. Virtual packages
-    (provided by Forge, e.g. `@forge/forms`) are mapped by their host instead.
+    the AST validator failed to resolve in the browser.
     """
     out: dict[str, str] = {}
     for name, spec in _manifest()["packages"].items():
-        if not spec.get("browser") or spec.get("virtual"):
+        if not spec.get("browser"):
             continue
         out[name] = _cdn_url(name, spec)
         for subpath in spec.get("subpaths", []):
@@ -86,18 +85,9 @@ def css_import_map() -> dict[str, str]:
     return out
 
 
-@lru_cache(maxsize=1)
-def virtual_packages() -> frozenset[str]:
-    return frozenset(name for name, spec in _manifest()["packages"].items() if spec.get("virtual"))
-
-
 def browser_package_versions() -> dict[str, str]:
     """Browser package -> exact version, for prompts and docs."""
-    return {
-        name: spec["version"]
-        for name, spec in _manifest()["packages"].items()
-        if spec.get("browser") and not spec.get("virtual")
-    }
+    return {name: spec["version"] for name, spec in _manifest()["packages"].items() if spec.get("browser")}
 
 
 def package_version(package: str) -> str | None:

@@ -155,9 +155,6 @@ def _prerender_sync(out_dir: Path, max_routes: int, budget_s: float) -> Prerende
         host = urlparse(url).hostname or ""
         try:
             if url.startswith(ORIGIN):
-                if urlparse(url).path.startswith("/_rodium/"):
-                    route.abort()
-                    return
                 status, body, ctype = _serve(out_dir, url)
                 route.fulfill(status=status, body=body, headers={"Content-Type": ctype})
                 return

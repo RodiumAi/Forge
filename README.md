@@ -53,7 +53,6 @@ Supporting services: **MinIO** (S3 uploads), **Valkey** (run queue / cancellatio
 - **Instant preview**: in-browser Babel/ESM runner — CDN import map (esm.sh). No node_modules, no Vite.
 - **Publishing**: production build (bundled, minified, hashed, dependencies embedded), every route pre-rendered with its own title/meta, `404.html`, sitemap, robots, structured data and cache headers, served by Caddy.
 - **Brand charter on the first build**: palette, Google Fonts pairing and imagery from the brief, plus the first generated images (WebP + srcset).
-- **Forms and audience**: `@forge/forms` submissions land in the project inbox (email to the owner, CSV export); cookie-free visit counts per day and per page.
 - **Visual editing**: text and images, directly on the preview.
 - **History / rollback**: per-project git snapshots.
 - **ZIP export**: a real, runnable Vite project.
