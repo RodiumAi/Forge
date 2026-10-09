@@ -1,0 +1,62 @@
+/* Hero */
+.home-screen .hero { text-align: center; padding: 48px 0 40px; }
+.home-screen .avatar {
+  width: 112px; height: 112px; border-radius: 50%; margin: 0 auto 24px;
+  background: linear-gradient(140deg, var(--accent), #2563eb 80%);
+  border: 3px solid var(--soft);
+  overflow: hidden;
+}
+.home-screen .avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
+.home-screen .hero h1 { font-size: clamp(28px, 5vw, 42px); }
+.home-screen .hero-sub { color: var(--muted); max-width: 560px; margin: 14px auto 28px; }
+.home-screen .hero-links { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; }
+
+/* Experience and education entries */
+.home-screen .job, .home-screen .edu { background: var(--soft); border-radius: 12px; padding: 22px 24px; margin-bottom: 16px; }
+.home-screen .job-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 6px; }
+.home-screen .job-head h3 { font-size: 17px; }
+.home-screen .job-at { color: var(--accent); font-weight: 500; }
+.home-screen .job ul { margin: 12px 0 0 20px; color: var(--muted); font-size: 14.5px; }
+.home-screen .job li { margin-bottom: 5px; }
+.home-screen .edu-school { color: var(--accent); font-size: 14px; margin-top: 2px; }
+
+/* Projects */
+.home-screen .projects { display: grid; grid-template-columns: 1fr; gap: 18px; }
+.home-screen .card { background: var(--soft); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
+.home-screen .card-thumb { height: 130px; overflow: hidden; }
+.home-screen .card-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.home-screen .card-body { padding: 18px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+.home-screen .card-body h3 { font-size: 17px; }
+.home-screen .card-body p { color: var(--muted); font-size: 14px; flex: 1; }
+.home-screen .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.home-screen .tag {
+  font-size: 11.5px; color: var(--accent); border: 1px solid rgba(94, 234, 212, 0.35);
+  padding: 2px 9px; border-radius: 999px;
+}
+.home-screen .card-links { display: flex; gap: 16px; font-size: 13.5px; }
+.home-screen .card-links a { color: var(--accent); text-decoration: none; }
+.home-screen .card-links a:hover { text-decoration: underline; }
+
+/* Testimonials */
+.home-screen .quotes { display: grid; grid-template-columns: 1fr; gap: 18px; }
+.home-screen .quote { background: var(--soft); border-left: 3px solid var(--accent); border-radius: 0 12px 12px 0; padding: 20px 22px; }
+.home-screen .quote p { font-size: 15px; font-style: italic; }
+.home-screen .quote-foot { display: flex; align-items: center; gap: 12px; margin-top: 16px; font-size: 13.5px; }
+.home-screen .quote-avatar { width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0; overflow: hidden; }
+.home-screen .quote-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
+
+/* Blogs */
+.home-screen .blogs { display: grid; grid-template-columns: 1fr; gap: 18px; }
+.home-screen .blog-card {
+  display: block; background: var(--soft); border-radius: 12px; padding: 20px 22px;
+  text-decoration: none; color: var(--fg);
+}
+.home-screen .blog-card h3 { font-size: 16px; margin-bottom: 8px; }
+.home-screen .blog-card .meta { display: block; margin-top: 12px; }
+.home-screen .blog-card:hover h3 { color: var(--accent); }
+
+@media (min-width: 761px) {
+  .home-screen .hero { padding: 72px 0 64px; }
+  .home-screen .projects { grid-template-columns: repeat(3, 1fr); }
+  .home-screen .quotes, .home-screen .blogs { grid-template-columns: 1fr 1fr; }
+}

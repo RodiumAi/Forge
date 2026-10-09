@@ -1,0 +1,13 @@
+/* Cards screen: payment card + card settings. */
+.cards-screen .paycard {
+  border-radius: 1.25rem; padding: 1.2rem; aspect-ratio: 1.62 / 1;
+  display: flex; flex-direction: column; justify-content: space-between;
+  color: #fff; position: relative; overflow: hidden;
+  background: linear-gradient(135deg, #10233a, #0b1220 70%);
+  border: 1px solid var(--line);
+}
+.cards-screen .paycard.accent { background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 70%, #0b3b2c), #0b1220 85%); }
+.cards-screen .paycard .brand { font-weight: 800; letter-spacing: .02em; }
+.cards-screen .paycard .num { font-size: 1.05rem; letter-spacing: .16em; font-variant-numeric: tabular-nums; }
+.cards-screen .paycard .foot { display: flex; justify-content: space-between; font-size: .78rem; opacity: .85; }
+.cards-screen .chip { width: 2.3rem; height: 1.65rem; border-radius: .35rem; background: linear-gradient(135deg, #f6d365, #d4a017); }

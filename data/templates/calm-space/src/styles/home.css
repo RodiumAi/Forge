@@ -1,0 +1,35 @@
+/* Home screen: daily hero, breathing circle, chips, short sessions. */
+.home-screen .breathe-card { display: grid; gap: 1rem; place-items: center; }
+.home-screen .breathe {
+  appearance: none; border: 0; background: transparent;
+  position: relative; width: 11rem; height: 11rem;
+  display: grid; place-items: center;
+}
+.home-screen .breathe-ring, .home-screen .breathe-core {
+  position: absolute; border-radius: 999px; left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+}
+.home-screen .breathe-ring {
+  width: 11rem; height: 11rem;
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 34%, transparent), transparent 70%);
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, transparent);
+}
+.home-screen .breathe-core {
+  width: 6.5rem; height: 6.5rem;
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--accent) 90%, #fff), color-mix(in srgb, var(--accent) 50%, var(--bg)));
+  box-shadow: 0 0 40px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+.home-screen .breathe-label {
+  position: relative; z-index: 1; font-size: .9rem; font-weight: 700;
+  letter-spacing: .16em; text-transform: uppercase; color: var(--on-accent);
+}
+.home-screen .breathe.breathing .breathe-ring { animation: breathe-pulse 8s ease-in-out infinite; }
+.home-screen .breathe.breathing .breathe-core { animation: breathe-scale 8s ease-in-out infinite; }
+.home-screen .breathe:active { transform: scale(.98); }
+@keyframes breathe-pulse {
+  0%, 100% { transform: translate(-50%, -50%) scale(.78); opacity: .55; }
+  50% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-screen .breathe.breathing .breathe-ring, .home-screen .breathe.breathing .breathe-core { animation: none; }
+}

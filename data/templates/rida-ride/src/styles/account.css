@@ -1,0 +1,3 @@
+/* Account screen: settings rows. Their icons keep the row text color
+   (the shared .tx .ava svg rule tints ride icons with the accent). */
+.account-screen .tx .ava svg { color: var(--fg); }

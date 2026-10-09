@@ -13,6 +13,20 @@
 | `--accent` | `#5eead4` | teal highlight, links, tags |
 | `--soft` | `#161b22` | cards, panels, chips |
 
+## Typography
+
+- Font stack: `"Segoe UI", system-ui, sans-serif` (no web fonts), body line-height 1.65.
+- Scale: hero h1 `clamp(28px, 5vw, 42px)`, section h2 24px with a teal `// ` prefix, card and entry h3 17px, blog h3 16px, brand 16px bold.
+- Text: quotes 15px italic, bullet lists and muted copy 14.5px, nav, buttons and card copy 14px, card links and quote footer 13.5px, meta and footer 13px, tag pills 11.5px.
+
+## Spacing & radius
+
+- Container: max-width 960px, 24px side padding. Single breakpoint at 761px (mobile-first).
+- Sections: 44px vertical padding with a 1px `--soft` top border; hero 72px 0 64px (48px 0 40px on mobile).
+- Gaps: grids 18px, entries 16px apart, hero buttons 14px, nav links 20px, tags 6px.
+- Padding: entries 22px 24px, quotes and blog cards 20px 22px, card body 18px, buttons 11px 24px.
+- Radius: cards, entries and blog cards 12px (quotes 0 12px 12px 0 with a 3px teal left border), buttons 8px, tags 999px, avatars round.
+
 ## Tone
 
 Dark, technical, confident. Monospaced-feeling accents, tag pills for tech
@@ -45,7 +59,7 @@ Nav → Hero intro → Work Experience → Projects → Education → Testimonia
 
 ## Don't
 
-- No external images beyond the listed Unsplash URLs; no icon fonts or libraries.
+- No external images beyond the listed Unsplash URLs; no icon fonts, and no icon library other than lucide-react.
 - No light theme, no pastel palette.
 - No walls of text — bullets and short paragraphs.
 - Never copy text, slogans, images or CSS from any third-party demo.

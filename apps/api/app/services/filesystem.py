@@ -142,27 +142,30 @@ def content_version(project_id: str, relative: str) -> str:
 def list_files(project_id: str) -> dict[str, str]:
     base = project_dir(project_id)
     files: dict[str, str] = {}
-    skip = {"node_modules", ".git", "dist", ".vite"}
+    skip = {"node_modules", ".git", "dist", ".vite", ".forge"}
     # .gitignore belongs to the private history repo, not to the user project.
     hidden_files = {".gitignore"}
-    for path in base.rglob("*"):
-        if not path.is_file():
-            continue
-        if any(part in skip for part in path.parts):
-            continue
-        rel = path.relative_to(base).as_posix()
-        if rel in hidden_files:
-            continue
-        try:
-            files[rel] = path.read_text(encoding="utf-8")
-        except UnicodeDecodeError:
-            continue
+    # Skipped directories are pruned during the walk, not filtered after it:
+    # node_modules alone holds tens of thousands of entries, and visiting each
+    # one before discarding it made every agent turn wait for minutes on a
+    # slow volume.
+    for dirpath, dirnames, filenames in os.walk(base):
+        dirnames[:] = sorted(name for name in dirnames if name not in skip)
+        for name in sorted(filenames):
+            path = Path(dirpath) / name
+            rel = path.relative_to(base).as_posix()
+            if rel in hidden_files or not path.is_file():
+                continue
+            try:
+                files[rel] = path.read_text(encoding="utf-8")
+            except UnicodeDecodeError:
+                continue
     return files
 
 
 def file_tree(project_id: str) -> list[FileNode]:
     base = project_dir(project_id)
-    skip = {"node_modules", ".git", "dist", ".vite"}
+    skip = {"node_modules", ".git", "dist", ".vite", ".forge"}
     # .gitignore belongs to the private history repo, not to the user project.
     hidden_files = {".gitignore"}
 

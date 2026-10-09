@@ -1,0 +1,12 @@
+/* Explore screen: guide search + care guides with difficulty chips. */
+.explore-screen .search {
+  display: flex; align-items: center; gap: .55rem;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 1rem; padding: .7rem .9rem; color: var(--muted);
+}
+.explore-screen .search input { flex: 1; border: 0; background: transparent; color: var(--fg); outline: none; }
+.explore-screen .search input::placeholder { color: var(--muted); }
+
+.explore-screen .chip-diff { font-size: .72rem; font-weight: 700; padding: .28rem .6rem; border-radius: 999px; flex-shrink: 0; }
+.explore-screen .chip-diff.ok { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
+.explore-screen .chip-diff.warn { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }

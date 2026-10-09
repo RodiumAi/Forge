@@ -1,0 +1,27 @@
+/* Onboarding screen (first launch). Scoped under .onboarding-screen. */
+.onboarding-screen {
+  padding: calc(1.6rem + var(--safe-top)) 1.4rem calc(1.4rem + var(--safe-bottom));
+  justify-content: space-between; gap: 1.5rem;
+}
+.onboarding-screen .onboard-art {
+  height: 44vh; max-height: 340px; border-radius: 1.6rem; position: relative; overflow: hidden;
+  display: grid; place-items: center;
+  background: linear-gradient(160deg, #1a1226, #0c0a12 82%);
+  border: 1px solid var(--line);
+}
+.onboarding-screen .onboard-art .orb { position: absolute; border-radius: 999px; filter: blur(26px); opacity: .8; }
+.onboarding-screen .onboard-art .orb-a { width: 60%; height: 55%; top: -12%; right: -8%; background: var(--accent); }
+.onboarding-screen .onboard-art .orb-b { width: 55%; height: 50%; bottom: -14%; left: -10%; background: #7c3aed; }
+.onboarding-screen .onboard-art .eq { position: relative; display: flex; align-items: flex-end; gap: .5rem; height: 40%; }
+.onboarding-screen .onboard-art .eq i {
+  width: .55rem; border-radius: 999px; background: color-mix(in srgb, var(--fg) 90%, transparent);
+  animation: bounce 1s ease-in-out infinite alternate;
+}
+@keyframes bounce { from { transform: scaleY(.55); } to { transform: scaleY(1); } }
+@media (prefers-reduced-motion: reduce) { .onboarding-screen .onboard-art .eq i { animation: none; } }
+.onboarding-screen .onboard-kicker { margin: 0 0 .6rem; color: var(--accent); font-size: .76rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.onboarding-screen .onboard-body h2 { margin: 0 0 .6rem; font-size: 1.85rem; line-height: 1.12; letter-spacing: -.02em; }
+.onboarding-screen .onboard-actions { display: grid; gap: .55rem; }
+.onboarding-screen .dots { display: flex; gap: .35rem; justify-content: center; margin-bottom: .3rem; }
+.onboarding-screen .dots i { width: .5rem; height: .5rem; border-radius: 999px; background: var(--line); }
+.onboarding-screen .dots i.on { background: var(--accent); width: 1.4rem; }

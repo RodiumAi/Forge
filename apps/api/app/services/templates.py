@@ -28,6 +28,9 @@ class TemplateMeta:
     preview: str | None
     path: Path
     kind: str = "web"
+    tone: str = ""
+    fg: str | None = None
+    muted: str | None = None
 
 
 def _parse_kind(raw: object) -> str:
@@ -90,6 +93,9 @@ def _load_meta(folder: Path) -> TemplateMeta | None:
         preview=str(data["preview"]) if data.get("preview") else None,
         path=folder,
         kind=_parse_kind(data.get("kind")),
+        tone=str(data.get("tone") or "").strip(),
+        fg=str(data["fg"]) if data.get("fg") else None,
+        muted=str(data["muted"]) if data.get("muted") else None,
     )
 
 
@@ -156,10 +162,22 @@ def fork_template(template_id: str, project_id: str, app_name: str | None = None
 
     shutil.copytree(meta.path, dest, ignore=ignore)
 
-    # Drop authoring metadata from the user project copy.
+    # Drop authoring metadata from the user project copy, but remember which kit
+    # it came from (and its tone) for the agent, outside the published files.
     tpl = dest / "template.json"
     if tpl.is_file():
         tpl.unlink()
+    origin = dest / ".forge" / "template.json"
+    origin.parent.mkdir(parents=True, exist_ok=True)
+    origin.write_text(
+        json.dumps(
+            {"id": meta.id, "kind": meta.kind, "tone": meta.tone, "boot_hint": meta.boot_hint_en},
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
 
     # House typography: the user's copy of a template carries no long dashes
     # (the template sources are left untouched).

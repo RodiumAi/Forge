@@ -14,12 +14,12 @@ Un kit est un dossier `data/templates/<id>/` où `<id>` respecte la regex :
 
 Minuscules, chiffres et tirets, 2 à 63 caractères, commençant par une lettre ou un chiffre. Exemple : `aurora-ai`.
 
-## Fichiers requis (12)
+## Fichiers requis
 
 ```
 data/templates/<id>/
-├── template.json        # métadonnées catalogue (voir ci-dessous)
-├── DESIGN.md            # charte de design (voir ci-dessous)
+├── template.json        # métadonnées du catalogue (voir plus bas)
+├── DESIGN.md            # charte graphique (voir plus bas)
 ├── index.html
 ├── package.json         # "name" doit valoir <id>
 ├── preview.html         # vignette statique de la galerie
@@ -27,11 +27,17 @@ data/templates/<id>/
 ├── tsconfig.json
 ├── tsconfig.node.json
 ├── vite.config.ts
+├── public/              # optionnel : images, manifest.webmanifest (kits mobiles)
 └── src/
-    ├── main.tsx
-    ├── App.tsx
-    └── index.css
+    ├── main.tsx         # createRoot nommé (voir les règles)
+    ├── App.tsx          # composition uniquement
+    ├── index.css        # fondation : tokens, reset, typo, shell, utilitaires partagés
+    ├── components/      # un fichier par section / élément partagé
+    ├── screens/         # kits mobiles : un fichier par écran
+    └── styles/          # feuilles de page ou d'écran, scopées (home.css...)
 ```
+
+Un kit est le premier code que l'agent modifie après un fork : il suit donc les mêmes règles que l'agent.
 
 ### `template.json`
 
@@ -77,6 +83,13 @@ La charte de design que suit l'IA quand elle forke le kit. Sections requises :
 - --muted: #8b84a3
 - --accent: #7c3aed
 
+## Typography
+- Titres : pile system-ui, 700, clamp(2.4rem, 6vw, 4.2rem)
+- Texte : pile system-ui, 400, 1rem / 1.6
+
+## Spacing & radius
+- Padding de section : clamp(4rem, 10vw, 7rem) ; rayon 14px
+
 ## Tone
 Une ou deux phrases décrivant la voix et le style de copie.
 
@@ -92,10 +105,19 @@ La section `## Colors` doit lister les quatre mêmes variables que `template.jso
 
 ## Règles dures (verrouillées par pytest)
 
-1. **`src/App.tsx` n'importe QUE depuis `"react"`.** Les kits tournent dans le runner Babel sans installation : pas de routeur, pas de librairie UI, pas de pack d'icônes. Tout spécificateur `from "…"` autre que `react` fait échouer la suite.
-2. **`preview.html` sans script.** Aucune balise `<script>`, quelle que soit la casse.
-3. **`preview.html` ne peut référencer qu'une seule origine externe :** `https://images.unsplash.com/`. Toute autre URL `http(s)://` fait échouer la suite.
-4. **`src/index.css` est autonome.** Pas de `@import` — pas de Google Fonts, pas de CSS externe. Utiliser des piles de polices système et des animations CSS pures.
+`apps/api/app/services/template_contract.py` est le contrat sous forme de code ; `test_templates.py` l'applique à chaque kit.
+
+1. **`src/main.tsx` utilise `import { createRoot } from "react-dom/client"`** (jamais l'import par défaut `ReactDOM`).
+2. **Imports :** `react`, `react-dom/client` (main.tsx), `lucide-react` et fichiers locaux uniquement. Les kits tournent toujours sans installation.
+3. **Les icônes sont des icônes `lucide-react`** (noms existant en 0.468.0). Pas d'emoji ni de glyphe utilisé comme icône, pas de SVG d'icône dessiné à la main.
+4. **Fichiers séparés :** sections (web) ou écrans (mobile) dans `src/components/` / `src/screens/` ; `App.tsx` ne fait que les composer.
+5. **Propriété du CSS :** `src/index.css` est la fondation (tokens, reset, typographie de base, shell, nav/footer ou shell d'app, boutons et éléments partagés). Les règles de section ou d'écran vivent dans `src/styles/<page>.css`, importé par le fichier qui les utilise et scopé sous une classe racine (`.home-screen .hero`).
+6. **Mobile-first :** pas de `@media (max-width: …)` ; les règles de base sont la mise en page téléphone, les mises en page plus larges utilisent `min-width`.
+7. **Pas d'`@import`** dans les feuilles de style (piles de polices système, animations CSS pures).
+8. **`package.json` :** `lucide-react` en dependencies ; devDependencies alignées sur la chaîne d'export (`vite ^5.4.21`, `@vitejs/plugin-react ^4.3.4`, `typescript ^5.6.3`, `@types/react ^18.3.12`, `@types/react-dom ^18.3.1`).
+9. **`DESIGN.md`** contient `## Colors` (les 4 variables de template.json), `## Typography` et `## Tone`.
+10. **`preview.html` sans script**, avec pour seule origine externe `https://images.unsplash.com/`.
+11. Un manifest vit dans `public/manifest.webmanifest`, jamais à la racine du kit.
 
 ## `preview.html` — la vignette de la galerie
 

@@ -2,6 +2,10 @@
 
 Les intégrations sont des **entrées de catalogue** pour des embeds tiers (formulaires, RDV, chat, paiements, …) affichées sur `/integrations`. Les contributeurs ajoutent un dossier sous [`data/integrations/`](../data/integrations/) ; l’API lit le filesystem — pas de migration DB.
 
+## Comment l'agent les utilise
+
+Le catalogue fait partie de chaque prompt de code (`format_integrations_prompt_block` dans `apps/api/app/services/integrations.py`) : une ligne par fournisseur et les règles d'embed (iframes en JSX, widgets script injectés une fois dans un `useEffect`, jamais d'identifiant de compte inventé). Les sites publiés sont statiques, sans backend Forge derrière : formulaires de visiteurs, newsletters, réservations et statistiques passent toujours par l'un de ces embeds, avec l'identifiant de formulaire ou de site de l'utilisateur.
+
 ## Politique
 
 Uniquement des kits qui marchent sur un prototype Forge **statique** en collant un embed officiel :

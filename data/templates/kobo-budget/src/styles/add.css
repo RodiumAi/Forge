@@ -1,0 +1,26 @@
+/* Add expense screen: amount, category chips, note, keypad. Root: .add-screen */
+.add-screen .add { display: grid; gap: 1rem; align-content: start; }
+.add-screen .amount-display {
+  display: flex; align-items: baseline; justify-content: center; gap: .5rem;
+  padding: 1.2rem 0 .4rem;
+}
+.add-screen .amount-display .cur { font-size: 1rem; font-weight: 700; color: var(--muted); }
+.add-screen .amount-display .big { font-size: 3.1rem; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.add-screen .chips { display: flex; flex-wrap: wrap; gap: .5rem; justify-content: center; }
+.add-screen .chip {
+  appearance: none; border: 1px solid var(--line); background: var(--surface);
+  color: var(--fg); border-radius: 999px; padding: .5rem .9rem; font-size: .82rem; font-weight: 600;
+}
+.add-screen .chip.on { background: color-mix(in srgb, var(--accent) 20%, transparent); border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); color: var(--accent); }
+.add-screen .note {
+  appearance: none; width: 100%; border: 1px solid var(--line); background: var(--surface);
+  color: var(--fg); border-radius: 1rem; padding: .85rem 1rem; font-size: .92rem;
+}
+.add-screen .note::placeholder { color: var(--muted); }
+.add-screen .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; }
+.add-screen .key {
+  appearance: none; border: 1px solid var(--line); background: var(--surface-2);
+  color: var(--fg); border-radius: 1rem; min-height: 3.4rem;
+  font-size: 1.3rem; font-weight: 600; display: grid; place-items: center;
+}
+.add-screen .key:active { transform: scale(.97); background: color-mix(in srgb, var(--accent) 14%, var(--surface-2)); }

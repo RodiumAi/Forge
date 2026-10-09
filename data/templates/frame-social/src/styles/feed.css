@@ -1,0 +1,37 @@
+/* Feed screen: stories row + photo posts. Root: .feed-screen */
+.feed-screen .stories {
+  display: flex; gap: .85rem; overflow-x: auto; padding: .9rem 1.1rem .2rem;
+  scrollbar-width: none;
+}
+.feed-screen .stories::-webkit-scrollbar { display: none; }
+.feed-screen .story { appearance: none; border: 0; background: transparent; padding: 0; display: grid; justify-items: center; gap: .35rem; flex: none; width: 4.3rem; }
+.feed-screen .story .story-add {
+  position: absolute; right: -1px; bottom: -1px; width: 1.25rem; height: 1.25rem; border-radius: 999px;
+  background: var(--accent); color: #fff; display: grid; place-items: center; border: 2px solid var(--surface);
+}
+.feed-screen .story-name { font-size: .7rem; color: var(--fg); max-width: 4.3rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Posts */
+.feed-screen .posts { display: grid; gap: 1.4rem; }
+.feed-screen .post { display: grid; gap: .1rem; }
+.feed-screen .post-head { display: flex; align-items: center; gap: .6rem; padding: 0 1.1rem .55rem; }
+.feed-screen .post-who { flex: 1; min-width: 0; line-height: 1.15; }
+.feed-screen .post-who strong { display: block; font-size: .86rem; font-weight: 650; }
+.feed-screen .post-who span { font-size: .72rem; color: var(--muted); }
+.feed-screen .post-time { font-size: .74rem; color: var(--muted); }
+.feed-screen .post-photo {
+  aspect-ratio: 4 / 5; overflow: hidden; background-size: cover; background-position: center;
+  border-block: 1px solid var(--line);
+}
+.feed-screen .post-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.feed-screen .post-actions { display: flex; align-items: center; gap: .35rem; padding: .55rem 1rem .1rem; }
+.feed-screen .pa { appearance: none; border: 0; background: transparent; color: var(--fg); width: 2.4rem; height: 2.4rem; display: grid; place-items: center; border-radius: 999px; }
+.feed-screen .pa.save { margin-left: auto; }
+.feed-screen .pa.save.on { color: var(--accent); }
+.feed-screen .pa.liked { color: var(--like); }
+.feed-screen .pa:active { transform: scale(.9); }
+.feed-screen .post-body { padding: .1rem 1.1rem 0; display: grid; gap: .15rem; }
+.feed-screen .likes { margin: 0; font-size: .86rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.feed-screen .caption { margin: 0; font-size: .88rem; line-height: 1.4; }
+.feed-screen .caption strong { font-weight: 650; }
+.feed-screen .cmt-link { margin: .1rem 0 0; font-size: .8rem; color: var(--muted); }

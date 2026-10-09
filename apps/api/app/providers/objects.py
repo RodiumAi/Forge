@@ -116,12 +116,22 @@ class ObjectStore:
             return f"{base}/{bucket}/{key}"
         return f"{base}/{key}"
 
-    def put(self, bucket: str, key: str, body: bytes, content_type: str) -> str:
+    def put(
+        self,
+        bucket: str,
+        key: str,
+        body: bytes,
+        content_type: str,
+        *,
+        cache_control: str | None = None,
+    ) -> str:
+        extra = {"CacheControl": cache_control} if cache_control else {}
         self.internal.put_object(
             Bucket=bucket,
             Key=key,
             Body=body,
             ContentType=content_type or "application/octet-stream",
+            **extra,
         )
         return self.public_url(bucket, key)
 

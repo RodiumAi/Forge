@@ -1,0 +1,32 @@
+/* Onboarding screen (first launch). Root: .onboarding-screen */
+.onboarding-screen {
+  padding: calc(1.6rem + var(--safe-top)) 1.4rem calc(1.4rem + var(--safe-bottom));
+  justify-content: space-between; gap: 1.5rem;
+}
+.onboarding-screen .onboard-art {
+  height: 44vh; max-height: 360px; border-radius: 1.6rem; position: relative; overflow: hidden;
+  background:
+    radial-gradient(circle at 24% 22%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 52%),
+    radial-gradient(circle at 78% 80%, #f9a8d4, transparent 50%),
+    var(--surface);
+  border: 1px solid var(--line);
+}
+.onboarding-screen .ob-photo { position: absolute; inset: 1.1rem; border-radius: 1.2rem; overflow: hidden; background-size: cover; background-position: center; box-shadow: 0 18px 40px rgba(16,17,20,.18); }
+.onboarding-screen .ob-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.onboarding-screen .ob-card {
+  position: absolute; left: 1.1rem; right: 1.1rem; bottom: 1.1rem;
+  display: flex; align-items: center; gap: .6rem; padding: .6rem .7rem; border-radius: 1rem;
+  background: color-mix(in srgb, var(--surface) 88%, transparent); backdrop-filter: blur(8px);
+  border: 1px solid var(--line); box-shadow: 0 8px 22px rgba(16,17,20,.12);
+}
+.onboarding-screen .ob-ring { width: 2.2rem; height: 2.2rem; border-radius: 999px; overflow: hidden; flex: none; border: 2px solid var(--accent); }
+.onboarding-screen .ob-ring img { width: 100%; height: 100%; object-fit: cover; }
+.onboarding-screen .ob-card strong { display: block; font-size: .82rem; }
+.onboarding-screen .ob-card span { font-size: .74rem; color: var(--muted); }
+.onboarding-screen .ob-heart { margin-left: auto; color: var(--like); }
+.onboarding-screen .onboard-kicker { margin: 0 0 .55rem; color: var(--accent); font-size: .76rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.onboarding-screen .onboard-body h2 { margin: 0 0 .55rem; font-size: 1.9rem; line-height: 1.12; letter-spacing: -.02em; }
+.onboarding-screen .onboard-actions { display: grid; gap: .55rem; }
+.onboarding-screen .dots { display: flex; gap: .35rem; justify-content: center; margin-bottom: .3rem; }
+.onboarding-screen .dots i { width: .5rem; height: .5rem; border-radius: 999px; background: var(--line); }
+.onboarding-screen .dots i.on { background: var(--accent); width: 1.4rem; }

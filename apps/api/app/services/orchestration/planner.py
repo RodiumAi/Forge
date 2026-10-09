@@ -549,119 +549,6 @@ async def build_final_brief(
         return fallback
 
 
-def _default_scaffold_plan(locale: Locale) -> list[dict[str, Any]]:
-    if locale == "fr":
-        items = [
-            (
-                "architecture",
-                "Poser l’architecture App + Context + shell",
-                "App/main + Provider API + slots layout compilent; scroll OK",
-                ["src/App.tsx", "src/main.tsx", "src/context", "src/index.css"],
-            ),
-            (
-                "styles_foundation",
-                "Fondation CSS complète (tokens, layout, navbar/hero base)",
-                "index.css complet: variables, typo, grid, navbar, hero base, utilities",
-                ["src/index.css", "src/App.tsx", "DESIGN.md"],
-            ),
-            (
-                "home",
-                "Build Home / Hero (contenu TSX + append CSS)",
-                "Hero navigable; nouvelles classes APPENDÉES à index.css sans supprimer l’existant",
-                ["src/components", "src/App.tsx", "src/index.css"],
-            ),
-            (
-                "primary_sections",
-                "Build sections principales (TSX + append CSS)",
-                "Chaque section a TSX + CSS append; règles navbar/hero préservées",
-                ["src/components", "src/App.tsx", "src/index.css"],
-            ),
-            (
-                "flows",
-                "Build flux mock (panier / formulaires / empty states)",
-                "localStorage ou state; UI complète sans API tierce",
-                ["src/components", "src/context", "src/index.css"],
-            ),
-            (
-                "coherence",
-                "Passe cohérence Context + CSS + scroll",
-                "Provider keys = consumers; classes TSX↔CSS; pas d’overflow:hidden html/body",
-                ["src/context", "src/App.tsx", "src/main.tsx", "src/index.css", "DESIGN.md"],
-            ),
-        ]
-    else:
-        items = [
-            (
-                "architecture",
-                "Set up App + Context + shell architecture",
-                "App/main + Provider API + layout slots compile; scroll OK",
-                ["src/App.tsx", "src/main.tsx", "src/context", "src/index.css"],
-            ),
-            (
-                "styles_foundation",
-                "Complete CSS foundation (tokens, layout, navbar/hero base)",
-                "Full index.css: variables, type, grid, navbar, hero base, utilities",
-                ["src/index.css", "src/App.tsx", "DESIGN.md"],
-            ),
-            (
-                "home",
-                "Build Home / Hero (TSX content + append CSS)",
-                "Navigable hero; new classes APPENDED to index.css without dropping existing rules",
-                ["src/components", "src/App.tsx", "src/index.css"],
-            ),
-            (
-                "primary_sections",
-                "Build primary sections (TSX + append CSS)",
-                "Each section ships TSX + appended CSS; navbar/hero rules preserved",
-                ["src/components", "src/App.tsx", "src/index.css"],
-            ),
-            (
-                "flows",
-                "Build mock flows (cart / forms / empty states)",
-                "localStorage or state; complete UI without third-party APIs",
-                ["src/components", "src/context", "src/index.css"],
-            ),
-            (
-                "coherence",
-                "Coherence pass Context + CSS + scroll",
-                "Provider keys match consumers; TSX↔CSS; no html/body overflow:hidden",
-                ["src/context", "src/App.tsx", "src/main.tsx", "src/index.css", "DESIGN.md"],
-            ),
-        ]
-    return [
-        {
-            "id": tid,
-            "title": title,
-            "acceptance": acceptance,
-            "files": files,
-            "status": "pending",
-        }
-        for tid, title, acceptance, files in items
-    ]
-
-
-def _default_edit_plan(locale: Locale) -> list[dict[str, Any]]:
-    if locale == "fr":
-        return [
-            {
-                "id": "edit",
-                "title": "Modifier uniquement la section / le texte demandé",
-                "acceptance": "Seul le périmètre demandé change; le reste intact",
-                "files": [],
-                "status": "pending",
-            }
-        ]
-    return [
-        {
-            "id": "edit",
-            "title": "Edit only the mentioned section / text",
-            "acceptance": "Only requested scope changes; rest untouched",
-            "files": [],
-            "status": "pending",
-        }
-    ]
-
-
 async def build_plan(
     *,
     prompt: str,
@@ -694,7 +581,7 @@ async def build_plan(
     execution).
     """
     if task_class.startswith(("code.scaffold", "plan.scaffold")):
-        max_tasks = 8
+        max_tasks = 10
         min_tasks = 2
     else:
         max_tasks = 3
@@ -703,7 +590,7 @@ async def build_plan(
     ref_count = count_markers_by_intent(prompt, "reference")
     # Multiple reference screenshots ⇒ one page/route each (plus foundation tasks).
     if ref_count >= 2 and task_class.startswith(("code.scaffold", "plan.scaffold", "code.edit")):
-        max_tasks = max(max_tasks, min(8, ref_count + 3))
+        max_tasks = max(max_tasks, min(10, ref_count + 3))
         min_tasks = max(min_tasks, min(ref_count + 1, max_tasks))
 
     answers_txt = ""
@@ -757,14 +644,18 @@ async def build_plan(
         "For scoped requests, tasks must name the target section/file only. "
         + multi_page_rule
         + "For scaffolds, use this ORDER: "
-        "(1) architecture, App/Context/shell, "
-        "(2) styles_foundation, complete index.css tokens/layout/navbar base BEFORE content, "
-        "(3) home / primary_sections / flows, each page brings its OWN src/styles/<page>.css "
-        "(never rewrite index.css after the foundation), "
-        "(4) final coherence (Context + CSS + scroll). "
+        "(1) architecture: App/Context/shell, router with every page route and a catch-all "
+        "NotFound page, main.tsx providers; "
+        "(2) styles_foundation: the complete src/index.css (web-font import, DESIGN.md "
+        "tokens, reset, type scale, layout shell, navbar/footer, shared utilities) BEFORE "
+        "any content; "
+        "(3) one task per page or major section group (home, then the other pages / "
+        "primary_sections, then flows such as forms or cart): each page task writes its "
+        "component(s) AND its own src/styles/<page>.css, lists both in files, and never "
+        "rewrites src/index.css; "
+        "(4) final coherence (Context + CSS + routes + scroll). "
         "A styles_foundation task BEFORE sections is required for scaffolds. "
-        "After styles_foundation, never ship orphan TSX without appending matching CSS. "
-        "Frontend-only prototype: no backend connector tasks. "
+        "Frontend-only: no backend connector tasks (visitor forms and analytics are integration-catalog embeds). "
         "Each task needs a clear acceptance criterion." + " " + NO_LONG_DASH_RULE
     )
     request_body = f"{prompt}\n\n{answers_txt}".strip() if answers_txt else prompt
@@ -797,7 +688,7 @@ async def build_plan(
         if cleaned.startswith("```"):
             cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned)
             cleaned = re.sub(r"\s*```$", "", cleaned)
-        parsed = json.loads(cleaned)
+        parsed = _parse_json_object(cleaned)
         meta: dict[str, str] = {}
         if isinstance(parsed, dict):
             # New object shape: {"title", "summary", "tasks": [...]}.

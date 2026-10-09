@@ -58,6 +58,14 @@ class Settings(BaseSettings):
     # Forge Cloud lane. Empty on open-source clones (BYOK).
     rodium_forge_gateway_token: str = ""
     rodium_gateway_internal_url: str = ""
+    # Gateway `/v1` base Forge Cloud generates through with each user's own
+    # RodiumAi access token (billed to that user's FRODI, then RODI). Empty =
+    # rodium_base_url.
+    rodium_gateway_url: str = ""
+    # Transition: when a user has no usable token, or the gateway refuses it,
+    # generate through the internal Forge lane instead. Shared projects billed
+    # to their owner still use that lane (per-collaborator FRODI ceiling).
+    forge_internal_lane_fallback: bool = True
     # Default per-collaborator weekly FRODI ceiling applied when a project is
     # shared `owner_pays` and the owner leaves the cap blank. A guardrail so an
     # invitee can't silently drain the owner's whole balance. The owner can
@@ -132,7 +140,24 @@ class Settings(BaseSettings):
     default_model: str = "google/gemini-3.7-flash"
     default_image_model: str = "openai/gpt-image-2"
     enable_pro_escalation: bool = True
-    escalation_model: str = "anthropic/claude-sonnet-4-6"
+    escalation_model: str = "anthropic/claude-sonnet-5-5"
+    # Code-generation sampling. Without an explicit max_tokens the gateway caps
+    # Claude/Gemini output at 4096 tokens, far below a multi-file task.
+    generation_max_output_tokens: int = 32_000
+    generation_temperature: float = 0.4
+    # Wall-clock ceiling for one plan task, continuations included.
+    forge_task_budget_seconds: float = 600.0
+    # Full-content layer of every code prompt (characters). index.css gets its
+    # own reserved share so later tasks always see the foundation in full.
+    context_full_files_max_chars: int = 160_000
+    context_css_reserved_chars: int = 48_000
+    # First build of a blank project: write a project-specific DESIGN.md (palette
+    # + web fonts) from the brief, and generate this many brand images.
+    forge_auto_charter_enabled: bool = True
+    forge_scaffold_images: int = 2
+    # Publish: render every route to HTML in headless Chromium (falls back to a
+    # client-rendered site when no browser is available).
+    forge_prerender_enabled: bool = True
     access_token_expire_minutes: int = 60 * 24 * 7
     preview_port_start: int = 5200
     preview_port_end: int = 5299
@@ -343,6 +368,10 @@ class Settings(BaseSettings):
     @property
     def provisioning_enabled(self) -> bool:
         return bool(self.rodium_provision_token.strip())
+
+    @property
+    def rodium_gateway_v1_url(self) -> str:
+        return (self.rodium_gateway_url.strip() or self.rodium_base_url).rstrip("/")
 
     @property
     def forge_cloud_enabled(self) -> bool:

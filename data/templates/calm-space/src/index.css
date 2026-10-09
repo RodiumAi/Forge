@@ -1,3 +1,6 @@
+/* Foundation: tokens, reset, app shell (navbar, main, tab bar), shared
+   components (featured hero, chips, list cards, buttons). Screen styles live
+   in src/styles/<screen>.css. */
 :root {
   color-scheme: dark;
   --bg: #0f1220;
@@ -42,7 +45,7 @@ button { font: inherit; cursor: pointer; }
 .pfp { width: 2.35rem; height: 2.35rem; border-radius: 999px; overflow: hidden; border: 1px solid var(--line); flex-shrink: 0; background: var(--surface); }
 .pfp img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-/* Main */
+/* Main (each screen renders <main class="app-main <name>-screen">) */
 .app-main {
   flex: 1; padding: 1.05rem 1.1rem 6.2rem;
   display: grid; gap: 1rem; align-content: start;
@@ -51,7 +54,7 @@ button { font: inherit; cursor: pointer; }
 .section-head h2 { margin: 0; font-size: .95rem; }
 .section-head a, .link { color: var(--accent); font-size: .8rem; font-weight: 600; text-decoration: none; }
 
-/* Daily calm hero */
+/* Featured hero (Home daily calm, Sleep story) */
 .daily {
   border-radius: 1.4rem; padding: 1.35rem 1.3rem;
   position: relative; overflow: hidden;
@@ -60,11 +63,6 @@ button { font: inherit; cursor: pointer; }
     radial-gradient(120% 130% at 0% 0%, color-mix(in srgb, var(--accent) 46%, transparent), transparent 58%),
     linear-gradient(155deg, color-mix(in srgb, var(--accent) 20%, var(--surface)), var(--surface));
   border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
-}
-.daily.sleep-hero {
-  background:
-    radial-gradient(120% 130% at 100% 0%, color-mix(in srgb, #6d5bd0 50%, transparent), transparent 58%),
-    linear-gradient(155deg, color-mix(in srgb, #3a2f6b 60%, var(--surface)), var(--surface));
 }
 .daily .lbl { margin: 0; font-size: .74rem; color: color-mix(in srgb, var(--fg) 74%, var(--muted)); letter-spacing: .06em; text-transform: uppercase; }
 .daily h2 { margin: .3rem 0 .5rem; font-size: 1.5rem; font-weight: 800; letter-spacing: -.02em; line-height: 1.1; }
@@ -78,44 +76,10 @@ button { font: inherit; cursor: pointer; }
 }
 .daily-play:active { transform: scale(.95); }
 
-/* Breathe circle */
-.breathe-card { display: grid; gap: 1rem; place-items: center; padding: 1.6rem 1.05rem; }
-.breathe {
-  appearance: none; border: 0; background: transparent;
-  position: relative; width: 11rem; height: 11rem;
-  display: grid; place-items: center;
-}
-.breathe-ring, .breathe-core {
-  position: absolute; border-radius: 999px; left: 50%; top: 50%;
-  transform: translate(-50%, -50%);
-}
-.breathe-ring {
-  width: 11rem; height: 11rem;
-  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 34%, transparent), transparent 70%);
-  border: 1px solid color-mix(in srgb, var(--accent) 34%, transparent);
-}
-.breathe-core {
-  width: 6.5rem; height: 6.5rem;
-  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--accent) 90%, #fff), color-mix(in srgb, var(--accent) 50%, var(--bg)));
-  box-shadow: 0 0 40px color-mix(in srgb, var(--accent) 45%, transparent);
-}
-.breathe-label {
-  position: relative; z-index: 1; font-size: .9rem; font-weight: 700;
-  letter-spacing: .16em; text-transform: uppercase; color: var(--on-accent);
-}
-.breathe.breathing .breathe-ring { animation: breathe-pulse 8s ease-in-out infinite; }
-.breathe.breathing .breathe-core { animation: breathe-scale 8s ease-in-out infinite; }
-.breathe:active { transform: scale(.98); }
+/* Slow breathing scale, shared by the onboarding orb and the Home circle */
 @keyframes breathe-scale {
   0%, 100% { transform: translate(-50%, -50%) scale(.72); }
   50% { transform: translate(-50%, -50%) scale(1); }
-}
-@keyframes breathe-pulse {
-  0%, 100% { transform: translate(-50%, -50%) scale(.78); opacity: .55; }
-  50% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .breathe.breathing .breathe-ring, .breathe.breathing .breathe-core { animation: none; }
 }
 
 /* Category chips */
@@ -144,7 +108,6 @@ button { font: inherit; cursor: pointer; }
 .tx .meta { flex: 1; min-width: 0; }
 .tx .meta strong { display: block; font-size: .92rem; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tx .meta span { font-size: .78rem; color: var(--muted); }
-.dur { font-weight: 700; font-variant-numeric: tabular-nums; font-size: .82rem; color: var(--muted); }
 .play-mini { color: var(--accent); display: grid; place-items: center; }
 
 .pill {
@@ -152,11 +115,6 @@ button { font: inherit; cursor: pointer; }
   font-size: .72rem; font-weight: 650; padding: .28rem .6rem; border-radius: 999px;
   background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent);
 }
-
-/* Profile stats */
-.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; text-align: center; }
-.stat strong { display: block; font-size: 1.6rem; font-weight: 800; letter-spacing: -.02em; color: var(--accent); font-variant-numeric: tabular-nums; }
-.stat span { font-size: .72rem; color: var(--muted); }
 
 /* Buttons */
 .btn-primary, .btn-ghost {
@@ -185,40 +143,3 @@ button { font: inherit; cursor: pointer; }
   font-size: .66rem; font-weight: 600; min-height: 2.9rem; padding: .35rem;
 }
 .tab.active { color: var(--accent); }
-
-/* Onboarding */
-.onboard {
-  padding: calc(1.6rem + var(--safe-top)) 1.4rem calc(1.4rem + var(--safe-bottom));
-  justify-content: space-between; gap: 1.5rem;
-}
-.onboard-art {
-  height: 44vh; max-height: 340px; border-radius: 1.6rem; position: relative; overflow: hidden;
-  display: grid; place-items: center;
-  background:
-    radial-gradient(circle at 30% 22%, color-mix(in srgb, var(--accent) 50%, transparent), transparent 54%),
-    radial-gradient(circle at 78% 80%, color-mix(in srgb, #6d5bd0 40%, transparent), transparent 50%),
-    var(--surface);
-  border: 1px solid var(--line);
-}
-.onboard-art .orb {
-  width: 9rem; height: 9rem; border-radius: 999px;
-  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--accent) 90%, #fff), color-mix(in srgb, var(--accent) 45%, transparent) 72%);
-  box-shadow: 0 0 60px color-mix(in srgb, var(--accent) 50%, transparent);
-}
-.onboard-art .orb.breathing { animation: breathe-scale 8s ease-in-out infinite; transform-origin: center; }
-.onboard-art .glass {
-  position: absolute; inset: auto 1.1rem 1.1rem; padding: 1rem 1.1rem; border-radius: 1.1rem;
-  background: color-mix(in srgb, var(--bg) 55%, transparent); backdrop-filter: blur(8px);
-  border: 1px solid var(--line);
-}
-.onboard-art .glass .amt { font-size: 1.7rem; font-weight: 800; letter-spacing: -.02em; }
-.onboard-art .glass .amt small { font-size: .9rem; font-weight: 600; opacity: .7; }
-.onboard-kicker { margin: 0 0 .6rem; color: var(--accent); font-size: .76rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
-.onboard-body h2 { margin: 0 0 .6rem; font-size: 1.85rem; line-height: 1.12; letter-spacing: -.02em; }
-.onboard-actions { display: grid; gap: .55rem; }
-.dots { display: flex; gap: .35rem; justify-content: center; margin-bottom: .3rem; }
-.dots i { width: .5rem; height: .5rem; border-radius: 999px; background: var(--line); }
-.dots i.on { background: var(--accent); width: 1.4rem; }
-@media (prefers-reduced-motion: reduce) {
-  .onboard-art .orb.breathing { animation: none; }
-}

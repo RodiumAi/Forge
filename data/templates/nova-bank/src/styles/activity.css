@@ -1,0 +1,5 @@
+/* Activity screen: weekly spending bars + full transaction list. */
+.activity-screen .bars { display: flex; align-items: flex-end; gap: .55rem; height: 108px; margin-top: .3rem; }
+.activity-screen .bars .col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: .4rem; height: 100%; justify-content: flex-end; }
+.activity-screen .bars .bar { width: 100%; border-radius: .5rem .5rem 0 0; background: linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--accent) 35%, transparent)); }
+.activity-screen .bars .bl { font-size: .68rem; color: var(--muted); }

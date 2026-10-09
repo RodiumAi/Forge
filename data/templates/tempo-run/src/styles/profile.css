@@ -1,0 +1,4 @@
+/* Profile screen: weekly goal meter, devices, settings. Root: .profile-screen */
+.profile-screen .meter { height: .7rem; border-radius: 999px; background: var(--track); overflow: hidden; margin-top: .8rem; }
+.profile-screen .meter span { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 60%, #4d7c0f), var(--accent)); animation: fill 1s ease both; }
+.profile-screen .dot-ok { width: .7rem; height: .7rem; border-radius: 999px; background: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent); flex-shrink: 0; }

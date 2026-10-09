@@ -1,4 +1,5 @@
 import json
+import logging
 import re
 from uuid import UUID
 
@@ -19,7 +20,7 @@ from app.schemas import (
     MessageOut,
     SendMessageRequest,
 )
-from app.services.apply_writes import apply_validated_writes_async
+from app.services.apply_writes import apply_validated_writes_async, brand_change_requested
 from app.services.attachments import extract_image_urls
 from app.services.capabilities import require_rodi_for_paid_capability
 from app.services.filesystem import delete_file
@@ -28,9 +29,11 @@ from app.services.llm import (
     error_code_for,
     is_transient_network_error,
     stream_chat_completion,
+    stream_with_continuation,
 )
 from app.services.orchestration.cancel import clear_cancelled, is_cancelled, mark_cancelled
 from app.services.orchestration.context import build_llm_messages
+from app.services.orchestration.dispatcher import edit_failure_findings, notice_sse
 from app.services.orchestration.images import generate_project_image
 from app.services.orchestration.plan_persist import (
     persist_assistant as _persist_assistant,
@@ -58,11 +61,12 @@ from app.services.orchestration.router import (
 from app.services.orchestration.stale_runs import expire_if_stale
 from app.services.rodium_generation import resolve_generation_auth
 from app.services.sse import with_sse_heartbeats
-from app.services.tags import parse_forge_tags
+from app.services.tags import op_text, parse_forge_tags
 from app.services.text_plain import build_run_summary, to_plain_text
 from app.services.url_capture import enrich_prompt_with_site_url_captures
 
 router = APIRouter(tags=["chats"])
+logger = logging.getLogger(__name__)
 
 
 def _can_access_project(db: Session, user: User, project: Project) -> bool:
@@ -452,11 +456,12 @@ async def _iter_single_pass(
     cancelled = False
     while True:
         try:
-            async for chunk in stream_chat_completion(
+            async for chunk in stream_with_continuation(
                 auth=auth,
                 model=stream_model,
                 messages=llm_messages,
                 locale=locale,  # type: ignore[arg-type]
+                stream_fn=stream_chat_completion,
             ):
                 if is_cancelled(run_id_str):
                     cancelled = True
@@ -464,6 +469,10 @@ async def _iter_single_pass(
                 if chunk.kind == "thinking":
                     thinking_parts.append(chunk.content)
                     yield _sse({"type": "thinking", "delta": chunk.content})
+                elif chunk.kind == "notice":
+                    frame = notice_sse(chunk, locale)  # type: ignore[arg-type]
+                    if frame:
+                        yield frame
                 else:
                     full.append(chunk.content)
                     yield _sse({"type": "token", "content": chunk.content})
@@ -520,7 +529,7 @@ async def _iter_single_pass(
         yield push_step("generate", t("step_generate_code", locale), "running")
         nudge = (
             "Your previous response was empty. Implement the user's request NOW "
-            "using forge-write tags with full file contents. Do not answer with prose only.\n\n"
+            "using forge-edit / forge-write tags. Do not answer with prose only.\n\n"
             f"User request:\n{user_content}"
         )
         empty_retry_messages = await build_llm_messages(
@@ -538,11 +547,12 @@ async def _iter_single_pass(
         db.commit()
         empty_retry_full: list[str] = []
         try:
-            async for chunk in stream_chat_completion(
+            async for chunk in stream_with_continuation(
                 auth=auth,
                 model=model,
                 messages=empty_retry_messages,
                 locale=locale,  # type: ignore[arg-type]
+                stream_fn=stream_chat_completion,
             ):
                 if is_cancelled(run_id_str):
                     yield push_step("generate", t("step_generate_code", locale), "error")
@@ -551,6 +561,10 @@ async def _iter_single_pass(
                 if chunk.kind == "thinking":
                     thinking_parts.append(chunk.content)
                     yield _sse({"type": "thinking", "delta": chunk.content})
+                elif chunk.kind == "notice":
+                    frame = notice_sse(chunk, locale)  # type: ignore[arg-type]
+                    if frame:
+                        yield frame
                 else:
                     empty_retry_full.append(chunk.content)
                     yield _sse({"type": "token", "content": chunk.content})
@@ -572,7 +586,7 @@ async def _iter_single_pass(
             return
 
     required_urls = [img.url for img in extract_image_urls(user_content) if img.url.startswith("http")]
-    if required_urls and not any(any(url in op.content for op in writes) for url in required_urls):
+    if required_urls and not any(any(url in op_text(op) for op in writes) for url in required_urls):
         retry_prompt = (
             "CRITICAL: The user's uploaded asset URL(s) must appear verbatim in your forge-write output "
             '(e.g. <img src="..."> or background-image: url(...)). Do not use placeholders.\n'
@@ -595,11 +609,12 @@ async def _iter_single_pass(
         db.commit()
         retry_full: list[str] = []
         try:
-            async for chunk in stream_chat_completion(
+            async for chunk in stream_with_continuation(
                 auth=auth,
                 model=model,
                 messages=retry_messages,
                 locale=locale,  # type: ignore[arg-type]
+                stream_fn=stream_chat_completion,
             ):
                 if is_cancelled(run_id_str):
                     yield push_step("generate", t("step_generate_code", locale), "error")
@@ -608,6 +623,10 @@ async def _iter_single_pass(
                 if chunk.kind == "thinking":
                     thinking_parts.append(chunk.content)
                     yield _sse({"type": "thinking", "delta": chunk.content})
+                elif chunk.kind == "notice":
+                    frame = notice_sse(chunk, locale)  # type: ignore[arg-type]
+                    if frame:
+                        yield frame
                 else:
                     retry_full.append(chunk.content)
                     yield _sse({"type": "token", "content": chunk.content})
@@ -620,8 +639,9 @@ async def _iter_single_pass(
             writes, deletes = parse_forge_tags("".join(full))
         yield push_step("generate", t("step_generate_code", locale), "done")
 
+    allow_brand = brand_change_requested(user_content)
     written, violations = await apply_validated_writes_async(
-        project_id_str, writes, snapshot_label="before edit"
+        project_id_str, writes, snapshot_label="before edit", allow_brand_writes=allow_brand
     )
     applied.extend(written)
     for item in written:
@@ -638,6 +658,70 @@ async def _iter_single_pass(
         delete_file(project_id_str, op.path)
         applied.append({"op": "delete", "path": op.path})
         yield _sse({"type": "file_delete", "path": op.path})
+
+    # A forge-edit that did not match gets one focused retry against the
+    # current content of its file, instead of being reported and dropped.
+    failed_edits = edit_failure_findings(violations)
+    if failed_edits:
+        yield push_step("edit_retry", t("step_edit_retry", locale), "running")
+        retry_prompt = (
+            "Some forge-edit blocks of your previous answer did not match the files and were "
+            "NOT applied:\n"
+            + "\n".join(f"- {f.path}: {f.message}" for f in failed_edits)
+            + "\nThe current content of those files is shown above. Redo only those changes, "
+            "with SEARCH blocks copied exactly from it (or forge-write the whole file).\n\n"
+            f"Original request:\n{user_content}"
+        )
+        fix_messages = await build_llm_messages(
+            project_id=project_id_str,
+            history=[*history, ("user", user_content), ("assistant", "".join(full)), ("user", retry_prompt)],
+            user_query=retry_prompt,
+            db=db,
+            user_id=user_id,
+            locale=locale,
+            auth=auth,
+            model=stream_model,
+            surgical_edit=surgical_edit,
+            focus_paths=[f.path for f in failed_edits],
+            carry_references=carry_references,
+        )
+        db.commit()
+        fix_buf: list[str] = []
+        try:
+            async for chunk in stream_with_continuation(
+                auth=auth,
+                model=stream_model,
+                messages=fix_messages,
+                locale=locale,  # type: ignore[arg-type]
+                stream_fn=stream_chat_completion,
+            ):
+                if is_cancelled(run_id_str):
+                    fix_buf = []  # stop here; the edits already applied stay
+                    break
+                if chunk.kind == "thinking":
+                    thinking_parts.append(chunk.content)
+                    yield _sse({"type": "thinking", "delta": chunk.content})
+                elif chunk.kind == "token":
+                    fix_buf.append(chunk.content)
+                    full.append(chunk.content)
+                    yield _sse({"type": "token", "content": chunk.content})
+            fix_writes, _fix_deletes = parse_forge_tags("".join(fix_buf))
+            fixed, fix_violations = await apply_validated_writes_async(
+                project_id_str, fix_writes, snapshot_label="before edit retry", allow_brand_writes=allow_brand
+            )
+            applied.extend(fixed)
+            for item in fixed:
+                yield _sse({"type": "file_write", "path": item["path"]})
+            for v in fix_violations:
+                yield _sse(
+                    {"type": "warning", "message": f"{v.get('code')}: {v.get('message')}", "violation": v}
+                )
+            yield push_step("edit_retry", t("step_edit_retry", locale), "done")
+        except Exception:
+            # Best effort: the first answer's writes are applied, the run must
+            # still close normally (any lane can raise, not only RodiumError).
+            logger.warning("edit retry failed", exc_info=True)
+            yield push_step("edit_retry", t("step_edit_retry", locale), "error")
     yield push_step("apply_writes", t("step_apply_writes", locale), "done")
     if applied:
         yield _sse({"type": "preview_refresh"})
@@ -921,12 +1005,16 @@ async def send_message(
                 yield _sse({"type": "file_write", "path": image_info["path"]})
                 yield push_step("generate_image", t("step_generate_image", locale), "done")
 
+                srcset = ", ".join(f"{p} {w}w" for p, w in image_info.get("srcset") or [])
                 wire_prompt = (
                     f"An image was generated at `{image_info['path']}` "
-                    f"(URL in the app: `{image_info['public_path']}`).\n"
+                    f"(URL in the app: `{image_info['public_path']}`, "
+                    f"{image_info.get('width')}x{image_info.get('height')}"
+                    + (f", srcset: {srcset}" if srcset else "")
+                    + ").\n"
                     f"User request: {user_content}\n"
-                    "Update the UI to showcase this image where appropriate. "
-                    "Use forge-write tags."
+                    "Update the UI to showcase this image where appropriate, with its real "
+                    "width/height and srcset. Use forge-edit / forge-write tags."
                 )
                 yield push_step("select_files", t("step_select_files", locale), "running")
                 with SessionLocal() as stream_db:
@@ -943,15 +1031,20 @@ async def send_message(
                     stream_db.commit()
                 yield push_step("select_files", t("step_select_files", locale), "done")
                 yield push_step("generate", t("step_generate_code", locale), "running")
-                async for chunk in stream_chat_completion(
+                async for chunk in stream_with_continuation(
                     auth=gen_auth,
                     model=get_settings().effective_default_model,
                     messages=llm_messages,
                     locale=locale,  # type: ignore[arg-type]
+                    stream_fn=stream_chat_completion,
                 ):
                     if chunk.kind == "thinking":
                         thinking_parts.append(chunk.content)
                         yield _sse({"type": "thinking", "delta": chunk.content})
+                    elif chunk.kind == "notice":
+                        frame = notice_sse(chunk, locale)  # type: ignore[arg-type]
+                        if frame:
+                            yield frame
                     else:
                         full.append(chunk.content)
                         yield _sse({"type": "token", "content": chunk.content})

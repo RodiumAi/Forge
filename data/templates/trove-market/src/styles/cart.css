@@ -1,0 +1,19 @@
+/* Cart screen: lines with steppers, summary, checkout, empty state. Root: .cart-screen */
+.cart-screen .price.free { color: var(--accent); }
+
+/* Quantity stepper */
+.cart-screen .stepper { display: inline-flex; align-items: center; gap: .1rem; border: 1px solid var(--line); border-radius: 999px; padding: .15rem; flex-shrink: 0; }
+.cart-screen .stepper button { appearance: none; border: 0; background: transparent; color: var(--fg); width: 1.85rem; height: 1.85rem; border-radius: 999px; display: grid; place-items: center; }
+.cart-screen .stepper button:active { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.cart-screen .stepper b { min-width: 1.3rem; text-align: center; font-size: .9rem; font-variant-numeric: tabular-nums; }
+
+/* Summary */
+.cart-screen .summary { display: grid; gap: .55rem; }
+.cart-screen .summary .row.total { border-top: 1px solid var(--line); padding-top: .6rem; margin-top: .2rem; font-weight: 800; font-size: 1.05rem; }
+.cart-screen .checkout { position: sticky; bottom: calc(5.2rem + var(--safe-bottom)); }
+
+/* Empty cart */
+.cart-screen .card.empty { display: grid; justify-items: center; text-align: center; gap: .55rem; padding: 2.2rem 1.2rem; }
+.cart-screen .empty .empty-orb { width: 3.4rem; height: 3.4rem; border-radius: 999px; display: grid; place-items: center; background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
+.cart-screen .card.empty strong { font-size: 1.05rem; }
+.cart-screen .card.empty .btn-primary { max-width: 15rem; margin-top: .4rem; }

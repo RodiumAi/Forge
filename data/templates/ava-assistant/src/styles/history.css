@@ -1,0 +1,3 @@
+/* History screen: one compact list of past conversations. */
+.history-screen .card.list { padding: .35rem 1.05rem; }
+.history-screen .tx .when { font-size: .72rem; color: var(--muted); flex-shrink: 0; }

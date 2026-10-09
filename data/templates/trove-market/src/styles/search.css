@@ -1,0 +1,7 @@
+/* Search screen: live search field, trending chips, popular picks. Root: .search-screen */
+.search-screen .searchbar.live input {
+  border: 0; outline: 0; background: transparent; color: var(--fg);
+  font: inherit; width: 100%; padding: 0;
+}
+.search-screen .searchbar.live input::placeholder { color: var(--muted); }
+.search-screen .chips.wrap { flex-wrap: wrap; overflow: visible; margin: 0; padding: 0; }

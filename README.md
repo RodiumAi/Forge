@@ -51,7 +51,8 @@ Supporting services: **MinIO** (S3 uploads), **Valkey** (run queue / cancellatio
 - **Chat-to-site**: describe a site or app; the agent generates a frontend-only React project.
 - **Web vs Appli**: gallery kits for marketing sites and mobile-style shells.
 - **Instant preview**: in-browser Babel/ESM runner — CDN import map (esm.sh). No node_modules, no Vite.
-- **Publishing**: static ESM site served by Caddy.
+- **Publishing**: production build (bundled, minified, hashed, dependencies embedded), every route pre-rendered with its own title/meta, `404.html`, sitemap, robots, structured data and cache headers, served by Caddy.
+- **Brand charter on the first build**: palette, Google Fonts pairing and imagery from the brief, plus the first generated images (WebP + srcset).
 - **Visual editing**: text and images, directly on the preview.
 - **History / rollback**: per-project git snapshots.
 - **ZIP export**: a real, runnable Vite project.

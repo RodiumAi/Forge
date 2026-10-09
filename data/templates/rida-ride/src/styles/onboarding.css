@@ -1,0 +1,30 @@
+/* Onboarding screen (first launch). Scoped under .onboarding-screen. */
+.onboarding-screen {
+  padding: calc(1.6rem + var(--safe-top)) 1.4rem calc(1.4rem + var(--safe-bottom));
+  justify-content: space-between; gap: 1.5rem;
+}
+.onboarding-screen .onboard-art {
+  height: 44vh; max-height: 340px; border-radius: 1.6rem; position: relative; overflow: hidden;
+  background:
+    radial-gradient(120% 90% at 70% 10%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 60%),
+    var(--surface);
+  border: 1px solid var(--line);
+}
+.onboarding-screen .onboard-art .map-grid { opacity: .8; }
+.onboarding-screen .onboard-route { position: absolute; inset: 0; width: 100%; height: 100%; filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 55%, transparent)); }
+.onboarding-screen .onboard-art .map-origin { left: 13%; bottom: 16%; }
+.onboarding-screen .onboard-art .map-pin { right: 12%; top: 14%; }
+.onboarding-screen .onboard-art .glass {
+  position: absolute; inset: auto 1.1rem 1.1rem; padding: 1rem 1.1rem; border-radius: 1.1rem;
+  background: color-mix(in srgb, var(--bg) 55%, transparent); backdrop-filter: blur(8px);
+  border: 1px solid var(--line);
+}
+.onboarding-screen .onboard-art .glass .amt { font-size: 1.7rem; font-weight: 800; letter-spacing: -.02em; }
+.onboarding-screen .onboard-art .glass .amt small { font-size: .95rem; font-weight: 700; opacity: .7; }
+.onboarding-screen .onboard-art .glass .pill { margin-top: .5rem; }
+.onboarding-screen .onboard-kicker { margin: 0 0 .6rem; color: var(--accent); font-size: .76rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.onboarding-screen .onboard-body h2 { margin: 0 0 .6rem; font-size: 1.85rem; line-height: 1.12; letter-spacing: -.02em; }
+.onboarding-screen .onboard-actions { display: grid; gap: .55rem; }
+.onboarding-screen .dots { display: flex; gap: .35rem; justify-content: center; margin-bottom: .3rem; }
+.onboarding-screen .dots i { width: .5rem; height: .5rem; border-radius: 999px; background: var(--line); }
+.onboarding-screen .dots i.on { background: var(--accent); width: 1.4rem; }

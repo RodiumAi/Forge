@@ -31,8 +31,8 @@ def _pkg(project, deps: dict) -> None:
 
 class TestProjectDependencies:
     def test_declared_deps_are_picked_up(self, project):
-        _pkg(project, {"canvas-confetti": "^1.9.0", "three": "0.160.0"})
-        assert project_dependencies(project) == {"canvas-confetti": "^1.9.0", "three": "0.160.0"}
+        _pkg(project, {"canvas-confetti": "^1.9.0", "matter-js": "0.20.0"})
+        assert project_dependencies(project) == {"canvas-confetti": "^1.9.0", "matter-js": "0.20.0"}
 
     def test_base_manifest_pins_win(self, project):
         _pkg(project, {"react": "^19.0.0", "canvas-confetti": "^1.9.0"})

@@ -1,0 +1,34 @@
+/* Profile screen: streak, shopping list, preferences, chefs. Root: .profile-screen */
+.profile-screen .lbl { margin: 0 0 .5rem; font-size: .76rem; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; }
+
+/* Streak */
+.profile-screen .streak { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.profile-screen .streak-n { margin: 0 0 .5rem; font-size: 2.2rem; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.profile-screen .streak-n small { font-size: .95rem; font-weight: 700; color: var(--muted); }
+.profile-screen .streak-week { display: flex; gap: .3rem; }
+.profile-screen .streak-week .day {
+  width: 1.75rem; height: 1.75rem; border-radius: 999px; display: grid; place-items: center;
+  font-size: .68rem; font-weight: 700; color: var(--muted); border: 1px solid var(--line);
+}
+.profile-screen .streak-week .day.on { background: var(--accent); color: var(--on-accent); border-color: transparent; }
+
+/* Shopping list */
+.profile-screen .shop { display: flex; align-items: center; gap: .8rem; padding: .65rem 0; border-bottom: 1px solid var(--line); }
+.profile-screen .shop .meta { flex: 1; min-width: 0; }
+.profile-screen .shop .meta strong { font-size: .9rem; font-weight: 650; }
+.profile-screen .shop .struck { text-decoration: line-through; color: var(--muted); }
+.profile-screen .check { width: 1.5rem; height: 1.5rem; border-radius: 999px; border: 1.5px solid var(--line); display: grid; place-items: center; font-size: .8rem; font-weight: 800; color: var(--on-accent); flex: none; }
+.profile-screen .check.on { background: var(--accent); border-color: transparent; }
+.profile-screen .qty { font-size: .8rem; color: var(--muted); font-weight: 650; font-variant-numeric: tabular-nums; }
+.profile-screen .add-shop {
+  appearance: none; border: 1px dashed var(--line); background: transparent; color: var(--accent);
+  width: 100%; margin-top: .35rem; padding: .7rem; border-radius: .9rem; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; gap: .45rem;
+}
+
+/* Chefs */
+.profile-screen .chef { display: flex; align-items: center; gap: .85rem; padding: .7rem 0; border-bottom: 1px solid var(--line); }
+.profile-screen .chef:last-child { border-bottom: 0; }
+.profile-screen .chef .ava { width: 2.7rem; height: 2.7rem; border-radius: 999px; display: grid; place-items: center; font-size: 1.2rem; flex: none; background: color-mix(in srgb, var(--accent) 16%, transparent); }
+.profile-screen .chef .meta { flex: 1; min-width: 0; }
+.profile-screen .chef .meta strong { display: block; font-size: .92rem; font-weight: 700; }

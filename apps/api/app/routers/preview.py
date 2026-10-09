@@ -54,24 +54,27 @@ def _project_extra_imports(project_id: str) -> dict[str, str]:
         return {}
 
 
-def _draft_thumb_cache_key(project_id: str) -> str:
-    return f"{project_id}:v{_DRAFT_THUMB_CACHE_VERSION}"
+def _draft_thumb_cache_key(project_id: str, viewer_id: str) -> str:
+    # The rendered HTML embeds the viewer's own access token, so entries are
+    # scoped per viewer and never shared between users of the same project.
+    return f"{project_id}:{viewer_id}:v{_DRAFT_THUMB_CACHE_VERSION}"
 
 
-def _draft_thumb_cache_get(project_id: str) -> str | None:
-    row = _DRAFT_THUMB_CACHE.get(_draft_thumb_cache_key(project_id))
+def _draft_thumb_cache_get(project_id: str, viewer_id: str) -> str | None:
+    key = _draft_thumb_cache_key(project_id, viewer_id)
+    row = _DRAFT_THUMB_CACHE.get(key)
     if not row:
         return None
     if time.time() - row[0] > _DRAFT_THUMB_TTL_S:
-        _DRAFT_THUMB_CACHE.pop(_draft_thumb_cache_key(project_id), None)
+        _DRAFT_THUMB_CACHE.pop(key, None)
         return None
     return row[1]
 
 
-def _draft_thumb_cache_set(project_id: str, html: str) -> None:
+def _draft_thumb_cache_set(project_id: str, viewer_id: str, html: str) -> None:
     if len(_DRAFT_THUMB_CACHE) >= _DRAFT_THUMB_CACHE_MAX:
         _DRAFT_THUMB_CACHE.pop(next(iter(_DRAFT_THUMB_CACHE)), None)
-    _DRAFT_THUMB_CACHE[_draft_thumb_cache_key(project_id)] = (time.time(), html)
+    _DRAFT_THUMB_CACHE[_draft_thumb_cache_key(project_id, viewer_id)] = (time.time(), html)
 
 
 def _status(project: Project, *, running: bool) -> PreviewStatus:
@@ -133,8 +136,9 @@ def draft_page(
     project = _owned(db, user, project_id, resolve_locale(request))
     is_thumb = request.query_params.get("thumb") in {"1", "true", "yes"}
     pid = str(project_id)
+    viewer_id = str(user.id)
     if is_thumb:
-        cached = _draft_thumb_cache_get(pid)
+        cached = _draft_thumb_cache_get(pid, viewer_id)
         if cached:
             return HTMLResponse(cached, headers={"Cache-Control": "private, max-age=60"})
     files = preview_babel.collect_project_source_files(pid)
@@ -153,7 +157,7 @@ def draft_page(
         thumb=is_thumb,
     )
     if is_thumb:
-        _draft_thumb_cache_set(pid, html)
+        _draft_thumb_cache_set(pid, viewer_id, html)
     return HTMLResponse(
         html, headers={"Cache-Control": "no-store" if not is_thumb else "private, max-age=60"}
     )

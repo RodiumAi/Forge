@@ -5,11 +5,25 @@
 
 ## Colors
 
-- Background: `#ffffff`
-- Foreground: `#111827` (near-black, used for dark header/footer)
-- Muted: `#6b7280`
-- Accent: `#f59e0b` (amber, CTAs and price highlights)
-- Soft: `#f3f4f6` (section backgrounds, card surfaces)
+- Background `--bg`: `#ffffff`
+- Foreground `--fg`: `#111827` (near-black, used for dark header/footer)
+- Muted `--muted`: `#6b7280`
+- Accent `--accent`: `#f59e0b` (amber, CTAs and price highlights)
+- Soft `--soft`: `#f3f4f6` (section backgrounds, card surfaces)
+
+## Typography
+
+- Font stack: `"Segoe UI", system-ui, sans-serif` everywhere (no web fonts), body line-height 1.5.
+- Scale: hero h1 2.4rem (1.8rem on mobile, max 22ch), section h2 1.6rem, category tile and promo h2 at the browser default 1.5rem, card h3 1rem.
+- Text: logo 1.2rem bold with 0.04em tracking, nav and buttons 0.95rem (buttons weight 600), tile links and old prices 0.9rem, card category and footnote 0.85rem.
+- Eyebrow: 0.8rem, uppercase, letter-spacing 0.15em, weight 700, amber.
+
+## Spacing & radius
+
+- Sections use 6vw side padding: header 1rem, hero 4rem (2.5rem on mobile), category strip and promo 3rem, product grids 2rem top and 3rem bottom. Single breakpoint at 761px (mobile-first).
+- Gaps: hero 3rem, header 2rem (0.8rem on mobile), grids and tiles 1.2rem, form 0.6rem.
+- Padding: buttons 0.7rem 1.4rem, card body 1rem, category tile 2.5rem 1.5rem.
+- Radius: buttons, inputs and cart 6px, cards and tiles 10px, hero image 12px, badge 999px.
 
 ## Tone
 

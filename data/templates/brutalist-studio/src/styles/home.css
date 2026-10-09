@@ -1,0 +1,248 @@
+/* Home page sections. Every selector is scoped under .home-screen. Mobile first. */
+.home-screen { overflow: hidden; }
+
+/* ---------- Hero ---------- */
+.home-screen .hero { position: relative; padding: 56px 5vw 70px; }
+
+.home-screen .hero h1 {
+  font-size: clamp(3rem, 10vw, 8rem); line-height: 0.95; font-weight: 900;
+  letter-spacing: -0.04em; text-transform: uppercase;
+}
+
+.home-screen .scribble {
+  color: var(--accent); text-decoration: underline; text-decoration-thickness: 8px;
+  text-underline-offset: 10px;
+}
+
+.home-screen .hero-sub {
+  max-width: 34rem; margin: 34px 0; font-size: 1.1rem;
+  font-weight: 500; color: var(--muted); border-left: 6px solid var(--accent);
+  padding-left: 18px;
+}
+
+.home-screen .hero-cta { display: flex; gap: 18px; flex-wrap: wrap; }
+
+/* ---------- Stickers ---------- */
+.home-screen .sticker {
+  position: absolute; padding: 14px 18px; font-weight: 900;
+  font-size: 0.82rem; text-align: center; line-height: 1.25;
+  border: var(--border); box-shadow: var(--shadow); z-index: 2;
+  animation: wobble 5s ease-in-out infinite alternate;
+}
+
+.home-screen .sticker-yellow { background: var(--yellow); top: auto; bottom: 20px; right: 5vw; transform: rotate(8deg); }
+
+.home-screen .sticker-blue {
+  display: none;
+  background: var(--blue); color: #fff; top: 220px;
+  right: 16vw; transform: rotate(-7deg); animation-delay: 1s;
+}
+
+.home-screen .sticker-icon { vertical-align: -2px; }
+
+@keyframes wobble {
+  0% { rotate: 0deg; }
+  100% { rotate: 6deg; }
+}
+
+/* ---------- Marquee ---------- */
+.home-screen .marquee {
+  overflow: hidden; background: var(--fg); color: var(--yellow);
+  border-top: var(--border); border-bottom: var(--border); padding: 16px 0;
+  white-space: nowrap;
+}
+
+.home-screen .marquee-track { display: inline-flex; animation: scroll-x 22s linear infinite; }
+
+.home-screen .marquee-item { font-size: 1.5rem; font-weight: 900; letter-spacing: 0.02em; padding: 0 18px; }
+
+.home-screen .marquee-star { color: var(--accent); padding-left: 30px; }
+
+.home-screen .marquee-star svg { vertical-align: -3px; }
+
+@keyframes scroll-x {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* ---------- Services ---------- */
+.home-screen .services { padding: 90px 5vw; }
+
+.home-screen .service-grid { display: grid; grid-template-columns: 1fr; gap: 26px; }
+
+.home-screen .service-card {
+  position: relative; border: var(--border); box-shadow: var(--shadow);
+  padding: 28px 22px 54px; transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.home-screen .service-card:hover { transform: translate(-4px, -4px); box-shadow: var(--shadow-lg); }
+
+.home-screen .service-card:nth-child(3) { color: #fff; }
+
+.home-screen .service-num {
+  font-size: 0.85rem; font-weight: 900; border: 2px solid currentColor;
+  padding: 2px 8px; display: inline-block; margin-bottom: 20px;
+}
+
+.home-screen .service-card h3 { font-size: 1.4rem; font-weight: 900; text-transform: uppercase; margin-bottom: 12px; }
+
+.home-screen .service-card p { font-size: 0.9rem; line-height: 1.55; }
+
+.home-screen .service-arrow { position: absolute; bottom: 16px; right: 20px; font-size: 1.6rem; font-weight: 900; }
+
+.home-screen .service-arrow svg { vertical-align: -3px; }
+
+/* ---------- Work ---------- */
+.home-screen .work { padding: 60px 5vw 90px; background: #fff; border-top: var(--border); border-bottom: var(--border); }
+
+.home-screen .work-head {
+  display: flex; justify-content: space-between; align-items: flex-end;
+  flex-wrap: wrap; gap: 20px;
+}
+
+.home-screen .work-note {
+  font-weight: 700; font-size: 0.95rem; color: var(--muted);
+  margin-bottom: 48px; text-align: right;
+}
+
+.home-screen .project-grid { display: grid; grid-template-columns: 1fr; gap: 44px 34px; }
+
+.home-screen .project-offset { margin-top: 0; }
+
+.home-screen .project-media { position: relative; border: var(--border); box-shadow: var(--shadow-lg); overflow: hidden; }
+
+.home-screen .project-media img {
+  width: 100%; height: 230px; object-fit: cover;
+  filter: saturate(1.15); transition: transform 0.3s ease;
+}
+
+.home-screen .project:hover .project-media img { transform: scale(1.04) rotate(-1deg); }
+
+.home-screen .project-stat {
+  position: absolute; bottom: 14px; left: 14px;
+  background: var(--yellow); border: var(--border); padding: 6px 12px;
+  font-weight: 900; font-size: 0.8rem; transform: rotate(-2deg);
+}
+
+.home-screen .project-meta {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 18px; flex-wrap: wrap; gap: 10px;
+}
+
+.home-screen .project-meta h3 { font-size: 1.3rem; font-weight: 900; letter-spacing: -0.01em; }
+
+.home-screen .project-tags { display: flex; gap: 8px; }
+
+/* ---------- Shout quote ---------- */
+.home-screen .shout { padding: 90px 5vw; background: var(--accent); color: #fff; text-align: center; }
+
+.home-screen .shout p {
+  font-size: clamp(1.4rem, 3.6vw, 2.6rem); font-weight: 900; line-height: 1.2;
+  letter-spacing: -0.02em; max-width: 60rem; margin: 0 auto 26px;
+}
+
+.home-screen .shout em { font-style: normal; background: var(--fg); color: var(--yellow); padding: 0 12px; }
+
+.home-screen .shout-credit { font-weight: 700; font-size: 0.95rem; opacity: 0.9; }
+
+/* ---------- Client strip & awards ---------- */
+.home-screen .client-strip { margin-top: 48px; text-align: center; }
+
+.home-screen .client-label { font-weight: 900; font-size: 0.85rem; letter-spacing: 0.14em; margin-bottom: 16px; }
+
+.home-screen .client-tags { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; }
+
+.home-screen .client-tags .tag { font-size: 0.8rem; padding: 5px 14px; }
+
+.home-screen .shout-awards { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin-top: 28px; }
+
+.home-screen .shout-awards .tag { background: #fff; border-color: #111; }
+
+/* ---------- Process ---------- */
+.home-screen .process { padding: 90px 5vw; }
+
+.home-screen .process-grid { display: grid; grid-template-columns: 1fr; gap: 24px; }
+
+.home-screen .process-card { border: var(--border); background: #fff; box-shadow: var(--shadow); padding: 26px 22px; }
+
+.home-screen .process-step {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; background: var(--fg);
+  color: var(--yellow); font-weight: 900; font-size: 1.2rem;
+  border: var(--border); margin-bottom: 18px;
+}
+
+.home-screen .process-card h3 { font-size: 1.1rem; font-weight: 900; text-transform: uppercase; margin-bottom: 10px; }
+
+.home-screen .process-card p { font-size: 0.88rem; color: var(--muted); }
+
+/* ---------- FAQ ---------- */
+.home-screen .faq { padding: 40px 5vw 90px; }
+
+.home-screen .faq-list { max-width: 52rem; }
+
+.home-screen .faq-item { border: var(--border); background: #fff; margin-bottom: 16px; box-shadow: var(--shadow); }
+
+.home-screen .faq-item.open { background: var(--yellow); }
+
+.home-screen .faq-q {
+  width: 100%; display: flex; justify-content: space-between;
+  align-items: center; gap: 16px; padding: 18px 22px;
+  background: transparent; border: none; font-family: inherit;
+  font-size: 1.05rem; font-weight: 900; text-align: left;
+  cursor: pointer; text-transform: uppercase;
+}
+
+.home-screen .faq-toggle { font-size: 1.5rem; line-height: 1; }
+
+.home-screen .faq-toggle svg { display: block; position: relative; top: 3px; margin: 3px -0.5px; }
+
+.home-screen .faq-a { padding: 0 22px 20px; font-size: 0.95rem; font-weight: 500; }
+
+/* ---------- Contact ---------- */
+.home-screen .contact { padding: 0 5vw 100px; }
+
+.home-screen .contact-box {
+  border: var(--border); background: var(--blue); color: #fff;
+  box-shadow: var(--shadow-lg); padding: 64px 5vw; text-align: center;
+}
+
+.home-screen .contact-box h2 {
+  font-size: clamp(1.8rem, 5vw, 3.4rem); font-weight: 900; line-height: 1.05;
+  letter-spacing: -0.02em; text-transform: uppercase; margin-bottom: 18px;
+}
+
+.home-screen .contact-accent { color: var(--yellow); }
+
+.home-screen .contact-box p { font-weight: 600; margin-bottom: 32px; }
+
+.home-screen .contact-facts {
+  display: flex; justify-content: center; flex-wrap: wrap;
+  gap: 14px 36px; margin-top: 36px; font-weight: 800;
+  font-size: 0.88rem; text-transform: uppercase;
+}
+
+.home-screen .fact-icon { vertical-align: -1px; }
+
+/* ---------- Wider screens ---------- */
+@media (min-width: 641px) {
+  .home-screen .hero { padding-top: 90px; }
+
+  .home-screen .sticker-yellow { top: 60px; bottom: auto; right: 8vw; }
+
+  .home-screen .service-grid,
+  .home-screen .process-grid { grid-template-columns: 1fr 1fr; }
+
+  .home-screen .project-media img { height: 320px; }
+}
+
+@media (min-width: 961px) {
+  .home-screen .sticker-blue { display: block; }
+
+  .home-screen .service-grid,
+  .home-screen .process-grid { grid-template-columns: repeat(4, 1fr); }
+
+  .home-screen .project-grid { grid-template-columns: 1fr 1fr; }
+
+  .home-screen .project-offset { margin-top: 56px; }
+}

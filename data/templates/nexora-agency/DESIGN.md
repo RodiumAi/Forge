@@ -10,6 +10,23 @@
 - --muted: #8b93a7
 - --accent: #6366f1
 
+## Typography
+- Font stack: "Segoe UI", system-ui, sans-serif (system fonts, no web fonts).
+- Body: 1rem, line-height 1.6.
+- Hero h1: 2rem on mobile, 2.9rem from 761px, line-height 1.15, letter-spacing -0.02em.
+- Section h2: 2rem, letter-spacing -0.02em, 32px bottom margin.
+- Card h3: 1.05rem. Card copy: 0.9rem to 0.95rem in --muted. Lede: 1.05rem in --muted.
+- Eyebrow: 0.85rem uppercase, weight 600, letter-spacing 0.12em, in --accent.
+- Numbers: 1.7rem in the hero stat cards, 1.4rem in the stats row.
+
+## Spacing & radius
+- Container: max-width 1120px with 24px side padding.
+- Section rhythm: 80px bottom padding per section (clients 64px); hero 40px top on mobile, 72px on desktop, 72px bottom.
+- Gaps: 52px in two-column blocks, 20px in card grids, 16px in stat grids.
+- Card padding: 18px to 26px; CTA box 64px 32px.
+- Radius: 20px for the why image and CTA box, 16px cards, 12px badge, 10px buttons, icon tiles and case-study images.
+- Breakpoint (mobile first): 761px.
+
 ## Tone
 Premium, assured, results-driven. Numbers and proof points everywhere.
 

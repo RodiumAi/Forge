@@ -1,0 +1,4 @@
+/* Account screen: profile card and account links. Root: .account-screen */
+.account-screen .card.profile { display: flex; align-items: center; gap: .8rem; }
+.account-screen .pfp.lg { width: 3rem; height: 3rem; }
+.account-screen .card.profile strong { font-size: 1rem; }

@@ -1,3 +1,5 @@
+/* Foundation: tokens, reset, app shell (navbar, main, tab bar), shared list
+   cards, buttons. Screen styles live in src/styles/<screen>.css. */
 :root {
   color-scheme: dark;
   --bg: #0b1220;
@@ -43,40 +45,12 @@ button { font: inherit; cursor: pointer; }
 .pfp { width: 2.35rem; height: 2.35rem; border-radius: 999px; overflow: hidden; border: 1px solid var(--line); flex-shrink: 0; background: var(--surface); }
 .pfp img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-/* Main */
+/* Main (each screen renders <main class="app-main <name>-screen">) */
 .app-main {
   flex: 1; padding: 1.05rem 1.1rem 6.2rem;
   display: grid; gap: 1rem; align-content: start;
 }
-.section-head { display: flex; align-items: baseline; justify-content: space-between; margin: .3rem 0 -.2rem; }
-.section-head h2 { margin: 0; font-size: .95rem; }
-.section-head a, .link { color: var(--accent); font-size: .8rem; font-weight: 600; text-decoration: none; }
-
-/* Balance hero */
-.balance {
-  border-radius: 1.4rem; padding: 1.35rem 1.3rem 1.25rem;
-  position: relative; overflow: hidden;
-  background:
-    radial-gradient(120% 120% at 100% 0%, color-mix(in srgb, var(--accent) 40%, transparent), transparent 55%),
-    linear-gradient(155deg, color-mix(in srgb, var(--accent) 16%, var(--surface)), var(--surface));
-  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line));
-}
-.balance .lbl { margin: 0; font-size: .78rem; color: color-mix(in srgb, var(--fg) 72%, var(--muted)); letter-spacing: .03em; }
-.balance .amt { margin: .3rem 0 .1rem; font-size: 2.4rem; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
-.balance .amt small { font-size: 1.1rem; font-weight: 700; opacity: .75; }
-.balance .delta { display: inline-flex; align-items: center; gap: .3rem; font-size: .8rem; font-weight: 600; color: var(--accent); }
-.balance .card-chip { position: absolute; top: 1.2rem; right: 1.2rem; width: 2.1rem; height: 1.5rem; border-radius: .35rem; background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 80%, #fff), color-mix(in srgb, var(--accent) 45%, transparent)); opacity: .9; }
-
-/* Quick actions */
-.actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: .55rem; }
-.action {
-  appearance: none; border: 1px solid var(--line); background: var(--surface);
-  border-radius: 1rem; padding: .8rem .4rem .65rem; color: var(--fg);
-  display: flex; flex-direction: column; align-items: center; gap: .4rem;
-  font-size: .72rem; font-weight: 600;
-}
-.action .ic { width: 2.15rem; height: 2.15rem; border-radius: 999px; display: grid; place-items: center; background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
-.action:active { transform: scale(.97); }
+.link { color: var(--accent); font-size: .8rem; font-weight: 600; text-decoration: none; }
 
 /* Cards / lists */
 .card {
@@ -105,26 +79,6 @@ button { font: inherit; cursor: pointer; }
   background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent);
 }
 
-/* Payment / virtual card */
-.paycard {
-  border-radius: 1.25rem; padding: 1.2rem; aspect-ratio: 1.62 / 1;
-  display: flex; flex-direction: column; justify-content: space-between;
-  color: #fff; position: relative; overflow: hidden;
-  background: linear-gradient(135deg, #10233a, #0b1220 70%);
-  border: 1px solid var(--line);
-}
-.paycard.accent { background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 70%, #0b3b2c), #0b1220 85%); }
-.paycard .brand { font-weight: 800; letter-spacing: .02em; }
-.paycard .num { font-size: 1.05rem; letter-spacing: .16em; font-variant-numeric: tabular-nums; }
-.paycard .foot { display: flex; justify-content: space-between; font-size: .78rem; opacity: .85; }
-.chip { width: 2.3rem; height: 1.65rem; border-radius: .35rem; background: linear-gradient(135deg, #f6d365, #d4a017); }
-
-/* Spending bars */
-.bars { display: flex; align-items: flex-end; gap: .55rem; height: 108px; margin-top: .3rem; }
-.bars .col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: .4rem; height: 100%; justify-content: flex-end; }
-.bars .bar { width: 100%; border-radius: .5rem .5rem 0 0; background: linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--accent) 35%, transparent)); }
-.bars .bl { font-size: .68rem; color: var(--muted); }
-
 /* Buttons */
 .btn-primary, .btn-ghost {
   appearance: none; border: 0; border-radius: 1rem;
@@ -152,29 +106,3 @@ button { font: inherit; cursor: pointer; }
   font-size: .66rem; font-weight: 600; min-height: 2.9rem; padding: .35rem;
 }
 .tab.active { color: var(--accent); }
-
-/* Onboarding */
-.onboard {
-  padding: calc(1.6rem + var(--safe-top)) 1.4rem calc(1.4rem + var(--safe-bottom));
-  justify-content: space-between; gap: 1.5rem;
-}
-.onboard-art {
-  height: 44vh; max-height: 340px; border-radius: 1.6rem; position: relative; overflow: hidden;
-  background:
-    radial-gradient(circle at 28% 26%, color-mix(in srgb, var(--accent) 55%, transparent), transparent 52%),
-    radial-gradient(circle at 76% 74%, color-mix(in srgb, var(--accent) 28%, transparent), transparent 48%),
-    var(--surface);
-  border: 1px solid var(--line);
-}
-.onboard-art .glass {
-  position: absolute; inset: auto 1.1rem 1.1rem; padding: 1rem 1.1rem; border-radius: 1.1rem;
-  background: color-mix(in srgb, var(--bg) 55%, transparent); backdrop-filter: blur(8px);
-  border: 1px solid var(--line);
-}
-.onboard-art .glass .amt { font-size: 1.7rem; font-weight: 800; letter-spacing: -.02em; }
-.onboard-kicker { margin: 0 0 .6rem; color: var(--accent); font-size: .76rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
-.onboard-body h2 { margin: 0 0 .6rem; font-size: 1.85rem; line-height: 1.12; letter-spacing: -.02em; }
-.onboard-actions { display: grid; gap: .55rem; }
-.dots { display: flex; gap: .35rem; justify-content: center; margin-bottom: .3rem; }
-.dots i { width: .5rem; height: .5rem; border-radius: 999px; background: var(--line); }
-.dots i.on { background: var(--accent); width: 1.4rem; }

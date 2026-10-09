@@ -10,6 +10,25 @@
 - --muted: #8a8a8a
 - --accent: #ccff00
 
+Supporting tokens: --carbon #131313 (bands, cards, bar tracks), --line rgba(245,245,245,0.12),
+bar gradient from #9acc00 to the accent.
+
+## Typography
+- Condensed display: "Arial Narrow", "Helvetica Neue Condensed", Impact, "Segoe UI", Arial, sans-serif,
+  weight 800 to 900, italic, uppercase (headlines, numbers, buttons, nav).
+- Body sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, 16px, line-height 1.6.
+- Hero title: clamp(58px, 11vw, 140px), line-height 0.88.
+- Section titles: clamp(40px, 6.5vw, 84px), line-height 0.92. Final CTA: clamp(42px, 7.5vw, 100px).
+- Stat numbers clamp(38px, 6vw, 72px); plan price 56px; bar percentages 30px.
+- Labels: 11 to 14px uppercase with letter-spacing 0.06em to 0.3em.
+
+## Spacing & radius
+- Horizontal gutter: --gutter clamp(20px, 6vw, 88px). Section padding clamp(64px, 9vw, 130px).
+- Diagonal bands add 4vw to top and bottom padding to make room for the clip-path slant.
+- Grid gaps: 22 to 26px for cards; plan cards 34px 28px padding.
+- Radius: none anywhere. Buttons and tags are skewed -8deg, bar tracks -16deg.
+- Breakpoints (mobile first): 701px and 961px.
+
 ## Tone
 Loud, energetic, no-excuses. Short imperative headlines in condensed heavy italic caps. Copy talks like a coach at 6am.
 

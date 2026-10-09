@@ -114,13 +114,17 @@ class TestCatalog:
         assert all(t.kind == "web" for t in webs)
         assert all(t.kind == "mobile" for t in mobiles)
 
-    def test_app_only_imports_react(self):
-        # Kits must run in the Babel runner with zero install: React only.
-        for template in list_templates():
-            source = (template.path / "src" / "App.tsx").read_text(encoding="utf-8")
-            imports = re.findall(r'from\s+["\']([^"\']+)["\']', source)
-            unexpected = [i for i in imports if i != "react"]
-            assert unexpected == [], f"{template.id} imports {unexpected}"
+    def test_kits_follow_the_agent_contract(self):
+        # A forked kit is the first code the agent edits: it must already follow
+        # the rules the agent is held to (named createRoot, lucide icons,
+        # mobile-first CSS, foundation + scoped page stylesheets, split files).
+        from app.services.template_contract import kit_violations
+
+        problems = {
+            template.id: kit_violations(template.path, kind=template.kind) for template in list_templates()
+        }
+        problems = {k: v for k, v in problems.items() if v}
+        assert problems == {}, problems
 
     def test_previews_are_static_and_single_origin(self):
         # Card thumbnails must stay script-free; the only allowed remote

@@ -3,19 +3,100 @@
 	auto_https off
 }
 
+# One published site, served from the assets bucket.
+#   {args[0]} bucket path of the site (e.g. /forge-assets/my-slug)
+#   {args[1]} bucket upstream          {args[2]} Host header for it
+#
+# /            -> index.html
+# /a/b.ext     -> the file, or a plain 404 (a missing script never gets HTML)
+# /page        -> page/index.html (pre-rendered route), else 404.html served
+#                 with status 404, else index.html (sites published before
+#                 pre-rendering: client-side routing). 403 counts as missing:
+#                 S3 answers 403 for absent keys when listing is not allowed.
+(published_site) {
+	encode zstd gzip
+
+	@root path /
+	handle @root {
+		rewrite * {args[0]}/index.html
+		reverse_proxy {args[1]} {
+			header_up Host {args[2]}
+			@missing status 403 404
+			handle_response @missing {
+				header Content-Type "text/html; charset=utf-8"
+				respond "Site not published" 404
+			}
+		}
+	}
+
+	# SVG renders as an image (<img src="/logo.svg">) but never runs scripts
+	# when opened directly: sandboxed, no script source.
+	@svg path_regexp svg (?i)\.svg$
+	handle @svg {
+		rewrite * {args[0]}{uri}
+		reverse_proxy {args[1]} {
+			header_up Host {args[2]}
+			header_down Content-Type "image/svg+xml"
+			header_down Content-Security-Policy "default-src 'none'; img-src data:; style-src 'unsafe-inline'; sandbox"
+			header_down X-Content-Type-Options "nosniff"
+			@missing status 403 404
+			handle_response @missing {
+				respond "Not found" 404
+			}
+		}
+	}
+
+	# Files are known extensions; any other path is a page route, even with a
+	# dot in it (/blog/v1.2, /u/jane.doe). Mirrors services/prerender.py.
+	@file path_regexp file (?i)\.(js|mjs|css|map|json|html?|txt|xml|webmanifest|png|jpe?g|gif|webp|avif|svg|ico|woff2?|ttf|otf|eot|mp4|webm|mp3|wav|ogg|pdf|zip)$
+	handle @file {
+		rewrite * {args[0]}{uri}
+		reverse_proxy {args[1]} {
+			header_up Host {args[2]}
+			@missing status 403 404
+			handle_response @missing {
+				respond "Not found" 404
+			}
+		}
+	}
+
+	handle {
+		@page path_regexp page ^(.*?)/?$
+		rewrite @page {args[0]}{re.page.1}/index.html
+		reverse_proxy {args[1]} {
+			header_up Host {args[2]}
+			@missing status 403 404
+			handle_response @missing {
+				rewrite * {args[0]}/404.html
+				reverse_proxy {args[1]} {
+					header_up Host {args[2]}
+					@found status 200
+					handle_response @found {
+						copy_response_headers
+						copy_response 404
+					}
+					@no_404_page status 403 404
+					handle_response @no_404_page {
+						rewrite * {args[0]}/index.html
+						reverse_proxy {args[1]} {
+							header_up Host {args[2]}
+							@still_missing status 403 404
+							handle_response @still_missing {
+								header Content-Type "text/html; charset=utf-8"
+								respond "Site not published" 404
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
 :80 {
 	log {
 		output stdout
 		format console
-	}
-
-	handle /_rodium/* {
-		uri strip_prefix /_rodium
-		reverse_proxy api:8000 {
-			header_up X-Rodium-Forwarded-Host {http.request.host}
-			header_up X-Forwarded-Proto http
-			header_up X-Forwarded-Host {http.request.host}
-		}
 	}
 
 	@lvh host *.lvh.me
@@ -24,38 +105,7 @@
 			~^([^.]+)\.lvh\.me(?::\d+)?$ ${1}
 			default _
 		}
-
-		@site_root path /
-		handle @site_root {
-			rewrite * /forge-assets/{site_slug}/index.html
-			reverse_proxy minio:9000 {
-				header_up Host minio:9000
-				@missing status 404
-				handle_response @missing {
-					header Content-Type "text/html; charset=utf-8"
-					respond "Site not published" 404
-				}
-			}
-		}
-
-		handle /* {
-			rewrite * /forge-assets/{site_slug}{uri}
-			reverse_proxy minio:9000 {
-				header_up Host minio:9000
-				@missing status 404
-				handle_response @missing {
-					rewrite * /forge-assets/{site_slug}/index.html
-					reverse_proxy minio:9000 {
-						header_up Host minio:9000
-						@still_missing status 404
-						handle_response @still_missing {
-							header Content-Type "text/html; charset=utf-8"
-							respond "Site not published" 404
-						}
-					}
-				}
-			}
-		}
+		import published_site /forge-assets/{site_slug} minio:9000 minio:9000
 	}
 
 	handle {
@@ -64,37 +114,6 @@
 			header_up X-Rodium-Forwarded-Host {http.request.host}
 			copy_headers X-Site-Slug
 		}
-
-		@site_root path /
-		handle @site_root {
-			rewrite * /forge-assets/{http.request.header.X-Site-Slug}/index.html
-			reverse_proxy minio:9000 {
-				header_up Host minio:9000
-				@missing status 404
-				handle_response @missing {
-					header Content-Type "text/html; charset=utf-8"
-					respond "Site not published" 404
-				}
-			}
-		}
-
-		handle /* {
-			rewrite * /forge-assets/{http.request.header.X-Site-Slug}{uri}
-			reverse_proxy minio:9000 {
-				header_up Host minio:9000
-				@missing status 404
-				handle_response @missing {
-					rewrite * /forge-assets/{http.request.header.X-Site-Slug}/index.html
-					reverse_proxy minio:9000 {
-						header_up Host minio:9000
-						@still_missing status 404
-						handle_response @still_missing {
-							header Content-Type "text/html; charset=utf-8"
-							respond "Site not published" 404
-						}
-					}
-				}
-			}
-		}
+		import published_site /forge-assets/{http.request.header.X-Site-Slug} minio:9000 minio:9000
 	}
 }

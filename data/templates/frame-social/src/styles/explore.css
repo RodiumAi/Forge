@@ -1,0 +1,7 @@
+/* Explore screen: search field + mosaic grid. Root: .explore-screen */
+.explore-screen .search {
+  margin: .9rem 1.1rem 0; padding: .7rem .9rem; border-radius: .9rem;
+  background: color-mix(in srgb, var(--fg) 5%, transparent); color: var(--muted); font-size: .86rem;
+}
+.explore-screen .explore-grid { padding-inline: 3px; grid-auto-rows: 1fr; }
+.explore-screen .cell.tall { grid-row: span 2; aspect-ratio: 1 / 2; }

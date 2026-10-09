@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import re
 import zipfile
 from dataclasses import dataclass
@@ -156,15 +157,14 @@ def detect_layout(root: Path) -> ExportLayout:
 
 def _iter_files(base: Path) -> list[Path]:
     out: list[Path] = []
-    for path in base.rglob("*"):
-        if not path.is_file():
-            continue
-        rel_parts = path.relative_to(base).parts
-        if any(_is_skipped_dir(part) for part in rel_parts[:-1]):
-            continue
-        if _is_skipped_file(path):
-            continue
-        out.append(path)
+    # Pruned during the walk: node_modules alone can hold tens of thousands
+    # of entries that would otherwise be visited only to be discarded.
+    for dirpath, dirnames, filenames in os.walk(base):
+        dirnames[:] = sorted(name for name in dirnames if not _is_skipped_dir(name))
+        for name in sorted(filenames):
+            path = Path(dirpath) / name
+            if path.is_file() and not _is_skipped_file(path):
+                out.append(path)
     return out
 
 
@@ -177,10 +177,20 @@ def _arcname_for(path: Path, source_root: Path, prefix: str) -> str:
 
 # --- frontend normalisation ---------------------------------------------------
 
-_VITE_CONFIG = """import react from "@vitejs/plugin-react";
+_VITE_CONFIG = """import { fileURLToPath, URL } from "node:url";
+import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
-export default defineConfig({ plugins: [react()] });
+// "@/x" -> src/x, as in the Forge runtime (tsconfig paths alone do not
+// configure Vite's resolver).
+export default defineConfig({
+  plugins: [react()],
+  resolve: {
+    alias: {
+      "@": fileURLToPath(new URL("./src", import.meta.url)),
+    },
+  },
+});
 """
 
 _TSCONFIG = """{
@@ -331,7 +341,7 @@ def _export_index_html(front: Path, project_name: str) -> str:
 
 def frontend_overrides(front: Path, project_name: str) -> dict[str, str]:
     """arcname (relative to the frontend root) -> normalised content."""
-    overrides: dict[str, str] = {
+    return {
         "package.json": _export_package_json(front, project_name),
         "index.html": _export_index_html(front, project_name),
         # Always ship a known-good Vite + TS config so exports don't inherit
@@ -339,7 +349,6 @@ def frontend_overrides(front: Path, project_name: str) -> dict[str, str]:
         "vite.config.ts": _VITE_CONFIG,
         "tsconfig.json": _TSCONFIG,
     }
-    return overrides
 
 
 def build_readme(*, project_name: str, layout: ExportLayout, locale: str) -> str:

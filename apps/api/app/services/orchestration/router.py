@@ -29,7 +29,9 @@ class Route:
 # Only explicit *generation* intents — not "image attached" / reference screenshots.
 _IMAGE_GENERATE_RE = re.compile(
     r"\b("
-    r"génér(?:e|er|ation)\s+(?:une?\s+)?(?:image|illustration|logo|photo|visuel|bannière|banner)|"
+    # "génère" (è) is how the verb is written; "génér" alone never matched it.
+    r"g[ée]n[èée]r(?:e|er|ez|ation)\s+(?:moi\s+)?(?:une?\s+|des\s+)?"
+    r"(?:image|illustration|logo|photo|visuel|bannière|banner)s?|"
     r"generate\s+(?:an?\s+)?(?:image|illustration|logo|photo|banner)|"
     r"crée(?:r)?\s+(?:une?\s+)?(?:image|illustration|logo|photo)|"
     r"create\s+(?:an?\s+)?(?:image|illustration|logo|photo)|"
@@ -97,6 +99,7 @@ def classify_task(user_text: str) -> str:
             return "code.edit.medium"
         return "code.edit.medium"
     if _IMAGE_GENERATE_RE.search(text):
+        # On an existing project an image request generates it and wires it in.
         return "image.generate"
     # (S or len>400) and (S or (page and crée))  ==  S or (len>400 and page and crée)
     if _SCAFFOLD_RE.search(text) or (len(text) > 400 and "page" in text.lower() and "crée" in text.lower()):
@@ -176,6 +179,43 @@ def fallback_model(model: str) -> str | None:
     return None
 
 
+_SITE_BUILD_RE = re.compile(
+    r"\b(site|website|web\s*site|landing|app|application|page|portfolio|boutique|shop|store|"
+    r"e-?commerce|blog|vitrine|restaurant|agence|agency|saas|dashboard|onepage|one-page)\b",
+    re.I,
+)
+
+
+def is_image_only_request(text: str) -> bool:
+    """An explicit image request that is not also asking to build a site.
+
+    "Build my bakery site and generate an image of croissants" is a build that
+    happens to want an image: routing it to image generation used to produce a
+    single picture and no site.
+    """
+    clean = strip_attachment_noise(text or "")
+    if not _IMAGE_GENERATE_RE.search(clean):
+        return False
+    return not (_SCAFFOLD_RE.search(clean) or _SITE_BUILD_RE.search(clean) or len(clean) > 220)
+
+
+_SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?\n])\s+")
+# Anchored on the conjunction, not on the spaces before it, so a long run of
+# spaces is not retried from every position.
+_AND_IMAGE_SPLIT_RE = re.compile(r"\b(?:et|and)\s+(?=g[ée]n[èe]re|generate|cr[ée]e|create|dessine|draw)")
+
+
+def requested_image_prompts(text: str) -> list[str]:
+    """Sentences of a build request that explicitly ask for an image."""
+    clean = strip_attachment_noise(text or "")
+    out = []
+    for chunk in _SENTENCE_SPLIT_RE.split(clean):
+        for sentence in _AND_IMAGE_SPLIT_RE.split(chunk):
+            if _IMAGE_GENERATE_RE.search(sentence):
+                out.append(sentence.strip()[:400])
+    return out[:2]
+
+
 def classify_and_route(user_text: str, *, force_scaffold: bool = False) -> Route:
     raw = user_text or ""
     text = strip_attachment_noise(raw)
@@ -183,7 +223,7 @@ def classify_and_route(user_text: str, *, force_scaffold: bool = False) -> Route
     # already on screen ("change this button to green") is not that build, and
     # sending it to the scaffold planner produces a response the plan parser rejects.
     small_edit = len(text) < 180 and bool(_SMALL_RE.search(text))
-    if force_scaffold and text and not small_edit and not _IMAGE_GENERATE_RE.search(text):
+    if force_scaffold and text and not small_edit and not is_image_only_request(text):
         if has_reference_attachments(raw) and extract_image_urls(raw):
             # Mockup-driven first build: Gemini vision, not Claude escalation.
             return route_task("code.scaffold.with_vision")

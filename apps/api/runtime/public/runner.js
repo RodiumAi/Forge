@@ -401,14 +401,108 @@ function topoSort(transformed, files) {
   return order;
 }
 
-function rewriteSpecifiers(code, imports, path, files, blobUrls) {
+// Package stylesheets (`import "swiper/css"`): specifier pattern -> CDN URL,
+// injected by the shell from runtime/packages.json.
+const PACKAGE_CSS = window.__FORGE_CSS_IMPORTS__ || {};
+
+function packageCssUrl(spec) {
+  for (const [pattern, url] of Object.entries(PACKAGE_CSS)) {
+    if (pattern.endsWith("/*") ? spec.startsWith(pattern.slice(0, -1)) : spec === pattern) return url;
+  }
+  return null;
+}
+
+function linkPackageCss(urls) {
+  const holder = document.head;
+  const wanted = new Set(urls);
+  for (const el of [...holder.querySelectorAll("link[data-forge-pkg-css]")]) {
+    if (!wanted.has(el.getAttribute("href"))) el.remove();
+  }
+  for (const url of wanted) {
+    if (holder.querySelector(`link[data-forge-pkg-css][href="${CSS.escape(url)}"]`)) continue;
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = url;
+    link.setAttribute("data-forge-pkg-css", "");
+    holder.appendChild(link);
+  }
+}
+
+// Mirrors runtime/css.mjs: @import is only valid before other rules, so the
+// imports found anywhere (web fonts on top of index.css, or in a page file)
+// are hoisted to the top of the combined sheet.
+const CSS_IMPORT_RE =
+  /@import\s+(?:url\(\s*(["'])(.*?)\1\s*\)|(["'])(.*?)\3|url\(\s*([^)\s]+)\s*\))([^;]*);/g;
+
+function assembleCss(files) {
+  const paths = Object.keys(files)
+    .filter((p) => /\.css$/i.test(p))
+    .sort((a, b) => {
+      if (a === "src/index.css" || a === "index.css") return -1;
+      if (b === "src/index.css" || b === "index.css") return 1;
+      return a < b ? -1 : 1;
+    });
+  const hoisted = [];
+  const seen = new Set();
+  const bodies = paths.map((p) =>
+    String(files[p] || "").replace(CSS_IMPORT_RE, (m) => {
+      const key = m.replace(/\s+/g, " ");
+      if (!seen.has(key)) {
+        seen.add(key);
+        hoisted.push(m);
+      }
+      return "";
+    }),
+  );
+  return [...hoisted, ...bodies].join("\n\n");
+}
+
+const ASSET_IMPORT_RE = /\.(svg|png|jpe?g|gif|webp|avif|ico|woff2?|ttf|otf|eot|mp4|webm|mp3|wav)(\?.*)?$/i;
+
+// `import logo from "./logo.png"` → the file's root URL; root-path images are
+// then rewritten to the project asset endpoint like any other <img>.
+function assetRootUrl(fromPath, spec) {
+  const clean = spec.split("?")[0];
+  if (clean.startsWith("@/")) return "/src/" + clean.slice(2);
+  if (clean.startsWith("/")) return clean;
+  const fromDir = fromPath.includes("/") ? fromPath.slice(0, fromPath.lastIndexOf("/")) : "";
+  return "/" + normalizeJoin(fromDir, clean);
+}
+
+function rewriteAssetImport(code, imp, url) {
+  const start = code.lastIndexOf("import", imp.start);
+  if (start < 0) return code;
+  let end = imp.end;
+  while (end < code.length && code[end] !== ";" && code[end] !== "\n") end++;
+  if (end < code.length && code[end] === ";") end++;
+  const statement = code.slice(start, end);
+  const binding =
+    (statement.match(/^import\s+([A-Za-z_$][\w$]*)\s+from/) || [])[1] ||
+    (statement.match(/^import\s*\{\s*default\s+as\s+([A-Za-z_$][\w$]*)\s*\}/) || [])[1];
+  // The root URL, like a literal "/images/x.png": <img> rewriting resolves it
+  // and keeps it in data-forge-src for the visual-image bridge.
+  return code.slice(0, start) + (binding ? `const ${binding} = ${JSON.stringify(url)};` : "") + code.slice(end);
+}
+
+function rewriteSpecifiers(code, imports, path, files, blobUrls, packageCss) {
   const missing = [];
   const sorted = [...imports].sort((a, b) => b.start - a.start);
   let out = code;
   for (const imp of sorted) {
-    if (imp.kind === "bare") continue;
-    if (/\.(css|scss|sass|less|svg|png|jpe?g|gif|webp|woff2?|ttf|eot)(\?.*)?$/i.test(imp.specifier)) {
+    if (imp.kind === "bare") {
+      const cssUrl = packageCssUrl(imp.specifier);
+      if (cssUrl) {
+        packageCss.add(cssUrl);
+        out = stripSideEffectImport(out, imp);
+      }
+      continue;
+    }
+    if (/\.(css|scss|sass|less)(\?.*)?$/i.test(imp.specifier)) {
       out = stripSideEffectImport(out, imp);
+      continue;
+    }
+    if (ASSET_IMPORT_RE.test(imp.specifier)) {
+      out = rewriteAssetImport(out, imp, assetRootUrl(path, imp.specifier));
       continue;
     }
     const resolved = resolveSpecifier(path, imp.specifier, files);
@@ -614,14 +708,7 @@ async function mount(files, entry, tokensCss, assets) {
     // Every stylesheet ships, index.css (tokens/layout) first: per-page CSS
     // files let plan tasks style their own page without rewriting — and
     // breaking — the shared foundation.
-    const cssPaths = Object.keys(files)
-      .filter((p) => /\.css$/i.test(p))
-      .sort((a, b) => {
-        if (a === "src/index.css" || a === "index.css") return -1;
-        if (b === "src/index.css" || b === "index.css") return 1;
-        return a < b ? -1 : 1;
-      });
-    cssEl.textContent = cssPaths.map((p) => files[p]).join("\n\n");
+    cssEl.textContent = assembleCss(files);
   }
   const tokensEl = document.getElementById("forge-tokens");
   if (tokensEl && tokensCss) tokensEl.textContent = tokensCss;
@@ -641,7 +728,9 @@ async function mount(files, entry, tokensCss, assets) {
   const exactBare = new Set(importMapKeys);
   const prefixBare = importMapKeys.filter((k) => k.endsWith("/"));
   const isAllowedBare = (spec) =>
-    exactBare.has(spec) || prefixBare.some((prefix) => spec.startsWith(prefix));
+    exactBare.has(spec) ||
+    prefixBare.some((prefix) => spec.startsWith(prefix)) ||
+    Boolean(packageCssUrl(spec));
 
   const transformed = new Map();
   for (const [path, content] of Object.entries(files)) {
@@ -686,9 +775,10 @@ async function mount(files, entry, tokensCss, assets) {
   }
 
   const blobUrls = new Map();
+  const packageCss = new Set();
   for (const path of order) {
     const info = transformed.get(path);
-    const { code, missing } = rewriteSpecifiers(info.code, info.imports, path, files, blobUrls);
+    const { code, missing } = rewriteSpecifiers(info.code, info.imports, path, files, blobUrls, packageCss);
     if (missing.length) {
       send({
         type: "forge:transform-error",
@@ -703,6 +793,7 @@ async function mount(files, entry, tokensCss, assets) {
     blobUrls.set(path, URL.createObjectURL(blob));
   }
 
+  linkPackageCss([...packageCss]);
   const entryUrl = blobUrls.get(entry);
   try {
     // Clear previous React tree (replaceChildren avoids innerHTML write path).

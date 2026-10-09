@@ -1,0 +1,4 @@
+/* Profile screen: practice stats + settings rows. */
+.profile-screen .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; text-align: center; }
+.profile-screen .stat strong { display: block; font-size: 1.6rem; font-weight: 800; letter-spacing: -.02em; color: var(--accent); font-variant-numeric: tabular-nums; }
+.profile-screen .stat span { font-size: .72rem; color: var(--muted); }

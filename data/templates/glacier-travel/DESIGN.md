@@ -10,6 +10,22 @@
 - --muted: #7ba3b8
 - --accent: #0ea5e9
 
+Support tokens: `--bg-raise: #0b2231` (cards, booking band), `--line: rgba(232, 244, 251, 0.12)` (borders, dividers).
+
+## Typography
+- Font stack (`--sans`): -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif. Body 16px, line-height 1.6, antialiased.
+- Hero title: clamp(42px, 7.5vw, 92px), weight 800, line-height 1.02, letter-spacing -0.02em; last line in accent.
+- Section titles: clamp(28px, 4.2vw, 48px), weight 800, line-height 1.1. Booking title clamp(32px, 5vw, 56px). Stat values clamp(34px, 5vw, 56px) in accent.
+- Card and timeline titles: 17px to 20px, weight 700. Supporting copy 13px to 17px in `--muted`.
+- Eyebrows, grades, day labels: 11px to 13px, uppercase, letter-spacing 0.1em to 0.24em, accent color.
+
+## Spacing & radius
+- Gutter: `--gutter: clamp(20px, 6vw, 88px)` on every band.
+- Sections: clamp(64px, 9vw, 130px) vertical padding; booking clamp(70px, 10vw, 140px).
+- Gaps: 22px in card grids, 36px in the footer, 14px between CTAs, 40px between timeline steps.
+- Radius: 8px buttons and inputs, 14px cards, 6px grade badges, 50% timeline dots.
+- Breakpoints: mobile first, `min-width: 561px`, `861px` and `1081px` (grids go 1, 2 then 3 or 4 columns).
+
 ## Tone
 Epic, calm, trustworthy. The voice of a guide who has done this a hundred times: awe without hype, safety without fuss.
 

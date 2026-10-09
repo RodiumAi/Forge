@@ -1,0 +1,28 @@
+/* Create screen: compose a new post. Root: .create-screen */
+.create-screen .compose { display: grid; gap: 1rem; padding: 1.1rem; }
+.create-screen .drop {
+  border-radius: 1.2rem; aspect-ratio: 4 / 3; display: grid; place-content: center; justify-items: center; gap: .35rem; text-align: center;
+  background-size: cover; background-position: center; color: var(--fg);
+  border: 1.5px dashed color-mix(in srgb, var(--accent) 45%, var(--line));
+  position: relative; overflow: hidden;
+}
+.create-screen .drop::before { content: ""; position: absolute; inset: 0; background: color-mix(in srgb, var(--surface) 62%, transparent); }
+.create-screen .drop > * { position: relative; }
+.create-screen .drop strong { font-size: .98rem; }
+.create-screen .drop .muted { font-size: .8rem; }
+.create-screen .drop-ic { width: 3.4rem; height: 3.4rem; border-radius: 999px; display: grid; place-items: center; background: var(--surface); color: var(--accent); box-shadow: 0 6px 18px rgba(139,92,246,.22); }
+.create-screen .field { display: grid; gap: .4rem; }
+.create-screen .field-lbl { font-size: .78rem; font-weight: 650; color: var(--muted); }
+.create-screen .field textarea {
+  font: inherit; width: 100%; resize: none; padding: .8rem .9rem; border-radius: .9rem;
+  border: 1px solid var(--line); background: var(--surface); color: var(--fg);
+}
+.create-screen .field textarea:focus { outline: none; border-color: var(--accent); }
+.create-screen .opt-row { background: var(--surface); border: 1px solid var(--line); border-radius: 1rem; overflow: hidden; }
+.create-screen .opt { display: flex; align-items: center; justify-content: space-between; padding: .85rem .95rem; font-size: .9rem; border-bottom: 1px solid var(--line); }
+.create-screen .opt:last-child { border-bottom: 0; }
+.create-screen .opt .chev { color: var(--muted); display: grid; padding-block: 2.5px; }
+.create-screen .switch { width: 2.4rem; height: 1.45rem; border-radius: 999px; background: var(--line); position: relative; flex: none; }
+.create-screen .switch.on { background: var(--accent); }
+.create-screen .switch::after { content: ""; position: absolute; top: 2.5px; left: 2.5px; width: 1.05rem; height: 1.05rem; border-radius: 999px; background: #fff; }
+.create-screen .switch.on::after { left: auto; right: 2.5px; }

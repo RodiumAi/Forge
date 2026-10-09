@@ -12,6 +12,26 @@
 
 Deep green surface: #3d5a3c used for dark bands and blob shapes.
 
+Supporting tokens: --bg-alt #dcd6c4 (projects band), --green-deep #2e452d (cards on green, footer),
+#f2efe5 (light cards), #e9b788 (warm figures and icons on green), #eef0e4 (text on green).
+
+## Typography
+- Display serif: Georgia, "Times New Roman", "Iowan Old Style", serif (headlines, figures, quotes).
+- UI sans: "Segoe UI", "Helvetica Neue", Arial, sans-serif (body, nav, buttons, labels).
+- Body: line-height 1.6; lede 18px, section subtitles 17px, card text 15 to 16px.
+- h1: clamp(38px, 5vw, 58px), weight 700, line-height 1.12, letter-spacing -0.02em.
+- h2: clamp(30px, 4vw, 44px), weight 700, line-height 1.15.
+- Card titles 22 to 27px serif; impact figures 46px serif.
+- Eyebrow: 13px uppercase, weight 700, letter-spacing 0.14em, terracotta.
+
+## Spacing & radius
+- Containers: max-width 1180px (sections, hero, footer), 1080px (impact and project grids).
+- Side padding 20px on mobile, 40px from 601px. Sections 88px vertical; hero 48px (72px desktop) top, 96px bottom.
+- Grid gaps: 24 to 32px for cards, 48 to 64px for project rows.
+- Radius: organic only. --blob (60% 40% 30% 70% / 60% 30% 70% 40%) for photos and shapes,
+  asymmetric pebble radii on buttons and cards, 30 to 40px pills for tags and inputs.
+- Breakpoints (mobile first): 601px and 961px.
+
 ## Tone
 Warm, grounded, hopeful. Serif-flavored headlines, generous organic curves, no hard corners anywhere.
 

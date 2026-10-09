@@ -8,9 +8,10 @@ import time
 from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import Any
 
+from app.config import get_settings
 from app.db import SessionLocal
 from app.i18n import Locale, t
-from app.services.apply_writes import apply_validated_writes_async
+from app.services.apply_writes import apply_validated_writes_async, brand_change_requested
 from app.services.filesystem import delete_file
 from app.services.llm import (
     ERR_AUTH_BUSY,
@@ -22,25 +23,87 @@ from app.services.llm import (
     error_code_for,
     is_transient_network_error,
     stream_chat_completion,
+    stream_with_continuation,
 )
 from app.services.orchestration.context import build_llm_messages
 from app.services.orchestration.router import fallback_model
 from app.services.rodium_generation import RodiumGenerationAuth
-from app.services.tags import parse_forge_tags
+from app.services.tags import parse_forge_output
 from app.services.text_plain import build_run_summary, to_plain_text
 
-# Wall-clock ceiling for one plan task's generation, across every retry-free
-# attempt. httpx only bounds the wait for the NEXT chunk, so a model dribbling
-# one token a minute could hold a task open indefinitely — one production run
-# burned 28 minutes before dying. A task that has not finished in four minutes
-# is not going to.
-_TASK_BUDGET_S = 240.0
+# Wall-clock ceiling for one plan task's generation, continuations included.
+# httpx only bounds the wait for the NEXT chunk, so a model dribbling one token
+# a minute could hold a task open indefinitely — one production run burned 28
+# minutes before dying.
+_TASK_BUDGET_S = float(get_settings().forge_task_budget_seconds)
+
+# forge-edit failures the model can fix with one more look at the file.
+_EDIT_FAILURE_CODES = frozenset({"EDIT_NO_MATCH", "EDIT_AMBIGUOUS", "EDIT_EMPTY", "EDIT_TARGET_MISSING"})
 
 
 def _sse(payload: dict) -> str:
     import json
 
     return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+
+
+def notice_sse(chunk: StreamChunk, locale: Locale) -> str | None:
+    """User-facing warning for a continuation notice, or None."""
+    import json
+
+    try:
+        data = json.loads(chunk.content or "{}")
+    except ValueError:
+        return None
+    paths = [str(p) for p in data.get("open") or []]
+    if data.get("event") == "continue":
+        key = "output_continuing_files" if paths else "output_continuing"
+        # An informational step: the generate step keeps spinning meanwhile,
+        # so this one is shown done rather than left running after the run.
+        return _sse(
+            {
+                "type": "step",
+                "id": "continue",
+                "label": t(key, locale, paths=", ".join(paths[:4])),
+                "status": "done",
+            }
+        )
+    if data.get("event") == "truncated" and paths:
+        return _sse(
+            {
+                "type": "warning",
+                "message": t("output_truncated", locale, paths=", ".join(paths[:6])),
+                "violation": {"code": "OUTPUT_TRUNCATED", "path": paths[0]},
+            }
+        )
+    return None
+
+
+def stub_notice(paths: list[str], locale: Locale) -> dict:
+    """Explain an auto-created placeholder module in words, not finding codes."""
+    return {
+        "type": "warning",
+        "message": t("stubs_created", locale, paths=", ".join(paths[:8])),
+        "violation": {"code": "STUB_CREATED", "path": paths[0] if paths else ""},
+    }
+
+
+def edit_failure_findings(violations: list[dict]) -> list[Any]:
+    """forge-edit blocks that did not apply, as repair findings."""
+    from app.services.orchestration.verify_build import VerifyFinding
+
+    out = []
+    for v in violations:
+        if v.get("code") in _EDIT_FAILURE_CODES:
+            out.append(
+                VerifyFinding(
+                    code="edit.failed",
+                    severity="critical",
+                    path=str(v.get("path") or ""),
+                    message=str(v.get("message") or ""),
+                )
+            )
+    return out
 
 
 async def _stream_within_budget(
@@ -51,13 +114,15 @@ async def _stream_within_budget(
     locale: Locale,
     budget_s: float,
 ) -> AsyncIterator[StreamChunk]:
-    """`stream_chat_completion` under a total wall-clock budget.
+    """Generation (with output-limit continuations) under a wall-clock budget.
 
     Raises `asyncio.TimeoutError` once the budget is spent, which the caller
     classifies as `timeout` and treats like any other task failure.
     """
     deadline = time.monotonic() + budget_s
-    agen = stream_chat_completion(auth=auth, model=model, messages=messages, locale=locale).__aiter__()
+    agen = stream_with_continuation(
+        auth=auth, model=model, messages=messages, locale=locale, stream_fn=stream_chat_completion
+    ).__aiter__()
     try:
         while True:
             remaining = deadline - time.monotonic()
@@ -78,8 +143,8 @@ def _resume_context_block(tasks: list[dict[str, Any]], applied: list[dict], idx:
     done = [str(t.get("title") or t.get("id") or "") for t in tasks if str(t.get("status") or "") == "done"]
     paths = sorted({str(a.get("path") or "") for a in applied if a.get("path")})
     lines = [
-        "Resume context:",
-        f"- Retrying task index {idx + 1}/{len(tasks)} after a previous interruption or failure.",
+        "Plan progress:",
+        f"- This is task {idx + 1}/{len(tasks)}.",
         "- Do not redo completed work. Preserve existing files unless this task requires edits.",
     ]
     if done:
@@ -198,33 +263,36 @@ def _task_prompt_block(task: dict[str, Any], *, idx: int, total: int) -> str:
     if isinstance(files, list) and files:
         lines.append("Suggested files: " + ", ".join(str(p) for p in files[:12]))
     lines.append(
-        "Implement ONLY this task using forge-write / forge-delete tags. "
+        "Implement ONLY this task using forge-write / forge-edit / forge-delete tags. "
         "Touch only the files required for it. Do not restyle unrelated sections. "
-        "When rewriting a file, preserve unchanged sections verbatim. "
+        "Use forge-edit for targeted changes to an existing file and forge-write for "
+        "new files or full rewrites. "
         "Do not write markdown feature lists or emoji outside the tags."
     )
     if tid == "styles_foundation":
         lines.append(
-            "STYLES FOUNDATION: Write a complete src/index.css with design tokens, "
-            "typography, layout shell, navbar and hero BASE styles, and utilities. "
+            "STYLES FOUNDATION: Write the complete src/index.css: design tokens from "
+            "DESIGN.md (colors, fonts incl. the web-font @import, spacing, radius), "
+            "reset, typography scale, layout shell, navbar/footer and shared utilities "
+            "(.btn-primary, .card, .container...). This is the only task that writes "
+            "src/index.css in full; every later task styles its own page file. "
             "Do not invent parallel naming schemes later tasks cannot reuse."
         )
-    elif (
-        tid != "styles_foundation"
-        and tid != "architecture"
-        and (
-            tid in ("home", "primary_sections", "flows", "sections")
-            or "section" in tid
-            or "home" in tid
-            or "flow" in tid
-            or (total >= 2 and idx > 0)
-        )
+    elif tid != "architecture" and (
+        tid in ("home", "primary_sections", "flows", "sections")
+        or "section" in tid
+        or "home" in tid
+        or "page" in tid
+        or "flow" in tid
+        or (total >= 2 and idx > 0)
     ):
         lines.append(
-            "CSS APPEND RULE (critical): When writing src/index.css you MUST preserve "
-            "ALL existing selectors verbatim (especially navbar/hero/layout). "
-            "Only APPEND new rules for this task's classes. Never replace the whole "
-            "stylesheet with a shorter subset. Prefer reusing foundation classes."
+            "PAGE STYLESHEET RULE (critical): style this task in its OWN stylesheet "
+            "src/styles/<page>.css, written in the same turn as the component and "
+            "imported at its top. Scope its rules under the page root class "
+            "(.<page>-screen .x). Reuse the foundation tokens and utilities from "
+            "src/index.css; do NOT rewrite src/index.css. If the foundation truly "
+            "lacks a shared rule, add it with a small forge-edit on src/index.css."
         )
     if tid == "coherence":
         lines.append(
@@ -236,7 +304,9 @@ def _task_prompt_block(task: dict[str, Any], *, idx: int, total: int) -> str:
             ".<page>-screen; no unscoped collisions across pages).\n"
             "3) Ensure src/main.tsx uses: import { createRoot } from 'react-dom/client'.\n"
             "4) Ensure arrays from context default to [] so .filter/.map never throw.\n"
-            "5) Do not add new product features — only fix coherence."
+            "5) With react-router, every route points to an existing page and a "
+            'catch-all path="*" route renders a NotFound page.\n'
+            "6) Do not add new product features, only fix coherence. Prefer forge-edit."
         )
     return "\n".join(lines)
 
@@ -309,20 +379,27 @@ async def _stream_verify_repair(
     focus_paths: list[str] | None = None,
     extra_prompt: str = "",
     surgical_edit: bool = True,
+    model: str | None = None,
+    allow_brand_writes: bool = False,
 ) -> AsyncIterator[str]:
-    """One LLM verify-repair pass."""
+    """One LLM verify-repair pass.
+
+    ``model`` is the model that wrote the code: a repair on a weaker model
+    tends to undo what the stronger one built. Falls back to the
+    ``verify.repair`` route.
+    """
     from app.services.orchestration.cancel import is_cancelled
     from app.services.orchestration.router import route_task
 
-    repair_route = route_task("verify.repair")
+    repair_model = model or route_task("verify.repair").model
     repair_prompt = (
         f"User request (context):\n{user_prompt}\n\n"
         f"{format_findings_for_prompt(findings)}\n\n"
         f"{extra_prompt}\n\n"
-        "Fix ONLY these issues with forge-write tags. Prefer extending the Context "
-        "Provider with aliases over rewriting all consumers. Sync orphan CSS class "
-        "names. Fix scroll (no overflow:hidden on html/body). "
-        "Do not add new features."
+        "Fix ONLY these issues. Prefer forge-edit for targeted fixes; use forge-write "
+        "only for new files or stubs to fill. Prefer extending the Context Provider "
+        "with aliases over rewriting all consumers. Fix scroll (no overflow:hidden on "
+        "html/body). Do not add new features."
     ).strip()
     repair_messages = await build_llm_messages(
         project_id=project_id,
@@ -332,7 +409,7 @@ async def _stream_verify_repair(
         user_id=user_id,
         locale=locale,
         auth=auth,
-        model=repair_route.model,
+        model=repair_model,
         surgical_edit=surgical_edit,
         focus_paths=focus_paths,
     )
@@ -341,11 +418,12 @@ async def _stream_verify_repair(
     current_auth = await resolve_auth() if resolve_auth else auth
     repair_buf: list[str] = []
     try:
-        async for chunk in stream_chat_completion(
+        async for chunk in _stream_within_budget(
             auth=current_auth,
-            model=repair_route.model,
+            model=repair_model,
             messages=repair_messages,
             locale=locale,
+            budget_s=_TASK_BUDGET_S,
         ):
             if run_id and is_cancelled(run_id):
                 yield push_step(step_id, step_label, "error")
@@ -354,13 +432,18 @@ async def _stream_verify_repair(
             if chunk.kind == "thinking":
                 thinking_parts.append(chunk.content)
                 yield _sse({"type": "thinking", "delta": chunk.content})
+            elif chunk.kind == "notice":
+                frame = notice_sse(chunk, locale)
+                if frame:
+                    yield frame
             else:
                 repair_buf.append(chunk.content)
                 full.append(chunk.content)
                 yield _sse({"type": "token", "content": chunk.content})
-        writes, deletes = parse_forge_tags("".join(repair_buf))
+        parsed = parse_forge_output("".join(repair_buf))
+        writes, deletes = parsed.writes, parsed.deletes
         written, violations = await apply_validated_writes_async(
-            project_id, writes, snapshot_label=snapshot_label
+            project_id, writes, snapshot_label=snapshot_label, allow_brand_writes=allow_brand_writes
         )
         applied.extend(written)
         for item in written:
@@ -417,6 +500,8 @@ async def run_plan_tasks(
     from app.services.orchestration.cancel import is_cancelled
 
     tasks = ensure_coherence_task(tasks, locale)
+    # DESIGN.md / public/logo.* stay locked unless this request asks for a new brand.
+    allow_brand = brand_change_requested(user_prompt)
     thinking_parts: list[str] = []
     full: list[str] = []
     applied: list[dict] = []
@@ -439,6 +524,27 @@ async def run_plan_tasks(
         else:
             steps.append({"id": step_id, "label": label, "status": status})
         return _sse({"type": "step", "id": step_id, "label": label, "status": status})
+
+    # First build of a blank project: a real charter (palette, web fonts,
+    # imagery) and the first brand images, before any code is written.
+    from app.services.brand_charter import bootstrap_project_brand, needs_brand_bootstrap
+
+    if needs_brand_bootstrap(project_id, tasks, user_prompt):
+        brand_auth = await resolve_auth() if resolve_auth else auth
+        async for event in bootstrap_project_brand(
+            project_id=project_id,
+            brief=f"{user_prompt}\n\n{answers_block}".strip(),
+            auth=brand_auth,
+            model=model,
+            locale=locale,
+            user_prompt=user_prompt,
+        ):
+            if event.get("type") == "step":
+                yield push_step(str(event["id"]), str(event["label"]), str(event["status"]))
+                continue
+            if event.get("type") == "file_write":
+                applied.append({"op": "write", "path": event["path"]})
+            yield _sse(event)
 
     for idx, task in enumerate(tasks):
         if run_id and is_cancelled(run_id):
@@ -479,9 +585,10 @@ async def run_plan_tasks(
         surgical = _is_surgical_task(task, total_tasks=len(tasks))
         if surgical:
             task_prompt += (
-                "\n\nSURGICAL EDIT: Prefer minimal diffs. Change only the lines needed "
-                "for this task. Do not rewrite entire files unless the acceptance criteria "
-                "require a full rewrite. Keep imports and unrelated JSX/CSS intact."
+                "\n\nSURGICAL EDIT: change only what this task needs. For files that "
+                "already exist, use forge-edit SEARCH/REPLACE blocks copied exactly from "
+                "the current content; rewrite a whole file only when most of it changes. "
+                "Keep imports and unrelated JSX/CSS intact."
             )
 
         yield push_step("select_files", t("step_select_files", locale), "running")
@@ -549,6 +656,10 @@ async def run_plan_tasks(
                     if chunk.kind == "thinking":
                         thinking_parts.append(chunk.content)
                         yield _sse({"type": "thinking", "delta": chunk.content})
+                    elif chunk.kind == "notice":
+                        frame = notice_sse(chunk, locale)
+                        if frame:
+                            yield frame
                     else:
                         task_buf.append(chunk.content)
                         full.append(chunk.content)
@@ -556,6 +667,23 @@ async def run_plan_tasks(
                 break
             except Exception as exc:
                 code = error_code_for(exc)
+                # Out of time with finished files in hand: keep them (the
+                # still-open ones are reported) instead of throwing the whole
+                # answer away and starting over on another model.
+                if isinstance(exc, TimeoutError):
+                    partial = parse_forge_output("".join(task_buf))
+                    if partial.writes or partial.deletes:
+                        if partial.truncated:
+                            yield _sse(
+                                {
+                                    "type": "warning",
+                                    "message": t(
+                                        "output_truncated", locale, paths=", ".join(partial.truncated[:6])
+                                    ),
+                                    "violation": {"code": "OUTPUT_TRUNCATED", "path": partial.truncated[0]},
+                                }
+                            )
+                        break
                 retryable_auth = (
                     isinstance(exc, RodiumError)
                     and exc.status_code in (401, 403)
@@ -646,7 +774,8 @@ async def run_plan_tasks(
         yield push_step("generate", t("step_generate", locale), "done")
         yield push_step("apply_writes", t("step_apply_writes", locale), "running")
         assistant_text = "".join(task_buf)
-        writes, deletes = parse_forge_tags(assistant_text)
+        parsed = parse_forge_output(assistant_text)
+        writes, deletes = parsed.writes, parsed.deletes
 
         # Empty model response (upstream hiccup): retry the task once, then
         # fail it honestly — a "done" task with zero writes silently skipped
@@ -671,6 +800,10 @@ async def run_plan_tasks(
                     if chunk.kind == "thinking":
                         thinking_parts.append(chunk.content)
                         yield _sse({"type": "thinking", "delta": chunk.content})
+                    elif chunk.kind == "notice":
+                        frame = notice_sse(chunk, locale)
+                        if frame:
+                            yield frame
                     else:
                         retry_buf.append(chunk.content)
                         full.append(chunk.content)
@@ -685,7 +818,8 @@ async def run_plan_tasks(
             yield push_step("generate", t("step_generate", locale), "done")
             if retry_buf:
                 assistant_text = "".join(retry_buf)
-                writes, deletes = parse_forge_tags(assistant_text)
+                parsed = parse_forge_output(assistant_text)
+                writes, deletes = parsed.writes, parsed.deletes
             if not writes and not deletes and len(assistant_text.strip()) < 40:
                 failures.append(
                     {
@@ -712,7 +846,7 @@ async def run_plan_tasks(
                 continue
 
         written, violations = await apply_validated_writes_async(
-            project_id, writes, snapshot_label=f"before: {title}"
+            project_id, writes, snapshot_label=f"before: {title}", allow_brand_writes=allow_brand
         )
         applied.extend(written)
         for item in written:
@@ -724,6 +858,40 @@ async def run_plan_tasks(
             applied.append({"op": "delete", "path": op.path})
             yield _sse({"type": "file_delete", "path": op.path})
         yield push_step("apply_writes", t("step_apply_writes", locale), "done")
+
+        # A forge-edit that did not match the file is not silently dropped: one
+        # focused pass with the current content of those files redoes it.
+        edit_findings = edit_failure_findings(violations)
+        if edit_findings:
+            from app.services.orchestration.verify_build import format_findings_for_prompt
+
+            yield push_step("edit_retry", t("step_edit_retry", locale), "running")
+            async for chunk in _stream_verify_repair(
+                project_id=project_id,
+                history=history,
+                user_prompt=user_prompt,
+                findings=edit_findings,
+                db=db,
+                user_id=user_id,
+                locale=locale,
+                auth=auth,
+                resolve_auth=resolve_auth,
+                run_id=run_id,
+                tasks=tasks,
+                applied=applied,
+                full=full,
+                thinking_parts=thinking_parts,
+                step_id="edit_retry",
+                step_label=t("step_edit_retry", locale),
+                snapshot_label=f"before edit retry: {title}",
+                format_findings_for_prompt=format_findings_for_prompt,
+                push_step=push_step,
+                focus_paths=[f.path for f in edit_findings if f.path],
+                extra_prompt=_task_prompt_block(task, idx=idx, total=len(tasks)),
+                model=task_model,
+                allow_brand_writes=allow_brand,
+            ):
+                yield chunk
 
         task["status"] = "done"
         await emit_progress(idx)
@@ -758,12 +926,7 @@ async def run_plan_tasks(
                     }
                 )
             if scaffolded:
-                yield _sse(
-                    {
-                        "type": "warning",
-                        "message": ("[verify-mid:info] import.scaffolded: " + ", ".join(scaffolded[:8])),
-                    }
-                )
+                yield _sse(stub_notice(scaffolded, locale))
             mid_findings = verify_project_build(project_id) + scaffold_fill_findings(scaffolded)
             critical_mid = [
                 f
@@ -809,6 +972,8 @@ async def run_plan_tasks(
                     format_findings_for_prompt=format_findings_for_prompt,
                     push_step=push_step,
                     focus_paths=repair_focus_paths(critical_mid),
+                    model=model,
+                    allow_brand_writes=allow_brand,
                 ):
                     yield chunk
                 recheck = [
@@ -839,8 +1004,10 @@ async def run_plan_tasks(
                         snapshot_label=f"before css repair 2: {title}",
                         format_findings_for_prompt=format_findings_for_prompt,
                         push_step=push_step,
-                        focus_paths=["src/index.css", "src/App.tsx"],
+                        focus_paths=repair_focus_paths(recheck),
                         extra_prompt=css_extra,
+                        model=model,
+                        allow_brand_writes=allow_brand,
                     ):
                         yield chunk
                     still = [
@@ -914,12 +1081,7 @@ async def run_plan_tasks(
             }
         )
     if scaffolded:
-        yield _sse(
-            {
-                "type": "warning",
-                "message": ("[verify:info] import.scaffolded: " + ", ".join(scaffolded[:8])),
-            }
-        )
+        yield _sse(stub_notice(scaffolded, locale))
     # Static heuristics + compile + named exports + route structure.
     findings = (
         scaffold_fill_findings(scaffolded)
@@ -970,6 +1132,8 @@ async def run_plan_tasks(
             format_findings_for_prompt=format_findings_for_prompt,
             push_step=push_step,
             focus_paths=repair_focus_paths(findings),
+            model=model,
+            allow_brand_writes=allow_brand,
         ):
             yield chunk
 
@@ -1004,8 +1168,10 @@ async def run_plan_tasks(
                 snapshot_label="before final css repair 2",
                 format_findings_for_prompt=format_findings_for_prompt,
                 push_step=push_step,
-                focus_paths=["src/index.css", "src/App.tsx"],
+                focus_paths=repair_focus_paths(css_findings),
                 extra_prompt=css_extra,
+                model=model,
+                allow_brand_writes=allow_brand,
             ):
                 yield chunk
             _, re_scaffolded2 = autofix_local_imports(project_id)
@@ -1057,6 +1223,8 @@ async def run_plan_tasks(
                 push_step=push_step,
                 focus_paths=repair_focus_paths(findings),
                 extra_prompt=_failed_context_block(failures),
+                model=model,
+                allow_brand_writes=allow_brand,
             ):
                 yield chunk
             findings = (
@@ -1094,9 +1262,20 @@ async def run_plan_tasks(
     if failures:
         summary = (summary + "\n\n" + _failures_summary(failures, locale, stopped=stopped_early)).strip()
     if findings_have_critical(findings):
-        summary = (
-            summary + "\n\nWarning: critical build verify findings remain — preview may be black."
-        ).strip()
+        summary = (summary + "\n\n" + t("summary_critical_findings", locale)).strip()
+    from app.services.orchestration.verify_build import remaining_stub_paths
+
+    leftover_stubs = remaining_stub_paths(project_id)
+    if leftover_stubs:
+        note = t("summary_stubs_left", locale, paths=", ".join(leftover_stubs[:8]))
+        yield _sse(
+            {
+                "type": "warning",
+                "message": note,
+                "violation": {"code": "STUB_LEFT", "path": leftover_stubs[0]},
+            }
+        )
+        summary = (summary + "\n\n" + note).strip()
 
     yield push_step("done", t("step_done", locale), "done")
     yield _sse(

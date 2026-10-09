@@ -12,7 +12,7 @@ from app.services.scaffold import scaffold_vite_react
 def test_mobile_scaffold_writes_manifest_without_service_worker(project):
     scaffold_vite_react(project, "MaPoche", "mobile")
     root = get_settings().projects_path / project
-    assert (root / "manifest.webmanifest").is_file()
+    assert (root / "public" / "manifest.webmanifest").is_file()
     html = (root / "index.html").read_text(encoding="utf-8")
     assert 'rel="manifest"' in html
     assert "serviceWorker" not in html
@@ -27,7 +27,7 @@ def test_mobile_scaffold_writes_manifest_without_service_worker(project):
     assert not list(root.rglob("*service*worker*"))
     import json
 
-    manifest = json.loads((root / "manifest.webmanifest").read_text(encoding="utf-8"))
+    manifest = json.loads((root / "public" / "manifest.webmanifest").read_text(encoding="utf-8"))
     assert "serviceworker" not in json.dumps(manifest).lower()
     assert manifest.get("display") == "standalone"
 
@@ -35,7 +35,7 @@ def test_mobile_scaffold_writes_manifest_without_service_worker(project):
 def test_web_scaffold_has_no_manifest(project):
     scaffold_vite_react(project, "Site", "web")
     root = get_settings().projects_path / project
-    assert not (root / "manifest.webmanifest").exists()
+    assert not (root / "public" / "manifest.webmanifest").exists()
     html = (root / "index.html").read_text(encoding="utf-8")
     assert "manifest.webmanifest" not in html
 
