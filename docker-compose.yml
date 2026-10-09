@@ -117,8 +117,11 @@ services:
       # FastAPI internal lane. Forge reads the weekly FRODI balance and the
       # plan with the shared token plus the platform uid.
       RODIUM_GATEWAY_INTERNAL_URL: http://host.docker.internal:8001
-      # Official FRODI generation lane. Empty on a clone (BYOK).
+      # Transition FRODI lane (shared token). Empty on a clone (BYOK).
       RODIUM_FORGE_GATEWAY_TOKEN: ${RODIUM_FORGE_GATEWAY_TOKEN:-}
+      # Generation with each user's own token goes to the same local gateway
+      # that trusts the local Nest issuer (RODIUM_BASE_URL may point elsewhere).
+      RODIUM_GATEWAY_URL: ${RODIUM_GATEWAY_URL:-http://host.docker.internal:8001/v1}
     volumes:
       - ./data/projects:/data/projects
       - ./data/templates:/data/templates:ro
