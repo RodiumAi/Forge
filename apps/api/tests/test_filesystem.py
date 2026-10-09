@@ -1,5 +1,7 @@
 """Filesystem safety: atomic writes, path escapes, binary detection, versions."""
 
+import os
+
 import pytest
 
 from app.services.filesystem import (
@@ -15,6 +17,19 @@ from app.services.filesystem import (
     write_bytes,
     write_file,
 )
+
+
+def _record_scandir(monkeypatch) -> list[str]:
+    """Paths os.scandir is asked to open (os.walk and pathlib both use it)."""
+    scanned: list[str] = []
+    real_scandir = os.scandir
+
+    def recording_scandir(path="."):
+        scanned.append(os.fspath(path).replace("\\", "/"))
+        return real_scandir(path)
+
+    monkeypatch.setattr(os, "scandir", recording_scandir)
+    return scanned
 
 
 class TestPathSafety:
@@ -106,6 +121,16 @@ class TestListing:
         write_file(project, "src/App.tsx", "x")
         write_bytes(project, "src/logo.png", b"\xff\xfe\x00binary")
         assert sorted(list_files(project)) == ["src/App.tsx"]
+
+    def test_never_walks_into_skipped_directories(self, project, monkeypatch):
+        write_file(project, "src/App.tsx", "x")
+        write_file(project, "node_modules/pkg/lib/index.js", "x")
+        write_file(project, ".forge/cache/entry.json", "{}")
+        scanned = _record_scandir(monkeypatch)
+
+        assert sorted(list_files(project)) == ["src/App.tsx"]
+        assert scanned
+        assert not [p for p in scanned if "/node_modules" in p or "/.forge" in p]
 
 
 class TestDelete:

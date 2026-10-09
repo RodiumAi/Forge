@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import re
 import zipfile
 from dataclasses import dataclass
@@ -156,15 +157,14 @@ def detect_layout(root: Path) -> ExportLayout:
 
 def _iter_files(base: Path) -> list[Path]:
     out: list[Path] = []
-    for path in base.rglob("*"):
-        if not path.is_file():
-            continue
-        rel_parts = path.relative_to(base).parts
-        if any(_is_skipped_dir(part) for part in rel_parts[:-1]):
-            continue
-        if _is_skipped_file(path):
-            continue
-        out.append(path)
+    # Pruned during the walk: node_modules alone can hold tens of thousands
+    # of entries that would otherwise be visited only to be discarded.
+    for dirpath, dirnames, filenames in os.walk(base):
+        dirnames[:] = sorted(name for name in dirnames if not _is_skipped_dir(name))
+        for name in sorted(filenames):
+            path = Path(dirpath) / name
+            if path.is_file() and not _is_skipped_file(path):
+                out.append(path)
     return out
 
 

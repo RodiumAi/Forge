@@ -9,11 +9,12 @@ frontend; these tests pin that contract.
 
 import io
 import json
+import os
 import zipfile
 
 import pytest
 
-from app.services.export_project import build_export_zip
+from app.services.export_project import _iter_files, build_export_zip
 from app.services.scaffold import scaffold_vite_react
 
 
@@ -135,3 +136,24 @@ class TestAliasesAndForgeModules:
         files, _ = exported
         config = files["vite.config.ts"].decode()
         assert '"@": fileURLToPath(new URL("./src"' in config
+
+
+def test_export_walk_never_enters_dependency_folders(tmp_path, monkeypatch):
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "App.tsx").write_text("x", encoding="utf-8")
+    deps = tmp_path / "node_modules" / "pkg"
+    deps.mkdir(parents=True)
+    (deps / "index.js").write_text("x", encoding="utf-8")
+    scanned: list[str] = []
+    real_scandir = os.scandir
+
+    def recording_scandir(path="."):
+        scanned.append(os.fspath(path).replace("\\", "/"))
+        return real_scandir(path)
+
+    monkeypatch.setattr(os, "scandir", recording_scandir)
+
+    files = [p.relative_to(tmp_path).as_posix() for p in _iter_files(tmp_path)]
+
+    assert files == ["src/App.tsx"]
+    assert not [p for p in scanned if "/node_modules" in p]
