@@ -44,6 +44,7 @@ from app.schemas import (
     RodiumAccountOut,
     RodiumApiKeyOut,
     RodiumGenerateKeyResponse,
+    RodiumHandoffRequest,
     RodiumSelectKeyRequest,
     RodiumSelectKeyResponse,
     RodiumWalletOut,
@@ -69,10 +70,12 @@ from app.services.rodium_oidc import (
     create_api_key,
     create_oauth_state,
     exchange_code,
+    exchange_handoff_code,
     fetch_api_keys,
     fetch_userinfo,
     fetch_wallet,
     generate_pkce,
+    handoff_configured,
     parse_oauth_state,
     resolve_rodium_profile,
     revoke_token,
@@ -93,6 +96,7 @@ def auth_features() -> dict[str, bool]:
     settings = get_settings()
     return {
         "rodium_oidc": settings.rodium_oidc_configured,
+        "rodium_handoff": handoff_configured(),
         "firebase": bool(
             settings.firebase_project_id and settings.firebase_client_email and settings.firebase_private_key
         ),
@@ -311,11 +315,59 @@ async def rodium_oauth_callback(
     try:
         verifier = parse_oauth_state(body.state, body.state_binding)
         tokens = await exchange_code(code=body.code, code_verifier=verifier)
-        access = tokens["access_token"]
         info = await resolve_rodium_profile(tokens)
     except RodiumOidcError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
+    return _complete_rodium_sign_in(
+        tokens=tokens,
+        info=info,
+        locale=locale,
+        background_tasks=background_tasks,
+    )
+
+
+@router.post("/rodium/handoff", response_model=TokenResponse)
+async def rodium_session_handoff(
+    body: RodiumHandoffRequest,
+    request: Request,
+    background_tasks: BackgroundTasks,
+) -> TokenResponse:
+    """Finish "Open Forge" from the RodiumAi dashboard without a second sign-in.
+
+    The dashboard hands this tab a one-time code (URL fragment, 60 s) bound to
+    a secret the tab generated. We redeem both server-side with our OAuth
+    client secret and get the same token set as the authorization-code flow,
+    so the rest is the regular sign-in.
+    """
+    locale = resolve_locale(request)
+    rate_limit.enforce(request, "oauth-rodium-handoff", limit=20, window_seconds=900)
+    if not handoff_configured():
+        raise HTTPException(status_code=503, detail=t("rodium_oauth_not_configured", locale))
+    try:
+        tokens = await exchange_handoff_code(body.code, body.binding)
+        info = await resolve_rodium_profile(tokens)
+    except RodiumOidcError as exc:
+        logger.info("rodium.handoff.rejected status=%s", exc.status_code)
+        raise HTTPException(status_code=400, detail=t("rodium_handoff_invalid", locale)) from exc
+
+    return _complete_rodium_sign_in(
+        tokens=tokens,
+        info=info,
+        locale=locale,
+        background_tasks=background_tasks,
+    )
+
+
+def _complete_rodium_sign_in(
+    *,
+    tokens: dict,
+    info: dict,
+    locale: str,
+    background_tasks: BackgroundTasks,
+) -> TokenResponse:
+    """Link or create the Forge user for a verified RodiumAi identity."""
+    access = tokens["access_token"]
     if info.get("email_verified") is not True:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

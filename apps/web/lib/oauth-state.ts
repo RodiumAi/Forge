@@ -28,15 +28,41 @@ function toHex(buffer: ArrayBuffer): string {
     .join("");
 }
 
+/** Same guarantee for "Open Forge" from the RodiumAi dashboard (handoff). */
+const HANDOFF_STORAGE_KEY = "forge_handoff_binding";
+
 /**
  * Mint a binding secret, stash it, and return the hash to send to the server.
  */
 export async function createStateBinding(): Promise<string> {
+  return createBinding(STORAGE_KEY);
+}
+
+/** Read and burn the secret. Single-use: a replayed callback finds nothing. */
+export function consumeStateBinding(): string | null {
+  return consumeBinding(STORAGE_KEY);
+}
+
+/**
+ * Handoff variant: the hash goes to the RodiumAi dashboard, which mints a
+ * one-time code only this tab can redeem (it alone holds the secret).
+ */
+export async function createHandoffBinding(): Promise<string> {
+  return createBinding(HANDOFF_STORAGE_KEY);
+}
+
+export function consumeHandoffBinding(): string | null {
+  return consumeBinding(HANDOFF_STORAGE_KEY);
+}
+
+async function createBinding(storageKey: string): Promise<string> {
   const bytes = new Uint8Array(32);
   crypto.getRandomValues(bytes);
-  const secret = toHex(bytes.buffer);
+  // A one-time random nonce: only its hash leaves the tab, and it is burned
+  // at the callback.
+  const nonce = toHex(bytes.buffer);
   try {
-    sessionStorage.setItem(STORAGE_KEY, secret);
+    sessionStorage.setItem(storageKey, nonce);
   } catch {
     // Private mode with storage disabled: we cannot bind the flow to this
     // browser, and the server now refuses an unbound state (that opt-out was a
@@ -46,16 +72,15 @@ export async function createStateBinding(): Promise<string> {
   }
   const digest = await crypto.subtle.digest(
     "SHA-256",
-    new TextEncoder().encode(secret),
+    new TextEncoder().encode(nonce),
   );
   return toHex(digest);
 }
 
-/** Read and burn the secret. Single-use: a replayed callback finds nothing. */
-export function consumeStateBinding(): string | null {
+function consumeBinding(storageKey: string): string | null {
   try {
-    const value = sessionStorage.getItem(STORAGE_KEY);
-    sessionStorage.removeItem(STORAGE_KEY);
+    const value = sessionStorage.getItem(storageKey);
+    sessionStorage.removeItem(storageKey);
     return value;
   } catch {
     return null;
