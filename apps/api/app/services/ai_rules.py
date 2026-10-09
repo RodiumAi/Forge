@@ -70,10 +70,15 @@ Standing conventions for this Forge project. Follow on every edit.
 # Normalized hashes of earlier defaults. A project still carrying one of them
 # verbatim never customized its rules, so it is upgraded to the current text
 # (the old ones contradicted the system prompt: "Vite", append-only CSS...).
+# Changing DEFAULT_AI_RULES means adding the previous text's hash here (a test
+# replays every committed default).
 _LEGACY_DEFAULT_HASHES = frozenset(
     {
         "9915cc29a66aa9812231b8f142b62ad98b380d6432e86559759d10fc512b0884",
         "e12a6507ab121b0451232d11196674eba722b5bc68d8746cc565546288a6b737",
+        # Visitor forms through `@forge/forms`, a package the runtime no longer
+        # ships: kept, it made new code import it and fail the preview.
+        "f96bcf4eb56063db746cd2a939b6ae6231ce41389f886af4e48014e6ad252ea5",
     }
 )
 

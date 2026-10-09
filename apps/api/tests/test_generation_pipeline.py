@@ -407,6 +407,36 @@ class TestScaffoldAndRules:
         ensure_ai_rules_md(project)
         assert read_file(project, AI_RULES_PATH) == "# AI_RULES\n- my own rule\n"
 
+    def test_every_committed_default_is_upgraded(self, project):
+        import subprocess
+
+        from app.services.ai_rules import AI_RULES_PATH, DEFAULT_AI_RULES, ensure_ai_rules_md
+
+        path = "apps/api/app/services/ai_rules.py"
+        revisions = subprocess.run(
+            ["git", "log", "--format=%H", "--", f":(top){path}"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        ).stdout.split()
+        defaults: set[str] = set()
+        for revision in revisions:
+            source = subprocess.run(
+                ["git", "show", f"{revision}:{path}"],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+            ).stdout
+            if 'DEFAULT_AI_RULES = """' in source:
+                defaults.add(source.split('DEFAULT_AI_RULES = """', 1)[1].split('"""', 1)[0])
+        defaults.discard(DEFAULT_AI_RULES)
+        if not defaults:
+            pytest.skip("git history unavailable")
+        for legacy in defaults:
+            write_file(project, AI_RULES_PATH, legacy)
+            ensure_ai_rules_md(project)
+            assert read_file(project, AI_RULES_PATH) == DEFAULT_AI_RULES
+
     def test_system_prompt_has_unique_rule_numbers(self):
         import re
 
