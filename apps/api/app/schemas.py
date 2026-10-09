@@ -119,6 +119,15 @@ class OAuthCallbackRequest(BaseModel):
     state_binding: str | None = Field(default=None, max_length=256)
 
 
+class RodiumHandoffRequest(BaseModel):
+    #: One-time code from the RodiumAi dashboard ("Open Forge"), read from the
+    #: landing URL fragment. Redeemed server-side with the OAuth client secret.
+    code: str = Field(min_length=16, max_length=256)
+    #: The secret this tab kept in sessionStorage while the dashboard minted
+    #: the code; only its sha256 was sent there.
+    binding: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
 class RodiumWalletOut(BaseModel):
     balance_rodi: str | None = None
     reserved_rodi: str | None = None
