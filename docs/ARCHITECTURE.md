@@ -99,30 +99,62 @@ contract, `apps/api/app/services/tags.py` parses it):
 
 ```
 <forge-write path="src/App.tsx"> …file contents… </forge-write>
+<forge-edit path="src/App.tsx">
+<<<<<<< SEARCH
+exact current lines
+=======
+replacement lines
+>>>>>>> REPLACE
+</forge-edit>
 <forge-delete path="src/Old.tsx"></forge-delete>
 ```
 
-A consequence worth knowing: **the agent does not choose which files to read.**
-Context assembly is heuristic — `apps/api/app/services/orchestration/context.py`
-selects files by relevance, forced paths, and the plan's declared `files`, then
-layers the system prompt, `AI_RULES.md`, a locked `DESIGN.md`, file skeletons and
-selected bodies. Older history is compacted by an LLM pass.
+`forge-edit` applies search/replace hunks to the current file
+(`services/edit_apply.py`: exact match, then a whitespace-tolerant line match,
+never an ambiguous one); an edit that does not apply gets one focused retry with
+the file shown in full.
 
-Phases: classify → optional clarify → plan → execute → verify/repair. Plans of
-four or more tasks, and any scaffold, pause for user confirmation.
+**Output limits.** Every code stream sends `max_tokens` (the gateway otherwise
+caps Claude/Gemini at 4096 output tokens) and reads `finish_reason`. An answer
+cut by the limit, or a tag left open, is continued (`stream_with_continuation`
+in `services/llm.py`): the re-emitted file wins over the cut one, and a file still
+cut after the last round is reported to the user instead of vanishing.
+
+A consequence worth knowing: **the agent does not choose which files to read.**
+Context assembly is heuristic: `apps/api/app/services/orchestration/context.py`
+selects files by relevance, forced paths, and the plan's declared `files`
+(directories expand to their files), then layers the system prompt,
+`AI_RULES.md`, a locked `DESIGN.md`, the project images with their real sizes, a
+starter-kit excerpt as quality reference on young builds, file skeletons (CSS
+files list their classes) and the selected bodies (160k characters, index.css
+first). Older history is compacted by an LLM pass.
+
+Phases: classify → optional clarify → plan → brand bootstrap (first build of a
+blank project: `services/brand_charter.py` writes a DESIGN.md with a palette, a
+validated Google Fonts pair and an imagery direction, then the first WebP images)
+→ execute → verify/repair (on the model that wrote the code). Plans of four or
+more tasks, and any scaffold, pause for user confirmation.
 `apps/api/app/services/orchestration/dispatcher.py` runs tasks sequentially.
+
+**CSS ownership is one rule everywhere**: `src/index.css` is the foundation,
+written once by the styles_foundation task; each page owns
+`src/styles/<page>.css`, scoped under its root class. Orphan classes are reported
+against the component and its stylesheet.
 
 **Writes are validated before anything touches disk**
 (`apps/api/app/services/apply_writes.py`):
 
-- A **git snapshot** is taken first — each project is its own private repo under
+- A **git snapshot** is taken first: each project is its own private repo under
   `data/projects/{id}`, which is what powers history and rollback.
 - Imports are checked against the manifest allowlist using **tree-sitter**
   (`services/import_validator.py`), falling back to regex when unavailable.
   Violations: `BUILD_FORBIDDEN_IMPORT`, `BUILD_INVALID_NAMED_EXPORT`.
-- `DESIGN.md` and `public/logo.*` are brand-locked and rejected by default.
-- CSS is **merged, not replaced**: top-level blocks whose selectors disappeared
-  are re-appended, so a partial rewrite cannot silently drop styles.
+- `DESIGN.md` and `public/logo.*` are brand-locked unless the request explicitly
+  asks to change the brand; the placeholder charter of a blank scaffold is not a
+  brand and is never locked.
+- A full rewrite of `src/index.css` that drops rules keeps them (merge);
+  deliberate removals go through `forge-edit`. Page stylesheets are owned by
+  their task and rewritten freely.
 
 ## Preview
 
@@ -181,22 +213,43 @@ API image (`playwright install --with-deps chromium`).
 
 `POST /projects/{id}/publish` → `apps/api/app/services/publish_esm.py`:
 
-1. Spawns `node apps/api/runtime/cli.mjs`, piping the project over **stdin**.
-2. `cli.mjs` reuses the *same* Babel transform and resolver as the preview, but
-   `rewrite.mjs` emits **relative `.js` paths** instead of blob URLs. It writes a
-   static `index.html` with the import map inlined, all CSS in one `<style>`
-   (`src/index.css` first — matching the preview exactly), and a module script.
-3. `public/` is copied verbatim; everything uploads to the object store under
-   `{slug}/`.
+1. **Production build.** `node apps/api/runtime/cli.mjs` (project on stdin)
+   runs the *same* Babel transform as the preview, then esbuild
+   (`runtime/build.mjs`) bundles the app and its dependencies (fetched once
+   from esm.sh, cached on disk), tree-shakes (lucide-react comes from the npm
+   package), minifies and content-hashes `assets/*.js`, with `modulepreload`
+   links and no source maps. If the CDN is unreachable, dependencies stay
+   external behind an import map limited to what the app imports. All CSS is
+   minified into one `<style>` (`src/index.css` first); web-font `@import`s
+   become `<link>` + preconnect. Assets imported from code are copied;
+   oversized images are resized and recompressed in place.
+2. **Pre-render** (`services/prerender.py`): headless Chromium loads the build
+   from disk (no other network), follows the site's own links, and saves each
+   route as `<route>/index.html` with its markup, title and the tags pages set
+   through react-helmet-async; `404.html` is rendered from an unknown path.
+3. **SEO** (`services/site_seo.py`): `<html lang>` detected from the text,
+   per-page canonical and og:url, absolute og/twitter images, og:site_name,
+   og:locale, schema.org WebSite on the home page, `sitemap.xml` and
+   `robots.txt` (unless the project ships its own), and the cookie-free visit
+   beacon.
+4. **Upload** under `{slug}/` with `Cache-Control` (hashed assets immutable,
+   pages revalidated), pages last, then stale keys are removed.
 
-Caddy is a **pure reverse proxy to the bucket** — no origin app. It maps the
-slug out of the Host header and rewrites to the bucket key, with an SPA fallback
-to `{slug}/index.html`. See `infra/local/Caddyfile` and
-`infra/aws/sites-gateway/Caddyfile`.
+Caddy is a **pure reverse proxy to the bucket** (`infra/local/Caddyfile`,
+`infra/aws/sites-gateway/Caddyfile`, one shared snippet): `/` serves
+`index.html`; a file path serves the file or a plain 404; a page path serves
+`<page>/index.html`, else `404.html` **with status 404**, else `index.html`
+(sites published before pre-rendering). 403 counts as missing. Responses are
+compressed (zstd/gzip); SVGs render as images but are sandboxed when opened.
+
+`/_rodium/*` on a site's origin proxies to the API: published sites post their
+forms (`@forge/forms` → `POST /v1/sites/forms`) and visits
+(`POST /v1/sites/hit`) there, same-origin. The owner reads them under
+Options › Forms and Options › Audience (`routers/site_events.py`).
 
 `/v1/authorize-host` exists **only for custom domains**: Caddy's `forward_auth`
 asks the API whether a hostname maps to a validated `ProjectDomain`, and gets
-back the slug to rewrite to. The slug always stays the S3 key — a custom domain
+back the slug to rewrite to. The slug always stays the S3 key; a custom domain
 changes routing, never storage.
 
 ## Data model
@@ -205,7 +258,7 @@ changes routing, never storage.
 `User → Project → Chat → Message`, with `AgentRun` recording each generation
 (status, plan, clarify answers, and `cursor_task_index` so a run can resume).
 `UserSettings` holds encrypted RodiumAI tokens. `ProjectDomain`, `StoredObject`,
-`SiteUsageDay`, `PreviewComment` and `ModelCatalog` round it out.
+`SiteUsageDay`, `SitePageDay`, `FormSubmission`, `PreviewComment` and `ModelCatalog` round it out.
 
 **There is no Alembic.** `apps/api/app/db.py` runs `create_all()` followed by a
 hand-written list of idempotent statements (`ADD COLUMN IF NOT EXISTS`, …), run
@@ -260,7 +313,7 @@ Honest notes for anyone reading the code and wondering:
   **no importers**; the encryption actually in use is Fernet in `app/crypto.py`.
   Production config still asserts KMS/Secrets Manager.
 - `providers/queue.py` defines a full Redis Streams usage queue that nothing
-  publishes to or consumes; `SiteUsageDay` is written synchronously instead.
+  publishes to or consumes; visits are written by `POST /v1/sites/hit` instead.
 - `Project.preview_port` / `preview_running` are vestigial from a Vite-dev-server
   era.
 - `apps/web/lib/preview-host.ts` rewrites to `/preview-by-slug/{slug}`, for which

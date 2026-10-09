@@ -1,5 +1,5 @@
 {
-  "$comment": "SINGLE SOURCE OF TRUTH for the closed package manifest of generated apps. Read by app/runtime_manifest.py (AST allowlist) AND runtime/importmap.mjs (browser import map). Never edit one without the other -- there is no other list. Fields: subpaths (explicit entries), deps (other manifest packages to pin through esm.sh so every module shares one copy), prefix (trailing-slash entry for deep imports; only for packages without React peers), css (bare stylesheet specifiers -> file inside the package, '*' suffix matches any subpath), virtual (provided by Forge itself, never by the CDN).",
+  "$comment": "SINGLE SOURCE OF TRUTH for the closed package manifest of generated apps. Read by app/runtime_manifest.py (AST allowlist) AND runtime/importmap.mjs (browser import map). Never edit one without the other -- there is no other list. Fields: subpaths (explicit entries), deps (other manifest packages to pin through esm.sh so every module shares one copy), prefix (trailing-slash entry for deep imports; only for packages without React peers), css (bare stylesheet specifiers -> file inside the package, '*' suffix matches any subpath), virtual (provided by Forge itself, never by the CDN), npm (published builds bundle it from the runtime's own node_modules, tree-shaken, instead of the CDN; the version must match apps/api/runtime/package.json).",
   "reactVersion": "18.3.1",
   "cdn": "https://esm.sh",
   "packages": {
@@ -13,7 +13,7 @@
       "browser": true,
       "subpaths": ["client"]
     },
-    "lucide-react": { "version": "0.468.0", "browser": true, "peerReact": true },
+    "lucide-react": { "version": "0.468.0", "browser": true, "peerReact": true, "npm": true },
     "react-router-dom": { "version": "7.1.1", "browser": true, "peerReact": true },
     "@tanstack/react-query": { "version": "5.62.0", "browser": true, "peerReact": true },
     "framer-motion": { "version": "11.15.0", "browser": true, "peerReact": true },

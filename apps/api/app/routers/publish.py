@@ -80,6 +80,9 @@ async def publish_now(
         subject=str(user.id),
     )
     project = _owned(db, user, project_id, locale)
+    # Canonical URLs, sitemap and og:url point at the address visitors use: the
+    # validated custom domain when there is one, else the slug subdomain.
+    site_url = sites_url_for_project(get_settings(), project, get_project_domain(db, project.id))
     try:
         result = await publish_project_esm(
             str(project.id),
@@ -87,6 +90,9 @@ async def publish_now(
             owner_user_id=str(user.id),
             # Fallback title when the project index.html has no <title>.
             title=project.name or "Forge app",
+            site_url=site_url,
+            # Starting guess only: the published language is detected from the page text.
+            lang=locale,
         )
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)[:2000]) from exc
@@ -124,6 +130,7 @@ def export_project_zip(
             project_id=str(project.id),
             project_name=project.name or project.slug,
             locale=locale,
+            site_slug=project.slug,
         )
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)[:2000]) from exc

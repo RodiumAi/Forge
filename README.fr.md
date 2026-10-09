@@ -51,7 +51,9 @@ Services d'appui : **MinIO** (uploads S3), **Valkey** (file de runs / annulation
 - **Du chat au site** : décrivez un site ou une app ; l'agent génère un projet React frontend-only.
 - **Web vs Appli** : kits galerie pour sites marketing et coques style mobile.
 - **Preview instantanée** : runner Babel/ESM dans le navigateur — import map CDN (esm.sh). Ni node_modules, ni Vite.
-- **Publication** : site statique ESM servi par Caddy.
+- **Publication** : build de production (bundlé, minifié, hashé, dépendances embarquées), chaque route pré-rendue avec son titre et ses metas, `404.html`, sitemap, robots, données structurées et en-têtes de cache, servi par Caddy.
+- **Charte de marque au premier build** : palette, paire Google Fonts et direction d'images tirées du brief, plus les premières images générées (WebP + srcset).
+- **Formulaires et audience** : les envois `@forge/forms` arrivent dans la boîte du projet (email au propriétaire, export CSV) ; visites comptées sans cookie, par jour et par page.
 - **Édition visuelle** : texte et images, directement sur la preview.
 - **Historique / rollback** : snapshots git par projet.
 - **Export ZIP** : un vrai projet Vite exécutable.

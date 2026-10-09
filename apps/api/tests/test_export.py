@@ -128,3 +128,31 @@ class TestCompleteness:
         files, _ = exported
         for internal in ("forge.json", "AI_RULES.md", "preview.html"):
             assert internal not in files
+
+
+class TestAliasesAndForgeModules:
+    def test_vite_resolves_the_at_alias(self, exported):
+        files, _ = exported
+        config = files["vite.config.ts"].decode()
+        assert '"@": fileURLToPath(new URL("./src"' in config
+
+    def test_forge_forms_ships_as_a_local_module(self, project):
+        from app.services.filesystem import write_file
+
+        scaffold_vite_react(project, "Fournil")
+        write_file(
+            project,
+            "src/Contact.tsx",
+            'import { submitForm } from "@forge/forms";\nexport const send = () => submitForm("contact", {});\n',
+        )
+        data, _ = build_export_zip(
+            project_id=project, project_name="Fournil", locale="en", site_slug="fournil"
+        )
+        with zipfile.ZipFile(io.BytesIO(data)) as zf:
+            files = {name: zf.read(name) for name in zf.namelist()}
+        pkg = json.loads(files["package.json"])
+        assert "@forge/forms" not in pkg["dependencies"], "not an npm package"
+        assert "@forge/forms" in files["vite.config.ts"].decode()
+        shim = files["src/forge-forms.ts"].decode()
+        assert "/v1/sites/forms?site=fournil" in shim
+        assert "@forge/forms" in files["tsconfig.json"].decode()

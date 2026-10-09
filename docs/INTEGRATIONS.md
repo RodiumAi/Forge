@@ -2,6 +2,10 @@
 
 Integrations are **catalog entries** for third-party embeds (forms, booking, chat, payments, …) shown on `/integrations`. Contributors add a folder under [`data/integrations/`](../data/integrations/); the API scans the filesystem — no DB migration.
 
+## How the agent uses them
+
+The catalog is part of every code prompt (`format_integrations_prompt_block` in `apps/api/app/services/integrations.py`): one line per provider and the embed rules (iframes as JSX, script widgets injected once in a `useEffect`, never an invented account id). Plain visitor forms do not need a provider at all: `@forge/forms` delivers them to the project inbox (Options > Forms).
+
 ## Policy
 
 Only kits that work on a **static** Forge prototype by pasting an official:

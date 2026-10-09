@@ -4,10 +4,12 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
+  BarChart3,
   Download,
   ExternalLink,
   Globe2,
   History,
+  Inbox,
   KeyRound,
   Loader2,
   Palette,
@@ -22,7 +24,9 @@ import { api, apiBase, getToken } from "@/lib/api";
 import { removeProject } from "@/lib/lists-cache";
 import { Icon } from "@/components/ui/icon";
 import { useI18n } from "@/lib/i18n/I18nProvider";
+import { AudienceSection } from "@/components/builder/AudienceSection";
 import { CustomDomainSection } from "@/components/builder/CustomDomainSection";
+import { FormsInboxSection } from "@/components/builder/FormsInboxSection";
 import { HistoryPanel } from "@/components/builder/HistoryPanel";
 import { SeoOptionsSection } from "@/components/builder/SeoOptionsSection";
 import { SubscriptionPanel } from "@/components/builder/SubscriptionPanel";
@@ -36,6 +40,8 @@ import { sitesBaseDomain, sitesScheme, sitesUrlForSlug } from "@/lib/sites-url";
   | "history"
   | "seo"
   | "publishing"
+  | "forms"
+  | "audience"
   | "subscription"
   | "danger";
 
@@ -158,6 +164,8 @@ export function OptionsPane({
           items: [
             { id: "seo" as const, label: t("optionsNavSeo"), icon: Search },
             { id: "publishing" as const, label: t("optionsNavPublish"), icon: Globe2 },
+            { id: "forms" as const, label: t("optionsNavForms"), icon: Inbox },
+            { id: "audience" as const, label: t("optionsNavAudience"), icon: BarChart3 },
           ],
         },
         {
@@ -308,6 +316,8 @@ export function OptionsPane({
     history: { title: t("historyTitle"), subtitle: t("historySectionSub") },
     seo: { title: t("optionsNavSeo"), subtitle: t("optionsSeoSub") },
     publishing: { title: t("optionsNavPublish"), subtitle: t("optionsPublishSub") },
+    forms: { title: t("optionsNavForms"), subtitle: t("optionsFormsSub") },
+    audience: { title: t("optionsNavAudience"), subtitle: t("optionsAudienceSub") },
     subscription: { title: t("optionsNavSubscription"), subtitle: t("optionsSubscriptionSub") },
     danger: { title: t("optionsNavDanger"), subtitle: t("optionsDangerSub") },
   };
@@ -542,6 +552,28 @@ export function OptionsPane({
               </div>
             )}
           </div>
+        )}
+
+        {section === "forms" && (
+          <FormsInboxSection
+            projectId={projectId}
+            canEdit={canManageSite}
+            onError={(msg) => {
+              setError(msg);
+              setMessage(null);
+            }}
+          />
+        )}
+
+        {section === "audience" && (
+          <AudienceSection
+            projectId={projectId}
+            published={Boolean(publishedAt)}
+            onError={(msg) => {
+              setError(msg);
+              setMessage(null);
+            }}
+          />
         )}
 
         {section === "subscription" && <SubscriptionPanel />}

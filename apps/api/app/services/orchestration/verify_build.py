@@ -682,8 +682,51 @@ def verify_project_build(project_id: str) -> list[VerifyFinding]:
         )
 
     findings.extend(responsive_findings(files))
+    findings.extend(missing_image_findings(project_id, files))
 
     return findings
+
+
+_IMAGE_REF_RE = re.compile(
+    r"""(?:src\s*=\s*\{?\s*|url\(\s*)["']?(/[^"')\s?#]+\.(?:png|jpe?g|webp|gif|svg|avif))""",
+    re.I,
+)
+
+
+def missing_image_findings(project_id: str, files: dict[str, str]) -> list[VerifyFinding]:
+    """Root-path images the code shows but the project does not have.
+
+    A broken image is the most visible defect of a generated page, and the
+    model regularly invents file names; the media list in the prompt names the
+    files that exist.
+    """
+    from app.services.filesystem import project_dir
+    from app.services.project_media import public_asset_exists
+
+    root = project_dir(project_id)
+    missing: dict[str, list[str]] = {}
+    for path, content in files.items():
+        if not path.endswith((".tsx", ".jsx", ".css")):
+            continue
+        for match in _IMAGE_REF_RE.finditer(content):
+            ref = match.group(1)
+            exists = public_asset_exists(project_id, ref) or (root / ref.lstrip("/")).is_file()
+            if not exists:
+                missing.setdefault(path, [])
+                if ref not in missing[path]:
+                    missing[path].append(ref)
+    return [
+        VerifyFinding(
+            code="media.missing_image",
+            severity="critical",
+            path=path,
+            message=(
+                f"{path} references images that do not exist: {', '.join(refs[:8])}. Use a file "
+                "from the project images list (exact path), or compose the visual with CSS/SVG."
+            ),
+        )
+        for path, refs in list(missing.items())[:8]
+    ]
 
 
 # ── Responsive ─────────────────────────────────────────────────────────────
@@ -793,7 +836,7 @@ def repair_focus_paths(findings: list[VerifyFinding]) -> list[str] | None:
         focus.extend(["src/App.tsx", "src/index.css", "src/pages"])
     for finding in findings:
         # Responsive findings name the exact file that holds the offending rule.
-        if finding.code.startswith("responsive.") and finding.path:
+        if finding.code.startswith(("responsive.", "media.")) and finding.path:
             focus.append(finding.path)
         if finding.code == "import.scaffold_fill" and finding.path:
             focus.append(finding.path)

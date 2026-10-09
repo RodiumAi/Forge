@@ -147,6 +147,9 @@ class Settings(BaseSettings):
     # + web fonts) from the brief, and generate this many brand images.
     forge_auto_charter_enabled: bool = True
     forge_scaffold_images: int = 2
+    # Publish: render every route to HTML in headless Chromium (falls back to a
+    # client-rendered site when no browser is available).
+    forge_prerender_enabled: bool = True
     access_token_expire_minutes: int = 60 * 24 * 7
     preview_port_start: int = 5200
     preview_port_end: int = 5299

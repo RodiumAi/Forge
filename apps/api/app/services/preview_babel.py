@@ -56,10 +56,17 @@ def render_runner_shell(
     """
     import json
 
-    from app.runtime_manifest import browser_import_map
+    from app.runtime_manifest import browser_import_map, css_import_map
 
     settings = get_settings()
-    import_map = json.dumps({"imports": {**browser_import_map(), **(extra_imports or {})}}, indent=2)
+    # Forge-provided modules: the preview gets a local stand-in (forms resolve
+    # without sending anything); publish bundles the real client.
+    virtual = {"@forge/forms": "/runner/forge-forms.js?v=1"}
+    import_map = json.dumps(
+        {"imports": {**browser_import_map(), **virtual, **(extra_imports or {})}},
+        indent=2,
+    )
+    package_css = json.dumps(css_import_map())
     origins = json.dumps(settings.runner_parent_origins)
     draft = ""
     if bundle:
@@ -89,14 +96,14 @@ def render_runner_shell(
   </script>
   <style id="forge-tokens"></style>
   <style id="forge-app-css"></style>
-  <script>window.__FORGE_PARENT_ORIGINS = {origins};</script>
+  <script>window.__FORGE_PARENT_ORIGINS = {origins};window.__FORGE_CSS_IMPORTS__ = {package_css};</script>
   <script>(function(){{var m=location.pathname.match(/^(\\/projects\\/[0-9a-f-]{{36}}\\/draft)/i);if(m)window.__FORGE_PREVIEW_SHELL_BASE__=m[1];}})();</script>
   {thumb_css}{draft}<script src="/runner/babel.min.js?v=7.26.9"></script>
 </head>
 <body>
   <div id="root"></div>
   <script src="/runner/bridge.js?v=thumb-persist1"></script>
-  <script type="module" src="/runner/runner.js?v=thumb-mobile4"></script>
+  <script type="module" src="/runner/runner.js?v=assets-css1"></script>
 </body>
 </html>
 """

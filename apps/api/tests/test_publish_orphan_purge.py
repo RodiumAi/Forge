@@ -16,7 +16,7 @@ async def test_publish_purges_orphan_keys(monkeypatch, tmp_path):
     (dist / "index.html").write_text("<html></html>", encoding="utf-8")
     (dist / "app.js").write_text("console.log(1)", encoding="utf-8")
 
-    async def fake_transform(project_id, out_dir, *, title="Forge app"):
+    async def fake_transform(project_id, out_dir, *, title="Forge app", **_kwargs):
         for src in dist.iterdir():
             (out_dir / src.name).write_bytes(src.read_bytes())
         return {"ok": True}
@@ -40,19 +40,22 @@ async def test_publish_purges_orphan_keys(monkeypatch, tmp_path):
         lambda: MagicMock(
             bucket_site_assets="forge-assets",
             sites_url_for_slug=lambda slug: f"https://{slug}.example",
+            forge_prerender_enabled=False,
         ),
     )
 
     result = await publish_esm.publish_project_esm("proj-1", "brandx", title="Demo")
 
-    assert result["files_uploaded"] == 2
+    # Build output + the generated sitemap.xml and robots.txt.
+    assert result["files_uploaded"] == 4
     assert result["orphans_deleted"] == 2
     store.delete_keys.assert_called_once()
     deleted = set(store.delete_keys.call_args.args[1])
     assert deleted == {"brandx/secret.pdf", "brandx/old/page.html"}
-    # New build keys must have been uploaded.
-    put_keys = {c.args[1] for c in store.put.call_args_list}
-    assert put_keys == {"brandx/index.html", "brandx/app.js"}
+    # New build keys must have been uploaded, each with its cache policy.
+    calls = {c.args[1]: c.kwargs.get("cache_control") for c in store.put.call_args_list}
+    assert set(calls) == {"brandx/index.html", "brandx/app.js", "brandx/sitemap.xml", "brandx/robots.txt"}
+    assert calls["brandx/index.html"] == publish_esm.CACHE_HTML
 
 
 def test_list_prefix_and_delete_keys_batching():

@@ -9,6 +9,8 @@ export type OptionsSubview =
   | "history"
   | "seo"
   | "publishing"
+  | "forms"
+  | "audience"
   | "subscription"
   | "danger";
 
@@ -28,6 +30,8 @@ const OPTIONS_SUBVIEWS = new Set<string>([
   "brand",
   "seo",
   "publishing",
+  "forms",
+  "audience",
   "subscription",
   "danger",
 ]);
