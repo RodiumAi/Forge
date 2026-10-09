@@ -343,6 +343,19 @@ class TestRouting:
 
         assert classify_and_route("génère une image de croissants", force_scaffold=True).is_image
 
+    def test_edited_and_plan_mode_image_requests_take_the_image_pass(self):
+        """An edited prompt or a plan-mode one used to be planned on the image model."""
+        import inspect
+
+        from app.routers import chats
+
+        for endpoint in (chats.send_message, chats.branch_messages):
+            source = inspect.getsource(endpoint)
+            assert "    if route.is_image:\n" in source
+            assert "_image_run_stream(" in source
+            assert source.index("_image_run_stream(") < source.index("    if clarify:")
+        assert 'route.is_image and mode == "agent"' not in inspect.getsource(chats)
+
     def test_requested_images_are_extracted_from_the_build(self):
         from app.services.orchestration.router import requested_image_prompts
 

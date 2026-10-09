@@ -109,6 +109,18 @@ CATALOG_SEED: list[dict] = [
     },
 ]
 
+IMAGE_MODEL_SLUGS = frozenset(row["slug"] for row in CATALOG_SEED if row["role"] == "image")
+
+
+def is_image_model(slug: str | None) -> bool:
+    """An image-generation model: the chat endpoint cannot serve it."""
+    from app.config import get_settings
+
+    value = (slug or "").strip()
+    if not value:
+        return False
+    return value in IMAGE_MODEL_SLUGS or value == get_settings().effective_default_image_model.strip()
+
 
 def seed_model_catalog(db: Session) -> None:
     for row in CATALOG_SEED:
