@@ -56,7 +56,7 @@ test("published head keeps structured data and remote stylesheets, not the previ
   const all = head.tags.join("\n");
   const hosts = [...all.matchAll(/href="([^"]+)"/g)].map((m) => new URL(m[1], "http://local.test").hostname);
   assert.ok(all.includes("application/ld+json"));
-  assert.ok(hosts.includes("fonts.googleapis.com"));
+  assert.ok(hosts.some((host) => host === "fonts.googleapis.com"));
   assert.ok(all.includes("preconnect"));
   assert.ok(!all.includes("importmap"));
   assert.ok(!all.includes("/src/main.js"));
