@@ -216,7 +216,7 @@ async def finalize_site(out_dir: Path, *, site_url: str, site_name: str, fallbac
     lang = site_seo.detect_language(home_text, fallback=fallback_lang)
 
     def finish(doc: str, route: str) -> str:
-        return site_seo.finalize_page_head(
+        doc = site_seo.finalize_page_head(
             doc,
             site_url=site_url,
             route=route,
@@ -225,6 +225,8 @@ async def finalize_site(out_dir: Path, *, site_url: str, site_name: str, fallbac
             description=description,
             indexable=route != NOT_FOUND_PROBE,
         )
+        # Injection points of the build template, not needed once the page is final.
+        return doc.replace("<!--forge:head-->\n", "").replace("<!--forge:body-->\n", "")
 
     routes = sorted(pages) or ["/"]
     if pages:

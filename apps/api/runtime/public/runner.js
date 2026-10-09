@@ -479,8 +479,9 @@ function rewriteAssetImport(code, imp, url) {
   const binding =
     (statement.match(/^import\s+([A-Za-z_$][\w$]*)\s+from/) || [])[1] ||
     (statement.match(/^import\s*\{\s*default\s+as\s+([A-Za-z_$][\w$]*)\s*\}/) || [])[1];
-  const value = resolveAssetUrl(url, ASSETS) || url;
-  return code.slice(0, start) + (binding ? `const ${binding} = ${JSON.stringify(value)};` : "") + code.slice(end);
+  // The root URL, like a literal "/images/x.png": <img> rewriting resolves it
+  // and keeps it in data-forge-src for the visual-image bridge.
+  return code.slice(0, start) + (binding ? `const ${binding} = ${JSON.stringify(url)};` : "") + code.slice(end);
 }
 
 function rewriteSpecifiers(code, imports, path, files, blobUrls, packageCss) {
