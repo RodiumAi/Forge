@@ -58,9 +58,11 @@ export function consumeHandoffBinding(): string | null {
 async function createBinding(storageKey: string): Promise<string> {
   const bytes = new Uint8Array(32);
   crypto.getRandomValues(bytes);
-  const secret = toHex(bytes.buffer);
+  // A one-time random nonce: only its hash leaves the tab, and it is burned
+  // at the callback.
+  const nonce = toHex(bytes.buffer);
   try {
-    sessionStorage.setItem(storageKey, secret);
+    sessionStorage.setItem(storageKey, nonce);
   } catch {
     // Private mode with storage disabled: we cannot bind the flow to this
     // browser, and the server now refuses an unbound state (that opt-out was a
@@ -70,7 +72,7 @@ async function createBinding(storageKey: string): Promise<string> {
   }
   const digest = await crypto.subtle.digest(
     "SHA-256",
-    new TextEncoder().encode(secret),
+    new TextEncoder().encode(nonce),
   );
   return toHex(digest);
 }
