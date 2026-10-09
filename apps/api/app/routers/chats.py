@@ -389,6 +389,157 @@ async def _clarity_gate(
     outcome["paused"] = True
 
 
+async def _image_run_stream(
+    *,
+    run_pk: UUID,
+    user_msg_id: str,
+    history: list[tuple[str, str]],
+    user_id: UUID,
+    project_id: str,
+    user_content: str,
+    route,
+    route_effort: str,
+    resolve_gen_auth,
+    locale: str,
+):
+    """One pass for an image request: generate it, then wire it in with the text model.
+
+    Shared by new messages and edited ones, in agent and plan mode alike:
+    there is nothing to plan, and the planner would otherwise run on the
+    image model, which the chat endpoint refuses.
+    """
+    steps: list[dict] = []
+    thinking_parts: list[str] = []
+    full: list[str] = []
+    applied: list[dict] = []
+
+    def push_step(step_id: str, label: str, st: str) -> str:
+        existing = next((s for s in steps if s["id"] == step_id), None)
+        if existing:
+            existing["status"] = st
+            existing["label"] = label
+        else:
+            steps.append({"id": step_id, "label": label, "status": st})
+        return _sse({"type": "step", "id": step_id, "label": label, "status": st})
+
+    yield _sse({"type": "user_message", "id": user_msg_id, "run_id": str(run_pk)})
+    yield push_step("classify", t("step_classify", locale), "running")
+    yield _sse(
+        {
+            "type": "route",
+            "task_class": route.task_class,
+            "effort_label": route_effort,
+            "tier": route.tier,
+        }
+    )
+    yield push_step("classify", t("step_classify", locale), "done")
+    try:
+        gen_auth = await resolve_gen_auth()
+        yield push_step("generate_image", t("step_generate_image", locale), "running")
+        image_info = await generate_project_image(
+            auth=gen_auth,
+            project_id=project_id,
+            prompt=user_content,
+            model=route.model,
+            locale=locale,
+        )
+        applied.append({"op": "write", "path": image_info["path"]})
+        yield _sse({"type": "file_write", "path": image_info["path"]})
+        yield push_step("generate_image", t("step_generate_image", locale), "done")
+
+        srcset = ", ".join(f"{p} {w}w" for p, w in image_info.get("srcset") or [])
+        wire_prompt = (
+            f"An image was generated at `{image_info['path']}` "
+            f"(URL in the app: `{image_info['public_path']}`, "
+            f"{image_info.get('width')}x{image_info.get('height')}"
+            + (f", srcset: {srcset}" if srcset else "")
+            + ").\n"
+            f"User request: {user_content}\n"
+            "Update the UI to showcase this image where appropriate, with its real "
+            "width/height and srcset. Use forge-edit / forge-write tags."
+        )
+        yield push_step("select_files", t("step_select_files", locale), "running")
+        with SessionLocal() as stream_db:
+            llm_messages = await build_llm_messages(
+                project_id=project_id,
+                history=[*history, ("user", wire_prompt)],
+                user_query=wire_prompt,
+                db=stream_db,
+                user_id=user_id,
+                locale=locale,
+                auth=gen_auth,
+                model=get_settings().effective_default_model,
+            )
+            stream_db.commit()
+        yield push_step("select_files", t("step_select_files", locale), "done")
+        yield push_step("generate", t("step_generate_code", locale), "running")
+        async for chunk in stream_with_continuation(
+            auth=gen_auth,
+            model=get_settings().effective_default_model,
+            messages=llm_messages,
+            locale=locale,  # type: ignore[arg-type]
+            stream_fn=stream_chat_completion,
+        ):
+            if chunk.kind == "thinking":
+                thinking_parts.append(chunk.content)
+                yield _sse({"type": "thinking", "delta": chunk.content})
+            elif chunk.kind == "notice":
+                frame = notice_sse(chunk, locale)  # type: ignore[arg-type]
+                if frame:
+                    yield frame
+            else:
+                full.append(chunk.content)
+                yield _sse({"type": "token", "content": chunk.content})
+        yield push_step("generate", t("step_generate_code", locale), "done")
+        yield push_step("apply_writes", t("step_apply_writes", locale), "running")
+        writes, deletes = parse_forge_tags("".join(full))
+        written, violations = await apply_validated_writes_async(
+            project_id, writes, snapshot_label="before edit"
+        )
+        applied.extend(written)
+        for item in written:
+            yield _sse({"type": "file_write", "path": item["path"]})
+        for v in violations:
+            yield _sse(
+                {
+                    "type": "warning",
+                    "message": f"{v.get('code')}: {v.get('message')}",
+                    "violation": v,
+                }
+            )
+        for op in deletes:
+            delete_file(project_id, op.path)
+            applied.append({"op": "delete", "path": op.path})
+            yield _sse({"type": "file_delete", "path": op.path})
+        yield push_step("apply_writes", t("step_apply_writes", locale), "done")
+        if applied:
+            yield _sse({"type": "preview_refresh"})
+        yield push_step("done", t("step_done", locale), "done")
+        summary = "Image générée et intégrée." if locale == "fr" else "Image generated and wired into the UI."
+        payload = {
+            "summary": summary,
+            "assistant_content": "".join(full),
+            "thinking_text": "".join(thinking_parts) or None,
+            "steps": steps,
+            "applied": applied,
+        }
+        with SessionLocal() as stream_db:
+            live = stream_db.get(AgentRun, run_pk)
+            if live is not None:
+                _persist_assistant(stream_db, live, payload, locale)
+                live.status = "done"
+                stream_db.commit()
+        yield _sse({"type": "done", **payload, "effort_label": route_effort})
+    except RodiumError as exc:
+        with SessionLocal() as stream_db:
+            live = stream_db.get(AgentRun, run_pk)
+            if live is not None:
+                live.status = "error"
+                record_run_outcome(live, code=error_code_for(exc), message=str(exc))
+                stream_db.commit()
+        yield _error_sse(exc)
+
+
 async def _iter_single_pass(
     *,
     db: Session,
@@ -959,148 +1110,25 @@ async def send_message(
     # Prototype mode (FE-only): no connector clarify gate (Resend/Firebase/…).
     # RodiumAi generation auth remains via resolve_generation_auth / Settings.
 
-    # Image branch: keep single-pass for V1
-    if route.is_image and mode == "agent":
+    # Image requests run in one pass in both modes (see `_image_run_stream`).
+    if route.is_image:
         history = _history(db, chat.id)
         user_id = user.id
         db.close()
-
-        async def image_stream():
-            steps: list[dict] = []
-            thinking_parts: list[str] = []
-            full: list[str] = []
-            applied: list[dict] = []
-
-            def push_step(step_id: str, label: str, st: str) -> str:
-                existing = next((s for s in steps if s["id"] == step_id), None)
-                if existing:
-                    existing["status"] = st
-                    existing["label"] = label
-                else:
-                    steps.append({"id": step_id, "label": label, "status": st})
-                return _sse({"type": "step", "id": step_id, "label": label, "status": st})
-
-            yield _sse({"type": "user_message", "id": user_msg_id, "run_id": str(run_pk)})
-            yield push_step("classify", t("step_classify", locale), "running")
-            yield _sse(
-                {
-                    "type": "route",
-                    "task_class": route.task_class,
-                    "effort_label": route_effort,
-                    "tier": route.tier,
-                }
+        return _event_stream(
+            _image_run_stream(
+                run_pk=run_pk,
+                user_msg_id=user_msg_id,
+                history=history,
+                user_id=user_id,
+                project_id=project_id_str,
+                user_content=user_content,
+                route=route,
+                route_effort=route_effort,
+                resolve_gen_auth=resolve_gen_auth,
+                locale=locale,
             )
-            yield push_step("classify", t("step_classify", locale), "done")
-            try:
-                gen_auth = await resolve_gen_auth()
-                yield push_step("generate_image", t("step_generate_image", locale), "running")
-                image_info = await generate_project_image(
-                    auth=gen_auth,
-                    project_id=project_id_str,
-                    prompt=user_content,
-                    model=route.model,
-                    locale=locale,
-                )
-                applied.append({"op": "write", "path": image_info["path"]})
-                yield _sse({"type": "file_write", "path": image_info["path"]})
-                yield push_step("generate_image", t("step_generate_image", locale), "done")
-
-                srcset = ", ".join(f"{p} {w}w" for p, w in image_info.get("srcset") or [])
-                wire_prompt = (
-                    f"An image was generated at `{image_info['path']}` "
-                    f"(URL in the app: `{image_info['public_path']}`, "
-                    f"{image_info.get('width')}x{image_info.get('height')}"
-                    + (f", srcset: {srcset}" if srcset else "")
-                    + ").\n"
-                    f"User request: {user_content}\n"
-                    "Update the UI to showcase this image where appropriate, with its real "
-                    "width/height and srcset. Use forge-edit / forge-write tags."
-                )
-                yield push_step("select_files", t("step_select_files", locale), "running")
-                with SessionLocal() as stream_db:
-                    llm_messages = await build_llm_messages(
-                        project_id=project_id_str,
-                        history=[*history, ("user", wire_prompt)],
-                        user_query=wire_prompt,
-                        db=stream_db,
-                        user_id=user_id,
-                        locale=locale,
-                        auth=gen_auth,
-                        model=get_settings().effective_default_model,
-                    )
-                    stream_db.commit()
-                yield push_step("select_files", t("step_select_files", locale), "done")
-                yield push_step("generate", t("step_generate_code", locale), "running")
-                async for chunk in stream_with_continuation(
-                    auth=gen_auth,
-                    model=get_settings().effective_default_model,
-                    messages=llm_messages,
-                    locale=locale,  # type: ignore[arg-type]
-                    stream_fn=stream_chat_completion,
-                ):
-                    if chunk.kind == "thinking":
-                        thinking_parts.append(chunk.content)
-                        yield _sse({"type": "thinking", "delta": chunk.content})
-                    elif chunk.kind == "notice":
-                        frame = notice_sse(chunk, locale)  # type: ignore[arg-type]
-                        if frame:
-                            yield frame
-                    else:
-                        full.append(chunk.content)
-                        yield _sse({"type": "token", "content": chunk.content})
-                yield push_step("generate", t("step_generate_code", locale), "done")
-                yield push_step("apply_writes", t("step_apply_writes", locale), "running")
-                writes, deletes = parse_forge_tags("".join(full))
-                written, violations = await apply_validated_writes_async(
-                    project_id_str, writes, snapshot_label="before edit"
-                )
-                applied.extend(written)
-                for item in written:
-                    yield _sse({"type": "file_write", "path": item["path"]})
-                for v in violations:
-                    yield _sse(
-                        {
-                            "type": "warning",
-                            "message": f"{v.get('code')}: {v.get('message')}",
-                            "violation": v,
-                        }
-                    )
-                for op in deletes:
-                    delete_file(project_id_str, op.path)
-                    applied.append({"op": "delete", "path": op.path})
-                    yield _sse({"type": "file_delete", "path": op.path})
-                yield push_step("apply_writes", t("step_apply_writes", locale), "done")
-                if applied:
-                    yield _sse({"type": "preview_refresh"})
-                yield push_step("done", t("step_done", locale), "done")
-                summary = (
-                    "Image générée et intégrée."
-                    if locale == "fr"
-                    else "Image generated and wired into the UI."
-                )
-                payload = {
-                    "summary": summary,
-                    "assistant_content": "".join(full),
-                    "thinking_text": "".join(thinking_parts) or None,
-                    "steps": steps,
-                    "applied": applied,
-                }
-                with SessionLocal() as stream_db:
-                    live = stream_db.get(AgentRun, run_pk)
-                    if live is not None:
-                        _persist_assistant(stream_db, live, payload, locale)
-                        live.status = "done"
-                        stream_db.commit()
-                yield _sse({"type": "done", **payload, "effort_label": route_effort})
-            except RodiumError as exc:
-                with SessionLocal() as stream_db:
-                    live = stream_db.get(AgentRun, run_pk)
-                    if live is not None:
-                        live.status = "error"
-                        stream_db.commit()
-                yield _error_sse(exc)
-
-        return _event_stream(image_stream())
+        )
 
     # Clarify gate — stream the first SSE frames IMMEDIATELY, then call the
     # LLM. Previously `await build_clarify_questions_llm(...)` ran before any
@@ -1746,6 +1774,26 @@ async def branch_messages(
         and get_settings().forge_clarity_gauge_enabled
         and clarity_gauge_eligible(user_content, force_scaffold=force_scaffold, task_class=route.task_class)
     )
+
+    # Image requests run in one pass in both modes (see `_image_run_stream`).
+    if route.is_image:
+        history = _history(db, chat.id)
+        user_id = user.id
+        db.close()
+        return _event_stream(
+            _image_run_stream(
+                run_pk=run_pk,
+                user_msg_id=user_msg_id,
+                history=history,
+                user_id=user_id,
+                project_id=project_id_str,
+                user_content=user_content,
+                route=route,
+                route_effort=route_effort,
+                resolve_gen_auth=resolve_gen_auth,
+                locale=locale,
+            )
+        )
 
     if clarify:
 

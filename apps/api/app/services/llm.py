@@ -501,7 +501,13 @@ async def stream_chat_completion(
     meta: dict[str, Any] | None = None,
 ) -> AsyncIterator[StreamChunk]:
     """Stream one completion. ``meta`` (optional) receives ``finish_reason``."""
+    from app.services.orchestration.catalog import is_image_model
+
     settings = get_settings()
+    if is_image_model(model):
+        # A run routed to image generation still writes code with a text
+        # model; the chat endpoint refuses an image model outright.
+        model = settings.effective_default_model
     if settings.forge_cloud_enabled and auth.billing_uid:
         # The gateway with the user's own token first. The internal lane stays
         # for owner-billed shared projects and, during the transition, for a
