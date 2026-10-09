@@ -1,0 +1,12 @@
+/* Prompts screen: two-column prompt library. */
+.prompts-screen .prompt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
+.prompts-screen .prompt {
+  appearance: none; text-align: left; color: var(--fg);
+  background: var(--surface); border: 1px solid var(--line); border-radius: 1.1rem;
+  padding: .85rem .9rem; display: flex; flex-direction: column; gap: .35rem; min-height: 6.6rem;
+}
+.prompts-screen .prompt:active { transform: scale(.98); }
+.prompts-screen .prompt .cat { display: inline-flex; align-items: center; gap: .35rem; font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.prompts-screen .prompt .cat-ic { width: 1.6rem; height: 1.6rem; border-radius: .6rem; display: grid; place-items: center; color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, transparent); }
+.prompts-screen .prompt strong { font-size: .92rem; font-weight: 700; margin-top: .1rem; }
+.prompts-screen .prompt .one-line { font-size: .78rem; color: var(--muted); line-height: 1.35; }

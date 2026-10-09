@@ -10,6 +10,24 @@
 - --muted: #78716c
 - --accent: #b45309
 
+Supporting tokens: --hairline rgba(28,25,23,0.16) for every rule, #f3f1ec for service hover.
+
+## Typography
+- Serif: Georgia, "Times New Roman", Times, serif, weight 400 (headlines, numbers, names, quotes).
+- Sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif (body, labels).
+- Body: 16px, line-height 1.6; hero lede 17px; card text 14 to 15px in --muted.
+- Hero title: clamp(38px, 7.2vw, 104px), line-height 1.04, letter-spacing -0.015em, max-width 18ch.
+- Section titles: clamp(30px, 4.4vw, 56px). Contact title: clamp(36px, 6vw, 84px).
+- Card titles 22 to 26px serif; pull quote clamp(22px, 2.6vw, 32px) italic.
+- Labels: 11 to 13px uppercase, letter-spacing 0.06em to 0.22em.
+
+## Spacing & radius
+- Horizontal gutter: --gutter clamp(20px, 6vw, 96px). Section padding clamp(64px, 9vw, 130px).
+- Grid gaps: clamp(24px, 4vw, 56px) for work and team, clamp(32px, 6vw, 88px) for philosophy, 1px hairline grid for services.
+- Narrow work cards drop by clamp(24px, 6vw, 96px) on desktop for the asymmetric rhythm.
+- Radius: none. No shadows, no gradients.
+- Breakpoints (mobile first): 721px and 901px.
+
 ## Tone
 Editorial, restrained, museum-grade. Long serif headlines, generous margins, quiet confidence. Copy reads like an architecture monograph.
 

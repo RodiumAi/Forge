@@ -1,0 +1,8 @@
+/* Saved screen: two-column cookbook grid. Root: .saved-screen */
+.saved-screen .saved-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; }
+.saved-screen .saved-card { position: relative; border-radius: 1.15rem; overflow: hidden; border: 1px solid var(--line); background: var(--surface); display: flex; flex-direction: column; }
+.saved-screen .saved-img { display: block; aspect-ratio: 1.4 / 1; background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 40%, #3a1d05), #2a1608); }
+.saved-screen .saved-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.saved-screen .cook-again.floating { position: absolute; top: .55rem; left: .55rem; background: color-mix(in srgb, var(--bg) 62%, transparent); backdrop-filter: blur(6px); }
+.saved-screen .saved-body { padding: .7rem .75rem .85rem; display: grid; gap: .25rem; }
+.saved-screen .saved-body strong { font-size: .88rem; line-height: 1.2; }

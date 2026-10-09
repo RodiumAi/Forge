@@ -1,0 +1,20 @@
+/* Search screen: search field + genre grid. */
+.search-screen .searchbar {
+  display: flex; align-items: center; gap: .6rem;
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: 1rem;
+  padding: .7rem .9rem; color: var(--muted);
+}
+.search-screen .searchbar input {
+  flex: 1; border: 0; background: transparent; color: var(--fg); font-size: .95rem; outline: none; min-width: 0;
+}
+.search-screen .searchbar input::placeholder { color: var(--muted); }
+.search-screen .genres { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
+.search-screen .genre {
+  appearance: none; border: 0; color: #fff; text-align: left;
+  aspect-ratio: 1.7 / 1; border-radius: 1rem; padding: .85rem;
+  font-size: 1rem; font-weight: 800; letter-spacing: -.01em;
+  background-size: cover; overflow: hidden;
+  display: flex; align-items: flex-start;
+  text-shadow: 0 1px 8px rgba(0,0,0,.3);
+}
+.search-screen .genre:active { transform: scale(.98); }

@@ -1,0 +1,30 @@
+/* Home screen: balance hero, quick actions, recent activity. */
+.home-screen .section-head { display: flex; align-items: baseline; justify-content: space-between; margin: .3rem 0 -.2rem; }
+.home-screen .section-head h2 { margin: 0; font-size: .95rem; }
+.home-screen .section-head a { color: var(--accent); font-size: .8rem; font-weight: 600; text-decoration: none; }
+
+/* Balance hero */
+.home-screen .balance {
+  border-radius: 1.4rem; padding: 1.35rem 1.3rem 1.25rem;
+  position: relative; overflow: hidden;
+  background:
+    radial-gradient(120% 120% at 100% 0%, color-mix(in srgb, var(--accent) 40%, transparent), transparent 55%),
+    linear-gradient(155deg, color-mix(in srgb, var(--accent) 16%, var(--surface)), var(--surface));
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line));
+}
+.home-screen .balance .lbl { margin: 0; font-size: .78rem; color: color-mix(in srgb, var(--fg) 72%, var(--muted)); letter-spacing: .03em; }
+.home-screen .balance .amt { margin: .3rem 0 .1rem; font-size: 2.4rem; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.home-screen .balance .amt small { font-size: 1.1rem; font-weight: 700; opacity: .75; }
+.home-screen .balance .delta { display: inline-flex; align-items: center; gap: .3rem; font-size: .8rem; font-weight: 600; color: var(--accent); }
+.home-screen .balance .card-chip { position: absolute; top: 1.2rem; right: 1.2rem; width: 2.1rem; height: 1.5rem; border-radius: .35rem; background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 80%, #fff), color-mix(in srgb, var(--accent) 45%, transparent)); opacity: .9; }
+
+/* Quick actions */
+.home-screen .actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: .55rem; }
+.home-screen .action {
+  appearance: none; border: 1px solid var(--line); background: var(--surface);
+  border-radius: 1rem; padding: .8rem .4rem .65rem; color: var(--fg);
+  display: flex; flex-direction: column; align-items: center; gap: .4rem;
+  font-size: .72rem; font-weight: 600;
+}
+.home-screen .action .ic { width: 2.15rem; height: 2.15rem; border-radius: 999px; display: grid; place-items: center; background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
+.home-screen .action:active { transform: scale(.97); }

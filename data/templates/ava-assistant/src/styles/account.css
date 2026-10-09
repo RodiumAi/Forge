@@ -1,0 +1,14 @@
+/* Account screen: model settings, usage meter, Pro upsell. */
+.account-screen .usage { height: .55rem; border-radius: 999px; background: var(--surface-2); overflow: hidden; margin-top: .7rem; border: 1px solid var(--line); }
+.account-screen .usage span { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 55%, transparent), var(--accent)); }
+
+.account-screen .upsell {
+  display: flex; align-items: center; gap: .8rem;
+  border-radius: 1.15rem; padding: 1rem 1.05rem;
+  background:
+    radial-gradient(120% 120% at 100% 0%, color-mix(in srgb, var(--accent) 34%, transparent), transparent 55%),
+    linear-gradient(155deg, color-mix(in srgb, var(--accent) 18%, var(--surface)), var(--surface));
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
+}
+.account-screen .upsell strong { font-size: .95rem; }
+.account-screen .upsell-ic { width: 2.6rem; height: 2.6rem; border-radius: .9rem; flex-shrink: 0; display: grid; place-items: center; color: var(--on-accent); background: linear-gradient(140deg, var(--accent), color-mix(in srgb, var(--accent) 45%, #3b1a8f)); }

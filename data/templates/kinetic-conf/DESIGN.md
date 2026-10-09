@@ -12,6 +12,22 @@
 
 Secondary hard blocks: #0000ff (electric blue) and #00ff85 (signal green) used as full-bleed section backgrounds and tags only.
 
+## Typography
+- Font stack: "Helvetica Neue", Helvetica, Arial, "Segoe UI", sans-serif (system fonts, no web fonts).
+- Body: 1rem, line-height 1.5, antialiased.
+- Marquee words: clamp(56px, 10vw, 128px), weight 900, line-height 1, letter-spacing -0.04em, uppercase; outline words use a 2px text stroke.
+- Section h2: clamp(40px, 6vw, 72px), weight 900, line-height 1, uppercase. Block titles: clamp(32px, 5vw, 56px), weight 900, line-height 1.1.
+- Big numbers: 56px stats, 52px ticket prices, weight 900, letter-spacing -0.04em.
+- Body copy: 17px to 19px in --muted. UI labels, nav, buttons and tags: 12px to 14px, weight 700 to 900, uppercase, letter-spacing 0.05em to 0.08em.
+
+## Spacing & radius
+- Side padding: 16px on mobile, 32px from 641px. Content max-width 1200px.
+- Section and block padding: 96px vertical. Hero: 48px top, 64px bottom.
+- Gaps: 32px in speaker and ticket grids, 56px in the venue grid, 12px to 16px between tags and buttons.
+- Borders: 2px solid #111 for rules and the accordion, 3px for photos and tickets.
+- Radius: 0 everywhere.
+- Breakpoints (mobile first): 641px (two columns, nav links) and 961px (three or four columns, two-column venue).
+
 ## Tone
 Loud, kinetic, design-agency confident. Massive uppercase type, alternating outline/filled words, opposing marquee lines. Copy is short and punchy.
 

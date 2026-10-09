@@ -1,0 +1,21 @@
+/* Activity screen: monthly spend hero, favorite places, receipts. */
+.activity-screen .balance {
+  border-radius: 1.4rem; padding: 1.35rem 1.3rem 1.25rem;
+  position: relative; overflow: hidden;
+  background:
+    radial-gradient(120% 120% at 100% 0%, color-mix(in srgb, var(--accent) 40%, transparent), transparent 55%),
+    linear-gradient(155deg, color-mix(in srgb, var(--accent) 16%, var(--surface)), var(--surface));
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line));
+}
+.activity-screen .balance .lbl { margin: 0; font-size: .78rem; color: color-mix(in srgb, var(--fg) 72%, var(--muted)); letter-spacing: .03em; }
+.activity-screen .balance .amt { margin: .3rem 0 .1rem; font-size: 2.4rem; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.activity-screen .balance .amt small { font-size: 1.1rem; font-weight: 700; opacity: .75; }
+.activity-screen .balance .delta { display: inline-flex; align-items: center; gap: .3rem; font-size: .8rem; font-weight: 600; color: var(--accent); }
+.activity-screen .balance .card-chip { position: absolute; top: 1.2rem; right: 1.2rem; width: 2.1rem; height: 1.5rem; border-radius: .35rem; background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 80%, #fff), color-mix(in srgb, var(--accent) 45%, transparent)); opacity: .9; }
+
+/* Favorite places */
+.activity-screen .places { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
+.activity-screen .place { display: flex; align-items: center; gap: .65rem; padding: .85rem .9rem; border: 1px solid var(--line); border-radius: 1rem; background: var(--surface); }
+.activity-screen .place-ic { width: 2.2rem; height: 2.2rem; flex-shrink: 0; border-radius: .7rem; display: grid; place-items: center; color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); font-size: 1.05rem; }
+.activity-screen .place strong { display: block; font-size: .88rem; }
+.activity-screen .place span { font-size: .72rem; }

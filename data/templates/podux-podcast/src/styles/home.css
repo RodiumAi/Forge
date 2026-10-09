@@ -1,0 +1,138 @@
+/* Home page sections, scoped under .home-screen. Mobile first. */
+
+.home-screen { display: flex; flex-direction: column; min-height: 100vh; }
+
+/* Hero */
+.home-screen .hero {
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+  align-items: center;
+  padding: 2rem 6vw;
+}
+.home-screen .hero-copy { flex: 1.2; }
+.home-screen .hero h1 { font-size: 1.8rem; line-height: 1.15; margin: 1rem 0; max-width: 24ch; }
+.home-screen .lead { color: var(--muted); max-width: 50ch; margin-bottom: 1.5rem; }
+.home-screen .hero-actions { display: flex; gap: 0.8rem; margin-bottom: 1.4rem; }
+.home-screen .stat { color: var(--muted); font-size: 0.9rem; }
+.home-screen .stat strong { color: var(--fg); }
+
+.home-screen .hero-art {
+  flex: 1;
+  min-height: 280px;
+  border-radius: 20px;
+  background: linear-gradient(150deg, #7c5cff, #2b1a6e 75%);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.home-screen .hero-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.home-screen .hero-play {
+  background: #fff;
+  color: var(--accent);
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  z-index: 1;
+}
+
+/* Episodes and hosts */
+.home-screen .episodes,
+.home-screen .hosts { padding: 2rem 6vw 3rem; }
+.home-screen .section-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1.2rem; }
+.home-screen .section-head h2,
+.home-screen .hosts h2 { font-size: 1.6rem; }
+.home-screen .more { color: var(--accent); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+.home-screen .more svg { vertical-align: -0.15em; }
+
+.home-screen .ep-list { list-style: none; display: flex; flex-direction: column; gap: 0.8rem; }
+.home-screen .ep {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  background: #fff;
+  border-radius: 14px;
+  padding: 0.8rem 1.2rem;
+  box-shadow: 0 2px 10px rgba(24, 19, 48, 0.06);
+}
+.home-screen .ep-num { color: var(--muted); font-weight: 700; width: 2ch; }
+.home-screen .ep-cover { width: 56px; height: 56px; border-radius: 10px; flex-shrink: 0; overflow: hidden; }
+.home-screen .ep-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.home-screen .ep-info { flex: 1; }
+.home-screen .ep-info h3 { font-size: 1rem; }
+.home-screen .dur {
+  background: var(--soft);
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 0.1rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.home-screen .play {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: var(--soft);
+  color: var(--accent);
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.home-screen .play.playing,
+.home-screen .play:hover { background: var(--accent); color: #fff; }
+
+.home-screen .hosts h2 { margin-bottom: 1.4rem; }
+.home-screen .host-grid { display: grid; grid-template-columns: 1fr; gap: 1.2rem; }
+.home-screen .host { background: #fff; border-radius: 16px; padding: 1.8rem; text-align: center; }
+.home-screen .avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  margin: 0 auto 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 800;
+  font-size: 1.2rem;
+  overflow: hidden;
+}
+.home-screen .avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.home-screen .host p { color: var(--muted); font-size: 0.9rem; }
+
+/* Subscribe strip */
+.home-screen .subscribe {
+  background: var(--accent);
+  color: #fff;
+  text-align: center;
+  padding: 3rem 6vw;
+  margin: 1rem 6vw 3rem;
+  border-radius: 20px;
+}
+.home-screen .subscribe p { opacity: 0.9; margin: 0.5rem 0 1.3rem; }
+.home-screen .subscribe form { display: flex; justify-content: center; gap: 0.6rem; flex-wrap: wrap; }
+.home-screen .subscribe input { border: none; border-radius: 999px; padding: 0.65rem 1.2rem; min-width: 260px; font-size: 0.95rem; }
+.home-screen .subscribe .btn-accent { background: var(--fg); }
+
+@media (min-width: 761px) {
+  .home-screen .hero { flex-direction: row; padding: 3.5rem 6vw 4rem; }
+  .home-screen .hero h1 { font-size: 2.5rem; }
+  .home-screen .host-grid { grid-template-columns: repeat(3, 1fr); }
+  .home-screen .ep { flex-wrap: nowrap; }
+}

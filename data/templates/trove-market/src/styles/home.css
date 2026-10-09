@@ -1,0 +1,30 @@
+/* Home screen: search, chips, promo hero, product grid. Root: .home-screen */
+.home-screen .promo {
+  position: relative; overflow: hidden; border-radius: 1.35rem; padding: 1.4rem 1.3rem;
+  color: var(--on-accent);
+  background:
+    radial-gradient(120% 120% at 100% 0%, #fdba74, transparent 55%),
+    linear-gradient(140deg, #fb923c, #ea580c 85%);
+  box-shadow: 0 14px 30px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.home-screen .promo-copy { position: relative; z-index: 1; }
+.home-screen .promo-tag { font-size: .72rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; opacity: .9; }
+.home-screen .promo h2 { margin: .45rem 0 .7rem; font-size: 1.5rem; line-height: 1.1; letter-spacing: -.02em; font-weight: 800; }
+.home-screen .promo-cta { font-size: .85rem; font-weight: 750; }
+.home-screen .promo-cta svg { vertical-align: -2px; }
+.home-screen .promo-orb { position: absolute; right: -2.5rem; bottom: -3.5rem; width: 9rem; height: 9rem; border-radius: 999px; background: color-mix(in srgb, #fff 22%, transparent); }
+
+/* Product grid */
+.home-screen .grid { display: grid; grid-template-columns: 1fr 1fr; gap: .85rem; }
+.home-screen .product { background: var(--surface); border: 1px solid var(--line); border-radius: 1.2rem; padding: .55rem .55rem .7rem; display: flex; flex-direction: column; }
+.home-screen .thumb { aspect-ratio: 1 / 1; border-radius: .85rem; overflow: hidden; background-size: cover; background-position: center; }
+.home-screen .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.home-screen .pmeta { padding: .55rem .3rem 0; flex: 1; }
+.home-screen .pmeta strong { display: block; font-size: .9rem; font-weight: 700; letter-spacing: -.01em; }
+.home-screen .pmeta span { font-size: .72rem; color: var(--muted); }
+.home-screen .prow { display: flex; align-items: center; justify-content: space-between; padding: .5rem .3rem 0; }
+.home-screen .add {
+  appearance: none; border: 0; width: 2rem; height: 2rem; border-radius: 999px;
+  background: var(--accent); color: var(--on-accent); display: grid; place-items: center;
+}
+.home-screen .add:active { transform: scale(.92); }

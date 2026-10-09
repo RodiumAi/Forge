@@ -1,3 +1,5 @@
+/* Foundation: tokens, reset, app shell (navbar + tab bar), shared components.
+   Screen styles live in src/styles/<screen>.css, scoped under the screen root. */
 :root {
   color-scheme: dark;
   --bg: #0e1230;
@@ -49,7 +51,7 @@ button { font: inherit; cursor: pointer; }
 }
 .nav-action.ghost { border-radius: .8rem; }
 
-/* Main */
+/* Main (each tab screen is an .app-main) */
 .app-main {
   flex: 1; padding: 1.05rem 1.1rem 6.4rem;
   display: grid; gap: 1rem; align-content: start;
@@ -58,15 +60,7 @@ button { font: inherit; cursor: pointer; }
 .section-head h2 { margin: 0; font-size: .95rem; }
 .section-head a, .link { color: var(--accent); font-size: .8rem; font-weight: 600; text-decoration: none; }
 
-/* Budget-left ring hero */
-.hero {
-  border-radius: 1.5rem; padding: 1.4rem 1.2rem 1.2rem;
-  display: grid; justify-items: center; gap: 1rem;
-  background:
-    radial-gradient(120% 90% at 50% -10%, color-mix(in srgb, var(--accent) 26%, transparent), transparent 60%),
-    linear-gradient(180deg, var(--surface-2), var(--surface));
-  border: 1px solid var(--line);
-}
+/* Budget-left ring (onboarding + Home) */
 .ring-wrap { position: relative; width: 190px; height: 190px; }
 .ring { width: 100%; height: 100%; display: block; }
 .ring-center {
@@ -75,11 +69,6 @@ button { font: inherit; cursor: pointer; }
 .ring-center .rc-lbl { font-size: .72rem; color: var(--muted); letter-spacing: .02em; }
 .ring-center .rc-amt { font-size: 2.5rem; font-weight: 800; letter-spacing: -.03em; line-height: 1; font-variant-numeric: tabular-nums; }
 .ring-center .rc-sub { font-size: .78rem; color: var(--muted); font-variant-numeric: tabular-nums; }
-.hero-legend { display: flex; flex-wrap: wrap; gap: .3rem 1.1rem; width: 100%; justify-content: center; font-size: .76rem; color: var(--muted); }
-.hero-legend span { display: inline-flex; align-items: center; gap: .4rem; }
-.hero-legend .d { width: .6rem; height: .6rem; border-radius: 999px; }
-.hero-legend .d.spent { background: var(--accent); }
-.hero-legend .d.left { background: var(--track); border: 1px solid var(--line); }
 
 /* Cards / lists */
 .card {
@@ -91,7 +80,7 @@ button { font: inherit; cursor: pointer; }
 .muted { color: var(--muted); margin: 0; line-height: 1.45; font-size: .9rem; }
 .row { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
 
-/* Category rows with progress bars */
+/* Category rows with progress bars (Home + Stats) */
 .cats { display: grid; gap: 1rem; }
 .cat { display: flex; align-items: center; gap: .8rem; }
 .cat-ico {
@@ -107,7 +96,7 @@ button { font: inherit; cursor: pointer; }
 .track { height: .5rem; border-radius: 999px; background: var(--track); overflow: hidden; }
 .fill { height: 100%; border-radius: 999px; transition: width .3s ease; }
 
-/* Expense list */
+/* List rows (Home expenses + Account settings) */
 .tx { display: flex; align-items: center; gap: .8rem; padding: .7rem 0; border-bottom: 1px solid var(--line); }
 .tx:last-child { border-bottom: 0; padding-bottom: 0; }
 .tx:first-child { padding-top: 0; }
@@ -123,51 +112,6 @@ button { font: inherit; cursor: pointer; }
   font-size: .72rem; font-weight: 650; padding: .28rem .6rem; border-radius: 999px;
   background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent);
 }
-
-/* Add expense screen */
-.add { display: grid; gap: 1rem; align-content: start; }
-.amount-display {
-  display: flex; align-items: baseline; justify-content: center; gap: .5rem;
-  padding: 1.2rem 0 .4rem;
-}
-.amount-display .cur { font-size: 1rem; font-weight: 700; color: var(--muted); }
-.amount-display .big { font-size: 3.1rem; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
-.chips { display: flex; flex-wrap: wrap; gap: .5rem; justify-content: center; }
-.chip {
-  appearance: none; border: 1px solid var(--line); background: var(--surface);
-  color: var(--fg); border-radius: 999px; padding: .5rem .9rem; font-size: .82rem; font-weight: 600;
-}
-.chip.on { background: color-mix(in srgb, var(--accent) 20%, transparent); border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); color: var(--accent); }
-.note {
-  appearance: none; width: 100%; border: 1px solid var(--line); background: var(--surface);
-  color: var(--fg); border-radius: 1rem; padding: .85rem 1rem; font-size: .92rem;
-}
-.note::placeholder { color: var(--muted); }
-.keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; }
-.key {
-  appearance: none; border: 1px solid var(--line); background: var(--surface-2);
-  color: var(--fg); border-radius: 1rem; min-height: 3.4rem;
-  font-size: 1.3rem; font-weight: 600; display: grid; place-items: center;
-}
-.key:active { transform: scale(.97); background: color-mix(in srgb, var(--accent) 14%, var(--surface-2)); }
-
-/* Stats bars */
-.bars { display: flex; align-items: flex-end; gap: .55rem; height: 116px; margin-top: .4rem; }
-.bars .col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: .4rem; height: 100%; justify-content: flex-end; }
-.bars .bar { width: 100%; border-radius: .5rem .5rem 0 0; background: linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--accent) 30%, transparent)); }
-.bars .bl { font-size: .68rem; color: var(--muted); }
-
-.io { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
-.io-card { border: 1px solid var(--line); border-radius: 1.1rem; padding: .9rem 1rem; display: grid; gap: .25rem; background: var(--surface); }
-.io-lbl { font-size: .74rem; color: var(--muted); }
-.io-amt { font-size: 1.25rem; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
-.io-card.in .io-amt { color: var(--accent); }
-.io-card.out .io-amt { color: var(--danger); }
-
-/* Account */
-.profile { display: flex; align-items: center; gap: .85rem; padding: .2rem .2rem .1rem; }
-.pfp-lg { width: 3.1rem; height: 3.1rem; border-radius: 1rem; display: grid; place-items: center; font-weight: 800; color: var(--on-accent); background: linear-gradient(140deg, var(--accent), #7c3aed); }
-.profile strong { font-size: 1.05rem; }
 
 /* Buttons */
 .btn-primary, .btn-ghost {
@@ -192,25 +136,3 @@ button { font: inherit; cursor: pointer; }
   font-size: .66rem; font-weight: 600; min-height: 2.9rem; padding: .35rem;
 }
 .tab.active { color: var(--accent); }
-
-/* Onboarding */
-.onboard {
-  padding: calc(1.6rem + var(--safe-top)) 1.4rem calc(1.4rem + var(--safe-bottom));
-  justify-content: space-between; gap: 1.5rem;
-}
-.onboard-art {
-  height: 44vh; max-height: 340px; border-radius: 1.6rem; position: relative; overflow: hidden;
-  display: grid; place-items: center;
-  background:
-    radial-gradient(circle at 30% 24%, color-mix(in srgb, var(--accent) 42%, transparent), transparent 52%),
-    radial-gradient(circle at 78% 78%, color-mix(in srgb, #7c3aed 34%, transparent), transparent 50%),
-    var(--surface);
-  border: 1px solid var(--line);
-}
-.onboard-art .ring-wrap { width: 180px; height: 180px; }
-.onboard-kicker { margin: 0 0 .6rem; color: var(--accent); font-size: .76rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
-.onboard-body h2 { margin: 0 0 .6rem; font-size: 1.85rem; line-height: 1.12; letter-spacing: -.02em; }
-.onboard-actions { display: grid; gap: .55rem; }
-.dots { display: flex; gap: .35rem; justify-content: center; margin-bottom: .3rem; }
-.dots i { width: .5rem; height: .5rem; border-radius: 999px; background: var(--line); }
-.dots i.on { background: var(--accent); width: 1.4rem; }

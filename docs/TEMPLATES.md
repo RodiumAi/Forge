@@ -14,7 +14,7 @@ A kit is a folder `data/templates/<id>/` where `<id>` matches the regex:
 
 Lowercase letters, digits and hyphens, 2–63 chars, starting with a letter or digit. Example: `aurora-ai`.
 
-## Required files (12)
+## Required files
 
 ```
 data/templates/<id>/
@@ -27,11 +27,17 @@ data/templates/<id>/
 ├── tsconfig.json
 ├── tsconfig.node.json
 ├── vite.config.ts
+├── public/              # optional: images, manifest.webmanifest (mobile kits)
 └── src/
-    ├── main.tsx
-    ├── App.tsx
-    └── index.css
+    ├── main.tsx         # named createRoot (see rules)
+    ├── App.tsx          # composition only
+    ├── index.css        # foundation: tokens, reset, type, shell, shared utilities
+    ├── components/      # one file per section / shared part
+    ├── screens/         # mobile kits: one file per screen
+    └── styles/          # page or screen stylesheets, scoped (home.css...)
 ```
+
+A kit is the first code the agent edits after a fork, so it follows the same rules the agent is held to.
 
 ### `template.json`
 
@@ -77,6 +83,13 @@ The design charter the AI follows when forking the kit. Required sections:
 - --muted: #8b84a3
 - --accent: #7c3aed
 
+## Typography
+- Display: system-ui stack, 700, clamp(2.4rem, 6vw, 4.2rem)
+- Body: system-ui stack, 400, 1rem / 1.6
+
+## Spacing & radius
+- Section padding: clamp(4rem, 10vw, 7rem); radius 14px
+
 ## Tone
 One or two sentences describing voice and copy style.
 
@@ -92,10 +105,19 @@ The `## Colors` section must list the same four variables as `template.json`.
 
 ## Hard rules (locked by pytest)
 
-1. **`src/App.tsx` may only import from `"react"`.** Kits run in the zero-install Babel runner: no router, no UI library, no icon packs. Every `from "…"` specifier other than `react` fails the suite.
-2. **`preview.html` must be script-free.** No `<script>` tag, in any casing.
-3. **`preview.html` may only reference one external origin:** `https://images.unsplash.com/`. Any other `http(s)://` URL fails the suite.
-4. **`src/index.css` is self-contained.** No `@import` — no Google Fonts, no external CSS. Use system font stacks and pure CSS animations.
+`apps/api/app/services/template_contract.py` is the contract as code; `test_templates.py` runs it on every kit.
+
+1. **`src/main.tsx` uses `import { createRoot } from "react-dom/client"`** (never the default `ReactDOM` import).
+2. **Imports:** `react`, `react-dom/client` (main.tsx), `lucide-react` and local files only. Kits still run with zero install.
+3. **Icons are `lucide-react` icons** (names that exist in 0.468.0). No emoji or dingbat glyphs used as icons, no hand-drawn icon SVGs.
+4. **Split files:** sections (web) or screens (mobile) live in `src/components/` / `src/screens/`; `App.tsx` only composes them.
+5. **CSS ownership:** `src/index.css` is the foundation (tokens, reset, base typography, layout shell, nav/footer or app shell, buttons and shared parts). Section or screen rules live in `src/styles/<page>.css`, imported by the file that uses them and scoped under a root class (`.home-screen .hero`).
+6. **Mobile-first:** no `@media (max-width: …)`; base rules are the phone layout, wider layouts use `min-width`.
+7. **No `@import`** in any stylesheet (system font stacks, pure CSS animations).
+8. **`package.json`:** `lucide-react` in dependencies; devDependencies pinned to the export toolchain (`vite ^5.4.21`, `@vitejs/plugin-react ^4.3.4`, `typescript ^5.6.3`, `@types/react ^18.3.12`, `@types/react-dom ^18.3.1`).
+9. **`DESIGN.md`** has `## Colors` (the 4 template.json variables), `## Typography` and `## Tone`.
+10. **`preview.html` is script-free** and only references `https://images.unsplash.com/`.
+11. A manifest lives at `public/manifest.webmanifest`, never at the kit root.
 
 ## `preview.html` — the gallery thumbnail
 

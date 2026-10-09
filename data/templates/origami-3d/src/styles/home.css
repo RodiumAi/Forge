@@ -1,0 +1,405 @@
+/* Home page sections, all scoped under .home-screen. Mobile first. */
+/* ---------- Hero ---------- */
+.home-screen .hero {
+  display: grid;
+  grid-template-columns: 1fr;
+  align-items: center;
+  gap: 40px;
+  padding: clamp(48px, 8vw, 110px) var(--gutter);
+  text-align: center;
+}
+.home-screen .hero-badge {
+  display: inline-block;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 999px;
+  margin-bottom: 22px;
+}
+.home-screen .hero-badge svg { vertical-align: -1px; }
+.home-screen .hero-title {
+  font-size: clamp(36px, 5.6vw, 68px);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+.home-screen .hero-accent { color: var(--accent); }
+.home-screen .hero-sub {
+  margin: 22px 0 30px;
+  max-width: 48ch;
+  color: var(--muted);
+  font-size: 17px;
+}
+.home-screen .hero-cta {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.home-screen .hero-note {
+  margin-top: 22px;
+  font-size: 13px;
+  color: var(--muted);
+}
+/* ---------- CSS cube ---------- */
+.home-screen .hero-stage {
+  display: flex;
+  justify-content: center;
+  perspective: 900px;
+  margin-top: 30px;
+}
+.home-screen .cube-scene {
+  position: relative;
+  width: 180px;
+  height: 180px;
+  transform-style: preserve-3d;
+}
+.home-screen .cube {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  animation: spin 14s linear infinite;
+}
+.home-screen .cube-face {
+  position: absolute;
+  width: 180px;
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 26px;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  background: rgba(255, 255, 255, 0.88);
+  border: 2px solid var(--accent);
+  border-radius: 12px;
+  backface-visibility: visible;
+}
+.home-screen .face-front  { transform: translateZ(90px); }
+.home-screen .face-back   { transform: rotateY(180deg) translateZ(90px); }
+.home-screen .face-right  { transform: rotateY(90deg) translateZ(90px); }
+.home-screen .face-left   { transform: rotateY(-90deg) translateZ(90px); }
+.home-screen .face-top    { transform: rotateX(90deg) translateZ(90px); }
+.home-screen .face-bottom { transform: rotateX(-90deg) translateZ(90px); }
+.home-screen .cube-shadow {
+  position: absolute;
+  left: 50%;
+  bottom: -70px;
+  width: 200px;
+  height: 30px;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse, rgba(24, 24, 27, 0.22), transparent 70%);
+  animation: shadowPulse 14s linear infinite;
+}
+@keyframes spin {
+  from { transform: rotateX(-18deg) rotateY(0deg); }
+  to   { transform: rotateX(-18deg) rotateY(360deg); }
+}
+@keyframes shadowPulse {
+  0%, 100% { opacity: 0.9; }
+  50% { opacity: 0.6; }
+}
+/* ---------- Fold panels (hinged) ---------- */
+.home-screen .fold-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: clamp(20px, 3vw, 40px);
+}
+.home-screen .fold-scene { perspective: 1200px; }
+.home-screen .fold-panel {
+  position: relative;
+  transform-style: preserve-3d;
+  transform-origin: left center;
+  transform: rotateY(-18deg);
+  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.home-screen .fold-scene:hover .fold-panel { transform: rotateY(0deg); }
+.home-screen .fold-face {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 30px 26px;
+  box-shadow: 0 12px 30px rgba(24, 24, 27, 0.08);
+}
+.home-screen .fold-flap {
+  position: absolute;
+  top: 0;
+  right: -14px;
+  width: 14px;
+  height: 100%;
+  background: linear-gradient(to right, rgba(99, 102, 241, 0.35), rgba(99, 102, 241, 0.08));
+  transform-origin: left center;
+  transform: rotateY(60deg);
+  border-radius: 0 6px 6px 0;
+}
+.home-screen .fold-num {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--accent);
+}
+.home-screen .fold-title {
+  font-size: 20px;
+  font-weight: 800;
+  margin: 10px 0 10px;
+}
+.home-screen .fold-text {
+  font-size: 14px;
+  color: var(--muted);
+}
+/* ---------- Isometric cards ---------- */
+.home-screen .iso-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: clamp(28px, 4vw, 56px);
+}
+.home-screen .iso-wrap { text-align: center; }
+.home-screen .iso-card {
+  width: 120px;
+  height: 120px;
+  margin: 0 auto 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--card);
+  border: 2px solid var(--accent);
+  border-radius: 18px;
+  transform: rotateX(55deg) rotateZ(-45deg);
+  box-shadow: -14px 14px 0 rgba(99, 102, 241, 0.18), -26px 26px 0 rgba(99, 102, 241, 0.08);
+  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.5s ease;
+}
+.home-screen .iso-wrap:hover .iso-card {
+  transform: rotateX(55deg) rotateZ(-45deg) translateZ(18px);
+  box-shadow: -20px 20px 0 rgba(99, 102, 241, 0.22), -36px 36px 0 rgba(99, 102, 241, 0.1);
+}
+.home-screen .iso-icon {
+  font-size: 40px;
+  color: var(--accent);
+  transform: rotateZ(45deg) rotateX(-55deg);
+}
+.home-screen .iso-icon svg { display: block; }
+.home-screen .iso-title {
+  font-size: 18px;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+.home-screen .iso-text {
+  font-size: 14px;
+  color: var(--muted);
+  max-width: 34ch;
+  margin: 0 auto;
+}
+/* ---------- Depth planes ---------- */
+.home-screen .planes {
+  position: relative;
+  margin-bottom: clamp(48px, 6vw, 80px);
+}
+.home-screen .plane { border-radius: 20px; }
+.home-screen .plane-back {
+  position: absolute;
+  inset: -26px 26px 26px -26px;
+  background: var(--accent-soft);
+  transform: translateZ(0);
+}
+.home-screen .plane-mid {
+  position: absolute;
+  inset: -13px 13px 13px -13px;
+  background: rgba(99, 102, 241, 0.16);
+}
+.home-screen .plane-front {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 32px;
+  align-items: center;
+  background: var(--card);
+  border: 1px solid var(--line);
+  padding: clamp(28px, 4vw, 56px);
+  box-shadow: 0 20px 50px rgba(24, 24, 27, 0.1);
+}
+.home-screen .plane-title {
+  font-size: clamp(22px, 2.8vw, 32px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-bottom: 14px;
+}
+.home-screen .plane-text {
+  color: var(--muted);
+  margin-bottom: 24px;
+}
+.home-screen .plane-img {
+  width: 100%;
+  height: clamp(220px, 26vw, 340px);
+  object-fit: cover;
+  border-radius: 14px;
+}
+/* ---------- Stats ---------- */
+.home-screen .stats-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+  text-align: center;
+}
+.home-screen .stat-value {
+  display: block;
+  font-size: clamp(28px, 4vw, 44px);
+  font-weight: 800;
+  color: var(--accent);
+  letter-spacing: -0.02em;
+}
+.home-screen .stat-label {
+  font-size: 13px;
+  color: var(--muted);
+}
+/* ---------- Pricing ---------- */
+.home-screen .billing-toggle {
+  display: inline-flex;
+  margin-top: 20px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  padding: 4px;
+}
+.home-screen .billing-toggle button {
+  padding: 8px 18px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.home-screen .billing-toggle button.on {
+  background: var(--accent);
+  color: #fff;
+}
+.home-screen .plans {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  align-items: start;
+}
+.home-screen .plan {
+  position: relative;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 32px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.home-screen .plan.featured {
+  border: 2px solid var(--accent);
+  box-shadow: 0 18px 44px rgba(99, 102, 241, 0.2);
+}
+.home-screen .plan-flag {
+  position: absolute;
+  top: -13px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 14px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.home-screen .plan-name {
+  font-size: 18px;
+  font-weight: 800;
+}
+.home-screen .plan-price {
+  font-size: 38px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.home-screen .plan-price span {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.home-screen .plan-list li {
+  padding: 7px 0;
+  font-size: 14px;
+  color: var(--muted);
+  border-bottom: 1px dashed var(--line);
+}
+.home-screen .plan-list svg { vertical-align: -2px; }
+/* ---------- FAQ ---------- */
+.home-screen .faq {
+  max-width: 720px;
+  margin: 0 auto;
+}
+.home-screen .faq-item {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--card);
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.home-screen .faq-item.open { border-color: var(--accent); }
+.home-screen .faq-q {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  text-align: left;
+  padding: 18px 22px;
+  font-weight: 600;
+  font-size: 15px;
+}
+.home-screen .faq-toggle {
+  color: var(--accent);
+  font-size: 20px;
+  line-height: 1;
+}
+.home-screen .faq-toggle svg { display: block; margin: 3px 2px 1px; }
+.home-screen .faq-a {
+  padding: 0 22px 18px;
+  color: var(--muted);
+  font-size: 14px;
+  animation: fadeDown 0.3s ease both;
+}
+@keyframes fadeDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+/* ---------- CTA band ---------- */
+.home-screen .cta-band {
+  margin: 0 var(--gutter) clamp(60px, 8vw, 100px);
+  padding: clamp(48px, 7vw, 90px) 32px;
+  text-align: center;
+  background: linear-gradient(135deg, var(--accent), #4338ca);
+  border-radius: 24px;
+  color: #fff;
+}
+.home-screen .cta-title {
+  font-size: clamp(28px, 4.2vw, 48px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.home-screen .cta-sub {
+  margin: 14px 0 30px;
+  opacity: 0.85;
+}
+/* ---------- Tablet and up ---------- */
+@media (min-width: 641px) {
+  .home-screen .stats-row { grid-template-columns: repeat(2, 1fr); }
+}
+/* ---------- Desktop ---------- */
+@media (min-width: 981px) {
+  .home-screen .hero {
+    grid-template-columns: 1.1fr 0.9fr;
+    text-align: left;
+  }
+  .home-screen .hero-cta { justify-content: flex-start; }
+  .home-screen .hero-stage { margin-top: 0; }
+  .home-screen .fold-row,
+  .home-screen .iso-grid,
+  .home-screen .plans { grid-template-columns: repeat(3, 1fr); }
+  .home-screen .plan.featured { transform: translateY(-10px); }
+  .home-screen .plane-front { grid-template-columns: 1.1fr 0.9fr; }
+  .home-screen .stats-row { grid-template-columns: repeat(4, 1fr); }
+}

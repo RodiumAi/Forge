@@ -13,6 +13,23 @@
 | `--accent` | `#c77b3f` | terracotta highlight, CTAs |
 | `--soft` | `#efe9e0` | cards, chips, dividers |
 
+## Typography
+
+- Font stack: "Segoe UI", system-ui, sans-serif (system fonts, no web fonts).
+- Body: 16px, line-height 1.6.
+- Intro h1: clamp(28px, 5vw, 44px), weight 600. CTA h2: clamp(22px, 4vw, 32px), weight 600.
+- Brand: 14px, weight 600, uppercase, letter-spacing 0.12em.
+- Kicker: 12px uppercase, letter-spacing 0.2em, in --accent.
+- UI text: 14px nav links and CTA button, 13px chips, captions and footer, 12px tile category.
+
+## Spacing & radius
+
+- Container: max-width 1100px with 24px side padding.
+- Intro padding: 40px 0 20px on mobile, 64px 0 32px from 761px.
+- Grid: 2 columns with 110px rows on mobile, 3 columns with 130px rows from 761px; gap 14px; tiles span 2 rows (tall tiles 3).
+- CTA band: padding 56px 24px, 56px bottom margin.
+- Radius: 10px tiles, 16px CTA band, 999px chips, nav links and buttons.
+
 ## Tone
 
 Airy, warm, editorial. Lots of whitespace, thin dividers, quiet typography.

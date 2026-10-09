@@ -1,0 +1,54 @@
+/* Home page sections. Every selector is scoped under .home-screen. Mobile first. */
+
+/* Intro */
+.home-screen .intro { text-align: center; padding: 40px 0 20px; }
+.home-screen .kicker { color: var(--accent); text-transform: uppercase; letter-spacing: 0.2em; font-size: 12px; }
+.home-screen .intro h1 { font-size: clamp(28px, 5vw, 44px); font-weight: 600; margin: 10px 0; }
+.home-screen .lede { color: var(--muted); max-width: 540px; margin: 0 auto; }
+
+/* Filters */
+.home-screen .filters { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; padding: 12px 0 28px; }
+.home-screen .chip {
+  border: 1px solid var(--soft); background: var(--bg); color: var(--muted);
+  font: inherit; font-size: 13px; padding: 6px 16px; border-radius: 999px; cursor: pointer;
+}
+.home-screen .chip--on { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* Masonry grid */
+.home-screen .grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-auto-rows: 110px;
+  grid-auto-flow: dense;
+  gap: 14px;
+  padding-bottom: 56px;
+}
+.home-screen .tile { grid-row: span 2; display: flex; flex-direction: column; overflow: hidden; border-radius: 10px; background: var(--soft); }
+.home-screen .tile--tall { grid-row: span 3; }
+.home-screen .tile-photo { flex: 1; min-height: 0; overflow: hidden; transition: transform 0.35s ease; }
+.home-screen .tile-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.home-screen .tile:hover .tile-photo { transform: scale(1.04); }
+.home-screen .tile-caption {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 8px 12px; font-size: 13px;
+}
+.home-screen .tile-title { font-weight: 600; }
+.home-screen .tile-cat { color: var(--muted); font-size: 12px; }
+
+/* CTA */
+.home-screen .cta {
+  text-align: center; background: var(--soft); border-radius: 16px;
+  padding: 56px 24px; margin-bottom: 56px;
+}
+.home-screen .cta h2 { font-size: clamp(22px, 4vw, 32px); font-weight: 600; }
+.home-screen .cta p { color: var(--muted); margin: 10px 0 24px; }
+.home-screen .cta-btn {
+  display: inline-block; background: var(--accent); color: #fff;
+  text-decoration: none; padding: 12px 28px; border-radius: 999px; font-size: 14px;
+}
+.home-screen .cta-btn:hover { opacity: 0.9; }
+
+@media (min-width: 761px) {
+  .home-screen .intro { padding: 64px 0 32px; }
+  .home-screen .grid { grid-template-columns: repeat(3, 1fr); grid-auto-rows: 130px; }
+}

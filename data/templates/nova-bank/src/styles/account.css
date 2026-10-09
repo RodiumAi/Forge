@@ -1,0 +1,3 @@
+/* Account screen: settings rows reuse the shared .card / .tx list styles
+   from index.css. Account-only tweaks go here, scoped under .account-screen. */
+.account-screen .link { white-space: nowrap; }

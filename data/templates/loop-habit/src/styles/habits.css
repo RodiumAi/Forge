@@ -1,0 +1,18 @@
+/* Habits screen: add-habit affordance and the routine list. Root: .habits-screen */
+.habits-screen .streak-pill {
+  display: inline-flex; align-items: center; gap: .28rem; flex-shrink: 0;
+  font-size: .78rem; font-weight: 700; padding: .3rem .55rem; border-radius: 999px;
+  color: var(--flame); background: color-mix(in srgb, var(--flame) 15%, transparent);
+}
+
+/* Add habit affordance */
+.habits-screen .add {
+  appearance: none; width: 100%; text-align: left; color: var(--fg);
+  display: flex; align-items: center; gap: .8rem; padding: .9rem 1.05rem;
+  border-radius: 1.15rem; background: transparent;
+  border: 1.5px dashed color-mix(in srgb, var(--accent) 40%, var(--line));
+}
+.habits-screen .add .ic { width: 2.55rem; height: 2.55rem; border-radius: .85rem; flex-shrink: 0; display: grid; place-items: center; background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
+.habits-screen .add .meta strong { display: block; font-size: .92rem; }
+.habits-screen .add .meta span { font-size: .78rem; color: var(--muted); }
+.habits-screen .add:active { transform: scale(.99); }

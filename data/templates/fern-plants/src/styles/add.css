@@ -1,0 +1,16 @@
+/* Add screen: add-a-plant form (fields, interval stepper, light picker). */
+.add-screen .form { display: grid; gap: .85rem; }
+.add-screen .field { display: grid; gap: .4rem; }
+.add-screen .field > span { font-size: .8rem; font-weight: 650; color: color-mix(in srgb, var(--fg) 82%, var(--muted)); }
+.add-screen .field input {
+  border: 1px solid var(--line); background: color-mix(in srgb, var(--fg) 4%, transparent);
+  color: var(--fg); border-radius: .85rem; padding: .7rem .85rem; outline: none;
+}
+.add-screen .field input:focus { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
+.add-screen .stepper { display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--line); border-radius: .85rem; padding: .35rem .5rem; }
+.add-screen .stepper button { width: 2.1rem; height: 2.1rem; border-radius: .65rem; border: 0; background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); font-size: 1.2rem; font-weight: 700; display: grid; place-items: center; }
+.add-screen .stepper span { font-weight: 700; font-variant-numeric: tabular-nums; }
+.add-screen .segmented { display: flex; flex-wrap: wrap; gap: .4rem; }
+.add-screen .seg { border: 1px solid var(--line); background: transparent; color: var(--muted); border-radius: 999px; padding: .45rem .75rem; font-size: .78rem; font-weight: 600; }
+.add-screen .seg.on { border-color: transparent; background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); }
+.add-screen .saved { display: inline-flex; align-items: center; gap: .4rem; margin: 0; font-size: .82rem; font-weight: 650; color: var(--accent); }

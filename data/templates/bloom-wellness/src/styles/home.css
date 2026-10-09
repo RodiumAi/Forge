@@ -1,0 +1,490 @@
+/* Home page sections, scoped under .home-screen. Mobile first. */
+
+.home-screen {
+  min-height: 100vh;
+  background: linear-gradient(160deg, var(--rose) 0%, var(--bg) 30%, var(--sage) 100%);
+  background-attachment: fixed;
+}
+
+/* ---------- Hero ---------- */
+.home-screen .hero {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 3rem;
+  align-items: center;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 3rem 1.4rem 4rem;
+}
+
+.home-screen .hero-text h1 {
+  font-size: clamp(2.2rem, 4.6vw, 3.4rem);
+  margin-bottom: 1.2rem;
+}
+
+.home-screen .hero-text h1 em {
+  font-style: italic;
+  color: var(--accent);
+}
+
+.home-screen .hero-sub {
+  color: var(--muted);
+  max-width: 460px;
+  margin-bottom: 1.8rem;
+}
+
+.home-screen .hero-actions {
+  display: flex;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.6rem;
+}
+
+.home-screen .hero-badges {
+  display: flex;
+  gap: 1.4rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.home-screen .hero-badges svg {
+  margin-right: 3.5px;
+  vertical-align: -2px;
+}
+
+.home-screen .icon-leaf {
+  color: var(--leaf);
+}
+
+.home-screen .icon-heart {
+  color: var(--muted);
+}
+
+.home-screen .hero-media {
+  position: relative;
+  animation: floaty 7s ease-in-out infinite;
+}
+
+@keyframes floaty {
+  0%,
+  100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.home-screen .hero-media img {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  border-radius: 3rem;
+  box-shadow: var(--shadow);
+}
+
+.home-screen .hero-chip {
+  position: absolute;
+  left: -1rem;
+  bottom: 2rem;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 999px;
+  padding: 0.6rem 1.2rem;
+  font-size: 0.75rem;
+  box-shadow: var(--shadow);
+}
+
+/* ---------- Treatments ---------- */
+.home-screen .treatments {
+  padding: 4rem 1.6rem 5rem;
+}
+
+.home-screen .treat-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.6rem;
+  max-width: 1080px;
+  margin: 0 auto;
+}
+
+.home-screen .treat-card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 2rem 1.8rem;
+  box-shadow: var(--shadow);
+  transition: transform 0.3s;
+}
+
+.home-screen .treat-card:hover {
+  transform: translateY(-6px);
+}
+
+.home-screen .treat-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  font-size: 1.3rem;
+  color: var(--accent);
+  background: linear-gradient(140deg, var(--rose), var(--sage));
+  border-radius: 1.2rem;
+  margin-bottom: 1rem;
+}
+
+.home-screen .treat-card h3 {
+  font-size: 1.15rem;
+  margin-bottom: 0.5rem;
+}
+
+.home-screen .treat-card p {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-bottom: 1.2rem;
+}
+
+.home-screen .treat-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px dashed #eadfd8;
+  padding-top: 0.9rem;
+}
+
+.home-screen .treat-time {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.home-screen .treat-price {
+  font-family: Georgia, serif;
+  font-size: 1.1rem;
+  color: var(--accent);
+}
+
+/* ---------- Schedule ---------- */
+.home-screen .schedule {
+  padding: 4rem 1.6rem 5rem;
+}
+
+.home-screen .sched-tabs {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 2rem;
+}
+
+.home-screen .sched-tab {
+  border: none;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 999px;
+  padding: 0.6rem 1.3rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  transition: background 0.25s, color 0.25s;
+  font-family: inherit;
+}
+
+.home-screen .sched-tab.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.home-screen .sched-card {
+  max-width: 520px;
+  margin: 0 auto;
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 2.6rem 2.2rem;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+
+.home-screen .sched-day {
+  font-size: 0.72rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.6rem;
+}
+
+.home-screen .sched-card h3 {
+  font-size: 1.5rem;
+  margin-bottom: 0.6rem;
+}
+
+.home-screen .sched-time {
+  font-size: 0.95rem;
+  margin-bottom: 0.3rem;
+}
+
+.home-screen .sched-time svg {
+  margin-right: 5px;
+  vertical-align: -3px;
+}
+
+.home-screen .sched-coach {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-bottom: 1.6rem;
+}
+
+/* ---------- Ritual ---------- */
+.home-screen .ritual {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 3.5rem;
+  align-items: center;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 4rem 1.6rem 5rem;
+}
+
+.home-screen .ritual-media {
+  position: relative;
+}
+
+.home-screen .ritual-media img:first-child {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  border-radius: 3rem;
+  box-shadow: var(--shadow);
+}
+
+.home-screen .ritual-media-small {
+  position: absolute;
+  right: 0;
+  bottom: -2rem;
+  width: 46% !important;
+  aspect-ratio: 1 !important;
+  object-fit: cover;
+  border-radius: 2rem !important;
+  border: 6px solid var(--bg);
+  box-shadow: var(--shadow);
+}
+
+.home-screen .ritual-copy h2 {
+  font-size: clamp(1.7rem, 3.2vw, 2.4rem);
+  margin-bottom: 2rem;
+}
+
+.home-screen .steps {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.home-screen .steps li {
+  display: flex;
+  gap: 1.3rem;
+  align-items: flex-start;
+}
+
+.home-screen .step-num {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 1.1rem;
+  background: linear-gradient(140deg, var(--rose), var(--sage));
+  font-family: Georgia, serif;
+  color: var(--accent);
+}
+
+.home-screen .steps h3 {
+  font-size: 1.05rem;
+  margin-bottom: 0.2rem;
+}
+
+.home-screen .steps p {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+/* ---------- Stories ---------- */
+.home-screen .stories {
+  padding: 4rem 1.6rem 5rem;
+}
+
+.home-screen .story-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.6rem;
+  max-width: 1080px;
+  margin: 0 auto;
+}
+
+.home-screen .story {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 2.2rem 1.9rem;
+  box-shadow: var(--shadow);
+}
+
+.home-screen .story p {
+  font-family: Georgia, serif;
+  font-style: italic;
+  font-size: 0.98rem;
+  margin-bottom: 1.4rem;
+}
+
+.home-screen .story footer {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.8rem;
+}
+
+.home-screen .story footer span {
+  color: var(--muted);
+}
+
+/* ---------- Visit ---------- */
+.home-screen .visit {
+  padding: 4rem 1.6rem 6rem;
+}
+
+.home-screen .visit-inner {
+  max-width: 1080px;
+  margin: 0 auto;
+  background: var(--card);
+  border-radius: 3rem;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 1fr;
+  box-shadow: var(--shadow);
+}
+
+.home-screen .visit-inner img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  min-height: 340px;
+}
+
+.home-screen .visit-copy {
+  padding: 2.4rem 1.8rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.home-screen .visit-copy h2 {
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  margin-bottom: 1rem;
+}
+
+.home-screen .visit-copy p {
+  color: var(--muted);
+  font-size: 0.92rem;
+  margin-bottom: 1.8rem;
+}
+
+.home-screen .visit-note {
+  font-size: 0.78rem !important;
+  margin: 1.4rem 0 0 !important;
+}
+
+/* ---------- Plans ---------- */
+.home-screen .plans {
+  padding: 4rem 1.6rem 5rem;
+}
+
+.home-screen .plan-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.6rem;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.home-screen .plan {
+  position: relative;
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 2.4rem 2rem;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.home-screen .plan-featured {
+  outline: 2px solid var(--accent);
+}
+
+.home-screen .plan-badge {
+  position: absolute;
+  top: -0.8rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0.35rem 1rem;
+  border-radius: 999px;
+}
+
+.home-screen .plan h3 {
+  font-size: 1.2rem;
+  margin-bottom: 0.3rem;
+}
+
+.home-screen .plan-price {
+  font-family: Georgia, serif;
+  font-size: 1.5rem;
+  color: var(--accent);
+  margin-bottom: 1.2rem;
+}
+
+.home-screen .plan ul {
+  list-style: none;
+  font-size: 0.82rem;
+  color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.6rem;
+  flex: 1;
+}
+
+.home-screen .plan li svg {
+  margin-right: 4px;
+  vertical-align: -2px;
+}
+
+/* ---------- Wider screens ---------- */
+@media (min-width: 961px) {
+  .home-screen .hero {
+    grid-template-columns: 1.05fr 1fr;
+    padding: 5rem 1.6rem 6rem;
+  }
+
+  .home-screen .treat-grid,
+  .home-screen .story-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .home-screen .ritual {
+    grid-template-columns: 1fr 1.1fr;
+  }
+
+  .home-screen .ritual-media-small {
+    right: -1.4rem;
+  }
+
+  .home-screen .visit-inner {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .home-screen .visit-copy {
+    padding: 3.4rem 3rem;
+  }
+
+  .home-screen .plan-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}

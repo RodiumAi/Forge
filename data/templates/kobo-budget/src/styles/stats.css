@@ -1,0 +1,12 @@
+/* Stats screen: monthly bars, income vs expenses, top categories. Root: .stats-screen */
+.stats-screen .bars { display: flex; align-items: flex-end; gap: .55rem; height: 116px; margin-top: .4rem; }
+.stats-screen .bars .col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: .4rem; height: 100%; justify-content: flex-end; }
+.stats-screen .bars .bar { width: 100%; border-radius: .5rem .5rem 0 0; background: linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--accent) 30%, transparent)); }
+.stats-screen .bars .bl { font-size: .68rem; color: var(--muted); }
+
+.stats-screen .io { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
+.stats-screen .io-card { border: 1px solid var(--line); border-radius: 1.1rem; padding: .9rem 1rem; display: grid; gap: .25rem; background: var(--surface); }
+.stats-screen .io-lbl { font-size: .74rem; color: var(--muted); }
+.stats-screen .io-amt { font-size: 1.25rem; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.stats-screen .io-card.in .io-amt { color: var(--accent); }
+.stats-screen .io-card.out .io-amt { color: var(--danger); }

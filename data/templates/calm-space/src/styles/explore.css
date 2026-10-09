@@ -1,0 +1,2 @@
+/* Explore screen: category chips + session list with durations. */
+.explore-screen .dur { font-weight: 700; font-variant-numeric: tabular-nums; font-size: .82rem; color: var(--muted); }
