@@ -72,6 +72,12 @@ def apply_hunks(
         )
     current = content
     for idx, (search, replace) in enumerate(hunks, start=1):
+        if not search.strip():
+            return content, EditFailure(
+                "EDIT_EMPTY",
+                f"forge-edit block {idx} on `{path}` has an empty SEARCH; to add lines, "
+                "SEARCH the lines they go after and repeat them in REPLACE.",
+            )
         count = current.count(search)
         if count == 1:
             current = current.replace(search, replace, 1)

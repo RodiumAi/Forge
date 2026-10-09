@@ -38,24 +38,51 @@ _MERGED_STYLESHEETS = frozenset({"src/index.css"})
 # An explicit request to change the brand unlocks DESIGN.md / public/logo.* for
 # that turn ("change the brand", "nouvelle charte", "regenerate DESIGN.md"...).
 _BRAND_CHANGE_RE = re.compile(
-    r"design\.md|"
-    r"\b(?:change|update|redo|regenerate|rework|new)\s+(?:the\s+|our\s+|my\s+)?"
-    r"(?:brand(?:ing)?|charter|graphic\s+charter|visual\s+identity|logo|palette)\b|"
-    r"\b(?:change|changer|modifie[rz]?|refai[st]|refaire|r[ée]g[ée]n[èe]re[rz]?|nouvel(?:le)?|nouveau)\s+"
+    r"\b(?:change|update|redo|regenerate|rework|rewrite|new)\s+(?:the\s+|our\s+|my\s+)?"
+    r"(?:brand(?:ing)?|charter|graphic\s+charter|visual\s+identity|logo|palette|design\.md)\b|"
+    r"\b(?:change|changer|modifie[rz]?|refai[st]|refaire|r[ée]g[ée]n[èe]re[rz]?|r[ée][ée]cri[st]|"
+    r"nouvel(?:le)?|nouveau)\s+"
     r"(?:la\s+|le\s+|l['’]\s*|ma\s+|mon\s+|notre\s+)?"
-    r"(?:charte(?:\s+graphique)?|identit[ée]\s+visuelle|marque|logo|palette)\b",
+    r"(?:charte(?:\s+graphique)?|identit[ée]\s+visuelle|marque|logo|palette|design\.md)\b",
     re.IGNORECASE,
 )
+# "don't change the logo", "ne change pas la marque", "sans toucher au logo"...
+_NEGATION_BEFORE_RE = re.compile(
+    r"\b(?:don['’]?t|do\s+not|never|without|no\s+need\s+to|keep|ne|n['’]|sans|surtout\s+pas|jamais|pas)\b"
+    r"[^.!?\n]{0,12}$",
+    re.IGNORECASE,
+)
+_NEGATION_AFTER_RE = re.compile(r"^\s*(?:pas|plus|jamais)\b", re.IGNORECASE)
 
 
 def brand_change_requested(text: str) -> bool:
-    """True when the user explicitly asks to change the brand / charter / logo."""
-    return bool(_BRAND_CHANGE_RE.search(text or ""))
+    """True when the user explicitly asks to change the brand / charter / logo.
+
+    Mentions under a negation ("update the hero but don't change the logo")
+    keep the lock.
+    """
+    body = text or ""
+    for match in _BRAND_CHANGE_RE.finditer(body):
+        before = body[max(0, match.start() - 40) : match.start()]
+        verb_end = match.start() + len(match.group(0).split()[0])
+        if _NEGATION_BEFORE_RE.search(before) or _NEGATION_AFTER_RE.match(body[verb_end:]):
+            continue
+        return True
+    return False
 
 
 def is_locked_brand_path(path: str) -> bool:
     rel = (path or "").strip().lstrip("/").replace("\\", "/")
     return bool(_LOCKED_BRAND_RE.match(rel))
+
+
+def _is_scaffold_placeholder_css(css: str) -> bool:
+    from app.services.scaffold import INDEX_CSS, INDEX_CSS_MOBILE
+
+    def norm(text: str) -> str:
+        return re.sub(r"\s+", " ", text).strip()
+
+    return norm(css) in {norm(INDEX_CSS), norm(INDEX_CSS_MOBILE)}
 
 
 def _css_preserving_content(project_id: str, path: str, content: str) -> tuple[str, dict | None]:
@@ -75,7 +102,9 @@ def _css_preserving_content(project_id: str, path: str, content: str) -> tuple[s
         existing = read_file(project_id, path)
     except FileNotFoundError:
         return content, None
-    if len(existing) < _CSS_MERGE_MIN_EXISTING:
+    if len(existing) < _CSS_MERGE_MIN_EXISTING or _is_scaffold_placeholder_css(existing):
+        # Nothing to keep: the blank scaffold's centred-placeholder rules
+        # (.page, p { max-width }) would otherwise outrank the new foundation.
         return content, None
     try:
         from app.services.css_merge import merge_css_preserving
@@ -113,6 +142,13 @@ def _resolve_edit(project_id: str, op: EditOp, batch_content: dict[str, str]) ->
                 "specifier": "",
                 "message": f"forge-edit targets `{op.path}`, which does not exist. Use forge-write to create it.",
             }
+        except (OSError, ValueError) as exc:  # binary file, refused path
+            return "", {
+                "code": "EDIT_TARGET_INVALID",
+                "path": op.path,
+                "specifier": "",
+                "message": f"forge-edit cannot change `{op.path}` ({exc.__class__.__name__}).",
+            }
     content, failure = apply_hunks(base, op.hunks, path=op.path)
     if failure is not None:
         return "", {"code": failure.code, "path": op.path, "specifier": "", "message": failure.message}
@@ -135,9 +171,26 @@ def _batch_allowlist(project_id: str, writes: list[Any]) -> dict[str, str]:
     from app.services.project_packages import project_allowed_packages, sanitize_batch_dependencies
 
     allow = dict(project_allowed_packages(project_id))
+    # package.json as this batch leaves it: writes replace it, edits patch the
+    # current version (disk, or an earlier op of the batch).
+    pkg: str | None = None
     for op in writes:
-        if str(getattr(op, "path", "") or "").strip().lstrip("/") == "package.json":
-            allow.update(sanitize_batch_dependencies(str(getattr(op, "content", "") or "")))
+        if str(getattr(op, "path", "") or "").strip().lstrip("/") != "package.json":
+            continue
+        if isinstance(op, EditOp):
+            if pkg is None:
+                try:
+                    from app.services.filesystem import read_file
+
+                    pkg = read_file(project_id, "package.json")
+                except (OSError, ValueError):
+                    pkg = ""
+            patched, failure = apply_hunks(pkg, op.hunks, path="package.json")
+            if failure is None:
+                pkg = patched
+        else:
+            pkg = str(getattr(op, "content", "") or "")
+        allow.update(sanitize_batch_dependencies(pkg or ""))
     return allow
 
 

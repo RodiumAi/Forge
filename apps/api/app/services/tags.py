@@ -60,9 +60,11 @@ TAG_DELETE = re.compile(
     r"<forge-delete\s+path=[\"']([^\"']+)[\"']\s*/?>",
     re.DOTALL | re.IGNORECASE,
 )
+# Markers sit on their own lines; an empty SEARCH (marker right after marker)
+# is captured as empty instead of swallowing the next block.
 _HUNK_RE = re.compile(
-    r"<{7}[ \t]*SEARCH[ \t]*\r?\n(.*?)\r?\n={7}[ \t]*\r?\n(.*?)>{7}[ \t]*REPLACE",
-    re.DOTALL,
+    r"^[ \t]*<{7}[ \t]*SEARCH[ \t]*\r?\n(.*?)^[ \t]*={7}[ \t]*\r?\n(.*?)^[ \t]*>{7}[ \t]*REPLACE",
+    re.DOTALL | re.MULTILINE,
 )
 
 
@@ -82,16 +84,20 @@ def _strip_fences(content: str) -> str:
 def _parse_hunks(body: str) -> list[tuple[str, str]]:
     hunks: list[tuple[str, str]] = []
     for match in _HUNK_RE.finditer(body):
-        search = match.group(1)
-        replace = match.group(2)
-        # The newline before the REPLACE marker belongs to the marker line.
-        if replace.endswith("\r\n"):
-            replace = replace[:-2]
-        elif replace.endswith("\n"):
-            replace = replace[:-1]
-        if search.strip():
-            hunks.append((search, replace))
+        # The newline before the next marker belongs to the marker line.
+        search = _drop_final_newline(match.group(1))
+        replace = _drop_final_newline(match.group(2))
+        # An empty SEARCH is kept: applying it reports it instead of dropping it.
+        hunks.append((search, replace))
     return hunks
+
+
+def _drop_final_newline(text: str) -> str:
+    if text.endswith("\r\n"):
+        return text[:-2]
+    if text.endswith("\n"):
+        return text[:-1]
+    return text
 
 
 def parse_forge_output(text: str) -> ForgeOutput:
@@ -138,6 +144,13 @@ def parse_forge_output(text: str) -> ForgeOutput:
             deletes.append(DeleteOp(path=path))
 
     return ForgeOutput(writes=ops, deletes=deletes, truncated=truncated)
+
+
+def op_text(op: WriteOp | EditOp) -> str:
+    """The text an op puts into its file (a write's body, an edit's replacements)."""
+    if isinstance(op, EditOp):
+        return "\n".join(replace for _search, replace in op.hunks)
+    return op.content
 
 
 def unclosed_paths(text: str) -> list[str]:

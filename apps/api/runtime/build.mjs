@@ -172,7 +172,11 @@ export async function buildSite(input) {
         // normally, React and friends come from the same CDN copy as the app.
         if (args.namespace === "file") {
           if (spec.startsWith(".") || spec.startsWith("/") || NPM_BUNDLED.has(packageRoot(spec))) return undefined;
-          if (external) return { path: spec, external: true };
+          if (external) {
+            // Must reach the import map too, even when the app never imports it itself.
+            usedBare.add(spec);
+            return { path: spec, external: true };
+          }
           const url = lookupImportMap(imports, spec);
           return url ? { path: url, namespace: "cdn" } : { errors: [{ text: `unresolved ${spec}` }] };
         }

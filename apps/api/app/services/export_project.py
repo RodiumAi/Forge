@@ -381,14 +381,16 @@ def _uses_forge_forms(front: Path) -> bool:
     return False
 
 
-def _forms_endpoint(site_slug: str | None) -> str:
+def _forms_endpoint(form_key: str | None) -> str:
+    """The project's own intake URL: keyed by project, so a slug changing hands
+    never redirects an exported site's messages to someone else."""
     from app.config import get_settings
 
     base = get_settings().api_base_url.rstrip("/") + "/v1/sites/forms"
-    return json.dumps(f"{base}?site={site_slug}" if site_slug else base)
+    return json.dumps(f"{base}?key={form_key}" if form_key else base)
 
 
-def frontend_overrides(front: Path, project_name: str, site_slug: str | None = None) -> dict[str, str]:
+def frontend_overrides(front: Path, project_name: str, form_key: str | None = None) -> dict[str, str]:
     """arcname (relative to the frontend root) -> normalised content."""
     uses_forms = _uses_forge_forms(front)
     tsconfig = _TSCONFIG
@@ -406,7 +408,7 @@ def frontend_overrides(front: Path, project_name: str, site_slug: str | None = N
         "tsconfig.json": tsconfig,
     }
     if uses_forms:
-        overrides["src/forge-forms.ts"] = _FORMS_SHIM.replace("__ENDPOINT__", _forms_endpoint(site_slug))
+        overrides["src/forge-forms.ts"] = _FORMS_SHIM.replace("__ENDPOINT__", _forms_endpoint(form_key))
     return overrides
 
 
@@ -633,7 +635,7 @@ def build_readme(*, project_name: str, layout: ExportLayout, locale: str) -> str
 
 
 def build_export_zip(
-    *, project_id: str, project_name: str, locale: str = "fr", site_slug: str | None = None
+    *, project_id: str, project_name: str, locale: str = "fr", form_key: str | None = None
 ) -> tuple[bytes, str]:
     """Return (zip_bytes, suggested_filename)."""
     root = project_dir(project_id).resolve()
@@ -651,7 +653,7 @@ def build_export_zip(
 
         if layout.mode == "spa":
             assert layout.front_root
-            overrides = frontend_overrides(layout.front_root, project_name, site_slug)
+            overrides = frontend_overrides(layout.front_root, project_name, form_key)
             for arc, content in overrides.items():
                 written.add(arc)
                 zf.writestr(arc, content)
@@ -664,7 +666,7 @@ def build_export_zip(
             front = layout.front_root.resolve()
             back = layout.back_root.resolve()
 
-            overrides = frontend_overrides(front, project_name, site_slug)
+            overrides = frontend_overrides(front, project_name, form_key)
             for arc, content in overrides.items():
                 written.add(f"frontend/{arc}")
                 zf.writestr(f"frontend/{arc}", content)

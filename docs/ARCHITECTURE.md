@@ -247,6 +247,8 @@ forms (`@forge/forms` → `POST /v1/sites/forms`) and visits
 (`POST /v1/sites/hit`) there, same-origin. The owner reads them under
 Options › Forms and Options › Audience (`routers/site_events.py`).
 
+The visitor address reaches the API in `X-Forge-Visitor-IP`, trusted only with `SITES_GATEWAY_SECRET` (set on the gateway and the API). A ZIP export posts to `/v1/sites/forms?key=…`, a per-project key that survives slug changes. Pre-rendering runs in a child process with a scrubbed environment and a hard deadline (`services/prerender.py`).
+
 `/v1/authorize-host` exists **only for custom domains**: Caddy's `forward_auth`
 asks the API whether a hostname maps to a validated `ProjectDomain`, and gets
 back the slug to rewrite to. The slug always stays the S3 key; a custom domain

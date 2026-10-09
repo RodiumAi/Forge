@@ -16,8 +16,9 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Query, Request, Response
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -46,14 +47,24 @@ class FormIn(BaseModel):
 
 
 class HitIn(BaseModel):
-    p: str = Field(default="/", max_length=300)
-    r: str = Field(default="", max_length=500)
+    """Beacon payload; oversized values are cut, not rejected (the visit still counts)."""
+
+    p: str = "/"
+    r: str = ""
+
+    @field_validator("p", "r", mode="before")
+    @classmethod
+    def _cut(cls, value: object) -> str:
+        return str(value or "")[:500]
 
 
-def _site_project(db: Session, forwarded_host: str, site: str | None) -> Project:
-    slug = site_events.slug_for_host(forwarded_host) if forwarded_host else None
-    slug = slug or (site or "").strip().lower() or None
-    project = site_events.published_project(db, slug)
+def _site_project(db: Session, forwarded_host: str, key: str | None) -> Project:
+    """The site a request is for: the gateway host (published sites) or a form key (exports)."""
+    project = None
+    if forwarded_host:
+        project = site_events.published_project(db, site_events.slug_for_host(forwarded_host))
+    if project is None and key:
+        project = site_events.project_from_form_key(db, key)
     if project is None:
         raise HTTPException(status_code=404, detail="unknown_site")
     return project
@@ -92,22 +103,27 @@ def submit_form(
     body: FormIn,
     request: Request,
     background: BackgroundTasks,
-    site: str | None = Query(default=None, max_length=200),
+    key: str | None = Query(default=None, max_length=64),
     x_rodium_forwarded_host: str = Header(default=""),
     user_agent: str = Header(default=""),
     db: Session = Depends(get_db),
 ) -> dict:
-    project = _site_project(db, x_rodium_forwarded_host, site)
-    rate_limit.enforce(request, "site-form-visitor", FORMS_PER_VISITOR_PER_10MIN, 600, subject="")
-    rate_limit.enforce(request, "site-form-site", FORMS_PER_SITE_PER_DAY, 86_400, subject=str(project.id))
+    ip = site_events.visitor_ip(request)
+    rate_limit.enforce(
+        request, "site-form-visitor", FORMS_PER_VISITOR_PER_10MIN, 600, subject=site_events.rate_subject(ip)
+    )
+    project = _site_project(db, x_rodium_forwarded_host, key)
     cleaned = site_events.clean_submission(body.form, body.data)
     if cleaned is None:
         raise HTTPException(status_code=422, detail=t("form_invalid", resolve_locale(request)))
     form_name, fields = cleaned
     if site_events.is_honeypot_hit(fields):
-        return {"ok": True}  # silently dropped
+        return {"ok": True}  # silently dropped, without using the site's daily quota
+    # Counted only for submissions that are about to be stored, so junk cannot
+    # use up the site's day.
+    rate_limit.enforce(request, "site-form-site", FORMS_PER_SITE_PER_DAY, 86_400, subject=str(project.id))
     day = datetime.now(UTC).date().isoformat()
-    visitor = site_events.visitor_hash(rate_limit._client_ip(request), user_agent, day)
+    visitor = site_events.visitor_hash(ip, user_agent, day)
     row = site_events.store_submission(
         db, project, form=form_name, fields=fields, page=body.page, visitor=visitor
     )
@@ -121,13 +137,28 @@ def submit_form(
     return {"ok": True}
 
 
+def _record_hit(forwarded_host: str, key: str | None, path: str, ip: str, user_agent: str) -> None:
+    with SessionLocal() as db:
+        try:
+            project = _site_project(db, forwarded_host, key)
+        except HTTPException:
+            return
+        day = datetime.now(UTC).date().isoformat()
+        try:
+            site_events.record_visit(
+                db, project, path=path, visitor=site_events.visitor_hash(ip, user_agent, day)
+            )
+        except Exception:
+            logger.exception("visit not recorded for %s", project.slug)
+            db.rollback()
+
+
 @public_router.post("/hit", status_code=204)
 async def record_hit(
     request: Request,
-    site: str | None = Query(default=None, max_length=200),
+    key: str | None = Query(default=None, max_length=64),
     x_rodium_forwarded_host: str = Header(default=""),
     user_agent: str = Header(default=""),
-    db: Session = Depends(get_db),
 ) -> Response:
     # sendBeacon posts a Blob: parse the body leniently, whatever its type.
     try:
@@ -137,18 +168,13 @@ async def record_hit(
         return Response(status_code=204)
     if site_events.is_bot(user_agent):
         return Response(status_code=204)
-    try:
-        project = _site_project(db, x_rodium_forwarded_host, site)
-    except HTTPException:
-        return Response(status_code=204)
-    rate_limit.enforce(request, "site-hit", HITS_PER_VISITOR_PER_MIN, 60, subject="")
-    day = datetime.now(UTC).date().isoformat()
-    visitor = site_events.visitor_hash(rate_limit._client_ip(request), user_agent, day)
-    try:
-        site_events.record_visit(db, project, path=payload.p, visitor=visitor)
-    except Exception:
-        logger.exception("visit not recorded for %s", project.slug)
-        db.rollback()
+    ip = site_events.visitor_ip(request)
+    rate_limit.enforce(
+        request, "site-hit", HITS_PER_VISITOR_PER_MIN, 60, subject=site_events.rate_subject(ip)
+    )
+    # Database and Redis work is blocking: off the event loop, so page views
+    # from every published site never stall chat streams.
+    await run_in_threadpool(_record_hit, x_rodium_forwarded_host, key, payload.p, ip, user_agent)
     return Response(status_code=204)
 
 
@@ -274,7 +300,7 @@ def export_submissions(
                 keys.append(key)
     buf = io.StringIO()
     writer = csv.writer(buf)
-    writer.writerow(["date", "form", "page", *keys])
+    writer.writerow(["date", "form", "page", *(_csv_cell(k) for k in keys)])
     for out in parsed:
         writer.writerow(
             [out.created_at.isoformat(), _csv_cell(out.form), _csv_cell(out.page)]

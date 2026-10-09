@@ -256,6 +256,8 @@ leurs formulaires (`@forge/forms` → `POST /v1/sites/forms`) et leurs visites
 (`POST /v1/sites/hit`), en même origine. Le propriétaire les consulte dans
 Options › Formulaires et Options › Audience (`routers/site_events.py`).
 
+L'adresse du visiteur arrive à l'API dans `X-Forge-Visitor-IP`, acceptée seulement avec `SITES_GATEWAY_SECRET` (défini sur le gateway et l'API). Un export ZIP envoie vers `/v1/sites/forms?key=…`, une clé par projet qui survit aux changements de slug. Le pré-rendu tourne dans un processus enfant à l'environnement épuré, avec une échéance stricte (`services/prerender.py`).
+
 `/v1/authorize-host` n'existe **que pour les domaines custom** : le
 `forward_auth` de Caddy demande à l'API si un hostname correspond à un
 `ProjectDomain` validé, et récupère le slug de réécriture. Le slug reste

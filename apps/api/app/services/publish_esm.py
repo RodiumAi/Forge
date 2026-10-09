@@ -203,7 +203,7 @@ async def transform_project_to_dir(
 async def finalize_site(out_dir: Path, *, site_url: str, site_name: str, fallback_lang: str) -> dict:
     """Pre-render routes, write per-page SEO, 404, sitemap and robots."""
     from app.services import site_seo
-    from app.services.prerender import NOT_FOUND_PROBE, compose_page, prerender_site
+    from app.services.prerender import NOT_FOUND_PROBE, compose_page, prerender_site, route_target
 
     settings = get_settings()
     index_path = out_dir / "index.html"
@@ -228,11 +228,18 @@ async def finalize_site(out_dir: Path, *, site_url: str, site_name: str, fallbac
         # Injection points of the build template, not needed once the page is final.
         return doc.replace("<!--forge:head-->\n", "").replace("<!--forge:body-->\n", "")
 
-    routes = sorted(pages) or ["/"]
-    if pages:
-        for route, page in pages.items():
-            doc = finish(compose_page(template, page), route)
-            target = index_path if route == "/" else out_dir / route.lstrip("/") / "index.html"
+    # Compose every page before writing any, so a failure leaves the plain
+    # build intact rather than half the routes rewritten.
+    composed: dict[Path, str] = {}
+    for route, page in pages.items():
+        target = route_target(out_dir, route)
+        if target is None:
+            logger.warning("prerender route refused: %r", route)
+            continue
+        composed[target] = finish(compose_page(template, page), route)
+    routes = sorted(r for r in pages if route_target(out_dir, r) in composed) or ["/"]
+    if composed:
+        for target, doc in composed.items():
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(doc, encoding="utf-8")
         if not (out_dir / "404.html").exists():
@@ -252,7 +259,7 @@ async def finalize_site(out_dir: Path, *, site_url: str, site_name: str, fallbac
         (out_dir / "robots.txt").write_text(site_seo.robots_txt(site_url, noindex=noindex), encoding="utf-8")
     return {
         "routes": routes,
-        "prerendered": bool(pages),
+        "prerendered": bool(composed),
         "prerender_error": rendered.error if rendered else None,
         "lang": lang,
     }

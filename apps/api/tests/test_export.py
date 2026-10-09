@@ -146,7 +146,7 @@ class TestAliasesAndForgeModules:
             'import { submitForm } from "@forge/forms";\nexport const send = () => submitForm("contact", {});\n',
         )
         data, _ = build_export_zip(
-            project_id=project, project_name="Fournil", locale="en", site_slug="fournil"
+            project_id=project, project_name="Fournil", locale="en", form_key="KEY123"
         )
         with zipfile.ZipFile(io.BytesIO(data)) as zf:
             files = {name: zf.read(name) for name in zf.namelist()}
@@ -154,5 +154,5 @@ class TestAliasesAndForgeModules:
         assert "@forge/forms" not in pkg["dependencies"], "not an npm package"
         assert "@forge/forms" in files["vite.config.ts"].decode()
         shim = files["src/forge-forms.ts"].decode()
-        assert "/v1/sites/forms?site=fournil" in shim
+        assert "/v1/sites/forms?key=KEY123" in shim
         assert "@forge/forms" in files["tsconfig.json"].decode()

@@ -688,7 +688,8 @@ def verify_project_build(project_id: str) -> list[VerifyFinding]:
 
 
 _IMAGE_REF_RE = re.compile(
-    r"""(?:src\s*=\s*\{?\s*|url\(\s*)["']?(/[^"')\s?#]+\.(?:png|jpe?g|webp|gif|svg|avif))""",
+    # Root paths only: "//cdn.example/x.png" is a remote URL, not a project file.
+    r"""(?:src\s*=\s*\{?\s*|url\(\s*)["']?(/(?!/)[^"')\s?#]+\.(?:png|jpe?g|webp|gif|svg|avif))""",
     re.I,
 )
 

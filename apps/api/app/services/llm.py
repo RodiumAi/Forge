@@ -575,6 +575,14 @@ def _continuation_prompt(open_paths: list[str]) -> str:
     )
 
 
+def _continuation_join(produced: list[str], head: str) -> str:
+    """First text of a continuation round, as it should follow the cut answer."""
+    if head.lstrip().startswith("<forge-"):
+        previous = produced[-1] if produced else ""
+        return head if not previous or previous.endswith("\n") else "\n" + head.lstrip()
+    return head
+
+
 def generation_defaults() -> dict[str, Any]:
     """Sampling defaults for code-generation streams (settings-driven)."""
     settings = get_settings()
@@ -612,6 +620,11 @@ async def stream_with_continuation(
     produced: list[str] = []
     for round_idx in range(max_rounds + 1):
         meta: dict[str, Any] = {}
+        # A continuation either re-opens a tag (asked for) or picks up the cut
+        # text where it stopped. Its first characters are held back to tell
+        # which: a re-opened tag goes on its own line, a resumed text is joined
+        # as is (an inserted newline would corrupt the cut file).
+        pending: list[str] | None = [] if round_idx > 0 else None
         async for chunk in stream(
             auth=auth,
             model=model,
@@ -620,9 +633,27 @@ async def stream_with_continuation(
             meta=meta,
             **params,
         ):
-            if chunk.kind == "token":
-                produced.append(chunk.content)
+            if chunk.kind != "token":
+                yield chunk
+                continue
+            if pending is not None:
+                pending.append(chunk.content)
+                head = "".join(pending)
+                start = head.lstrip()
+                # Undecided while it could still become "<forge-".
+                if not start or (len(start) < 7 and "<forge-".startswith(start)):
+                    continue
+                joined = _continuation_join(produced, head)
+                pending = None
+                produced.append(joined)
+                yield StreamChunk(kind="token", content=joined)
+                continue
+            produced.append(chunk.content)
             yield chunk
+        if pending:  # the round ended while still undecided
+            tail = _continuation_join(produced, "".join(pending))
+            produced.append(tail)
+            yield StreamChunk(kind="token", content=tail)
         text = "".join(produced)
         open_paths = unclosed_paths(text)
         if not open_paths and meta.get("finish_reason") != "length":
@@ -634,10 +665,6 @@ async def stream_with_continuation(
                 )
             return
         yield StreamChunk(kind="notice", content=json.dumps({"event": "continue", "open": open_paths}))
-        # Separate the continuation from the cut text so a re-emitted tag
-        # always starts on its own line.
-        produced.append("\n")
-        yield StreamChunk(kind="token", content="\n")
         convo = [
             *messages,
             {"role": "assistant", "content": text[-_CONTINUATION_ASSISTANT_MAX_CHARS:]},

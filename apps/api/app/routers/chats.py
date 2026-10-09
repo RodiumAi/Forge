@@ -1,4 +1,5 @@
 import json
+import logging
 import re
 from uuid import UUID
 
@@ -60,11 +61,12 @@ from app.services.orchestration.router import (
 from app.services.orchestration.stale_runs import expire_if_stale
 from app.services.rodium_generation import resolve_generation_auth
 from app.services.sse import with_sse_heartbeats
-from app.services.tags import parse_forge_tags
+from app.services.tags import op_text, parse_forge_tags
 from app.services.text_plain import build_run_summary, to_plain_text
 from app.services.url_capture import enrich_prompt_with_site_url_captures
 
 router = APIRouter(tags=["chats"])
+logger = logging.getLogger(__name__)
 
 
 def _can_access_project(db: Session, user: User, project: Project) -> bool:
@@ -584,7 +586,7 @@ async def _iter_single_pass(
             return
 
     required_urls = [img.url for img in extract_image_urls(user_content) if img.url.startswith("http")]
-    if required_urls and not any(any(url in op.content for op in writes) for url in required_urls):
+    if required_urls and not any(any(url in op_text(op) for op in writes) for url in required_urls):
         retry_prompt = (
             "CRITICAL: The user's uploaded asset URL(s) must appear verbatim in your forge-write output "
             '(e.g. <img src="..."> or background-image: url(...)). Do not use placeholders.\n'
@@ -693,6 +695,9 @@ async def _iter_single_pass(
                 locale=locale,  # type: ignore[arg-type]
                 stream_fn=stream_chat_completion,
             ):
+                if is_cancelled(run_id_str):
+                    fix_buf = []  # stop here; the edits already applied stay
+                    break
                 if chunk.kind == "thinking":
                     thinking_parts.append(chunk.content)
                     yield _sse({"type": "thinking", "delta": chunk.content})
@@ -712,7 +717,10 @@ async def _iter_single_pass(
                     {"type": "warning", "message": f"{v.get('code')}: {v.get('message')}", "violation": v}
                 )
             yield push_step("edit_retry", t("step_edit_retry", locale), "done")
-        except RodiumError:
+        except Exception:
+            # Best effort: the first answer's writes are applied, the run must
+            # still close normally (any lane can raise, not only RodiumError).
+            logger.warning("edit retry failed", exc_info=True)
             yield push_step("edit_retry", t("step_edit_retry", locale), "error")
     yield push_step("apply_writes", t("step_apply_writes", locale), "done")
     if applied:

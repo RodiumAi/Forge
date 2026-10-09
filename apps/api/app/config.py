@@ -138,7 +138,7 @@ class Settings(BaseSettings):
     generation_max_output_tokens: int = 32_000
     generation_temperature: float = 0.4
     # Wall-clock ceiling for one plan task, continuations included.
-    forge_task_budget_seconds: float = 360.0
+    forge_task_budget_seconds: float = 600.0
     # Full-content layer of every code prompt (characters). index.css gets its
     # own reserved share so later tasks always see the foundation in full.
     context_full_files_max_chars: int = 160_000
@@ -150,6 +150,9 @@ class Settings(BaseSettings):
     # Publish: render every route to HTML in headless Chromium (falls back to a
     # client-rendered site when no browser is available).
     forge_prerender_enabled: bool = True
+    # Shared with the sites gateway (Caddy): with it, the visitor address the
+    # gateway forwards (X-Forge-Visitor-IP) is trusted for per-visitor limits.
+    sites_gateway_secret: str = ""
     access_token_expire_minutes: int = 60 * 24 * 7
     preview_port_start: int = 5200
     preview_port_end: int = 5299

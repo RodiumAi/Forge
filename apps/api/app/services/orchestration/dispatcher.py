@@ -58,12 +58,14 @@ def notice_sse(chunk: StreamChunk, locale: Locale) -> str | None:
     paths = [str(p) for p in data.get("open") or []]
     if data.get("event") == "continue":
         key = "output_continuing_files" if paths else "output_continuing"
+        # An informational step: the generate step keeps spinning meanwhile,
+        # so this one is shown done rather than left running after the run.
         return _sse(
             {
                 "type": "step",
                 "id": "continue",
                 "label": t(key, locale, paths=", ".join(paths[:4])),
-                "status": "running",
+                "status": "done",
             }
         )
     if data.get("event") == "truncated" and paths:
@@ -665,6 +667,23 @@ async def run_plan_tasks(
                 break
             except Exception as exc:
                 code = error_code_for(exc)
+                # Out of time with finished files in hand: keep them (the
+                # still-open ones are reported) instead of throwing the whole
+                # answer away and starting over on another model.
+                if isinstance(exc, TimeoutError):
+                    partial = parse_forge_output("".join(task_buf))
+                    if partial.writes or partial.deletes:
+                        if partial.truncated:
+                            yield _sse(
+                                {
+                                    "type": "warning",
+                                    "message": t(
+                                        "output_truncated", locale, paths=", ".join(partial.truncated[:6])
+                                    ),
+                                    "violation": {"code": "OUTPUT_TRUNCATED", "path": partial.truncated[0]},
+                                }
+                            )
+                        break
                 retryable_auth = (
                     isinstance(exc, RodiumError)
                     and exc.status_code in (401, 403)
