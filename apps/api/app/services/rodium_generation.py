@@ -36,6 +36,9 @@ class RodiumGenerationAuth:
     actor_uid: str | None = None
     project_id: str | None = None
     frodi_cap_per_cycle: int | None = None
+    # Forge Cloud: the user's own RodiumAi access token. The gateway bills it
+    # to that user (FRODI, then RODI); see `llm.gateway_user_token`.
+    user_token: str | None = None
 
 
 def pick_default_api_key_id(keys: list, preferred: str | None = None) -> str | None:
@@ -176,6 +179,58 @@ async def ensure_rodium_access_token(db: Session, user: User, row: UserSettings)
         return decrypt_secret(row.rodium_access_token_encrypted or "")
 
 
+async def gateway_access_token(db: Session, user: User, row: UserSettings) -> str | None:
+    """The user's own RodiumAi access token for the gateway, or None.
+
+    An expired token is refreshed. Tokens that are gone (Forge logout, a
+    refresh the gateway rejected) are minted again through the trusted
+    provisioning channel login uses: the request comes from a signed-in Forge
+    session, so the account behind it is already proven. None means "no token
+    right now" (provisioning off, RodiumAi unreachable); the caller decides
+    whether another lane may be used.
+    """
+    try:
+        return await ensure_rodium_access_token(db, user, row)
+    except HTTPException as exc:
+        if exc.status_code != 403:
+            return None
+    from app.services import rodium_provisioning
+
+    db.refresh(row)
+    if not user.rodium_sub or row.rodium_refresh_token_encrypted or not rodium_provisioning.enabled():
+        return None
+    try:
+        result = await rodium_provisioning.reissue_tokens(email=user.email, user_id=str(user.rodium_sub))
+    except Exception:
+        return None
+    if result is None:
+        return None
+    access = str(result.tokens.get("access_token") or "")
+    if not access:
+        return None
+    store_oauth_tokens(row, result.tokens)
+    db.commit()
+    return access
+
+
+async def _link_verified_account(db: Session, user: User) -> str | None:
+    """Create the RodiumAi account of a verified Forge account that has none yet.
+
+    Every Forge Cloud account gets one when its address is proven (email link
+    or provider sign-in). When RodiumAi was unreachable at that moment, the
+    first generation finishes the job instead of failing.
+    """
+    if user.rodium_sub or user.email_verified_at is None:
+        return user.rodium_sub
+    from app.routers.auth import _link_rodium_account
+
+    try:
+        await _link_rodium_account(db, user)
+    except Exception:
+        return None
+    return user.rodium_sub
+
+
 def _keys_from_row(row: UserSettings) -> list:
     if not row.rodium_api_keys_json:
         return []
@@ -252,10 +307,11 @@ async def resolve_generation_auth(
     Forge Cloud (Google / email signup already binds ``rodium_sub`` — no OIDC
     step for the user):
 
-    1. Gateway with ``billing_uid`` — FRODI first, then the user's RODI wallet
-       inside RodiumAi. Never blocked on expired OIDC leftovers.
-    2. Optional pasted BYOK secret is attached only as a post-quota fallback
-       (``stream_chat_completion`` tries FRODI whenever ``billing_uid`` is set).
+    1. Gateway with the user's own RodiumAi access token (``user_token``,
+       refreshed or minted again as needed) — FRODI first, then the user's
+       RODI wallet. ``billing_uid`` names the same account for the transition
+       lane, used only when the gateway has no token for this user.
+    2. Optional pasted BYOK secret is attached only as a post-quota fallback.
 
     Self-host / no ``rodium_sub``: BYOK secret, else legacy OIDC playground.
     """
@@ -265,11 +321,16 @@ async def resolve_generation_auth(
     row = db.get(UserSettings, user.id)
     if row is None:
         raise HTTPException(status_code=400, detail="RodiumAi API key is required")
-    rodium_sub = user.rodium_sub
-    selected_key = row.selected_rodium_api_key_id
     from app.config import get_settings
 
-    cloud = get_settings().forge_cloud_enabled and bool(rodium_sub)
+    settings = get_settings()
+    rodium_sub = user.rodium_sub
+    if settings.forge_cloud_enabled and not rodium_sub:
+        rodium_sub = await _link_verified_account(db, user)
+        row = db.get(UserSettings, user.id) or row
+    selected_key = row.selected_rodium_api_key_id
+
+    cloud = settings.forge_cloud_enabled and bool(rodium_sub)
 
     secret: str | None = None
     if row.rodium_api_key_encrypted:
@@ -278,15 +339,17 @@ async def resolve_generation_auth(
         except ValueError as exc:
             raise HTTPException(status_code=400, detail="Stored RodiumAi key is unreadable") from exc
 
-    # Cloud account: FRODI/RODI via gateway. OIDC is never required here.
+    # Cloud account: FRODI/RODI via the gateway, with the user's own token.
     if cloud:
+        token = await gateway_access_token(db, user, row)
         if secret:
             return RodiumGenerationAuth(
                 mode="secret",
                 api_key_secret=secret,
                 billing_uid=rodium_sub,
+                user_token=token,
             )
-        return RodiumGenerationAuth(mode="playground", billing_uid=rodium_sub)
+        return RodiumGenerationAuth(mode="playground", billing_uid=rodium_sub, user_token=token)
 
     if secret:
         return RodiumGenerationAuth(mode="secret", api_key_secret=secret, billing_uid=rodium_sub)

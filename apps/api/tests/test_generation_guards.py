@@ -68,21 +68,23 @@ def test_generation_auth_allows_explicit_free_usage(monkeypatch: pytest.MonkeyPa
     gate.assert_not_called()
 
 
-def test_cloud_generation_skips_oidc_even_with_selected_key(
+def test_cloud_generation_is_not_blocked_by_expired_oidc_leftovers(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Expired OIDC leftovers must not block Forge Cloud (billing_uid + gateway)."""
-    user = SimpleNamespace(id=uuid.uuid4(), rodium_sub="sub_cloud_user")
+    """Expired OIDC leftovers must not block Forge Cloud: no token, still a gateway auth."""
+    user = SimpleNamespace(id=uuid.uuid4(), rodium_sub="sub_cloud_user", email="a@b.co")
     row = SimpleNamespace(
         selected_rodium_api_key_id="key_from_old_oidc",
         rodium_api_key_encrypted=None,
+        rodium_refresh_token_encrypted=None,
     )
     db = MagicMock()
     db.get.return_value = row
-    ensure = AsyncMock(side_effect=AssertionError("OIDC must not run on cloud path"))
+    ensure = AsyncMock(side_effect=HTTPException(status_code=403, detail="RodiumAi session expired."))
     monkeypatch.setattr(generation_mod, "_bound_user", lambda _db, current: current)
     monkeypatch.setattr(generation_mod, "require_rodi_for_paid_capability", MagicMock())
     monkeypatch.setattr(generation_mod, "ensure_rodium_access_token", ensure)
+    monkeypatch.setattr("app.services.rodium_provisioning.enabled", lambda: False)
     import app.config as config_mod
 
     monkeypatch.setattr(
@@ -95,9 +97,31 @@ def test_cloud_generation_skips_oidc_even_with_selected_key(
 
     assert auth.mode == "playground"
     assert auth.billing_uid == "sub_cloud_user"
+    assert auth.user_token is None
     assert auth.access_token is None
     assert auth.api_key_id is None
-    ensure.assert_not_awaited()
+
+
+def test_cloud_generation_carries_the_users_own_token(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = SimpleNamespace(id=uuid.uuid4(), rodium_sub="sub_cloud_user")
+    row = SimpleNamespace(selected_rodium_api_key_id=None, rodium_api_key_encrypted=None)
+    db = MagicMock()
+    db.get.return_value = row
+    monkeypatch.setattr(generation_mod, "_bound_user", lambda _db, current: current)
+    monkeypatch.setattr(generation_mod, "require_rodi_for_paid_capability", MagicMock())
+    monkeypatch.setattr(generation_mod, "ensure_rodium_access_token", AsyncMock(return_value="jwt-live"))
+    import app.config as config_mod
+
+    monkeypatch.setattr(config_mod, "get_settings", lambda: SimpleNamespace(forge_cloud_enabled=True))
+
+    auth = asyncio.run(generation_mod.resolve_generation_auth(db, user, usage="free"))
+
+    assert auth.user_token == "jwt-live"
+    assert auth.billing_uid == "sub_cloud_user"
+    # The token is for the gateway lane, never the legacy playground lane.
+    assert auth.access_token is None and auth.api_key_id is None
 
 
 def test_cloud_primes_frodi_with_byok_as_quota_fallback(
@@ -111,7 +135,7 @@ def test_cloud_primes_frodi_with_byok_as_quota_fallback(
     )
     db = MagicMock()
     db.get.return_value = row
-    ensure = AsyncMock(side_effect=AssertionError("OIDC must not run for cloud BYOK"))
+    ensure = AsyncMock(return_value="jwt-live")
     monkeypatch.setattr(generation_mod, "_bound_user", lambda _db, current: current)
     monkeypatch.setattr(generation_mod, "require_rodi_for_paid_capability", MagicMock())
     monkeypatch.setattr(generation_mod, "ensure_rodium_access_token", ensure)
@@ -128,7 +152,7 @@ def test_cloud_primes_frodi_with_byok_as_quota_fallback(
 
     assert auth.billing_uid == "sub_cloud_user"
     assert auth.api_key_secret == "rd_sk_byok"
-    ensure.assert_not_awaited()
+    assert auth.user_token == "jwt-live"
 
 
 def test_project_naming_is_the_only_explicit_free_call_site() -> None:

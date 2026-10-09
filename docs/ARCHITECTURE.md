@@ -282,9 +282,19 @@ Two independent layers (plus optional Cloud entitlements):
   wallet fallback. Plan grants and Free+500 live in Nest, not in this repo.
 
 `resolve_generation_auth` (`services/rodium_generation.py`) runs at the top of
-every generation endpoint. On the Cloud path it sends the user's access token
-plus an API **key id** — **the key secret never reaches Forge.** Self-host /
-legacy can decrypt a pasted key instead.
+every generation endpoint. On the Cloud path, chat and image calls go to the
+gateway's public `/v1` with **the user's own RodiumAI access token**
+(`RODIUM_GATEWAY_URL`, default `RODIUM_BASE_URL`): the gateway bills the
+token's owner, FRODI first, then RODI. An expired token is refreshed; a missing
+one is minted again through provisioning, and a verified Forge account without
+a RodiumAI account gets one on its first generation. Self-host / legacy can
+decrypt a pasted key instead.
+
+During the transition the internal Forge lane (`/internal/forge/*`, shared
+token) is still used when the gateway refuses a token or Forge has none
+(`FORGE_INTERNAL_LANE_FALLBACK=false` turns that off), and for shared projects
+billed to their owner, whose per-collaborator FRODI ceiling only that lane
+enforces. Plan and balance reads still go through it too.
 
 > Self-host does **not** require OIDC. Local `/register` works with an empty
 > `RODIUM_OIDC_CLIENT_ID`. Forge Cloud (`forge.rodiumai.io`) uses OIDC SSO and

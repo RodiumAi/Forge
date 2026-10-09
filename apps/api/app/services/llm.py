@@ -18,6 +18,21 @@ def _current_frodi_cycle_key() -> str:
     return current_frodi_cycle_key()
 
 
+def bills_someone_else(auth: RodiumGenerationAuth) -> bool:
+    """A shared project billed to its owner, generating for a collaborator."""
+    return bool(auth.actor_uid and auth.actor_uid != auth.billing_uid)
+
+
+def gateway_user_token(auth: RodiumGenerationAuth) -> str | None:
+    """The user's own token, when the generation bills that same user.
+
+    A project billed to its owner carries the collaborator's identity and a
+    per-cycle FRODI ceiling that only the internal lane enforces, so those
+    runs never go out with the collaborator's token.
+    """
+    return None if bills_someone_else(auth) else auth.user_token
+
+
 def _forge_billing_context(auth: RodiumGenerationAuth) -> dict[str, Any] | None:
     """Build the lane ``forge_context`` for a capped shared-project generation."""
     if not auth.actor_uid or auth.actor_uid == auth.billing_uid:
@@ -333,6 +348,7 @@ async def _stream_secret_chat(
     temperature: float | None = None,
     max_tokens: int | None = None,
     meta: dict[str, Any] | None = None,
+    url: str | None = None,
 ) -> AsyncIterator[StreamChunk]:
 
     headers = {
@@ -349,7 +365,9 @@ async def _stream_secret_chat(
 
     try:
         async with httpx.AsyncClient(timeout=_STREAM_TIMEOUT) as client:
-            async with client.stream("POST", _gateway_chat_url(), headers=headers, json=payload) as response:
+            async with client.stream(
+                "POST", url or _gateway_chat_url(), headers=headers, json=payload
+            ) as response:
                 if response.status_code >= 400:
                     body = await response.aread()
 
@@ -485,25 +503,56 @@ async def stream_chat_completion(
     """Stream one completion. ``meta`` (optional) receives ``finish_reason``."""
     settings = get_settings()
     if settings.forge_cloud_enabled and auth.billing_uid:
-        try:
-            async for chunk in _stream_frodi_chat(
-                billing_uid=auth.billing_uid,
-                model=model,
-                messages=messages,
-                locale=locale,
-                actor_uid=auth.actor_uid,
-                forge_context=_forge_billing_context(auth),
-                temperature=temperature,
-                max_tokens=max_tokens,
-                meta=meta,
-            ):
-                yield chunk
-            return
-        except RodiumError as exc:
-            if exc.code != ERR_QUOTA:
-                raise
-            # FRODI (+ wallet RODI inside the gateway) exhausted — fall through
-            # to optional BYOK / legacy playground credentials if present.
+        # The gateway with the user's own token first. The internal lane stays
+        # for owner-billed shared projects and, during the transition, for a
+        # user without a usable token or whose token the gateway refuses.
+        lane = bills_someone_else(auth) or settings.forge_internal_lane_fallback
+        token = gateway_user_token(auth)
+        if token:
+
+            def user_factory() -> AsyncIterator[StreamChunk]:
+                return _stream_secret_chat(
+                    api_key=token,
+                    model=model,
+                    messages=messages,
+                    locale=locale,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    meta=meta,
+                    url=settings.rodium_gateway_v1_url + "/chat/completions",
+                )
+
+            try:
+                async for chunk in _stream_with_retries(factory=user_factory, locale=locale):
+                    yield chunk
+                return
+            except RodiumError as exc:
+                if exc.code == ERR_QUOTA:
+                    lane = False  # the same wallets stand behind both lanes
+                elif not (lane and exc.status_code in (401, 403)):
+                    raise
+        elif not lane:
+            raise RodiumError(t("rodium_session_expired", locale), 401, ERR_AUTH_EXPIRED)
+        if lane:
+            try:
+                async for chunk in _stream_frodi_chat(
+                    billing_uid=auth.billing_uid,
+                    model=model,
+                    messages=messages,
+                    locale=locale,
+                    actor_uid=auth.actor_uid,
+                    forge_context=_forge_billing_context(auth),
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    meta=meta,
+                ):
+                    yield chunk
+                return
+            except RodiumError as exc:
+                if exc.code != ERR_QUOTA:
+                    raise
+        # FRODI (+ wallet RODI inside the gateway) exhausted — fall through
+        # to optional BYOK / legacy playground credentials if present.
 
     if auth.mode == "playground" and auth.access_token and auth.api_key_id:
 

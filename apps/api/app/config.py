@@ -58,6 +58,14 @@ class Settings(BaseSettings):
     # Forge Cloud lane. Empty on open-source clones (BYOK).
     rodium_forge_gateway_token: str = ""
     rodium_gateway_internal_url: str = ""
+    # Gateway `/v1` base Forge Cloud generates through with each user's own
+    # RodiumAi access token (billed to that user's FRODI, then RODI). Empty =
+    # rodium_base_url.
+    rodium_gateway_url: str = ""
+    # Transition: when a user has no usable token, or the gateway refuses it,
+    # generate through the internal Forge lane instead. Shared projects billed
+    # to their owner still use that lane (per-collaborator FRODI ceiling).
+    forge_internal_lane_fallback: bool = True
     # Default per-collaborator weekly FRODI ceiling applied when a project is
     # shared `owner_pays` and the owner leaves the cap blank. A guardrail so an
     # invitee can't silently drain the owner's whole balance. The owner can
@@ -360,6 +368,10 @@ class Settings(BaseSettings):
     @property
     def provisioning_enabled(self) -> bool:
         return bool(self.rodium_provision_token.strip())
+
+    @property
+    def rodium_gateway_v1_url(self) -> str:
+        return (self.rodium_gateway_url.strip() or self.rodium_base_url).rstrip("/")
 
     @property
     def forge_cloud_enabled(self) -> bool:

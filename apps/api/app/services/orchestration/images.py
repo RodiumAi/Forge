@@ -14,7 +14,16 @@ from uuid import uuid4
 import httpx
 
 from app.config import get_settings
-from app.services.llm import ERR_QUOTA, RodiumError, _playground_base, _raise_rodium_error
+from app.i18n import t
+from app.services.llm import (
+    ERR_AUTH_EXPIRED,
+    ERR_QUOTA,
+    RodiumError,
+    _playground_base,
+    _raise_rodium_error,
+    bills_someone_else,
+    gateway_user_token,
+)
 from app.services.rodium_generation import RodiumGenerationAuth
 
 _IMAGE_TIMEOUT = httpx.Timeout(180.0, connect=30.0)
@@ -60,9 +69,35 @@ async def request_image_bytes(
     }
 
     response: httpx.Response | None = None
+    has_own_key = bool(auth.api_key_secret or auth.api_key_id)
     async with httpx.AsyncClient(timeout=_IMAGE_TIMEOUT) as client:
-        if settings.forge_cloud_enabled and auth.billing_uid:
-            # Same billing lane as chat: FRODI first, wallet inside the gateway.
+        # Same lanes as chat: the user's own token first, FRODI then wallet.
+        lane = settings.forge_cloud_enabled and bool(auth.billing_uid)
+        token = gateway_user_token(auth) if lane else None
+        if lane and not bills_someone_else(auth) and not settings.forge_internal_lane_fallback:
+            lane = False
+            if not token:
+                raise RodiumError(t("rodium_session_expired", locale), 401, ERR_AUTH_EXPIRED)  # type: ignore[arg-type]
+        if token:
+            response = await client.post(
+                settings.rodium_gateway_v1_url + "/images/generations",
+                headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+                json=payload,
+            )
+            if response.status_code >= 400:
+                try:
+                    _raise_rodium_error(response, locale)  # type: ignore[arg-type]
+                except RodiumError as exc:
+                    if exc.code == ERR_QUOTA and has_own_key:
+                        lane = False  # the same wallets stand behind both lanes
+                        response = None
+                    elif lane and exc.status_code in (401, 403):
+                        response = None
+                    else:
+                        raise
+            else:
+                lane = False
+        if lane:
             url = settings.rodium_gateway_internal_url.rstrip("/") + "/internal/forge/images/generations"
             body = {"billing_uid": auth.billing_uid, **payload}
             if auth.actor_uid and auth.actor_uid != auth.billing_uid:
@@ -76,7 +111,7 @@ async def request_image_bytes(
                 try:
                     _raise_rodium_error(response, locale)  # type: ignore[arg-type]
                 except RodiumError as exc:
-                    if exc.code != ERR_QUOTA or not (auth.api_key_secret or auth.api_key_id):
+                    if exc.code != ERR_QUOTA or not has_own_key:
                         raise
                     response = None
         if response is None:

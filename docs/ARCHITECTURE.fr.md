@@ -294,9 +294,20 @@ Deux couches indépendantes (plus entitlements Cloud optionnels) :
   repli wallet. Les grants de plan et Free+500 vivent dans Nest, pas ici.
 
 `resolve_generation_auth` (`services/rodium_generation.py`) s'exécute en tête de
-chaque endpoint de génération. Sur le chemin Cloud, il envoie le jeton d'accès
-et un **id** de clé API — **le secret n'atteint jamais Forge.** En self-host /
-legacy, une clé collée peut être déchiffrée à la place.
+chaque endpoint de génération. Sur le chemin Cloud, chat et images passent par
+le `/v1` public du gateway avec **le propre jeton d'accès RodiumAI de
+l'utilisateur** (`RODIUM_GATEWAY_URL`, par défaut `RODIUM_BASE_URL`) : le gateway
+facture le titulaire du jeton, FRODI d'abord, puis RODI. Un jeton expiré est
+rafraîchi ; un jeton absent est réémis via le provisioning, et un compte Forge
+vérifié sans compte RodiumAI en reçoit un à sa première génération. En
+self-host / legacy, une clé collée peut être déchiffrée à la place.
+
+Pendant la transition, la voie interne Forge (`/internal/forge/*`, jeton
+partagé) sert encore quand le gateway refuse un jeton ou que Forge n'en a pas
+(`FORGE_INTERNAL_LANE_FALLBACK=false` coupe ce repli), et pour les projets
+partagés facturés à leur propriétaire, dont le plafond FRODI par collaborateur
+n'est appliqué que par cette voie. Les lectures de plan et de solde y passent
+aussi pour l'instant.
 
 > Le self-host **n'exige pas** OIDC. `/register` local fonctionne avec
 > `RODIUM_OIDC_CLIENT_ID` vide. Forge Cloud (`forge.rodiumai.io`) utilise le SSO
