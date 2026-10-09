@@ -45,4 +45,16 @@ test: ## Tests API sur l'hote (venv requis - voir CONTRIBUTING.md)
 	#   cd apps/api && pip install -r requirements-dev.txt
 	cd apps/api && TEMPLATES_ROOT="$(CURDIR)/data/templates" pytest -q
 
-.PHONY: help up down reset logs migrate seed shell psql redis test
+lock: ## Régénère les dépendances Python résolues avec leurs hashes
+	cd apps/api && uv --system-certs pip compile requirements.in \
+		--python-version 3.12 \
+		--python-platform x86_64-manylinux_2_17 \
+		--generate-hashes \
+		--output-file requirements.txt
+	cd apps/api && uv --system-certs pip compile requirements-dev.in \
+		--python-version 3.12 \
+		--python-platform x86_64-manylinux_2_17 \
+		--generate-hashes \
+		--output-file requirements-dev.txt
+
+.PHONY: help up down reset logs migrate seed shell psql redis test lock

@@ -1,7 +1,8 @@
 """Custom domains — hostname normalization + verification state machine."""
 
 import types
-from datetime import UTC
+import uuid
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -12,10 +13,13 @@ from app.services.domains import (
     STATUS_VALIDATED,
     DomainValidationError,
     advance_verification,
+    claim_dns_proven,
     dns_records_for,
+    new_domain_claim,
     normalize_hostname,
     public_url_for_domain,
     relative_label,
+    request_certificate,
 )
 
 
@@ -29,8 +33,10 @@ def _settings(**overrides):
         "custom_domain_cname_target": "",
         "custom_domain_alb_listener_arn": "",
         "custom_domain_gateway_tg_arn": "",
+        "environment": base.environment,
         **overrides,
     }
+    env = values["environment"]
     return types.SimpleNamespace(
         **values,
         effective_custom_domain_cname_target=(
@@ -40,7 +46,7 @@ def _settings(**overrides):
         custom_domain_aws_enabled=bool(
             values["custom_domain_alb_listener_arn"] and values["custom_domain_gateway_tg_arn"]
         ),
-        environment=base.environment,
+        is_local=env in ("local", "test"),
     )
 
 
@@ -52,6 +58,10 @@ def _domain(**overrides):
         acm_validation_name=None,
         acm_validation_value=None,
         acm_certificate_arn=None,
+        acm_idempotency_token=None,
+        ownership_txt_name=None,
+        ownership_txt_value=None,
+        ownership_verified_at=datetime.now(UTC),
         last_error=None,
         verified_at=None,
     )
@@ -132,6 +142,161 @@ class TestDnsRecords:
         assert relative_to_zone("other.example.com", "ptoke.me") == "other.example.com"
 
 
+class TestOwnershipClaim:
+    def _claim(self, **overrides):
+        values = dict(
+            id=uuid.uuid4(),
+            hostname="www.client.com",
+            cname_target="sites.forge.rodiumai.io",
+            ownership_txt_name="_rodiumai-challenge.www.client.com",
+            ownership_txt_value="rodiumai-domain-verification=fresh",
+            expires_at=datetime.now(UTC) + timedelta(minutes=30),
+            last_error=None,
+        )
+        values.update(overrides)
+        return types.SimpleNamespace(**values)
+
+    def test_dns_records_show_txt_before_routing(self):
+        records = dns_records_for(self._claim(), zone="client.com")
+        assert [record["purpose"] for record in records] == ["ownership", "routing"]
+        assert records[0]["type"] == "TXT"
+        assert records[0]["name"] == "_rodiumai-challenge.www"
+
+    def test_requires_txt_and_cname_before_proof(self):
+        claim = self._claim()
+        assert not claim_dns_proven(
+            claim,
+            txt_resolver=lambda _name: set(),
+            cname_resolver=lambda _name: "sites.forge.rodiumai.io",
+        )
+        assert claim.last_error == "ownership_txt_missing"
+        assert claim_dns_proven(
+            claim,
+            txt_resolver=lambda _name: {claim.ownership_txt_value},
+            cname_resolver=lambda _name: "sites.forge.rodiumai.io",
+        )
+
+    def test_expired_claim_cannot_be_proven(self):
+        claim = self._claim(expires_at=datetime.now(UTC) - timedelta(seconds=1))
+        assert not claim_dns_proven(
+            claim,
+            txt_resolver=lambda _name: {claim.ownership_txt_value},
+            cname_resolver=lambda _name: "sites.forge.rodiumai.io",
+        )
+        assert claim.last_error == "ownership_challenge_expired"
+
+    def test_new_generation_has_a_distinct_challenge(self):
+        project = types.SimpleNamespace(id=uuid.uuid4())
+        user_id = uuid.uuid4()
+        first = new_domain_claim(project, user_id, "www.client.com", "sites.forge.rodiumai.io")
+        second = new_domain_claim(project, first.user_id, "www.client.com", "sites.forge.rodiumai.io")
+        assert (first.project_id, first.user_id, first.hostname) == (
+            project.id,
+            user_id,
+            "www.client.com",
+        )
+        assert first.ownership_txt_value != second.ownership_txt_value
+
+    def test_pending_claim_hostname_is_not_globally_unique(self):
+        from sqlalchemy import UniqueConstraint
+
+        from app.models import ProjectDomain, ProjectDomainClaim
+
+        claim_unique_columns = {
+            tuple(column.name for column in constraint.columns)
+            for constraint in ProjectDomainClaim.__table__.constraints
+            if isinstance(constraint, UniqueConstraint)
+        }
+        active_unique_columns = {
+            tuple(column.name for column in constraint.columns)
+            for constraint in ProjectDomain.__table__.constraints
+            if isinstance(constraint, UniqueConstraint)
+        }
+        assert ("hostname",) not in claim_unique_columns
+        assert ("hostname",) in active_unique_columns
+
+
+class TestAcmRequest:
+    def test_requires_prior_ownership_proof(self):
+        domain = _domain(ownership_verified_at=None)
+        with pytest.raises(RuntimeError, match="ownership_proof_required"):
+            request_certificate(domain, acm=types.SimpleNamespace())
+
+    def test_sends_stable_idempotency_token(self):
+        calls = []
+
+        class Acm:
+            def request_certificate(self, **kwargs):
+                calls.append(kwargs)
+                return {"CertificateArn": "arn:cert"}
+
+            def describe_certificate(self, **_kwargs):
+                return {
+                    "Certificate": {
+                        "DomainValidationOptions": [
+                            {
+                                "ResourceRecord": {
+                                    "Name": "_token.www.client.com.",
+                                    "Value": "_value.acm-validations.aws.",
+                                }
+                            }
+                        ]
+                    }
+                }
+
+        domain = _domain(acm_idempotency_token="a" * 32)
+        request_certificate(domain, acm=Acm())
+        assert calls[0]["IdempotencyToken"] == "a" * 32
+
+
+class TestProjectDeletion:
+    def test_cleans_active_domain_before_project_row(self, monkeypatch, tmp_path):
+        from app.routers import sites_v1
+        from app.services import project_delete
+
+        project = types.SimpleNamespace(id=uuid.uuid4(), slug="client")
+        domain = _domain()
+        deleted = []
+        cleaned = []
+        cache_cleared = []
+
+        class Query:
+            def filter(self, *_args):
+                return self
+
+            def first(self):
+                return domain
+
+        db = types.SimpleNamespace(
+            query=lambda *_args: Query(),
+            delete=lambda value: deleted.append(value),
+            commit=lambda: None,
+        )
+        monkeypatch.setattr(project_delete.preview_babel, "stop_babel_preview", lambda *_args: None)
+        monkeypatch.setattr(project_delete, "project_dir", lambda *_args: tmp_path / "absent")
+        monkeypatch.setattr(
+            project_delete,
+            "get_settings",
+            lambda: types.SimpleNamespace(bucket_site_assets=""),
+        )
+        monkeypatch.setattr(
+            "app.providers.objects.get_object_store",
+            lambda: types.SimpleNamespace(bucket_site_assets=""),
+        )
+        monkeypatch.setattr(
+            project_delete,
+            "cleanup_aws",
+            lambda value, _settings: cleaned.append(value),
+        )
+        monkeypatch.setattr(sites_v1, "clear_resolve_cache", cache_cleared.append)
+
+        project_delete.delete_project_full(db, project)
+
+        assert cleaned == [domain]
+        assert cache_cleared == ["www.client.com"]
+        assert deleted == [project]
+
+
 class TestStateMachine:
     def test_routing_cname_missing_stays_pending(self):
         d = advance_verification(_domain(), _settings(), resolver=lambda h: None)
@@ -144,6 +309,25 @@ class TestStateMachine:
         assert d.last_error is None
         assert d.verified_at is not None and d.verified_at.tzinfo == UTC
         assert public_url_for_domain(d) == "https://www.client.com"
+
+    def test_degraded_mode_refused_outside_local(self):
+        d = advance_verification(
+            _domain(),
+            _settings(environment="production"),
+            resolver=lambda h: "sites.forge.rodiumai.io",
+        )
+        assert d.status == STATUS_FAILED
+        assert d.last_error == "custom_domain_aws_required"
+        assert d.verified_at is None
+
+    def test_degraded_mode_refused_in_staging(self):
+        d = advance_verification(
+            _domain(),
+            _settings(environment="staging"),
+            resolver=lambda h: "sites.forge.rodiumai.io",
+        )
+        assert d.status == STATUS_FAILED
+        assert d.last_error == "custom_domain_aws_required"
 
     def _aws_settings(self):
         return _settings(

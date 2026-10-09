@@ -1,0 +1,31 @@
+/* Now playing screen: large cover, title + like, progress, transport. */
+.now-playing-screen .np { display: grid; gap: 1.15rem; padding-top: .4rem; }
+.now-playing-screen .np-art {
+  width: 100%; aspect-ratio: 1; border-radius: 1.5rem; background-size: cover;
+  box-shadow: 0 26px 60px rgba(0,0,0,.55);
+}
+.now-playing-screen .np-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.now-playing-screen .np-title h2 { margin: 0 0 .2rem; font-size: 1.5rem; letter-spacing: -.02em; }
+.now-playing-screen .np-title .muted { font-size: .95rem; }
+.now-playing-screen .heart {
+  appearance: none; border: 1px solid var(--line); background: var(--surface); color: var(--fg);
+  width: 2.7rem; height: 2.7rem; border-radius: 999px; display: grid; place-items: center; flex-shrink: 0;
+}
+.now-playing-screen .heart.on { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.now-playing-screen .progress { display: grid; gap: .45rem; }
+.now-playing-screen .progress .track { height: .35rem; border-radius: 999px; background: var(--line); overflow: hidden; }
+.now-playing-screen .progress .fill { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--accent), #a855f7); }
+.now-playing-screen .times { display: flex; justify-content: space-between; font-size: .72rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.now-playing-screen .controls { display: flex; align-items: center; justify-content: space-between; }
+.now-playing-screen .ctl { appearance: none; border: 0; background: transparent; color: var(--fg); display: grid; place-items: center; padding: .3rem; }
+.now-playing-screen .ctl.big { color: var(--fg); }
+.now-playing-screen .ctl.play {
+  width: 3.9rem; height: 3.9rem; border-radius: 999px; color: var(--on-accent);
+  background: var(--accent); box-shadow: 0 12px 30px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+.now-playing-screen .ctl:active { transform: scale(.94); }
+.now-playing-screen .np-download {
+  appearance: none; border: 1px solid var(--line); background: var(--surface); color: var(--muted);
+  border-radius: 1rem; min-height: 2.9rem; font-size: .82rem; font-weight: 650;
+  display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+}

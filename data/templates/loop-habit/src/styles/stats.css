@@ -1,0 +1,16 @@
+/* Stats screen: stat cards and the consistency heatmap. Root: .stats-screen */
+.stats-screen .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; }
+.stats-screen .card.stat { display: flex; flex-direction: column; gap: .1rem; }
+.stats-screen .card.stat .lbl { margin: 0; font-size: .76rem; color: var(--muted); letter-spacing: .02em; }
+.stats-screen .card.stat .big { margin: .15rem 0 .35rem; font-size: 1.9rem; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.stats-screen .card.stat .big small { font-size: .95rem; font-weight: 700; opacity: .7; }
+
+/* Heatmap */
+.stats-screen .heatmap { display: flex; gap: .4rem; margin-top: .5rem; }
+.stats-screen .heat-days { display: grid; grid-template-rows: repeat(7, 1fr); gap: 3px; font-size: .56rem; color: var(--muted); padding-top: 1px; }
+.stats-screen .heat-days span { height: 12px; display: grid; align-items: center; }
+.stats-screen .heat-grid { display: grid; grid-auto-flow: row; gap: 3px; flex: 1; }
+.stats-screen .heat-row { display: grid; grid-template-columns: repeat(18, 1fr); gap: 3px; }
+.stats-screen .heat-row .cell { aspect-ratio: 1 / 1; border-radius: 3px; }
+.stats-screen .legend { display: flex; align-items: center; gap: .3rem; margin-top: .7rem; font-size: .66rem; color: var(--muted); justify-content: flex-end; }
+.stats-screen .legend i { width: 12px; height: 12px; border-radius: 3px; }

@@ -27,6 +27,11 @@ export type ChatErrorAction =
   | { kind: "retry" }
   /** Open the RodiumAI top-up page. */
   | { kind: "recharge" }
+  /**
+   * Move to a bigger Forge plan (more FRODI). Primary recovery when both credit
+   * reservoirs are empty on Forge Cloud; keeps recharge as the secondary path.
+   */
+  | { kind: "upgrade" }
   /** Re-link the RodiumAI account (OIDC). */
   | { kind: "reconnect-rodium" }
   /** Pick up a plan that stopped part-way. */
@@ -69,6 +74,8 @@ export type ChatErrorInfo = {
 const BY_CODE: Record<string, { labelKey: ChatErrorLabelKey; action: ChatErrorAction }> = {
   // ── No credit ────────────────────────────────────────────────────────────
   INSUFFICIENT_RODI: { labelKey: "streamErrorQuota", action: { kind: "recharge" } },
+  INSUFFICIENT_CREDITS: { labelKey: "streamErrorQuota", action: { kind: "recharge" } },
+  FEATURE_NOT_IN_PLAN: { labelKey: "streamErrorQuota", action: { kind: "recharge" } },
   quota: { labelKey: "streamErrorQuota", action: { kind: "recharge" } },
 
   // ── The RodiumAI link ────────────────────────────────────────────────────
@@ -167,6 +174,19 @@ export function classifyChatError(
     codeFromLooseMessage(message) ||
     (status !== undefined ? codeFromStatus(status) : null) ||
     undefined;
+
+  // The API attaches recovery `actions` to some failures (in priority order).
+  // INSUFFICIENT_CREDITS carries ["upgrade", "recharge"] on Forge Cloud: prefer
+  // the plan upgrade over a bare RODI top-up when the server asked for it.
+  const carriedActions =
+    err && typeof err === "object" && Array.isArray((err as { actions?: unknown }).actions)
+      ? ((err as { actions: unknown[] }).actions.filter(
+          (item): item is string => typeof item === "string",
+        ))
+      : undefined;
+  if (code === "INSUFFICIENT_CREDITS" && carriedActions?.includes("upgrade")) {
+    return { labelKey: "streamErrorQuota", message, action: { kind: "upgrade" }, code };
+  }
 
   const known = code ? BY_CODE[code] : undefined;
   if (known) {

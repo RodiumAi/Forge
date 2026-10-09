@@ -6,7 +6,7 @@ import logging
 import posixpath
 import re
 import uuid
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from typing import Any, Literal
 
 from app.services.filesystem import list_files, rename_path, write_file
@@ -22,9 +22,40 @@ class VerifyFinding:
     severity: Severity
     path: str
     message: str
+    #: Other files a repair needs in full (e.g. the page stylesheet of `path`).
+    related: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
+
+
+_CSS_IMPORT_RE = re.compile(r"""import\s+["']([^"']+\.css)["']""")
+
+
+def owning_stylesheet(tsx_path: str, files: dict[str, str]) -> str:
+    """The stylesheet a component's rules belong to.
+
+    The first local .css the file imports; otherwise the conventional
+    src/styles/<name>.css derived from the file name.
+    """
+    content = files.get(tsx_path) or ""
+    for match in _CSS_IMPORT_RE.finditer(content):
+        resolved = _resolved_css_path(match.group(1), tsx_path)
+        if resolved and resolved != "src/index.css":
+            return resolved
+    stem = posixpath.splitext(posixpath.basename(tsx_path))[0]
+    slug = re.sub(r"(?<!^)(?=[A-Z])", "-", stem).lower().strip("-") or "app"
+    if slug in ("app", "main"):
+        slug = "app"
+    return f"src/styles/{slug}.css"
+
+
+def _resolved_css_path(spec: str, importer: str) -> str | None:
+    if spec.startswith("@/"):
+        return posixpath.normpath("src/" + spec[2:])
+    if spec.startswith("."):
+        return posixpath.normpath(posixpath.join(posixpath.dirname(importer), spec))
+    return None
 
 
 _USE_HOOK_RE = re.compile(
@@ -258,11 +289,17 @@ def _binding_for_spec(importer_content: str, spec: str) -> tuple[str, str] | Non
     return None
 
 
+# Marks a placeholder module until the agent rewrites it; `remaining_stub_paths`
+# reports the ones still unfilled at the end of a run.
+STUB_MARKER = "/* forge:stub */"
+
+
 def _stub_module_source(name: str, kind: str) -> str:
     title = re.sub(r"(?<!^)(?=[A-Z])", " ", name).strip() or name
     slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-") or "page"
     if kind == "named":
         return (
+            f"{STUB_MARKER}\n"
             f"export function {name}() {{\n"
             f"  return (\n"
             f'    <main className="page page-{slug}">\n'
@@ -273,6 +310,7 @@ def _stub_module_source(name: str, kind: str) -> str:
             f"export default {name};\n"
         )
     return (
+        f"{STUB_MARKER}\n"
         f"export default function {name}() {{\n"
         f"  return (\n"
         f'    <main className="page page-{slug}">\n'
@@ -280,6 +318,19 @@ def _stub_module_source(name: str, kind: str) -> str:
         f"    </main>\n"
         f"  );\n"
         f"}}\n"
+    )
+
+
+def remaining_stub_paths(project_id: str) -> list[str]:
+    """Placeholder modules the agent never filled in."""
+    try:
+        files = list_files(project_id)
+    except Exception:
+        return []
+    return sorted(
+        path
+        for path, content in files.items()
+        if path.endswith(_SOURCE_EXTS) and content.lstrip().startswith(STUB_MARKER)
     )
 
 
@@ -544,19 +595,21 @@ def verify_project_build(project_id: str) -> list[VerifyFinding]:
                     )
                 )
 
-    css = files.get("src/index.css") or ""
-    if css and (_OVERFLOW_HIDDEN_SIMPLE_RE.search(css) or _OVERFLOW_HIDDEN_RE.search(css)):
-        findings.append(
-            VerifyFinding(
-                code="css.overflow_hidden_root",
-                severity="critical",
-                path="src/index.css",
-                message=(
-                    "html/body uses overflow:hidden — breaks vertical scroll. "
-                    "Use overflow:auto/visible (never copy preview.html shells)."
-                ),
+    for path, content in files.items():
+        if not path.endswith((".css", ".scss")):
+            continue
+        if _OVERFLOW_HIDDEN_SIMPLE_RE.search(content) or _OVERFLOW_HIDDEN_RE.search(content):
+            findings.append(
+                VerifyFinding(
+                    code="css.overflow_hidden_root",
+                    severity="critical",
+                    path=path,
+                    message=(
+                        "html/body uses overflow:hidden, which breaks vertical scroll. "
+                        "Use overflow:auto/visible (never copy preview.html shells)."
+                    ),
+                )
             )
-        )
 
     # Class lookup must span EVERY stylesheet the project ships, not just
     # index.css: rules written to src/styles/*.css were reported as orphans and
@@ -566,65 +619,46 @@ def verify_project_build(project_id: str) -> list[VerifyFinding]:
         if path.endswith((".css", ".scss")):
             css_classes |= _css_classes(content)
 
-    orphan_samples: list[str] = []
+    # Orphans are grouped by the component that uses them, and each group names
+    # the stylesheet that owns that component: the fix belongs in the page's own
+    # src/styles/<page>.css, never in the shared foundation.
+    orphans_by_file: dict[str, list[str]] = {}
     hero_layout_orphans = 0
     all_orphan_count = 0
+    total_tsx_classes = 0
     for path, content in files.items():
         if not path.endswith((".tsx", ".jsx")):
             continue
-        for token in _tsx_class_tokens(content):
-            if css_classes and token in css_classes:
+        tokens = _tsx_class_tokens(content)
+        total_tsx_classes += len(tokens)
+        for token in sorted(tokens):
+            if token in css_classes or (css_classes and len(token) < 2):
                 continue
-            if not css_classes:
-                # No CSS selectors at all while TSX has classes → always critical.
-                orphan_samples.append(f"{path}:{token}")
-                all_orphan_count += 1
-                if _HERO_LAYOUT_CLASS_RE.search(token):
-                    hero_layout_orphans += 1
-            elif token not in css_classes:
-                if len(token) < 2:
-                    continue
-                orphan_samples.append(f"{path}:{token}")
-                all_orphan_count += 1
-                if _HERO_LAYOUT_CLASS_RE.search(token):
-                    hero_layout_orphans += 1
-            if len(orphan_samples) >= 60:
-                break
-        if len(orphan_samples) >= 60:
-            break
-    if orphan_samples or (
-        not css_classes
-        and any(
-            path.endswith((".tsx", ".jsx")) and _tsx_class_tokens(content) for path, content in files.items()
-        )
-    ):
-        total_tsx_classes = 0
-        for path, content in files.items():
-            if path.endswith((".tsx", ".jsx")):
-                total_tsx_classes += len(_tsx_class_tokens(content))
-        # Count real orphans even beyond the sample cap for ratio.
-        if all_orphan_count < len(orphan_samples):
-            all_orphan_count = len(orphan_samples)
+            all_orphan_count += 1
+            if _HERO_LAYOUT_CLASS_RE.search(token):
+                hero_layout_orphans += 1
+            orphans_by_file.setdefault(path, []).append(token)
+    if orphans_by_file:
         ratio = all_orphan_count / max(total_tsx_classes, 1)
-        # Stricter: any hero/layout orphan, ≥15% orphans, or ≥5 samples → critical.
-        critical = not css_classes or hero_layout_orphans >= 1 or ratio >= 0.15 or len(orphan_samples) >= 5
-        findings.append(
-            VerifyFinding(
-                code="css.orphan_classes",
-                severity="critical" if critical else "warning",
-                path="src/index.css",
-                message=(
-                    "TSX classNames not found in src/index.css (sample): "
-                    + "; ".join(orphan_samples[:12])
-                    + (
-                        " — REQUIRED: append matching CSS rules using the SAME class "
-                        "names (do not invent a parallel prefix)."
-                        if critical
-                        else ""
-                    )
-                ),
+        # Stricter: any hero/layout orphan, ≥15% orphans, or ≥5 orphans → critical.
+        critical = not css_classes or hero_layout_orphans >= 1 or ratio >= 0.15 or all_orphan_count >= 5
+        for path in sorted(orphans_by_file, key=lambda p: -len(orphans_by_file[p]))[:8]:
+            tokens = orphans_by_file[path]
+            sheet = owning_stylesheet(path, files)
+            findings.append(
+                VerifyFinding(
+                    code="css.orphan_classes",
+                    severity="critical" if critical else "warning",
+                    path=path,
+                    message=(
+                        f"{path} uses classNames with no CSS rule: {', '.join(tokens[:16])}. "
+                        f"Add the rules to {sheet} (imported at the top of the component, "
+                        "scoped under the page root class) using the SAME class names; "
+                        "do not invent a parallel prefix and do not rewrite src/index.css."
+                    ),
+                    related=[sheet],
+                )
             )
-        )
 
     soft = 0
     for path, content in files.items():
@@ -648,8 +682,52 @@ def verify_project_build(project_id: str) -> list[VerifyFinding]:
         )
 
     findings.extend(responsive_findings(files))
+    findings.extend(missing_image_findings(project_id, files))
 
     return findings
+
+
+_IMAGE_REF_RE = re.compile(
+    # Root paths only: "//cdn.example/x.png" is a remote URL, not a project file.
+    r"""(?:src\s*=\s*\{?\s*|url\(\s*)["']?(/(?!/)[^"')\s?#]+\.(?:png|jpe?g|webp|gif|svg|avif))""",
+    re.I,
+)
+
+
+def missing_image_findings(project_id: str, files: dict[str, str]) -> list[VerifyFinding]:
+    """Root-path images the code shows but the project does not have.
+
+    A broken image is the most visible defect of a generated page, and the
+    model regularly invents file names; the media list in the prompt names the
+    files that exist.
+    """
+    from app.services.filesystem import project_dir
+    from app.services.project_media import public_asset_exists
+
+    root = project_dir(project_id)
+    missing: dict[str, list[str]] = {}
+    for path, content in files.items():
+        if not path.endswith((".tsx", ".jsx", ".css")):
+            continue
+        for match in _IMAGE_REF_RE.finditer(content):
+            ref = match.group(1)
+            exists = public_asset_exists(project_id, ref) or (root / ref.lstrip("/")).is_file()
+            if not exists:
+                missing.setdefault(path, [])
+                if ref not in missing[path]:
+                    missing[path].append(ref)
+    return [
+        VerifyFinding(
+            code="media.missing_image",
+            severity="critical",
+            path=path,
+            message=(
+                f"{path} references images that do not exist: {', '.join(refs[:8])}. Use a file "
+                "from the project images list (exact path), or compose the visual with CSS/SVG."
+            ),
+        )
+        for path, refs in list(missing.items())[:8]
+    ]
 
 
 # ── Responsive ─────────────────────────────────────────────────────────────
@@ -737,8 +815,19 @@ def css_critical_findings(findings: list[VerifyFinding]) -> list[VerifyFinding]:
 def repair_focus_paths(findings: list[VerifyFinding]) -> list[str] | None:
     """Paths to inject into LLM context for a focused verify repair pass."""
     focus: list[str] = []
+    for finding in findings:
+        # A component with orphan classes comes with its own stylesheet; the
+        # foundation is included read-only so shared tokens get reused.
+        if finding.code == "css.orphan_classes" and finding.path:
+            focus.append(finding.path)
+            focus.extend(finding.related)
     if any(f.code.startswith("css.") for f in findings):
         focus.extend(["src/index.css", "src/App.tsx"])
+    for finding in findings:
+        if finding.code == "css.overflow_hidden_root" and finding.path:
+            focus.append(finding.path)
+    if any(f.code == "edit.failed" for f in findings):
+        focus.extend(f.path for f in findings if f.code == "edit.failed" and f.path)
     if any(f.code == "entry.createRoot" for f in findings):
         focus.append("src/main.tsx")
     if any(f.code == "context.api_mismatch" for f in findings):
@@ -748,7 +837,7 @@ def repair_focus_paths(findings: list[VerifyFinding]) -> list[str] | None:
         focus.extend(["src/App.tsx", "src/index.css", "src/pages"])
     for finding in findings:
         # Responsive findings name the exact file that holds the offending rule.
-        if finding.code.startswith("responsive.") and finding.path:
+        if finding.code.startswith(("responsive.", "media.")) and finding.path:
             focus.append(finding.path)
         if finding.code == "import.scaffold_fill" and finding.path:
             focus.append(finding.path)
@@ -775,18 +864,25 @@ def repair_focus_paths(findings: list[VerifyFinding]) -> list[str] | None:
 def format_findings_for_prompt(findings: list[VerifyFinding]) -> str:
     if not findings:
         return "No findings."
-    lines = ["Deterministic verify findings (fix these with forge-write):"]
+    lines = ["Deterministic verify findings (fix these with forge-edit, or forge-write for new files):"]
     for f in findings:
         lines.append(f"- [{f.severity}] {f.code} @ {f.path}: {f.message}")
     lines.append(
         "Rules: keep Provider key names stable; add aliases for consumers; "
-        "sync orphan classNames with src/index.css using the EXACT same tokens "
-        "(never rename to a parallel prefix mid-plan); fix createRoot named import; "
+        "style orphan classNames in the component's OWN stylesheet named in the "
+        "finding, using the EXACT same tokens (never rename to a parallel prefix); "
+        "src/index.css is the shared foundation: reuse its tokens, change it only "
+        "with a small forge-edit; fix createRoot named import; "
         "remove overflow:hidden from html/body so the page can scroll; "
         "replace fixed pixel widths with max-width + width:100% so nothing "
-        "overflows a phone viewport; "
-        "APPEND CSS only — do not drop existing navbar/hero rules."
+        "overflows a phone viewport."
     )
+    if any(f.code == "edit.failed" for f in findings):
+        lines.append(
+            "For edit.failed: a forge-edit SEARCH block did not match the file. The "
+            "current content of that file is in this prompt: redo the change with a "
+            "SEARCH block copied exactly from it, or forge-write the whole file."
+        )
     if any(f.code == "export.named_missing" for f in findings):
         lines.append(
             "For export.named_missing on lucide-react: replace invented icon names with "
@@ -824,8 +920,9 @@ def format_css_second_pass_prompt(findings: list[VerifyFinding]) -> str:
         return ""
     return (
         "SECOND CSS REPAIR PASS (mandatory):\n"
-        "The first repair did not fix all CSS issues. Read src/index.css from disk "
-        "in full. APPEND missing rules for EVERY orphan className below — use the "
-        "EXACT same spelling as in TSX. Never replace index.css with a shorter file. "
-        "Never drop navbar/hero/layout selectors.\n\n" + format_findings_for_prompt(css)
+        "The first repair did not fix all CSS issues. Each finding names a component "
+        "and the stylesheet that owns it; both are shown in full in this prompt. Add "
+        "a rule for EVERY orphan className below to that stylesheet (create it and "
+        "import it at the top of the component if it does not exist yet), using the "
+        "EXACT same spelling as in TSX. Do not rewrite src/index.css.\n\n" + format_findings_for_prompt(css)
     )

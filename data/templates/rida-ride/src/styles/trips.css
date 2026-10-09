@@ -1,0 +1,11 @@
+/* Trips screen: route glyph (dot, line, pin) + fare and status per trip.
+   The tile keeps the shared .tx .ava background from index.css. */
+.trips-screen .route-ava { position: relative; }
+.trips-screen .route-ava .r-dot { position: absolute; left: 50%; top: .55rem; transform: translateX(-50%); width: .5rem; height: .5rem; border-radius: 999px; background: var(--fg); }
+.trips-screen .route-ava .r-line { position: absolute; left: 50%; top: 1rem; transform: translateX(-50%); width: 2px; height: .8rem; background: var(--line); }
+.trips-screen .route-ava .r-pin { position: absolute; left: 50%; bottom: .5rem; transform: translateX(-50%); width: .55rem; height: .55rem; border-radius: 999px 999px 999px 2px; background: var(--accent); rotate: 45deg; }
+.trips-screen .trip-right { display: flex; flex-direction: column; align-items: flex-end; gap: .25rem; }
+.trips-screen .status { font-size: .68rem; font-weight: 700; padding: .18rem .5rem; border-radius: 999px; }
+.trips-screen .status.up { color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, transparent); }
+.trips-screen .status.done { color: var(--muted); background: color-mix(in srgb, var(--fg) 8%, transparent); }
+.trips-screen .status.off { color: var(--danger); background: color-mix(in srgb, var(--danger) 15%, transparent); }

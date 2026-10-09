@@ -1,11 +1,19 @@
 {
+  "kind": "web",
   "id": "podux-podcast",
-  "title": { "en": "Podux Podcast", "fr": "Podcast Podux" },
+  "title": {
+    "en": "Podux Podcast",
+    "fr": "Podcast Podux"
+  },
   "description": {
     "en": "A modern podcast landing page with show hero, numbered episode list, hosts section and footer.",
     "fr": "Une page podcast moderne avec héro d'émission, liste d'épisodes numérotés, section animateurs et pied de page."
   },
-  "tags": ["podcast", "audio", "media"],
+  "tags": [
+    "podcast",
+    "audio",
+    "media"
+  ],
   "preview": "preview.html",
   "bootHint": {
     "en": "Podcast studio warming up: hero, episodes, hosts.",

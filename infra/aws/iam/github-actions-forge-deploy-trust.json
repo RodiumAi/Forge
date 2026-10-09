@@ -13,7 +13,7 @@
         },
         "StringLike": {
           "token.actions.githubusercontent.com:sub": [
-            "repo:<GITHUB_ORG>/<GITHUB_REPO>:*"
+            "repo:<GITHUB_ORG>/<GITHUB_REPO>:environment:production"
           ]
         }
       }

@@ -1,0 +1,26 @@
+{
+  "id": "microsoft-bookings",
+  "name": "Microsoft Bookings",
+  "categories": [
+    "booking"
+  ],
+  "access": "yes",
+  "methods": [
+    "iframe"
+  ],
+  "docsUrl": "https://learn.microsoft.com/en-us/microsoft-365/bookings/",
+  "badge": null,
+  "enabledHint": false,
+  "logo": "logo.png",
+  "simpleIcon": "microsoft",
+  "i18n": {
+    "en": {
+      "title": "Microsoft Bookings",
+      "blurb": "Bookings page via iframe embed."
+    },
+    "fr": {
+      "title": "Microsoft Bookings",
+      "blurb": "Page Bookings via iframe."
+    }
+  }
+}

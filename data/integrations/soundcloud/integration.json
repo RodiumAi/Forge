@@ -1,0 +1,26 @@
+{
+  "id": "soundcloud",
+  "name": "SoundCloud",
+  "categories": [
+    "media"
+  ],
+  "access": "yes",
+  "methods": [
+    "iframe"
+  ],
+  "docsUrl": "https://developers.soundcloud.com/docs/api/html5-widget",
+  "badge": null,
+  "enabledHint": false,
+  "logo": "logo.png",
+  "simpleIcon": "soundcloud",
+  "i18n": {
+    "en": {
+      "title": "SoundCloud",
+      "blurb": "HTML5 player widget."
+    },
+    "fr": {
+      "title": "SoundCloud",
+      "blurb": "Widget lecteur HTML5."
+    }
+  }
+}

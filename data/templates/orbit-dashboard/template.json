@@ -1,11 +1,19 @@
 {
+  "kind": "web",
   "id": "orbit-dashboard",
-  "title": { "en": "Orbit Admin Dashboard", "fr": "Tableau de bord Orbit" },
+  "title": {
+    "en": "Orbit Admin Dashboard",
+    "fr": "Tableau de bord Orbit"
+  },
   "description": {
     "en": "A classic admin layout: dark navy sidebar, light content area, KPI card grid, CSS bar chart and a fictional data table.",
     "fr": "Un layout admin classique : sidebar navy sombre, zone de contenu claire, grille de cartes KPI, graphique en barres CSS et table de données fictives."
   },
-  "tags": ["dashboard", "admin", "app"],
+  "tags": [
+    "dashboard",
+    "admin",
+    "app"
+  ],
   "preview": "preview.html",
   "bootHint": {
     "en": "Admin dashboard with dark sidebar, light workspace and blue accent.",

@@ -9,32 +9,77 @@ from app.config import get_settings
 from app.models import SiteUsageDay, StoredObject, User, UserSettings
 
 
-def cached_wallet_balance(user: User, db: Session) -> float:
-    row = db.get(UserSettings, user.id)
-    if row is None or not row.rodium_wallet_json:
-        return 0.0
+def _parse_wallet_balance(raw_json: str | None) -> float | None:
+    """Return balance when the cache is readable, else None (unknown)."""
+    if not raw_json:
+        return None
     try:
-        raw = json.loads(row.rodium_wallet_json)
+        raw = json.loads(raw_json)
     except Exception:
-        return 0.0
+        return None
     if not isinstance(raw, dict):
+        return None
+    value = raw.get("balanceRodi") or raw.get("balance_rodi")
+    if value is None:
         return 0.0
-    value = raw.get("balanceRodi") or raw.get("balance_rodi") or 0
     try:
         return float(value)
     except (TypeError, ValueError):
+        return None
+
+
+def cached_wallet_balance(user: User, db: Session) -> float:
+    row = db.get(UserSettings, user.id)
+    if row is None:
         return 0.0
+    parsed = _parse_wallet_balance(row.rodium_wallet_json)
+    return 0.0 if parsed is None else parsed
+
+
+def _has_rodium_oauth_tokens(row: UserSettings | None) -> bool:
+    if row is None:
+        return False
+    return bool(row.rodium_access_token_encrypted or row.rodium_refresh_token_encrypted)
 
 
 def require_rodi_for_paid_capability(user: User, db: Session) -> None:
-    """Gate AI generation on a positive RODI wallet balance."""
-    from app.errors import insufficient_rodi
+    """Gate AI generation.
+
+    Forge Cloud (secrets present): FRODI or RODI must be readable and positive.
+    Open-source / non-cloud: positive cached RODI, with WALLET_SYNCING while the
+    OAuth wallet cache is still hydrating after login.
+    """
+    from app.config import get_settings
+    from app.errors import SitesError, insufficient_rodi, wallet_syncing
+
+    settings = get_settings()
+    if settings.forge_cloud_enabled and user.rodium_sub:
+        from app.services.entitlements import fetch_credit_balances
+
+        balances = fetch_credit_balances(user)
+        if balances is None:
+            raise insufficient_rodi("Credit balance could not be verified.")
+        frodi, rodi = balances
+        if frodi > 0 or rodi > 0:
+            return
+        raise SitesError(
+            402,
+            "INSUFFICIENT_CREDITS",
+            "FRODI and RODI balances are empty.",
+            {
+                "reservoir": "both",
+                "frodi": frodi,
+                "rodi": rodi,
+                "actions": ["upgrade", "recharge"],
+            },
+        )
 
     row = db.get(UserSettings, user.id)
-    if row is None or not row.rodium_wallet_json:
+    parsed = _parse_wallet_balance(row.rodium_wallet_json if row else None)
+    if parsed is not None and parsed > 0:
         return
-    if cached_wallet_balance(user, db) > 0:
-        return
+    if parsed is None and _has_rodium_oauth_tokens(row):
+        raise wallet_syncing()
     raise insufficient_rodi("Insufficient RODI credits. Recharge your RodiumAi wallet to keep generating.")
 
 

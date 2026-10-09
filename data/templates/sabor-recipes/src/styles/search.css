@@ -1,0 +1,7 @@
+/* Search screen: search field, cuisine chips, results. Root: .search-screen */
+.search-screen .search {
+  display: flex; align-items: center; gap: .6rem; padding: .8rem 1rem;
+  border-radius: 1rem; background: var(--surface); border: 1px solid var(--line); color: var(--muted);
+}
+.search-screen .search input { flex: 1; min-width: 0; border: 0; background: transparent; color: var(--fg); outline: none; }
+.search-screen .search input::placeholder { color: var(--muted); }

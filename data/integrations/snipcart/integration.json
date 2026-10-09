@@ -1,0 +1,26 @@
+{
+  "id": "snipcart",
+  "name": "Snipcart",
+  "categories": [
+    "payments"
+  ],
+  "access": "yes",
+  "methods": [
+    "script"
+  ],
+  "docsUrl": "https://docs.snipcart.com/v3/setup/installation",
+  "badge": null,
+  "enabledHint": false,
+  "logo": "logo.png",
+  "simpleIcon": "snipcart",
+  "i18n": {
+    "en": {
+      "title": "Snipcart",
+      "blurb": "JS cart for static / JAMstack sites."
+    },
+    "fr": {
+      "title": "Snipcart",
+      "blurb": "Panier JS pour sites statiques / JAMstack."
+    }
+  }
+}

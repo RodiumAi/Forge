@@ -1,10 +1,11 @@
-"""Selector-preserving merge for stylesheet rewrites.
+"""Selector-preserving merge for full rewrites of the foundation stylesheet.
 
-Plan tasks rewrite `src/index.css` as a full file, but the LLM only sees a
-truncated version of a large stylesheet — so later tasks routinely re-emit the
-file without the middle rules, breaking earlier pages. Instead of rejecting
-such writes (which loses the new styles), we merge: keep the new content and
-re-append every top-level block whose selector disappeared.
+`src/index.css` is shared by every page. When a task re-emits it in full and
+drops rules (a rewrite from memory rather than from the current file), the
+earlier pages lose their styles. Instead of rejecting such writes (which loses
+the new styles), we merge: keep the new content and re-append every top-level
+block whose selector disappeared. Deliberate removals go through forge-edit,
+which bypasses this merge.
 """
 
 from __future__ import annotations
@@ -102,10 +103,5 @@ def merge_css_preserving(existing: str, new: str) -> tuple[str, list[str]]:
     if prepend:
         merged = "\n".join(prepend) + "\n" + merged
     if chunks:
-        merged = (
-            merged
-            + "\n\n/* — preserved styles (auto-merged, do not remove) — */\n"
-            + "\n\n".join(chunks)
-            + "\n"
-        )
+        merged = merged + "\n\n/* preserved styles (auto-merged) */\n" + "\n\n".join(chunks) + "\n"
     return merged, preserved

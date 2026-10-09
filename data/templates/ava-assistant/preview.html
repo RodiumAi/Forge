@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Ava — preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 480px; height: 300px; overflow: hidden;
+    background: radial-gradient(120% 120% at 85% 0%, #1a1030, #0a0a0f 60%);
+    color: #f2f2f7;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    display: flex; align-items: center; gap: 20px; padding: 0 26px;
+  }
+  .side { width: 150px; }
+  .side .logo { display: flex; align-items: center; gap: 7px; font-size: 15px; font-weight: 800; letter-spacing: -.01em; }
+  .side .logo .dot { width: 15px; height: 15px; border-radius: 6px; background: linear-gradient(135deg, #a78bfa, #4c2699); box-shadow: 0 3px 8px rgba(139,92,246,.5); }
+  .side h2 { font-size: 20px; font-weight: 800; letter-spacing: -.02em; line-height: 1.12; margin-top: 14px; }
+  .side p { font-size: 10px; color: #8b8b9a; line-height: 1.4; margin-top: 8px; }
+  .side .tag {
+    display: inline-block; margin-top: 12px; font-size: 8.5px; font-weight: 700; color: #a78bfa;
+    background: color-mix(in srgb, #8b5cf6 18%, transparent); padding: 3px 8px; border-radius: 99px;
+  }
+  .phone {
+    width: 172px; height: 288px; border-radius: 26px; flex: none;
+    border: 2px solid color-mix(in srgb, #f2f2f7 16%, transparent);
+    background: #0a0a0f; overflow: hidden; position: relative;
+    box-shadow: 0 22px 48px rgba(0,0,0,.6);
+  }
+  .notch { width: 52px; height: 7px; border-radius: 99px; margin: 8px auto 0; background: color-mix(in srgb, #f2f2f7 16%, transparent); }
+  .nav { display: flex; align-items: center; gap: 6px; padding: 8px 11px 7px; border-bottom: 1px solid color-mix(in srgb, #f2f2f7 10%, transparent); }
+  .ava { width: 20px; height: 20px; border-radius: 99px; flex: none; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #fff; background: linear-gradient(140deg, #8b5cf6, #4c2699); }
+  .nav b { font-size: 10.5px; }
+  .nav small { display: flex; align-items: center; gap: 3px; font-size: 6.5px; color: #8b8b9a; }
+  .nav small .live { width: 4px; height: 4px; border-radius: 99px; background: #34d399; }
+  .plus { margin-left: auto; width: 18px; height: 18px; border-radius: 99px; border: 1px solid color-mix(in srgb, #f2f2f7 14%, transparent); display: flex; align-items: center; justify-content: center; font-size: 11px; color: #8b8b9a; }
+  .thread { padding: 9px 10px 0; display: flex; flex-direction: column; gap: 6px; }
+  .day { align-self: center; font-size: 6px; color: #8b8b9a; border: 1px solid color-mix(in srgb, #f2f2f7 10%, transparent); padding: 2px 7px; border-radius: 99px; }
+  .b { max-width: 78%; font-size: 7.5px; line-height: 1.35; padding: 6px 8px; border-radius: 10px; }
+  .b.ai { align-self: flex-start; background: color-mix(in srgb, #f2f2f7 9%, #0a0a0f); border: 1px solid color-mix(in srgb, #f2f2f7 12%, transparent); border-bottom-left-radius: 3px; }
+  .b.me { align-self: flex-end; color: #fff; background: linear-gradient(150deg, #8b5cf6, #4c2699); border-bottom-right-radius: 3px; }
+  .chips { display: flex; gap: 4px; padding: 8px 10px 0; }
+  .chip { font-size: 6px; font-weight: 700; color: #a78bfa; background: color-mix(in srgb, #8b5cf6 12%, transparent); border: 1px solid color-mix(in srgb, #8b5cf6 34%, transparent); padding: 3px 6px; border-radius: 99px; }
+  .inbar {
+    position: absolute; left: 10px; right: 10px; bottom: 34px;
+    display: flex; align-items: center; gap: 5px;
+    background: color-mix(in srgb, #f2f2f7 9%, #0a0a0f); border: 1px solid color-mix(in srgb, #f2f2f7 12%, transparent);
+    border-radius: 99px; padding: 3px 3px 3px 9px;
+  }
+  .inbar .ph { flex: 1; font-size: 7px; color: #8b8b9a; }
+  .inbar .send { width: 19px; height: 19px; border-radius: 99px; flex: none; display: flex; align-items: center; justify-content: center; font-size: 9px; color: #fff; background: linear-gradient(140deg, #8b5cf6, #4c2699); }
+  .tabs {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    display: grid; grid-template-columns: repeat(4,1fr); padding: 6px 4px 8px;
+    border-top: 1px solid color-mix(in srgb, #f2f2f7 10%, transparent);
+    background: color-mix(in srgb, #0a0a0f 88%, #000);
+    font-size: 5.5px; color: #8b8b9a; text-align: center; gap: 2px;
+  }
+  .tabs .dot { width: 12px; height: 12px; margin: 0 auto 2px; border-radius: 4px; border: 1.3px solid currentColor; }
+  .tabs .active { color: #a78bfa; font-weight: 700; }
+</style>
+</head>
+<body>
+  <div class="side">
+    <div class="logo"><span class="dot"></span> Ava</div>
+    <h2>Your everyday AI</h2>
+    <p>Onboarding · chat thread with suggestions · prompts · history — with bottom tabs.</p>
+    <span class="tag">Mobile app shell</span>
+  </div>
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="nav">
+      <span class="ava">✦</span>
+      <div><b>Ava</b><small><span class="live"></span> Online · GPT-grade</small></div>
+      <span class="plus">＋</span>
+    </div>
+    <div class="thread">
+      <span class="day">Today</span>
+      <div class="b ai">Hey! I'm Ava. What are we working on today?</div>
+      <div class="b me">Draft a reply to my client's update ask</div>
+      <div class="b ai">Sure — here's a friendly draft you can send.</div>
+    </div>
+    <div class="chips">
+      <span class="chip">Summarize this</span>
+      <span class="chip">Draft a reply</span>
+      <span class="chip">Plan my day</span>
+    </div>
+    <div class="inbar">
+      <span class="ph">Message Ava…</span>
+      <span class="send">➤</span>
+    </div>
+    <div class="tabs">
+      <span class="active"><span class="dot"></span>Chat</span>
+      <span><span class="dot"></span>Prompts</span>
+      <span><span class="dot"></span>History</span>
+      <span><span class="dot"></span>Account</span>
+    </div>
+  </div>
+</body>
+</html>

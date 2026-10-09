@@ -27,10 +27,10 @@ def main() -> None:
     print(f"Gateway         {s.api_base_url}/docs")
     print(f"Sites           http://<slug>.{s.sites_base_domain}")
     print("MinIO console   http://localhost:9001  (rodiumdev / rodiumdev123)")
-    print("Valkey          redis://localhost:6380/0")
+    print("Valkey          redis://:****@localhost:6380/0 (requirepass)")
     print()
     print("Checklist:")
-    print("  curl http://boutique.lvh.me:8080/_rodium/v1/health")
+    print("  curl -I http://boutique.lvh.me:8080/")
     print("  curl http://localhost:8100/health")
 
 

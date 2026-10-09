@@ -1,0 +1,4 @@
+/* Account screen: profile header and settings lists. Root: .account-screen */
+.account-screen .profile { display: flex; align-items: center; gap: .85rem; padding: .2rem .2rem .1rem; }
+.account-screen .pfp-lg { width: 3.1rem; height: 3.1rem; border-radius: 1rem; display: grid; place-items: center; font-weight: 800; color: var(--on-accent); background: linear-gradient(140deg, var(--accent), #7c3aed); }
+.account-screen .profile strong { font-size: 1.05rem; }

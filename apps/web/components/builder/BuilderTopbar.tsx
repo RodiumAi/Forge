@@ -8,20 +8,22 @@ import {
   ExternalLink,
   FolderOpen,
   Globe,
-  History,
   Monitor,
   Pencil,
   RefreshCw,
   Settings2,
+  Share2,
   Smartphone,
   Tablet,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { api, apiBase } from "@/lib/api";
 import { Icon } from "@/components/ui/icon";
-import { LocaleSwitch, useI18n } from "@/lib/i18n/I18nProvider";
+import { shareSeatLimit, useForgeStatus } from "@/lib/forge-status";
+import { useI18n } from "@/lib/i18n/I18nProvider";
 import type { BuilderMode, ViewportMode } from "./types";
 import { PublishPopover } from "./PublishPopover";
+import { ShareProjectModal } from "./ShareProjectModal";
 import { sitesUrlForSlug } from "@/lib/sites-url";
 
 type Props = {
@@ -44,6 +46,8 @@ type Props = {
   onModeChange: (mode: BuilderMode) => void;
   viewport: ViewportMode;
   onViewportChange: (v: ViewportMode) => void;
+  /** When mobile, hide desktop viewport and default to phone framing. */
+  projectPlatform?: "web" | "mobile";
   pages: string[];
   previewPath: string;
   onPreviewPathChange: (path: string) => void;
@@ -51,8 +55,9 @@ type Props = {
   previewUpdating: boolean;
   previewBusy: boolean;
   onRefreshPreview: () => void;
-  onOpenDesign: () => void;
-  onOpenHistory: () => void;
+  /** Only the owner invites. Guests see the collaborator faces instead. */
+  canShare?: boolean;
+  collaborators?: { name: string | null; email: string; avatar_url: string | null }[];
   /** Ensure draft preview is running, then open it in a new tab. */
   onOpenDraftExternal?: () => Promise<void> | void;
 };
@@ -69,6 +74,7 @@ export function BuilderTopbar({
   onModeChange,
   viewport,
   onViewportChange,
+  projectPlatform = "web",
   pages,
   previewPath,
   onPreviewPathChange,
@@ -76,16 +82,20 @@ export function BuilderTopbar({
   previewUpdating,
   previewBusy,
   onRefreshPreview,
-  onOpenDesign,
-  onOpenHistory,
   onOpenDraftExternal,
+  canShare = true,
+  collaborators = [],
 }: Props) {
   const { t } = useI18n();
+  const shareLimit = shareSeatLimit(useForgeStatus());
+  const shareLocked = shareLimit === 0;
+  const [shareHint, setShareHint] = useState<{ text: string; id: number } | null>(null);
   const [editing, setEditing] = useState(false);
   const [draftName, setDraftName] = useState(projectName);
   const [savingName, setSavingName] = useState(false);
   const [openMenu, setOpenMenu] = useState(false);
   const [pageMenuOpen, setPageMenuOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const skipBlurSave = useRef(false);
   const openMenuRef = useRef<HTMLDivElement>(null);
@@ -101,6 +111,12 @@ export function BuilderTopbar({
   useEffect(() => {
     if (!editing) setDraftName(projectName);
   }, [projectName, editing]);
+
+  useEffect(() => {
+    if (!shareHint) return;
+    const timer = window.setTimeout(() => setShareHint(null), 3200);
+    return () => window.clearTimeout(timer);
+  }, [shareHint]);
 
   useEffect(() => {
     if (editing) {
@@ -300,6 +316,7 @@ export function BuilderTopbar({
         {mainMode === "preview" && (
           <>
             <div className="builder-viewport-switch" role="group" aria-label={t("builderViewport")}>
+              {projectPlatform !== "mobile" && (
               <button
                 type="button"
                 className={viewport === "desktop" ? "active" : ""}
@@ -308,6 +325,7 @@ export function BuilderTopbar({
               >
                 <Icon icon={Monitor} className="ui-icon-sm" />
               </button>
+              )}
               <button
                 type="button"
                 className={viewport === "tablet" ? "active" : ""}
@@ -442,32 +460,90 @@ export function BuilderTopbar({
       </div>
 
       <div className="builder-topbar-right">
+        {canShare ? (
         <button
           type="button"
-          className="builder-toolbar-btn builder-toolbar-btn-text"
-          onClick={onOpenDesign}
-          title={t("designTitle")}
+          className={`builder-toolbar-btn builder-toolbar-btn-text${shareLocked ? " is-locked" : ""}`}
+          onClick={() => {
+            if (shareLocked) {
+              setShareOpen(false);
+              setShareHint({ text: t("shareLocked"), id: Date.now() });
+              return;
+            }
+            setShareHint(null);
+            setShareOpen(true);
+          }}
+          title={t("shareTitle")}
         >
-          {t("designOpen")}
+          <Icon icon={Share2} className="ui-icon-sm" />
+          <span>{t("shareAction")}</span>
         </button>
-        <button
-          type="button"
-          className="builder-toolbar-btn"
-          onClick={onOpenHistory}
-          title={t("historyTitle")}
-          aria-label={t("historyTitle")}
-        >
-          <Icon icon={History} className="ui-icon-sm" />
-        </button>
-        <PublishPopover
-          projectId={projectId}
-          slug={slug}
-          sitesUrl={sitesUrl}
-          publishedAt={publishedAt}
-          onMetaChange={onPublishMetaChange}
-        />
-        <LocaleSwitch />
+        ) : (
+          <CollaboratorFaces people={collaborators} moreLabel={t("projectCollabMore")} />
+        )}
+        {shareHint ? (
+          <p className="builder-share-hint" role="status">
+            {shareHint.text}
+          </p>
+        ) : null}
+        {canShare ? (
+          <PublishPopover
+            projectId={projectId}
+            slug={slug}
+            sitesUrl={sitesUrl}
+            publishedAt={publishedAt}
+            onMetaChange={onPublishMetaChange}
+          />
+        ) : null}
       </div>
+
+      {canShare && shareOpen ? (
+        <ShareProjectModal
+          projectId={projectId}
+          projectName={projectName}
+          seatLimit={shareLimit}
+          onClose={() => setShareOpen(false)}
+        />
+      ) : null}
     </header>
   );
+}
+
+function CollaboratorFaces({
+  people,
+  moreLabel,
+}: {
+  people: { name: string | null; email: string; avatar_url: string | null }[];
+  moreLabel: string;
+}) {
+  if (people.length === 0) return null;
+  const shown = people.length <= 4 ? people : people.slice(0, 3);
+  const extra = people.length <= 4 ? 0 : people.length - 3;
+  return (
+    <div
+      className="builder-collab-faces"
+      title={people.map((person) => person.name?.trim() || person.email).join(", ")}
+    >
+      {shown.map((person, index) => {
+        const label = person.name?.trim() || person.email;
+        return (
+          <span key={person.email} className="home-card-avatar" style={{ zIndex: index + 1 }}>
+            {person.avatar_url ? <img src={person.avatar_url} alt="" /> : <span>{initials(label)}</span>}
+          </span>
+        );
+      })}
+      {extra > 0 ? (
+        <span className="home-card-avatar is-more" style={{ zIndex: shown.length + 1 }}>
+          {moreLabel.replace("{n}", String(extra))}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
 }

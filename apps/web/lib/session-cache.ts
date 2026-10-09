@@ -17,6 +17,8 @@ export type SessionProfile = {
    * which identifies the account to credit by that id.
    */
   rodium_sub?: string | null;
+  /** Default payment country chosen on pricing. Null until the person picks one. */
+  payment_country_iso?: string | null;
 };
 
 export type SessionWallet = {
@@ -168,6 +170,7 @@ export async function ensureSession(options?: { force?: boolean }): Promise<Sess
           avatar_url: me.avatar_url,
           rodium_linked: me.rodium_linked,
           rodium_sub: me.rodium_sub ?? null,
+          payment_country_iso: me.payment_country_iso ?? null,
         };
         const distinctId = me.rodium_sub ?? (me.id ? String(me.id) : null);
         if (distinctId) {
@@ -267,14 +270,14 @@ export async function refreshRodiumWallet(): Promise<SessionWallet | null> {
         /* OIDC account may be unavailable — try key path below */
       }
 
-      if (!wallet) {
+      if (!wallet && !linked) {
         try {
           const byKey = await api<SessionWallet>("/settings/rodium/wallet");
           if (byKey && (byKey.balance_rodi != null || byKey.provided_total_rodi != null)) {
             wallet = byKey;
           }
         } catch {
-          /* no pasted key / gateway error */
+          /* no pasted key / gateway error — do not call when OIDC-linked (400 rodium_key_required) */
         }
       }
 
@@ -299,4 +302,36 @@ export async function refreshRodiumWallet(): Promise<SessionWallet | null> {
   })();
 
   return walletFlight;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+/**
+ * After OIDC callback: wait until a generation key is selected and the wallet
+ * cache is warm so the dashboard never flashes "Connect RodiumAi".
+ */
+export async function prepareSessionAfterRodiumLogin(): Promise<SessionSnapshot | null> {
+  let snap = await ensureSession({ force: true });
+
+  try {
+    await api("/auth/rodium/ensure-generation-key", { method: "POST" });
+  } catch {
+    // Key mint may race with Nest; wallet refresh below still helps.
+  }
+
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const wallet = await refreshRodiumWallet();
+    snap = getSessionSnapshot();
+    const hasWallet =
+      wallet != null &&
+      (wallet.balance_rodi != null || wallet.provided_total_rodi != null);
+    const linked = Boolean(snap?.rodium?.linked || snap?.profile?.rodium_linked);
+    if (linked && hasWallet) return snap;
+    await sleep(350 + attempt * 250);
+    snap = await ensureSession({ force: true });
+  }
+
+  return getSessionSnapshot();
 }

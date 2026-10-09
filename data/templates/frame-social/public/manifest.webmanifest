@@ -1,0 +1,22 @@
+{
+  "name": "Frame",
+  "short_name": "Frame",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fbfbfd",
+  "theme_color": "#fbfbfd",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

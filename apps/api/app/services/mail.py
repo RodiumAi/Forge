@@ -21,6 +21,7 @@ every failure is logged and swallowed, and the caller can offer "resend".
 
 from __future__ import annotations
 
+import html
 import logging
 from dataclasses import dataclass
 
@@ -94,6 +95,118 @@ def build_reset_password(to: str, url: str, locale: Locale = "en") -> MailMessag
         subject=title,
         text=text,
         html=_html_document(title, intro, t("mail_reset_cta", locale), url, footer),
+    )
+
+
+def build_seat_remove_code(to: str, code: str, member_email: str, locale: Locale = "en") -> MailMessage:
+    """A short code, not a link: the owner types it back to empty a paid seat."""
+    member = _mail_plain(member_email)
+    title = t("mail_seat_remove_subject", locale)
+    intro = t("mail_seat_remove_intro", locale, email=member)
+    footer = t("mail_seat_remove_footer", locale)
+    text = f"{title}\n\n{intro}\n\n{code}\n\n{footer}\n"
+    safe_intro = html.escape(intro)
+    safe_code = html.escape(code)
+    safe_footer = html.escape(footer)
+    safe_title = html.escape(title)
+    logo_url = get_settings().web_url("/logo-light.png")
+    document = f"""\
+<!doctype html>
+<html>
+  <body style="margin:0;padding:24px;background:#f6f6f7;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#18181b">
+    <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:12px;padding:32px">
+      <div style="text-align:center;margin-bottom:24px">
+        <img src="{logo_url}" alt="Forge" width="140" height="40" style="display:inline-block;height:40px;width:auto" />
+      </div>
+      <h1 style="margin:0 0 16px;font-size:20px;font-weight:600">{safe_title}</h1>
+      <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#3f3f46">{safe_intro}</p>
+      <p style="margin:0 0 24px;font-size:28px;letter-spacing:0.28em;font-weight:700">{safe_code}</p>
+      <p style="margin:0;font-size:13px;line-height:1.6;color:#a1a1aa">{safe_footer}</p>
+    </div>
+  </body>
+</html>"""
+    return MailMessage(to=to, subject=title, text=text, html=document)
+
+
+def build_team_invite(to: str, url: str, locale: Locale = "en") -> MailMessage:
+    title = t("mail_team_invite_subject", locale)
+    intro = t("mail_team_invite_intro", locale)
+    footer = t("mail_team_invite_footer", locale)
+    text = f"{title}\n\n{intro}\n\n{url}\n\n{footer}\n"
+    return MailMessage(
+        to=to,
+        subject=title,
+        text=text,
+        html=_html_document(title, intro, t("mail_team_invite_cta", locale), url, footer),
+    )
+
+
+def build_team_restore(to: str, url: str, locale: Locale = "en") -> MailMessage:
+    title = t("mail_team_restore_subject", locale)
+    intro = t("mail_team_restore_intro", locale)
+    footer = t("mail_team_restore_footer", locale)
+    text = f"{title}\n\n{intro}\n\n{url}\n\n{footer}\n"
+    return MailMessage(
+        to=to,
+        subject=title,
+        text=text,
+        html=_html_document(title, intro, t("mail_team_restore_cta", locale), url, footer),
+    )
+
+
+def _mail_plain(value: str) -> str:
+    """Keep `str.format` and HTML from treating a project or person name as markup."""
+    return value.replace("{", "(").replace("}", ")")
+
+
+def build_project_invite(
+    to: str,
+    url: str,
+    *,
+    inviter: str,
+    project: str,
+    role: str,
+    locale: Locale = "en",
+) -> MailMessage:
+    inviter_plain = _mail_plain(inviter)
+    project_plain = _mail_plain(project)
+    role_plain = _mail_plain(role)
+    title = t("mail_invite_subject", locale, inviter=inviter_plain)
+    intro = t(
+        "mail_invite_intro",
+        locale,
+        inviter=inviter_plain,
+        project=project_plain,
+        role=role_plain,
+    )
+    footer = t("mail_invite_footer", locale)
+    text = f"{title}\n\n{intro}\n\n{url}\n\n{footer}\n"
+    html_intro = t(
+        "mail_invite_intro",
+        locale,
+        inviter=html.escape(inviter_plain),
+        project=html.escape(project_plain),
+        role=html.escape(role_plain),
+    )
+    return MailMessage(
+        to=to,
+        subject=title,
+        text=text,
+        html=_html_document(html.escape(title), html_intro, t("mail_invite_cta", locale), url, footer),
+    )
+
+
+def build_reset_password_sso_hint(to: str, login_url: str, locale: Locale = "en") -> MailMessage:
+    """Inform SSO-only accounts that there is no local password to reset."""
+    title = t("mail_reset_sso_subject", locale)
+    intro = t("mail_reset_sso_intro", locale)
+    footer = t("mail_reset_sso_footer", locale)
+    text = f"{title}\n\n{intro}\n\n{login_url}\n\n{footer}\n"
+    return MailMessage(
+        to=to,
+        subject=title,
+        text=text,
+        html=_html_document(title, intro, t("mail_reset_sso_cta", locale), login_url, footer),
     )
 
 

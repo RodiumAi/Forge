@@ -4,9 +4,9 @@ The raw token exists only in the link we mail out; the database keeps its
 sha256. A read-only leak of `auth_tokens` therefore yields nothing usable —
 the same reasoning as `keyHash` on API keys and `codeHash` on OAuth codes.
 
-`consume()` is the only way back to a user, and it is atomic-by-construction:
-a token is marked consumed in the same transaction that returns it, so a link
-clicked twice (mail scanners routinely prefetch) resolves once.
+`consume()` is the only way back to a user. It burns the row with a single
+conditional ``UPDATE … WHERE consumed_at IS NULL``, so two concurrent
+clicks (mail scanners, reset races) cannot both succeed under READ COMMITTED.
 """
 
 from __future__ import annotations
@@ -56,6 +56,30 @@ def issue_password_reset(db: Session, user_id: UUID) -> str:
     return issue(db, user_id, AuthToken.KIND_PASSWORD_RESET, PASSWORD_RESET_TTL)
 
 
+TEAM_SEAT_REMOVE_TTL = timedelta(minutes=10)
+
+
+def seat_removal_material(code: str, member_email: str, reason: str) -> str:
+    """Bind a mailed code to one person and one reason, so it cannot confirm another removal."""
+    return "\n".join([code.strip(), member_email.strip().lower(), reason.strip()])
+
+
+def issue_team_seat_removal(db: Session, user_id: UUID, member_email: str, reason: str) -> str:
+    """Mint a 6-digit code. Only the code is returned; the database stores a hash."""
+    invalidate_outstanding(db, user_id, AuthToken.KIND_TEAM_SEAT_REMOVE)
+    code = f"{secrets.randbelow(1_000_000):06d}"
+    db.add(
+        AuthToken(
+            user_id=user_id,
+            kind=AuthToken.KIND_TEAM_SEAT_REMOVE,
+            token_hash=hash_token(seat_removal_material(code, member_email, reason)),
+            expires_at=datetime.now(UTC) + TEAM_SEAT_REMOVE_TTL,
+        )
+    )
+    db.flush()
+    return code
+
+
 def lookup_user_id(db: Session, raw: str, kind: str) -> UUID | None:
     """Return the user id for a token even if it is expired or already used.
 
@@ -75,22 +99,29 @@ def consume(db: Session, raw: str, kind: str) -> UUID | None:
     One `None` for every failure mode (unknown, wrong kind, already used,
     expired): the caller shows a single "this link is no longer valid"
     message, which is also all an attacker learns.
+
+    Consumption is a single conditional UPDATE so concurrent requests cannot
+    both observe ``consumed_at IS NULL`` and both succeed (TOCTOU / reset race).
     """
     if not raw:
         return None
-    row = db.query(AuthToken).filter(AuthToken.token_hash == hash_token(raw), AuthToken.kind == kind).first()
-    if row is None or row.consumed_at is not None:
-        return None
-
-    expires_at = row.expires_at
-    if expires_at.tzinfo is None:  # naive timestamps come back from some drivers
-        expires_at = expires_at.replace(tzinfo=UTC)
-    if expires_at < datetime.now(UTC):
-        return None
-
-    row.consumed_at = datetime.now(UTC)
+    now = datetime.now(UTC)
+    token_hash = hash_token(raw)
+    updated = (
+        db.query(AuthToken)
+        .filter(
+            AuthToken.token_hash == token_hash,
+            AuthToken.kind == kind,
+            AuthToken.consumed_at.is_(None),
+            AuthToken.expires_at >= now,
+        )
+        .update({AuthToken.consumed_at: now}, synchronize_session=False)
+    )
     db.flush()
-    return row.user_id
+    if updated != 1:
+        return None
+    row = db.query(AuthToken).filter(AuthToken.token_hash == token_hash, AuthToken.kind == kind).first()
+    return row.user_id if row is not None else None
 
 
 def invalidate_outstanding(db: Session, user_id: UUID, kind: str) -> None:

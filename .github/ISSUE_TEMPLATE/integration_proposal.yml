@@ -1,0 +1,62 @@
+name: Integration proposal
+description: Propose a new embed integration for the catalog. See docs/INTEGRATIONS.md. (Français accepté / French is welcome)
+labels: ["integration"]
+body:
+  - type: input
+    id: name
+    attributes:
+      label: Integration name and id
+      description: "Proposed id must match ^[a-z0-9][a-z0-9-]{1,62}$"
+      placeholder: "tally — Tally"
+    validations:
+      required: true
+  - type: dropdown
+    id: access
+    attributes:
+      label: Access
+      description: "yes = drop-in widget/iframe/script · partial = needs server verify or custom UI"
+      options:
+        - yes
+        - partial
+      default: 0
+    validations:
+      required: true
+  - type: dropdown
+    id: category
+    attributes:
+      label: Primary category
+      options:
+        - forms
+        - booking
+        - chat
+        - payments
+        - data
+        - auth
+        - email
+        - maps
+        - media
+        - comments
+        - analytics
+        - widgets
+      default: 0
+    validations:
+      required: true
+  - type: input
+    id: docs
+    attributes:
+      label: Official embed docs URL
+      placeholder: "https://…"
+    validations:
+      required: true
+  - type: textarea
+    id: methods
+    attributes:
+      label: Embed methods
+      description: iframe, script, sdk, form-action, link…
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Caveats for Forge (frontend-only prototypes)
+      description: CSP, sandbox, secrets, webhooks…

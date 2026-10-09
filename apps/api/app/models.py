@@ -25,6 +25,9 @@ class User(Base):
     #: were minted with, so bumping it invalidates every outstanding token —
     #: without it a 7-day JWT would survive a password reset.
     token_version: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    #: Set when RodiumAi admin suspends the linked platform account. Blocks
+    #: every Forge session (JWT `tv` bump + this flag) until restored.
+    access_blocked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     #: When a RodiumAi account was created for this user by the provisioning
     #: call. Distinct from `rodium_sub`, which means "we hold OAuth tokens".
     rodium_provisioned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -47,6 +50,7 @@ class AuthToken(Base):
 
     KIND_EMAIL_VERIFY = "email_verify"
     KIND_PASSWORD_RESET = "password_reset"
+    KIND_TEAM_SEAT_REMOVE = "team_seat_remove"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(
@@ -57,6 +61,25 @@ class AuthToken(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class TeamSeat(Base):
+    """One paid team place offered to someone other than the owner."""
+
+    __tablename__ = "team_seats"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    owner_user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    email: Mapped[str] = mapped_column(String(320), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False)
+    token_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
 
 class OauthAccount(Base):
@@ -94,6 +117,7 @@ class UserSettings(Base):
     rodium_wallet_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     rodium_api_keys_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     selected_rodium_api_key_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    payment_country_iso: Mapped[str | None] = mapped_column(String(2), nullable=True)
     default_model: Mapped[str] = mapped_column(String(128), nullable=False, default="google/gemini-3.7-flash")
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
@@ -116,6 +140,10 @@ class Project(Base):
     preview_running: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     design_brief: Mapped[str | None] = mapped_column(Text, nullable=True)
     template_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # "web" | "mobile" — mobile = app-shell prototype + PWA manifest-only.
+    platform: Mapped[str] = mapped_column(String(16), nullable=False, default="web")
+    visibility: Mapped[str] = mapped_column(String(16), nullable=False, default="private")
+    billing_policy: Mapped[str] = mapped_column(String(32), nullable=False, default="owner_pays")
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
@@ -126,6 +154,9 @@ class Project(Base):
 
     user: Mapped[User] = relationship(back_populates="projects")
     chats: Mapped[list["Chat"]] = relationship(back_populates="project", cascade="all, delete-orphan")
+    collaborators: Mapped[list["ProjectCollaborator"]] = relationship(
+        back_populates="project", cascade="all, delete-orphan"
+    )
 
 
 class Chat(Base):
@@ -184,6 +215,10 @@ class AgentRun(Base):
     prompt: Mapped[str] = mapped_column(Text, nullable=False, default="")
     clarify_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     answers_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    #: Merged request + clarification answers, read by the planner and tasks.
+    brief: Mapped[str | None] = mapped_column(Text, nullable=True)
+    #: AI clarity gauge score (0-100) for the request, when it was assessed.
+    clarity_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
     plan_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     plan_meta_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     task_class: Mapped[str | None] = mapped_column(String(64), nullable=True)
@@ -260,6 +295,32 @@ class StoredObject(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class ProjectDomainClaim(Base):
+    """Short-lived ownership proof that does not reserve a hostname globally."""
+
+    __tablename__ = "project_domain_claims"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    hostname: Mapped[str] = mapped_column(String(253), index=True, nullable=False)
+    cname_target: Mapped[str] = mapped_column(String(253), nullable=False)
+    ownership_txt_name: Mapped[str] = mapped_column(String(300), nullable=False)
+    ownership_txt_value: Mapped[str] = mapped_column(String(300), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    __table_args__ = (UniqueConstraint("project_id", name="uq_project_domain_claims_project"),)
+
+
 class ProjectDomain(Base):
     """Custom domain attached to a project (1 primary domain max per project).
 
@@ -280,6 +341,10 @@ class ProjectDomain(Base):
     acm_validation_name: Mapped[str | None] = mapped_column(String(300), nullable=True)
     acm_validation_value: Mapped[str | None] = mapped_column(String(300), nullable=True)
     acm_certificate_arn: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    acm_idempotency_token: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    ownership_txt_name: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    ownership_txt_value: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    ownership_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -310,3 +375,66 @@ class PreviewComment(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
+
+
+class ForgeEntitlementCache(Base):
+    __tablename__ = "forge_entitlement_cache"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    plan_slug: Mapped[str] = mapped_column(String(32), nullable=False, default="free")
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="active")
+    max_projects: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    model_selection: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    custom_domain: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    export_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    history_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    history_limit: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    priority_generation: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    allowed_model_tiers: Mapped[str | None] = mapped_column(Text, nullable=True)
+    frodi_balance: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    refreshed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ProjectCollaborator(Base):
+    __tablename__ = "project_collaborators"
+
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), primary_key=True
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    role: Mapped[str] = mapped_column(String(16), nullable=False, default="editor")
+    invited_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    invited_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    frodi_cap_per_cycle: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    project: Mapped[Project] = relationship(back_populates="collaborators")
+
+
+class ProjectInvite(Base):
+    """Email invitation that exists before the person accepts, and before they have an account.
+
+    Access stays on ``project_collaborators`` and only after ``accepted_at`` is set.
+    The raw token is mailed once; the row keeps its sha256.
+    """
+
+    __tablename__ = "project_invites"
+    __table_args__ = (UniqueConstraint("project_id", "email", name="uq_project_invites_project_email"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    email: Mapped[str] = mapped_column(String(320), nullable=False)
+    role: Mapped[str] = mapped_column(String(16), nullable=False, default="editor")
+    invited_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    invited_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    declined_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
+    frodi_cap_per_cycle: Mapped[int | None] = mapped_column(Integer, nullable=True)

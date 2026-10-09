@@ -1,0 +1,6 @@
+/* Sleep screen: night-toned story hero, sounds list, bedtime reminder. */
+.sleep-screen .daily.sleep-hero {
+  background:
+    radial-gradient(120% 130% at 100% 0%, color-mix(in srgb, #6d5bd0 50%, transparent), transparent 58%),
+    linear-gradient(155deg, color-mix(in srgb, #3a2f6b 60%, var(--surface)), var(--surface));
+}

@@ -1,0 +1,27 @@
+{
+  "id": "lemon-squeezy",
+  "name": "Lemon Squeezy",
+  "categories": [
+    "payments"
+  ],
+  "access": "yes",
+  "methods": [
+    "script",
+    "link"
+  ],
+  "docsUrl": "https://docs.lemonsqueezy.com/help/checkout/checkout-overlay",
+  "badge": null,
+  "enabledHint": false,
+  "logo": "logo.png",
+  "simpleIcon": "lemonsqueezy",
+  "i18n": {
+    "en": {
+      "title": "Lemon Squeezy",
+      "blurb": "Checkout overlay / product links."
+    },
+    "fr": {
+      "title": "Lemon Squeezy",
+      "blurb": "Overlay checkout / liens produits."
+    }
+  }
+}

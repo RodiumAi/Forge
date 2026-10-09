@@ -1,0 +1,21 @@
+/* Today screen: progress ring card and the daily checklist. Root: .today-screen */
+.today-screen .progress {
+  border-radius: 1.4rem; padding: 1.3rem;
+  display: flex; align-items: center; gap: 1.2rem;
+  background:
+    radial-gradient(120% 120% at 0% 0%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 55%),
+    var(--surface);
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--line));
+}
+.today-screen .progress-copy .lbl { margin: 0; font-size: .78rem; color: color-mix(in srgb, var(--fg) 72%, var(--muted)); letter-spacing: .03em; }
+.today-screen .progress-copy .big { margin: .2rem 0 .3rem; font-size: 1.6rem; font-weight: 800; letter-spacing: -.02em; }
+
+/* Tappable check circle */
+.today-screen .check {
+  appearance: none; flex-shrink: 0; width: 2.15rem; height: 2.15rem; border-radius: 999px;
+  border: 2px solid color-mix(in srgb, var(--fg) 22%, transparent); background: transparent;
+  color: var(--on-accent); display: grid; place-items: center;
+  transition: transform .14s ease, background .14s ease, border-color .14s ease;
+}
+.today-screen .check:active { transform: scale(.9); }
+.today-screen .check.on { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent); }

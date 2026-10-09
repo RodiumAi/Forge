@@ -1,0 +1,51 @@
+/* Home screen: water-today hero + list, my-plants grid, care tip. */
+.home-screen .hero {
+  border-radius: 1.4rem; padding: 1.35rem 1.3rem 1.25rem;
+  position: relative; overflow: hidden;
+  background:
+    radial-gradient(120% 130% at 100% 0%, color-mix(in srgb, var(--accent) 42%, transparent), transparent 58%),
+    linear-gradient(155deg, color-mix(in srgb, var(--accent) 16%, var(--surface)), var(--surface));
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line));
+}
+.home-screen .hero .lbl { margin: 0; font-size: .78rem; color: color-mix(in srgb, var(--fg) 72%, var(--muted)); letter-spacing: .03em; }
+.home-screen .hero .amt { margin: .3rem 0 .1rem; font-size: 2.4rem; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.home-screen .hero .amt small { font-size: 1rem; font-weight: 700; opacity: .75; }
+.home-screen .hero .delta { display: inline-flex; align-items: center; gap: .35rem; font-size: .8rem; font-weight: 600; color: var(--accent); }
+.home-screen .hero .hero-leaf { position: absolute; top: 1rem; right: 1rem; color: color-mix(in srgb, var(--accent) 85%, #fff); opacity: .85; }
+
+/* Water button */
+.home-screen .waterbtn {
+  appearance: none; border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line));
+  background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent);
+  border-radius: 999px; padding: .45rem .8rem; font-size: .78rem; font-weight: 700;
+  display: inline-flex; align-items: center; gap: .3rem; flex-shrink: 0;
+}
+.home-screen .waterbtn:active { transform: scale(.96); }
+.home-screen .waterbtn.done { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+
+/* My-plants grid */
+.home-screen .plant-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
+.home-screen .plant-card {
+  border-radius: 1.15rem; padding: .95rem 1rem 1rem; position: relative; overflow: hidden;
+  border: 1px solid var(--line); display: flex; flex-direction: column; gap: .2rem;
+  min-height: 8.6rem; justify-content: flex-end;
+}
+.home-screen .plant-card .plant-glyph { position: absolute; top: .55rem; right: .55rem; font-size: 2.1rem; opacity: .9; color: var(--accent); }
+.home-screen .plant-card strong { font-size: .95rem; font-weight: 700; letter-spacing: -.01em; }
+.home-screen .plant-card .next { display: inline-flex; align-items: center; gap: .3rem; font-size: .76rem; font-weight: 650; color: var(--accent); }
+.home-screen .plant-card .light { display: inline-flex; align-items: center; gap: .3rem; font-size: .72rem; color: var(--muted); }
+.home-screen .plant-card.g0 { background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 24%, var(--surface)), var(--surface)); }
+.home-screen .plant-card.g1 { background: linear-gradient(160deg, color-mix(in srgb, #22c55e 22%, var(--surface)), var(--surface)); }
+.home-screen .plant-card.g2 { background: linear-gradient(160deg, color-mix(in srgb, #34d399 26%, var(--surface)), var(--surface)); }
+.home-screen .plant-card.g3 { background: linear-gradient(160deg, color-mix(in srgb, #a3e635 20%, var(--surface)), var(--surface)); }
+
+/* Care tip banner */
+.home-screen .tip {
+  display: flex; gap: .7rem; align-items: flex-start;
+  border-radius: 1.15rem; padding: .9rem 1rem;
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  border: 1px dashed color-mix(in srgb, var(--accent) 34%, var(--line));
+}
+.home-screen .tip .tip-ic { font-size: 1.3rem; flex-shrink: 0; color: var(--accent); width: 1.33em; text-align: center; }
+.home-screen .tip p { margin: 0; font-size: .82rem; line-height: 1.45; color: color-mix(in srgb, var(--fg) 82%, var(--muted)); }
+.home-screen .tip strong { color: var(--fg); }

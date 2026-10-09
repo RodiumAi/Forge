@@ -19,8 +19,11 @@ Design constraints:
 from __future__ import annotations
 
 import logging
+import os
 import shutil
 import subprocess
+import tempfile
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -32,6 +35,21 @@ logger = logging.getLogger("history")
 _AUTHOR_NAME = "Forge"
 _AUTHOR_EMAIL = "forge@rodiumai.local"
 _TIMEOUT = 30
+
+# Local repository config is an execution boundary, not user project data.
+# Keep only the settings Forge needs. In particular, never retain filter.*,
+# diff.*.command, include.path, core.fsmonitor, or a caller-controlled hooksPath.
+_TRUSTED_LOCAL_CONFIG = """\
+[core]
+\trepositoryformatversion = 0
+\tfilemode = true
+\tbare = false
+\tlogallrefupdates = true
+\thooksPath = /dev/null
+\tfsmonitor = false
+[commit]
+\tgpgsign = false
+"""
 
 # Never version build output or dependencies: they are huge and reproducible.
 _GITIGNORE = """\
@@ -50,6 +68,8 @@ class Snapshot:
     created_at: str
     files_changed: int = 0
     stats: dict[str, int] = field(default_factory=dict)
+    actor_name: str = ""
+    actor_email: str = ""
 
     def as_dict(self) -> dict:
         return {
@@ -57,10 +77,43 @@ class Snapshot:
             "label": self.label,
             "created_at": self.created_at,
             "files_changed": self.files_changed,
+            "actor_name": self.actor_name,
+            "actor_email": self.actor_email,
         }
 
 
+_history_actor: ContextVar[tuple[str, str] | None] = ContextVar("forge_history_actor", default=None)
+
+
+def bind_history_actor(name: str | None, email: str | None) -> None:
+    """Remember who is writing, so the next checkpoint can name them."""
+    clean_email = (email or "").strip()
+    clean_name = (name or "").strip() or clean_email
+    if clean_email:
+        _history_actor.set((clean_name, clean_email))
+
+
+def _actor_lines(actor: tuple[str, str] | None) -> list[str]:
+    who = actor or _history_actor.get()
+    if not who or not who[1]:
+        return []
+    return [f"forge-actor-name: {who[0]}", f"forge-actor-email: {who[1]}"]
+
+
+def _actor_from_body(body: str) -> tuple[str, str]:
+    name = ""
+    email = ""
+    for line in body.splitlines():
+        if line.startswith("forge-actor-name:"):
+            name = line.split(":", 1)[1].strip()
+        elif line.startswith("forge-actor-email:"):
+            email = line.split(":", 1)[1].strip()
+    return name, email
+
+
 class HistoryUnavailable(RuntimeError):
+    """Git is missing or the repository is unusable."""
+
     """Git is missing or the repository is unusable."""
 
 
@@ -68,10 +121,35 @@ def _git_exe() -> str | None:
     return shutil.which("git")
 
 
+def _reset_local_config(repo: Path) -> None:
+    """Atomically replace `.git/config` with Forge's known-safe configuration.
+
+    This also neutralises malicious filters planted before `.git` became a
+    reserved path. It runs before every Git subprocess so existing workspaces
+    are repaired on their next history operation.
+    """
+    git_dir = repo / ".git"
+    if not git_dir.is_dir():
+        return
+
+    fd, tmp_name = tempfile.mkstemp(dir=str(git_dir), prefix=".forge-config-")
+    tmp = Path(tmp_name)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(_TRUSTED_LOCAL_CONFIG)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(tmp, git_dir / "config")
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
+
+
 def _run(repo: Path, args: list[str], *, check: bool = True) -> subprocess.CompletedProcess[str]:
     exe = _git_exe()
     if not exe:
         raise HistoryUnavailable("git executable not found")
+    _reset_local_config(repo)
     cmd = [
         exe,
         "-c",
@@ -79,13 +157,24 @@ def _run(repo: Path, args: list[str], *, check: bool = True) -> subprocess.Compl
         "-c",
         f"user.email={_AUTHOR_EMAIL}",
         "-c",
-        "core.hooksPath=",
+        f"core.hooksPath={os.devnull}",
         "-c",
         "commit.gpgsign=false",
         "-C",
         str(repo),
         *args,
     ]
+    # Never inherit repository/config redirections from the API process.
+    env = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
+    env.update(
+        {
+            "GIT_CONFIG_NOSYSTEM": "1",
+            "GIT_CONFIG_GLOBAL": os.devnull,
+            "GIT_CONFIG_SYSTEM": os.devnull,
+            "GIT_ATTR_NOSYSTEM": "1",
+            "GIT_TERMINAL_PROMPT": "0",
+        }
+    )
     proc = subprocess.run(
         cmd,
         capture_output=True,
@@ -93,6 +182,7 @@ def _run(repo: Path, args: list[str], *, check: bool = True) -> subprocess.Compl
         encoding="utf-8",
         errors="replace",
         timeout=_TIMEOUT,
+        env=env,
     )
     if check and proc.returncode != 0:
         raise HistoryUnavailable(f"git {' '.join(args[:2])} failed: {proc.stderr.strip()}")
@@ -124,7 +214,7 @@ def ensure_repo(project_id: str, initial_label: str = "initial state") -> tuple[
     return repo, True
 
 
-def snapshot(project_id: str, label: str) -> str | None:
+def snapshot(project_id: str, label: str, *, actor: tuple[str, str] | None = None) -> str | None:
     """Commit the current workspace state. Returns the snapshot id, or None.
 
     Returns None when nothing changed (no empty checkpoints in the timeline) or
@@ -138,7 +228,9 @@ def snapshot(project_id: str, label: str) -> str | None:
         status = _run(repo, ["status", "--porcelain"])
         if not status.stdout.strip():
             return None
-        message = f"{label}\n\nforge-snapshot-at: {datetime.now(UTC).isoformat()}"
+        message = "\n".join(
+            [label, "", f"forge-snapshot-at: {datetime.now(UTC).isoformat()}", *_actor_lines(actor)]
+        )
         _run(repo, ["commit", "--quiet", "--no-verify", "-m", message])
         head = _run(repo, ["rev-parse", "HEAD"])
         return head.stdout.strip()
@@ -158,18 +250,31 @@ def list_snapshots(project_id: str, limit: int = 50) -> list[Snapshot]:
     try:
         out = _run(
             repo,
-            ["log", f"-{limit}", "--pretty=format:%H%x1f%s%x1f%cI", "--no-merges"],
+            ["log", f"-{limit}", "--pretty=format:%H%x1f%s%x1f%aI%x1f%b%x1e", "--no-merges"],
         )
     except (HistoryUnavailable, OSError, subprocess.SubprocessError):
         return []
 
     snapshots: list[Snapshot] = []
-    for line in out.stdout.splitlines():
-        parts = line.split("\x1f")
-        if len(parts) != 3:
+    for record in out.stdout.split("\x1e"):
+        record = record.strip("\n")
+        if not record.strip():
             continue
-        commit, subject, created = parts
-        snapshots.append(Snapshot(id=commit, label=subject, created_at=created))
+        parts = record.split("\x1f", 3)
+        if len(parts) < 3:
+            continue
+        commit, subject, created = parts[0], parts[1], parts[2]
+        body = parts[3] if len(parts) > 3 else ""
+        actor_name, actor_email = _actor_from_body(body)
+        snapshots.append(
+            Snapshot(
+                id=commit.strip(),
+                label=subject.strip(),
+                created_at=created.strip(),
+                actor_name=actor_name,
+                actor_email=actor_email,
+            )
+        )
     return snapshots
 
 
@@ -179,7 +284,14 @@ def snapshot_files(project_id: str, snapshot_id: str) -> list[str]:
     try:
         out = _run(
             repo,
-            ["show", "--pretty=format:", "--name-only", snapshot_id],
+            [
+                "show",
+                "--no-ext-diff",
+                "--no-textconv",
+                "--pretty=format:",
+                "--name-only",
+                snapshot_id,
+            ],
         )
     except (HistoryUnavailable, OSError, subprocess.SubprocessError):
         return []
@@ -190,7 +302,10 @@ def diff(project_id: str, snapshot_id: str) -> str:
     """Unified diff introduced by a snapshot (capped for UI display)."""
     repo = project_dir(project_id)
     try:
-        out = _run(repo, ["show", "--format=", "--unified=3", snapshot_id])
+        out = _run(
+            repo,
+            ["show", "--no-ext-diff", "--no-textconv", "--format=", "--unified=3", snapshot_id],
+        )
     except (HistoryUnavailable, OSError, subprocess.SubprocessError):
         return ""
     return out.stdout[:200_000]
@@ -219,5 +334,6 @@ def restore(project_id: str, snapshot_id: str) -> str | None:
     status = _run(repo, ["status", "--porcelain"])
     if not status.stdout.strip():
         return None
-    _run(repo, ["commit", "--quiet", "--no-verify", "-m", f"restore checkpoint {short}"])
+    message = "\n".join([f"restore checkpoint {short}", "", *_actor_lines(None)])
+    _run(repo, ["commit", "--quiet", "--no-verify", "-m", message])
     return _run(repo, ["rev-parse", "HEAD"]).stdout.strip()

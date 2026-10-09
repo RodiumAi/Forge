@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Nova Bank — preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 480px; height: 300px; overflow: hidden;
+    background: radial-gradient(120% 120% at 85% 0%, #10233a, #0b1220 60%);
+    color: #eaf1ff;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    display: flex; align-items: center; gap: 20px; padding: 0 26px;
+  }
+  .side { width: 150px; }
+  .side .logo { display: flex; align-items: center; gap: 7px; font-size: 15px; font-weight: 800; letter-spacing: -.01em; }
+  .side .logo .dot { width: 14px; height: 14px; border-radius: 5px; background: linear-gradient(135deg, #34d399, #0b3b2c); }
+  .side h2 { font-size: 20px; font-weight: 800; letter-spacing: -.02em; line-height: 1.12; margin-top: 14px; }
+  .side p { font-size: 10px; color: #8a97b5; line-height: 1.4; margin-top: 8px; }
+  .side .tag {
+    display: inline-block; margin-top: 12px; font-size: 8.5px; font-weight: 700; color: #34d399;
+    background: color-mix(in srgb, #34d399 16%, transparent); padding: 3px 8px; border-radius: 99px;
+  }
+  .phone {
+    width: 172px; height: 288px; border-radius: 26px; flex: none;
+    border: 2px solid color-mix(in srgb, #eaf1ff 16%, transparent);
+    background: #0b1220; overflow: hidden; position: relative;
+    box-shadow: 0 22px 48px rgba(0,0,0,.5);
+  }
+  .notch { width: 52px; height: 7px; border-radius: 99px; margin: 8px auto 0; background: color-mix(in srgb, #eaf1ff 16%, transparent); }
+  .nav { display: flex; align-items: center; gap: 6px; padding: 8px 11px 7px; }
+  .pfp { width: 20px; height: 20px; border-radius: 99px; overflow: hidden; flex: none; }
+  .pfp img { width: 100%; height: 100%; object-fit: cover; }
+  .nav b { font-size: 10.5px; }
+  .nav small { display: block; font-size: 6.5px; color: #8a97b5; }
+  .bell { margin-left: auto; width: 18px; height: 18px; border-radius: 99px; border: 1px solid color-mix(in srgb, #eaf1ff 14%, transparent); }
+  .bal {
+    margin: 4px 11px 0; padding: 12px 12px 11px; border-radius: 15px; position: relative;
+    background: radial-gradient(120% 120% at 100% 0%, color-mix(in srgb, #34d399 38%, transparent), transparent 55%),
+      linear-gradient(155deg, color-mix(in srgb, #34d399 15%, #12161f), #12161f);
+    border: 1px solid color-mix(in srgb, #34d399 30%, transparent);
+  }
+  .bal .l { font-size: 7px; color: color-mix(in srgb, #eaf1ff 72%, #8a97b5); }
+  .bal .v { font-size: 20px; font-weight: 800; letter-spacing: -.03em; margin-top: 2px; }
+  .bal .v small { font-size: 9px; opacity: .7; }
+  .bal .d { font-size: 7.5px; font-weight: 700; color: #34d399; margin-top: 3px; }
+  .bal .chip { position: absolute; top: 11px; right: 11px; width: 20px; height: 14px; border-radius: 4px; background: linear-gradient(135deg, #a7f3d0, #34d399); opacity: .9; }
+  .acts { display: grid; grid-template-columns: repeat(4,1fr); gap: 5px; padding: 9px 11px 0; }
+  .act { text-align: center; font-size: 6px; color: #eaf1ff; font-weight: 600; }
+  .act .c { width: 26px; height: 26px; border-radius: 99px; margin: 0 auto 3px; background: color-mix(in srgb, #34d399 16%, transparent); color: #34d399; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+  .tx { display: flex; align-items: center; gap: 7px; padding: 7px 11px 0; }
+  .tx .a { width: 22px; height: 22px; border-radius: 7px; background: color-mix(in srgb, #eaf1ff 8%, transparent); display: flex; align-items: center; justify-content: center; font-size: 10px; flex: none; }
+  .tx .m { flex: 1; }
+  .tx .m b { display: block; font-size: 7.5px; }
+  .tx .m span { font-size: 6px; color: #8a97b5; }
+  .tx .amt { font-size: 8px; font-weight: 800; }
+  .tx .amt.in { color: #34d399; }
+  .tabs {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    display: grid; grid-template-columns: repeat(4,1fr); padding: 6px 4px 8px;
+    border-top: 1px solid color-mix(in srgb, #eaf1ff 10%, transparent);
+    background: color-mix(in srgb, #0b1220 88%, #000);
+    font-size: 5.5px; color: #8a97b5; text-align: center; gap: 2px;
+  }
+  .tabs .dot { width: 12px; height: 12px; margin: 0 auto 2px; border-radius: 3px; border: 1.3px solid currentColor; }
+  .tabs .active { color: #34d399; font-weight: 700; }
+</style>
+</head>
+<body>
+  <div class="side">
+    <div class="logo"><span class="dot"></span> Nova Bank</div>
+    <h2>Money in clear view</h2>
+    <p>Onboarding · balance &amp; quick actions · cards · activity — with bottom tabs.</p>
+    <span class="tag">Mobile app shell</span>
+  </div>
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="nav">
+      <span class="pfp"><img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&q=70" alt="" /></span>
+      <div><b>Nova</b><small>Good morning, Amine</small></div>
+      <span class="bell"></span>
+    </div>
+    <div class="bal">
+      <span class="chip"></span>
+      <div class="l">Total balance</div>
+      <div class="v">2,318,540 <small>CFA</small></div>
+      <div class="d">↑ +42,900 this week</div>
+    </div>
+    <div class="acts">
+      <div class="act"><div class="c">↑</div>Send</div>
+      <div class="act"><div class="c">＋</div>Add</div>
+      <div class="act"><div class="c">▢</div>Pay</div>
+      <div class="act"><div class="c">⤳</div>Split</div>
+    </div>
+    <div class="tx"><span class="a">☕</span><span class="m"><b>Kora Coffee</b><span>Café · Today</span></span><span class="amt">-2,400</span></div>
+    <div class="tx"><span class="a">↓</span><span class="m"><b>Salary — Northwind</b><span>Income · Yesterday</span></span><span class="amt in">+845,000</span></div>
+    <div class="tabs">
+      <span class="active"><span class="dot"></span>Home</span>
+      <span><span class="dot"></span>Cards</span>
+      <span><span class="dot"></span>Activity</span>
+      <span><span class="dot"></span>Account</span>
+    </div>
+  </div>
+</body>
+</html>

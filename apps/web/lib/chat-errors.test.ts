@@ -70,6 +70,21 @@ describe("classifying a failure", () => {
     expect(info.action).toEqual({ kind: "recharge" });
   });
 
+  it("offers a plan upgrade when the API asks for one (both reservoirs empty)", () => {
+    const err = new ApiError("FRODI and RODI balances are empty.", 402, "INSUFFICIENT_CREDITS", [
+      "upgrade",
+      "recharge",
+    ]);
+    const info = classifyChatError(err);
+    expect(info.labelKey).toBe("streamErrorQuota");
+    expect(info.action).toEqual({ kind: "upgrade" });
+  });
+
+  it("falls back to a top-up on INSUFFICIENT_CREDITS without an upgrade action", () => {
+    const info = classifyChatError(new ApiError("empty", 402, "INSUFFICIENT_CREDITS"));
+    expect(info.action).toEqual({ kind: "recharge" });
+  });
+
   it("offers to reconnect when the RodiumAi link is dead", () => {
     expect(classifyChatError(new ApiError("…", 403, "RODIUM_LINK_EXPIRED")).action).toEqual({
       kind: "reconnect-rodium",

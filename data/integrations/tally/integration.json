@@ -1,0 +1,27 @@
+{
+  "id": "tally",
+  "name": "Tally",
+  "categories": [
+    "forms"
+  ],
+  "access": "yes",
+  "methods": [
+    "iframe",
+    "script"
+  ],
+  "docsUrl": "https://developers.tally.so/widgets/embeds",
+  "badge": null,
+  "enabledHint": false,
+  "logo": "logo.png",
+  "simpleIcon": "tally",
+  "i18n": {
+    "en": {
+      "title": "Tally",
+      "blurb": "Embed forms without a backend."
+    },
+    "fr": {
+      "title": "Tally",
+      "blurb": "Formulaires embarqués sans backend."
+    }
+  }
+}

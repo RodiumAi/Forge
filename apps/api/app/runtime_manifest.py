@@ -33,13 +33,24 @@ def browser_packages() -> frozenset[str]:
     return frozenset(name for name, spec in _manifest()["packages"].items() if spec.get("browser"))
 
 
+def _deps_query(spec: dict) -> str:
+    manifest = _manifest()
+    pins: list[str] = []
+    if spec.get("peerReact"):
+        react = manifest["reactVersion"]
+        pins += [f"react@{react}", f"react-dom@{react}"]
+    for dep in spec.get("deps", []):
+        pinned = manifest["packages"].get(dep)
+        if pinned:
+            pins.append(f"{dep}@{pinned['version']}")
+    return f"?deps={','.join(pins)}" if pins else ""
+
+
 def _cdn_url(name: str, spec: dict, subpath: str = "") -> str:
     manifest = _manifest()
     base = f"{manifest['cdn']}/{name}@{spec['version']}"
     path = f"/{subpath}" if subpath else ""
-    react = manifest["reactVersion"]
-    query = f"?deps=react@{react},react-dom@{react}" if spec.get("peerReact") else ""
-    return f"{base}{path}{query}"
+    return f"{base}{path}{_deps_query(spec)}"
 
 
 @lru_cache(maxsize=1)
@@ -58,7 +69,25 @@ def browser_import_map() -> dict[str, str]:
         out[name] = _cdn_url(name, spec)
         for subpath in spec.get("subpaths", []):
             out[f"{name}/{subpath}"] = _cdn_url(name, spec, subpath)
+        if spec.get("prefix"):
+            out[f"{name}/"] = f"{_manifest()['cdn']}/{name}@{spec['version']}/"
     return out
+
+
+@lru_cache(maxsize=1)
+def css_import_map() -> dict[str, str]:
+    """Bare stylesheet specifier pattern -> CDN URL (`swiper/css/*` style keys)."""
+    manifest = _manifest()
+    out: dict[str, str] = {}
+    for name, spec in manifest["packages"].items():
+        for pattern, file in (spec.get("css") or {}).items():
+            out[pattern] = f"{manifest['cdn']}/{name}@{spec['version']}/{file}"
+    return out
+
+
+def browser_package_versions() -> dict[str, str]:
+    """Browser package -> exact version, for prompts and docs."""
+    return {name: spec["version"] for name, spec in _manifest()["packages"].items() if spec.get("browser")}
 
 
 def package_version(package: str) -> str | None:

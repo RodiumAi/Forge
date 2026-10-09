@@ -1,0 +1,8 @@
+/* Stats screen: stat tiles, weekly distance, personal bests. Root: .stats-screen */
+.stats-screen .stat-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; }
+.stats-screen .tile { background: var(--surface); border: 1px solid var(--line); border-radius: 1.1rem; padding: .95rem 1rem; display: flex; flex-direction: column; gap: .35rem; }
+.stats-screen .tile .k { font-size: .74rem; color: var(--muted); }
+.stats-screen .tile .v { font-size: 1.7rem; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.stats-screen .tile .v small { font-size: .9rem; font-weight: 700; opacity: .7; }
+.stats-screen .pill.up { align-self: flex-start; }
+.stats-screen .bars.tall { height: 132px; }

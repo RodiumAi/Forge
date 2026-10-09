@@ -1,0 +1,26 @@
+{
+  "id": "disqus",
+  "name": "Disqus",
+  "categories": [
+    "comments"
+  ],
+  "access": "yes",
+  "methods": [
+    "script"
+  ],
+  "docsUrl": "https://help.disqus.com/en/articles/1717236-adding-disqus-to-your-site",
+  "badge": null,
+  "enabledHint": false,
+  "logo": "logo.png",
+  "simpleIcon": "disqus",
+  "i18n": {
+    "en": {
+      "title": "Disqus",
+      "blurb": "Comment thread script."
+    },
+    "fr": {
+      "title": "Disqus",
+      "blurb": "Script de fils de commentaires."
+    }
+  }
+}

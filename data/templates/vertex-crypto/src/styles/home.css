@@ -1,0 +1,504 @@
+/* Home page sections, scoped under .home-screen. Mobile first. */
+
+.home-screen {
+  position: relative;
+  overflow: hidden;
+}
+
+/* ---------- Ambient glows ---------- */
+.home-screen .glow {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(110px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.home-screen .glow-top {
+  width: 55vw;
+  height: 55vw;
+  top: -30vw;
+  right: -15vw;
+  background: radial-gradient(circle, rgba(0, 229, 160, 0.16), transparent 65%);
+}
+
+.home-screen .glow-mid {
+  width: 50vw;
+  height: 50vw;
+  top: 50vh;
+  left: -20vw;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.14), transparent 65%);
+}
+
+/* ---------- Ticker bar ---------- */
+.home-screen .ticker-bar {
+  position: relative;
+  z-index: 2;
+  overflow: hidden;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+  padding: 8px 0;
+  white-space: nowrap;
+}
+
+.home-screen .ticker-track {
+  display: inline-flex;
+  animation: ticker-scroll 30s linear infinite;
+}
+
+@keyframes ticker-scroll {
+  0% { transform: translateX(0); }
+
+  100% { transform: translateX(-33.33%); }
+}
+
+.home-screen .ticker-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 26px;
+  font-size: 0.78rem;
+  font-family: var(--mono);
+  color: var(--muted);
+}
+
+.home-screen .ticker-chip strong {
+  color: var(--fg);
+}
+
+.home-screen .ticker-chip em {
+  font-style: normal;
+  font-weight: 600;
+}
+
+/* ---------- Hero ---------- */
+.home-screen .hero {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 56px;
+  align-items: center;
+  padding: 56px 0 64px;
+}
+
+.home-screen .hero h1 {
+  font-size: clamp(2.3rem, 4.5vw, 3.7rem);
+  line-height: 1.06;
+  letter-spacing: -0.03em;
+  font-weight: 800;
+}
+
+.home-screen .lede {
+  margin: 22px 0 30px;
+  color: var(--muted);
+  font-size: 1.05rem;
+  max-width: 32rem;
+}
+
+.home-screen .hero-cta {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.home-screen .trust-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+  font-size: 0.8rem;
+  color: var(--muted);
+  flex-wrap: wrap;
+}
+
+/* ---------- Hero trading panel ---------- */
+.home-screen .hero-panel {
+  padding: 22px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+}
+
+.home-screen .panel-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  padding: 4px;
+}
+
+.home-screen .panel-tabs button {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.home-screen .panel-tabs button.active {
+  background: rgba(0, 229, 160, 0.14);
+  color: var(--accent);
+}
+
+.home-screen .panel-pair {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.home-screen .pair-name {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-family: var(--mono);
+}
+
+.home-screen .pair-price {
+  font-size: 1.3rem;
+  font-weight: 800;
+  font-family: var(--mono);
+  letter-spacing: -0.02em;
+}
+
+.home-screen .pair-change {
+  font-weight: 700;
+  font-size: 0.9rem;
+  font-family: var(--mono);
+}
+
+/* ---------- CSS bar chart ---------- */
+.home-screen .chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 5px;
+  height: 130px;
+  margin-bottom: 16px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.home-screen .bar {
+  flex: 1;
+  border-radius: 3px 3px 0 0;
+  background: linear-gradient(to top, rgba(0, 229, 160, 0.25), var(--accent));
+  animation: bar-grow 0.9s ease both;
+}
+
+.home-screen .bar-dim {
+  background: linear-gradient(to top, rgba(59, 130, 246, 0.2), var(--blue));
+}
+
+@keyframes bar-grow {
+  from { transform: scaleY(0); transform-origin: bottom; }
+
+  to { transform: scaleY(1); transform-origin: bottom; }
+}
+
+.home-screen .panel-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-bottom: 16px;
+  font-family: var(--mono);
+}
+
+.home-screen .panel-row strong {
+  color: var(--fg);
+  display: block;
+}
+
+/* ---------- Stats ---------- */
+.home-screen .stats {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+  padding: 40px 0 64px;
+}
+
+.home-screen .stat {
+  padding: 26px 20px;
+  text-align: center;
+}
+
+.home-screen .stat-value {
+  display: block;
+  font-size: 1.9rem;
+  font-weight: 800;
+  font-family: var(--mono);
+  letter-spacing: -0.02em;
+}
+
+.home-screen .stat-label {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+/* ---------- Markets ---------- */
+.home-screen .markets {
+  position: relative;
+  z-index: 1;
+  padding: 48px 0;
+}
+
+.home-screen .market-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+}
+
+.home-screen .market-card {
+  padding: 20px;
+  transition: transform 0.2s ease;
+}
+
+.home-screen .market-card:hover {
+  transform: translateY(-5px);
+}
+
+.home-screen .market-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.home-screen .market-sym {
+  display: block;
+  font-weight: 800;
+  font-size: 1rem;
+}
+
+.home-screen .market-name {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.home-screen .market-change {
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 0.82rem;
+}
+
+.home-screen .market-price {
+  display: block;
+  font-family: var(--mono);
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 14px;
+}
+
+/* ---------- CSS sparkline ---------- */
+.home-screen .spark {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 44px;
+}
+
+.home-screen .spark-bar {
+  flex: 1;
+  border-radius: 2px;
+}
+
+.home-screen .spark-up {
+  background: linear-gradient(to top, rgba(0, 229, 160, 0.15), rgba(0, 229, 160, 0.85));
+}
+
+.home-screen .spark-down {
+  background: linear-gradient(to top, rgba(244, 63, 94, 0.15), rgba(244, 63, 94, 0.85));
+}
+
+/* ---------- Features ---------- */
+.home-screen .features {
+  position: relative;
+  z-index: 1;
+  padding: 64px 0;
+}
+
+.home-screen .feature-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+.home-screen .feature {
+  padding: 30px 28px;
+  display: flex;
+  flex-direction: column;
+}
+
+.home-screen .feature-icon {
+  font-size: 1.8rem;
+  margin-bottom: 14px;
+  color: var(--accent);
+}
+
+.home-screen .feature h3 {
+  font-size: 1.1rem;
+  margin-bottom: 8px;
+}
+
+.home-screen .feature p {
+  color: var(--muted);
+  font-size: 0.93rem;
+}
+
+/* ---------- Security ---------- */
+.home-screen .security {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 56px;
+  align-items: center;
+  padding: 64px 0;
+}
+
+.home-screen .security-media {
+  position: relative;
+  overflow: visible;
+}
+
+.home-screen .security-media img {
+  width: 100%;
+  height: 260px;
+  object-fit: cover;
+  border-radius: var(--radius);
+  opacity: 0.85;
+}
+
+.home-screen .security-badge {
+  position: absolute;
+  bottom: -22px;
+  right: 10px;
+  padding: 16px 22px;
+  text-align: center;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+}
+
+.home-screen .security-badge strong {
+  display: block;
+  font-size: 1.6rem;
+  color: var(--accent);
+  font-family: var(--mono);
+}
+
+.home-screen .security-badge span {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.home-screen .security-copy h2 {
+  font-size: clamp(1.6rem, 3vw, 2.3rem);
+  letter-spacing: -0.02em;
+  margin-bottom: 28px;
+}
+
+.home-screen .security-list {
+  display: grid;
+  gap: 22px;
+}
+
+.home-screen .security-item {
+  display: flex;
+  gap: 16px;
+}
+
+.home-screen .security-icon {
+  font-size: 1.4rem;
+  flex-shrink: 0;
+  width: 1em;
+}
+
+.home-screen .security-item h3 {
+  font-size: 1rem;
+  margin-bottom: 4px;
+}
+
+.home-screen .security-item p {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+/* ---------- CTA ---------- */
+.home-screen .cta {
+  position: relative;
+  z-index: 1;
+  padding: 56px 0 96px;
+}
+
+.home-screen .cta-panel {
+  text-align: center;
+  padding: 68px 32px;
+}
+
+.home-screen .cta-panel h2 {
+  font-size: clamp(1.7rem, 3.4vw, 2.6rem);
+  letter-spacing: -0.02em;
+  margin-bottom: 12px;
+}
+
+.home-screen .cta-panel > p {
+  color: var(--muted);
+  margin-bottom: 30px;
+}
+
+.home-screen .cta-center {
+  justify-content: center;
+}
+
+.home-screen .cta-fine {
+  margin-top: 26px;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+
+/* ---------- Wider screens ---------- */
+@media (min-width: 641px) {
+  .home-screen .stats,
+  .home-screen .market-grid,
+  .home-screen .feature-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .home-screen .security-media img {
+    height: 420px;
+  }
+
+  .home-screen .pair-price {
+    font-size: 1.6rem;
+  }
+}
+
+@media (min-width: 961px) {
+  .home-screen .hero {
+    grid-template-columns: 1.15fr 1fr;
+    padding-top: 88px;
+  }
+
+  .home-screen .stats,
+  .home-screen .market-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .home-screen .security {
+    grid-template-columns: 1fr 1.2fr;
+  }
+
+  .home-screen .security-badge {
+    right: -18px;
+  }
+}

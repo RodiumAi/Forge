@@ -15,34 +15,18 @@ from app.i18n import resolve_locale, t
 from app.models import Project, User
 from app.services import history
 from app.services.attachments import ResolvedImage, resolve_image_part
+from app.services.brand_charter import CHARTER_SYSTEM, LOGO_VISION_HINT, generate_charter_markdown
 from app.services.capabilities import require_rodi_for_paid_capability
 from app.services.design_colors import apply_brand_color, merge_palettes, parse_palette
 from app.services.filesystem import project_dir, read_file, write_bytes, write_file
-from app.services.llm import RodiumError, complete_chat
+from app.services.llm import RodiumError
 from app.services.orchestration.context import DESIGN_PATH
 from app.services.rodium_generation import resolve_generation_auth
 
 router = APIRouter(prefix="/projects", tags=["design"])
 
-CHARTER_SYSTEM = """You write DESIGN.md graphic charters for Forge web apps.
-Output ONLY valid markdown for a DESIGN.md file (no fences, no preamble).
-Include complete sections:
-# Brand
-# Colors (CSS variables with hex — derive a full palette from the logo when an image is attached)
-# Typography
-# Spacing & radius
-# Tone of voice
-# Logo (path, usage, clear space, do/don't on the mark)
-# Do / Don't
-Use concrete token names like --color-bg, --color-accent, --font-sans.
-When a logo image is attached: analyze its colors, shapes, style and mood; build the whole charter around that identity.
-If a project logo path is provided (e.g. /logo.png), reference that exact path in the Logo section and recommend using it in the app header.
-"""
-
-LOGO_VISION_HINT = (
-    "The attached image is the brand logo. Analyze it carefully (colors, contrast, "
-    "geometry, style, mood) and produce a complete, coherent graphic charter derived from it."
-)
+# One charter format for the panel and the first-build bootstrap.
+__all__ = ["CHARTER_SYSTEM", "LOGO_VISION_HINT", "router"]
 
 
 class DesignCharterRequest(BaseModel):
@@ -106,11 +90,10 @@ def _detect_logo_ext(content_type: str | None, name: str | None) -> str:
         return ".webp"
     if "gif" in ctype:
         return ".gif"
-    if "svg" in ctype:
-        return ".svg"
+    # SVG rejected for XSS — treat as PNG fallback only when no other signal.
     if name:
         lower = name.lower()
-        for ext in (".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg"):
+        for ext in (".jpg", ".jpeg", ".png", ".webp", ".gif"):
             if lower.endswith(ext):
                 return ".jpg" if ext == ".jpeg" else ext
     return ".png"
@@ -181,12 +164,16 @@ def get_design_logo(
         ".jpeg": "image/jpeg",
         ".webp": "image/webp",
         ".gif": "image/gif",
-        ".svg": "image/svg+xml",
     }.get(disk.suffix.lower(), "application/octet-stream")
+    headers = {"Cache-Control": "private, max-age=60", "X-Content-Type-Options": "nosniff"}
+    # Historical logo.svg: force download so embedded scripts never execute.
+    if disk.suffix.lower() == ".svg":
+        media = "application/octet-stream"
+        headers["Content-Disposition"] = f'attachment; filename="{disk.name}"'
     return FileResponse(
         disk,
         media_type=media,
-        headers={"Cache-Control": "private, max-age=60"},
+        headers=headers,
     )
 
 
@@ -288,8 +275,6 @@ async def generate_design_charter(
     if len(brief_text) < 8:
         brief_text = "Generate a complete graphic charter from the brand logo."
 
-    user_prompt = f"Project name: {project.name}\n\nBrief:\n{brief_text}"
-
     logo_public_path = (body.logo_path or "").strip() or _existing_logo_path(str(project.id))
     image_part: dict[str, Any] | None = None
 
@@ -308,7 +293,9 @@ async def generate_design_charter(
             ResolvedImage(url=logo_public_path, name="brand-logo"),
         )
 
+    vision_part = None
     if image_part and image_part.get("type") == "image_url":
+        vision_part = image_part
         if body.logo_object_id or body.logo_url:
             persisted = _persist_logo_from_data_url(
                 str(project.id),
@@ -317,46 +304,22 @@ async def generate_design_charter(
             )
             if persisted:
                 logo_public_path = persisted
-        user_prompt += f"\n\n{LOGO_VISION_HINT}"
-        if logo_public_path:
-            user_prompt += f"\nProject logo path to reference in DESIGN.md: {logo_public_path}"
-        if body.logo_url:
-            user_prompt += f"\nCDN / public URL (optional fallback): {body.logo_url.strip()}"
-    elif body.logo_url:
-        user_prompt += f"\n\nLogo URL: {body.logo_url.strip()}"
-        if logo_public_path:
-            user_prompt += f"\nProject logo path: {logo_public_path}"
-
-    user_content: str | list[dict[str, Any]] = user_prompt
-    if image_part and image_part.get("type") == "image_url":
-        user_content = [
-            {"type": "text", "text": user_prompt},
-            image_part,
-        ]
 
     try:
-        markdown = await complete_chat(
+        markdown = await generate_charter_markdown(
             auth=gen_auth,
             model=settings.effective_default_model,
-            messages=[
-                {"role": "system", "content": CHARTER_SYSTEM},
-                {"role": "user", "content": user_content},
-            ],
+            brief=brief_text,
+            project_name=project.name,
+            platform=getattr(project, "platform", None) or "web",
+            image_part=vision_part,
+            logo_path=logo_public_path,
             locale=locale,
-            temperature=0.5,
         )
     except RodiumError as exc:
         raise HTTPException(status_code=exc.status_code or 502, detail=str(exc)) from exc
 
     markdown = markdown.strip()
-    if markdown.startswith("```"):
-        lines = markdown.splitlines()
-        if lines and lines[0].startswith("```"):
-            lines = lines[1:]
-        if lines and lines[-1].strip() == "```":
-            lines = lines[:-1]
-        markdown = "\n".join(lines).strip()
-
     write_file(str(project.id), DESIGN_PATH, markdown + "\n")
     project.design_brief = brief_text
     db.commit()

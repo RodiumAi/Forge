@@ -1,13 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { KeyRound } from "lucide-react";
 import { api, getToken } from "@/lib/api";
 import { Icon } from "@/components/ui/icon";
 import { useI18n } from "@/lib/i18n/I18nProvider";
-import { startRodiumOAuth } from "@/lib/rodium-oauth";
-import { patchSessionCache, refreshRodiumWallet } from "@/lib/session-cache";
+import { patchSessionCache, refreshRodiumWallet, getSessionSnapshot } from "@/lib/session-cache";
 
 type RodiumAccount = {
   linked: boolean;
@@ -29,6 +27,7 @@ type RodiumAccount = {
   rodium_sub?: string | null;
   has_generation_key?: boolean;
   generation_key_hint?: string | null;
+  can_generate_key?: boolean;
 };
 
 type RodiumKeyStatus = {
@@ -37,9 +36,19 @@ type RodiumKeyStatus = {
   credentials_hint: string | null;
 };
 
+type GenerateKeyResponse = {
+  ok: boolean;
+  selected_api_key_id: string;
+  has_generation_key: boolean;
+  generation_key_hint?: string | null;
+  api_keys?: RodiumAccount["api_keys"];
+  can_generate_key?: boolean;
+};
+
 /**
  * Compact API-key picker for the home/builder sidebar.
  * Linked: select autosaves on change. Unlinked: paste or connect.
+ * Official instance: Generate when no keys yet.
  */
 export function SidebarApiKeyBlock() {
   const { t, locale } = useI18n();
@@ -48,10 +57,10 @@ export function SidebarApiKeyBlock() {
   const [loading, setLoading] = useState(true);
   const [selectedKeyId, setSelectedKeyId] = useState("");
   const [selecting, setSelecting] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [showPaste, setShowPaste] = useState(false);
   const [apiKeyPaste, setApiKeyPaste] = useState("");
   const [saving, setSaving] = useState(false);
-  const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -71,15 +80,27 @@ export function SidebarApiKeyBlock() {
         setAccount(rodium);
         setKeyStatus(item);
         if (!rodium.linked) setShowPaste(true);
+        // Never replace /auth/me profile with an unlinked stub (empty email/name
+        // blanks the ProfileMenu avatar + label). Only enrich when linked.
+        const prev = getSessionSnapshot()?.profile ?? null;
         patchSessionCache({
           rodium: { linked: Boolean(rodium.linked), wallet: rodium.wallet ?? null },
-          profile: {
-            email: rodium.email || "",
-            name: rodium.name,
-            avatar_url: rodium.avatar_url,
-            rodium_linked: Boolean(rodium.linked),
-            rodium_sub: rodium.rodium_sub ?? null,
-          },
+          profile: prev
+            ? {
+                ...prev,
+                rodium_linked: Boolean(rodium.linked),
+                rodium_sub: rodium.linked
+                  ? (rodium.rodium_sub ?? prev.rodium_sub ?? null)
+                  : null,
+                ...(rodium.linked
+                  ? {
+                      email: rodium.email || prev.email,
+                      name: rodium.name ?? prev.name,
+                      avatar_url: rodium.avatar_url ?? prev.avatar_url,
+                    }
+                  : {}),
+              }
+            : undefined,
         });
         const preferred =
           rodium.selected_api_key_id ||
@@ -103,6 +124,7 @@ export function SidebarApiKeyBlock() {
     [account],
   );
   const linked = Boolean(account?.linked);
+  const canGenerate = Boolean(linked && account?.can_generate_key);
   const hint =
     account?.generation_key_hint ||
     keyStatus?.credentials_hint ||
@@ -128,6 +150,34 @@ export function SidebarApiKeyBlock() {
       setError(err instanceof Error ? err.message : t("errorGeneric"));
     } finally {
       setSelecting(false);
+    }
+  }
+
+  async function onGenerate() {
+    if (!canGenerate || generating) return;
+    setGenerating(true);
+    setError(null);
+    try {
+      const result = await api<GenerateKeyResponse>("/auth/rodium/generate-key", {
+        method: "POST",
+        body: "{}",
+      });
+      const rodium = await api<RodiumAccount>("/auth/rodium/account");
+      setAccount(rodium);
+      setSelectedKeyId(
+        result.selected_api_key_id ||
+          rodium.selected_api_key_id ||
+          rodium.api_keys?.find((k) => k.is_active)?.id ||
+          "",
+      );
+      patchSessionCache({
+        rodium: { linked: Boolean(rodium.linked), wallet: rodium.wallet ?? null },
+      });
+      void refreshRodiumWallet();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("errorGeneric"));
+    } finally {
+      setGenerating(false);
     }
   }
 
@@ -157,30 +207,6 @@ export function SidebarApiKeyBlock() {
       setError(err instanceof Error ? err.message : t("errorGeneric"));
     } finally {
       setSaving(false);
-    }
-  }
-
-  async function onConnect() {
-    setConnecting(true);
-    setError(null);
-    const result = await startRodiumOAuth({
-      returnTo: typeof window !== "undefined" ? window.location.pathname : "/dashboard",
-      unavailableHref: null,
-    });
-    if (!result.ok) {
-      setConnecting(false);
-      if (result.reason === "oidc_unavailable") {
-        setShowPaste(true);
-        setError(t("rodiumManualKeyHelp"));
-      } else if (result.reason === "popup_blocked") {
-        setError(t("authSocialPopupBlocked"));
-      } else if (result.reason === "cancelled") {
-        // User closed the window.
-      } else if (result.error instanceof Error) {
-        setError(result.error.message);
-      } else {
-        setError(t("errorGeneric"));
-      }
     }
   }
 
@@ -231,21 +257,22 @@ export function SidebarApiKeyBlock() {
       ) : null}
 
       {linked && activeKeys.length === 0 ? (
-        <p className="home-sidebar-key-hint muted">
-          {t("rodiumNoKeys")}{" "}
-          <Link href="/settings?tab=generation">{t("settings")}</Link>
-        </p>
-      ) : null}
-
-      {!linked ? (
-        <button
-          type="button"
-          className="home-sidebar-key-btn"
-          onClick={() => void onConnect()}
-          disabled={connecting}
-        >
-          {connecting ? t("rodiumConnectWorking") : t("connectRodiumAi")}
-        </button>
+        <>
+          <p className="home-sidebar-key-hint muted">{t("rodiumNoKeys")}</p>
+          {canGenerate ? (
+            <>
+              <button
+                type="button"
+                className="home-sidebar-key-btn"
+                onClick={() => void onGenerate()}
+                disabled={generating}
+              >
+                {generating ? t("rodiumGeneratingKey") : t("rodiumGenerateKey")}
+              </button>
+              <p className="home-sidebar-key-hint muted">{t("rodiumGenerateKeyHint")}</p>
+            </>
+          ) : null}
+        </>
       ) : null}
 
       {(showPaste || !linked) && (

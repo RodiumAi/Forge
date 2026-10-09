@@ -1,0 +1,40 @@
+/* Home screen: activity rings, start-run CTA, last run, weekly bars. Root: .home-screen */
+.home-screen .rings-card {
+  border-radius: 1.4rem; padding: 1.2rem 1.15rem 1.3rem;
+  position: relative; overflow: hidden;
+  background:
+    radial-gradient(130% 120% at 0% 0%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 55%),
+    linear-gradient(160deg, color-mix(in srgb, var(--accent) 10%, var(--surface)), var(--surface));
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--line));
+}
+.home-screen .rings-card h2 { margin: 0; font-size: .98rem; }
+.home-screen .rings { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; }
+.home-screen .ring { display: flex; flex-direction: column; align-items: center; gap: .3rem; text-align: center; }
+.home-screen .ring-lbl { font-size: .74rem; font-weight: 700; }
+.home-screen .ring-note { font-size: .62rem; color: var(--muted); }
+
+/* Start run CTA */
+.home-screen .start-run {
+  appearance: none; border: 0; width: 100%; text-align: left;
+  display: flex; align-items: center; gap: .85rem;
+  border-radius: 1.25rem; padding: .95rem 1.05rem;
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 62%, #4d7c0f));
+  color: var(--on-accent);
+  box-shadow: 0 12px 30px color-mix(in srgb, var(--accent) 26%, transparent);
+}
+.home-screen .start-run:active { transform: scale(.985); }
+.home-screen .start-run .ic { width: 2.9rem; height: 2.9rem; border-radius: 999px; display: grid; place-items: center; background: color-mix(in srgb, var(--on-accent) 20%, transparent); color: var(--on-accent); flex-shrink: 0; }
+.home-screen .start-run .txt { flex: 1; display: flex; flex-direction: column; }
+.home-screen .start-run .txt strong { font-size: 1.08rem; font-weight: 800; letter-spacing: -.01em; }
+.home-screen .start-run .txt span { font-size: .74rem; font-weight: 600; opacity: .78; }
+.home-screen .start-run .go { font-weight: 900; letter-spacing: .06em; font-size: .95rem; padding: .35rem .7rem; border-radius: 999px; background: color-mix(in srgb, var(--on-accent) 16%, transparent); animation: pulse 2s ease-in-out infinite; }
+
+/* Last run */
+.home-screen .last-run { display: grid; gap: .9rem; }
+.home-screen .lr-top { display: flex; align-items: center; gap: .8rem; }
+.home-screen .lr-meta { display: flex; flex-direction: column; }
+.home-screen .lr-meta strong { font-size: 1rem; font-weight: 750; }
+.home-screen .lr-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; }
+.home-screen .lr-stats > div { display: flex; flex-direction: column; gap: .15rem; padding: .55rem .6rem; border-radius: .8rem; background: color-mix(in srgb, var(--fg) 4%, transparent); }
+.home-screen .lr-stats .k { font-size: .68rem; color: var(--muted); }
+.home-screen .lr-stats .v { font-size: .98rem; font-weight: 800; font-variant-numeric: tabular-nums; }

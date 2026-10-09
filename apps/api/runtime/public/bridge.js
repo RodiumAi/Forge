@@ -324,6 +324,38 @@
     STYLE_BACKUP = null;
   }
 
+  /** Strip active content; returns a DocumentFragment (no innerHTML write-back). */
+  function sanitizePreviewFragment(html) {
+    var frag = document.createDocumentFragment();
+    if (!html) return frag;
+    var doc = new DOMParser().parseFromString("<div id='forge-sanitize-root'>" + html + "</div>", "text/html");
+    var root = doc.getElementById("forge-sanitize-root");
+    if (!root) return frag;
+    root.querySelectorAll("script,iframe,object,embed,link[rel='import']").forEach(function (node) {
+      node.remove();
+    });
+    root.querySelectorAll("*").forEach(function (node) {
+      var attrs = node.attributes;
+      for (var i = attrs.length - 1; i >= 0; i--) {
+        var attr = attrs[i];
+        var name = attr.name;
+        var value = attr.value || "";
+        if (/^on/i.test(name) || ((name === "href" || name === "xlink:href" || name === "src") && /^\s*javascript:/i.test(value))) {
+          node.removeAttribute(name);
+        }
+      }
+    });
+    while (root.firstChild) {
+      frag.appendChild(document.importNode(root.firstChild, true));
+    }
+    return frag;
+  }
+
+  function writePreviewHtml(el, html) {
+    if (!el) return;
+    el.replaceChildren(sanitizePreviewFragment(html));
+  }
+
   function finishEdit(save) {
     if (!EDITING) return;
     var el = EDITING;
@@ -339,7 +371,7 @@
     } else if (!save) {
       // Restore markup, not flattened text: `innerText = ORIG` destroyed nested
       // links, <strong> and icons on every cancel.
-      el.innerHTML = ORIG_HTML;
+      writePreviewHtml(el, ORIG_HTML);
       PENDING_EDIT = null;
     }
   }
@@ -347,7 +379,7 @@
   function revertPendingEdit() {
     if (!PENDING_EDIT) return;
     try {
-      PENDING_EDIT.el.innerHTML = PENDING_EDIT.html;
+      writePreviewHtml(PENDING_EDIT.el, PENDING_EDIT.html);
     } catch (err) {
       /* ignore */
     }

@@ -259,7 +259,8 @@ class TestRepairHelpers:
             ),
         ]
         paths = repair_focus_paths(findings)
-        assert paths == ["src/index.css", "src/App.tsx", "src/main.tsx"]
+        # The component that owns the orphans comes first, then the foundation.
+        assert paths == ["src/App.tsx", "src/index.css", "src/main.tsx"]
         prompt = format_css_second_pass_prompt(findings)
         assert "SECOND CSS REPAIR PASS" in prompt
         assert "css.orphan_classes" in prompt

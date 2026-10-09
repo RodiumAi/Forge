@@ -1,0 +1,5 @@
+/* Profile screen: care stats, reminder toggles, tools list. */
+.profile-screen .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: .6rem; }
+.profile-screen .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 1.1rem; padding: .95rem .5rem; text-align: center; }
+.profile-screen .stat .n { display: block; font-size: 1.5rem; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.profile-screen .stat .l { display: block; font-size: .72rem; color: var(--muted); margin-top: .1rem; }

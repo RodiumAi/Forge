@@ -4,6 +4,88 @@ import { fileURLToPath } from "node:url";
 
 const configDir = path.dirname(fileURLToPath(import.meta.url));
 
+function httpOrigin(value: string | undefined, fallback: string): string {
+  try {
+    const url = new URL(value?.trim() || fallback);
+    return url.protocol === "http:" || url.protocol === "https:" ? url.origin : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function firebaseAuthOrigin(): string {
+  const domain = process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN?.trim();
+  if (!domain) return "https://*.firebaseapp.com";
+  return httpOrigin(domain.includes("://") ? domain : `https://${domain}`, "https://*.firebaseapp.com");
+}
+
+const apiOrigin = httpOrigin(process.env.NEXT_PUBLIC_API_URL, "http://localhost:8100");
+/** localhost ↔ 127.0.0.1 are distinct origins; Windows often needs both. */
+function loopbackSibling(origin: string): string | null {
+  try {
+    const url = new URL(origin);
+    if (url.hostname === "localhost") {
+      url.hostname = "127.0.0.1";
+      return url.origin;
+    }
+    if (url.hostname === "127.0.0.1") {
+      url.hostname = "localhost";
+      return url.origin;
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+const apiOrigins = [apiOrigin, loopbackSibling(apiOrigin)].filter(Boolean).join(" ");
+const posthogOrigin = httpOrigin(
+  process.env.NEXT_PUBLIC_POSTHOG_HOST,
+  "https://eu.i.posthog.com",
+);
+const scriptEval = process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : "";
+const contentSecurityPolicy = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  `connect-src 'self' ${apiOrigins} ${posthogOrigin} https://*.i.posthog.com https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebaseapp.com`,
+  "font-src 'self' data: https://fonts.gstatic.com",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+  `frame-src 'self' ${apiOrigins} ${firebaseAuthOrigin()} https://accounts.google.com https://*.firebaseapp.com`,
+  `img-src 'self' data: blob: https: ${apiOrigins}`,
+  "object-src 'none'",
+  `script-src 'self' 'unsafe-inline'${scriptEval} ${posthogOrigin} https://*.i.posthog.com https://apis.google.com https://accounts.google.com https://*.firebaseapp.com https://*.googleapis.com`,
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "worker-src 'self' blob:",
+].join("; ");
+
+const securityHeaders = [
+  {
+    key: "Strict-Transport-Security",
+    value: "max-age=31536000",
+  },
+  {
+    key: "X-Content-Type-Options",
+    value: "nosniff",
+  },
+  {
+    key: "Referrer-Policy",
+    value: "strict-origin-when-cross-origin",
+  },
+  {
+    key: "Permissions-Policy",
+    value:
+      "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+  },
+  {
+    key: "X-Frame-Options",
+    value: "DENY",
+  },
+  {
+    key: "Content-Security-Policy",
+    value: contentSecurityPolicy,
+  },
+] as const;
+
 function s3RemotePatterns(): NonNullable<
   NextConfig["images"]
 >["remotePatterns"] {
@@ -50,6 +132,10 @@ const nextConfig: NextConfig = {
   // Storage-event fallback still works if a hop clears the opener.
   async headers() {
     return [
+      {
+        source: "/:path*",
+        headers: [...securityHeaders],
+      },
       {
         source: "/login",
         headers: [

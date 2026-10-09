@@ -1,0 +1,26 @@
+{
+  "id": "giscus",
+  "name": "Giscus",
+  "categories": [
+    "comments"
+  ],
+  "access": "yes",
+  "methods": [
+    "script"
+  ],
+  "docsUrl": "https://giscus.app/",
+  "badge": null,
+  "enabledHint": false,
+  "logo": "logo.png",
+  "simpleIcon": null,
+  "i18n": {
+    "en": {
+      "title": "Giscus",
+      "blurb": "GitHub Discussions as comments."
+    },
+    "fr": {
+      "title": "Giscus",
+      "blurb": "Discussions GitHub comme commentaires."
+    }
+  }
+}

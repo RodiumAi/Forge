@@ -1,0 +1,26 @@
+{
+  "id": "substack",
+  "name": "Substack",
+  "categories": [
+    "email"
+  ],
+  "access": "yes",
+  "methods": [
+    "iframe"
+  ],
+  "docsUrl": "https://support.substack.com/hc/en-us/articles/360037554672",
+  "badge": null,
+  "enabledHint": false,
+  "logo": "logo.jpg",
+  "simpleIcon": "substack",
+  "i18n": {
+    "en": {
+      "title": "Substack",
+      "blurb": "Embed subscribe / post widgets."
+    },
+    "fr": {
+      "title": "Substack",
+      "blurb": "Widgets d’abonnement / posts."
+    }
+  }
+}

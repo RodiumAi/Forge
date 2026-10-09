@@ -7,23 +7,44 @@ from typing import Any
 
 from app.prompts.system import THEME_QUALITY_HINT, system_prompt_with_design
 from app.services.ai_rules import ensure_ai_rules_md, load_ai_rules_md
-from app.services.attachments import enrich_user_message_with_vision
+from app.services.attachments import (
+    carried_reference_markers,
+    enrich_user_message_with_vision,
+    with_carried_references,
+)
 from app.services.filesystem import list_files, project_dir, read_file
+from app.services.project_media import format_project_media_layer
 from app.services.prototype_mode import format_prototype_plugins_layer
+from app.services.template_examples import format_template_example_layer
 
 DESIGN_MAX_CHARS = 12_000
-SELECTED_FILE_MAX_CHARS = 56_000
-CSS_RESERVED_CHARS = 26_000
 RECENT_DISK_PATHS = 3
-FORCED_PATHS = ("src/index.css", "src/App.tsx", "DESIGN.md", "AI_RULES.md")
+# DESIGN.md and AI_RULES.md are not here: they travel in layer 2, once.
+FORCED_PATHS = ("src/index.css", "src/App.tsx")
+_LAYER2_PATHS = frozenset({"DESIGN.md", "AI_RULES.md"})
 SCAFFOLD_EXTRA_K = 8
+# A plan task may name a directory ("src/components"): its files are expanded,
+# smallest first, up to this many.
+FOCUS_DIR_MAX_FILES = 12
 SURGICAL_EDIT_HINT = (
-    "Surgical edit mode: prefer the smallest correct change. Edit only the "
-    "targeted lines/sections. Do not rewrite whole files unless necessary for "
-    "correctness. Preserve unrelated imports, JSX, and CSS. "
-    "NEVER rewrite src/index.css (foundation is locked); page styles belong in "
-    "the page's own src/styles/<page>.css."
+    "Surgical edit mode: make the smallest correct change. For an existing file use "
+    "forge-edit SEARCH/REPLACE blocks copied exactly from its current content; "
+    "rewrite a whole file only when most of it changes. Preserve unrelated imports, "
+    "JSX, and CSS. src/index.css is the shared foundation: never rewrite it, touch it "
+    "only with a small forge-edit; page styles belong in the page's own "
+    "src/styles/<page>.css."
 )
+
+
+def _budgets() -> tuple[int, int]:
+    from app.config import get_settings
+
+    settings = get_settings()
+    total = max(20_000, int(settings.context_full_files_max_chars))
+    css = max(8_000, min(int(settings.context_css_reserved_chars), total // 2))
+    return total, css
+
+
 _SELECTION_RE = re.compile(
     r"\[(?:Selection|Sélection):\s*[^|\]]*\|[^|\]]*\|?\s*text:\"([^\"]*)\"",
     re.I,
@@ -159,17 +180,55 @@ def merge_context_paths(
     recent_paths: list[str],
     files: dict[str, str],
 ) -> list[str]:
-    """Final full-content layer order: task focus, then selection, then recency."""
+    """Final full-content layer order: task focus, then selection, then recency.
+
+    A focus entry naming a directory ("src/components") expands to the files
+    under it, which used to be dropped silently.
+    """
     ordered: list[str] = []
-    for path in [*(focus_paths or []), *selected, *recent_paths]:
+
+    def add(path: str) -> None:
         if path in files and path not in ordered:
             ordered.append(path)
+
+    for path in focus_paths or []:
+        clean = (path or "").strip().strip("/")
+        if clean in files:
+            add(clean)
+            continue
+        prefix = clean + "/"
+        under = sorted((p for p in files if p.startswith(prefix)), key=lambda p: (len(files[p]), p))
+        for child in under[:FOCUS_DIR_MAX_FILES]:
+            add(child)
+    for path in [*selected, *recent_paths]:
+        add(path)
     return ordered
+
+
+_CSS_SELECTOR_CLASS_RE = re.compile(r"\.([A-Za-z_][\w-]*)")
+_TSX_CLASSNAME_RE = re.compile(r"""className\s*=\s*(?:"([^"]+)"|'([^']+)'|\{`([^`]+)`\})""")
+
+
+def _css_skeleton_classes(content: str, limit: int = 40) -> list[str]:
+    seen: list[str] = []
+    for prelude in re.findall(r"([^{}]+)\{", re.sub(r"/\*.*?\*/", "", content, flags=re.S)):
+        for name in _CSS_SELECTOR_CLASS_RE.findall(prelude):
+            if name not in seen:
+                seen.append(name)
+                if len(seen) >= limit:
+                    return seen
+    return seen
 
 
 def _skeleton_for_file(path: str, content: str) -> str:
     lines = content.splitlines()
     n = len(lines)
+    if path.endswith((".css", ".scss")):
+        # Class names are what other files need from a stylesheet: without them
+        # the model cannot reuse a foundation utility it was not shown in full.
+        classes = _css_skeleton_classes(content)
+        listed = " ".join("." + c for c in classes) if classes else "—"
+        return f"{path}  ({n} lines)\n  classes: {listed}"
     exports = []
     for line in lines[:80]:
         if re.search(r"^\s*(export\s+(default\s+)?|function\s+|const\s+\w+\s*=)", line):
@@ -180,18 +239,30 @@ def _skeleton_for_file(path: str, content: str) -> str:
     for line in lines[:40]:
         if line.strip().startswith("import "):
             imports.append(line.strip()[:100])
-            if len(imports) >= 3:
+            if len(imports) >= 4:
                 break
     head = "\n".join(exports) if exports else "\n".join(lines[:3])
     imp = ", ".join(imports) if imports else "—"
-    return f"{path}  ({n} lines)\n  imports: {imp}\n  {head}"
+    out = f"{path}  ({n} lines)\n  imports: {imp}\n  {head}"
+    if path.endswith((".tsx", ".jsx")):
+        used: list[str] = []
+        for match in _TSX_CLASSNAME_RE.finditer(content):
+            for token in re.split(r"\s+", (match.group(1) or match.group(2) or match.group(3) or "").strip()):
+                token = re.sub(r"\$\{[^}]*\}", "", token)
+                if token and re.match(r"^[A-Za-z_][\w-]*$", token) and token not in used:
+                    used.append(token)
+        if used:
+            out += "\n  classNames: " + " ".join(used[:30])
+    return out
 
 
-def build_file_skeletons(files: dict[str, str], max_files: int = 60) -> str:
+def build_file_skeletons(files: dict[str, str], max_files: int = 120) -> str:
     parts = ["Project file tree (skeletons):\n"]
     for path in sorted(files.keys())[:max_files]:
         parts.append(_skeleton_for_file(path, files[path]))
         parts.append("")
+    if len(files) > max_files:
+        parts.append(f"... {len(files) - max_files} more files not listed")
     return "\n".join(parts).rstrip() + "\n"
 
 
@@ -205,8 +276,9 @@ def _selected_file_blocks(files: dict[str, str], paths: list[str]) -> str:
         "these outside the chat; they OVERRIDE any version of the same files "
         "appearing earlier in this conversation):\n"
     ]
+    total_budget, css_budget = _budgets()
     used = 0
-    ordered = list(paths)
+    ordered = [p for p in paths if p not in _LAYER2_PATHS]
     if "src/index.css" in files:
         ordered = ["src/index.css"] + [p for p in ordered if p != "src/index.css"]
 
@@ -214,16 +286,21 @@ def _selected_file_blocks(files: dict[str, str], paths: list[str]) -> str:
     css = files.get("src/index.css")
     if css is not None:
         css_chunk = css
-        if len(css_chunk) > CSS_RESERVED_CHARS:
-            half = CSS_RESERVED_CHARS // 2
+        if len(css_chunk) > css_budget:
+            half = css_budget // 2
             css_chunk = (
-                css_chunk[:half] + "\n/* … index.css truncated (middle omitted) … */\n" + css_chunk[-half:]
+                css_chunk[:half]
+                + "\n/* index.css PARTIAL VIEW (middle omitted): never rewrite this file in full, "
+                "use forge-edit */\n" + css_chunk[-half:]
             )
         block = f"\n--- src/index.css ---\n{css_chunk}\n"
         parts.append(block)
         used += len(block)
 
-    # Phase 2: remaining files with leftover budget.
+    # Phase 2: remaining files with leftover budget. A file that does not fit is
+    # skipped (and named) rather than ending the layer, so the smaller files
+    # after it still get in.
+    omitted: list[str] = []
     for path in ordered:
         if path == "src/index.css":
             continue
@@ -231,21 +308,34 @@ def _selected_file_blocks(files: dict[str, str], paths: list[str]) -> str:
         if content is None:
             continue
         chunk = f"\n--- {path} ---\n{content}\n"
-        if used + len(chunk) > SELECTED_FILE_MAX_CHARS:
-            parts.append(f"\n... truncated before {path}\n")
-            break
+        if used + len(chunk) > total_budget:
+            omitted.append(path)
+            continue
         parts.append(chunk)
         used += len(chunk)
+    if omitted:
+        parts.append(
+            "\nNot shown in full (context budget), do not rewrite them with forge-write: "
+            + ", ".join(omitted[:20])
+            + "\n"
+        )
     return "".join(parts)
 
 
 def load_design_md(project_id: str) -> str | None:
+    """The project's locked charter, or None.
+
+    The placeholder charter a blank scaffold ships with is not a brand: treating
+    it as LOCKED pinned every new site to Forge's own dark/orange identity.
+    """
+    from app.services.brand_charter import is_default_charter
+
     try:
         raw = read_file(project_id, DESIGN_PATH)
     except FileNotFoundError:
         return None
     text = raw.strip()
-    if not text:
+    if not text or is_default_charter(text):
         return None
     if len(text) > DESIGN_MAX_CHARS:
         return text[:DESIGN_MAX_CHARS] + "\n\n… (DESIGN.md truncated)\n"
@@ -256,6 +346,7 @@ def _sanitize_turn(role: str, content: str, *, limit: int) -> str:
     text = content or ""
     if role == "assistant":
         text = re.sub(r"<forge-write[\s\S]*?</forge-write>", "[file write omitted]", text)
+        text = re.sub(r"<forge-edit[\s\S]*?</forge-edit>", "[file edit omitted]", text)
         text = re.sub(r"<forge-delete[^>]*\/?>", "", text)
         text = re.sub(r"\n{3,}", "\n\n", text).strip()
         if not text:
@@ -308,29 +399,52 @@ async def build_llm_messages(
     model: str | None = None,
     surgical_edit: bool = False,
     focus_paths: list[str] | None = None,
+    carry_references: bool = True,
 ) -> list[dict[str, Any]]:
     """
     history: list of (role, content) including the latest user message.
     Layers 1–2 stable; 3 volatile; 4 compacted; 5 = last user turn already in history.
+
+    ``carry_references``: re-attach the most recent reference screenshot to the
+    final turn when that turn has none, so a follow-up about the same design is
+    answered WITH the image (callers on a text-only lite model pass False).
     """
+    carried = carried_reference_markers(history) if carry_references else []
     ensure_ai_rules_md(project_id)
     files = list_files(project_id)
     design = load_design_md(project_id)
     has_design = bool(design)
 
-    layer1 = system_prompt_with_design(has_design)
+    platform = "web"
+    if db is not None:
+        try:
+            from uuid import UUID
+
+            from app.models import Project
+
+            row = db.get(Project, UUID(str(project_id)))
+            if row is not None and getattr(row, "platform", None) in ("web", "mobile"):
+                platform = row.platform
+        except Exception:
+            platform = "web"
+
+    layer1 = system_prompt_with_design(has_design, platform=platform)
     layer2_parts = []
     ai_rules = load_ai_rules_md(project_id)
     if ai_rules:
-        layer2_parts.append("AI_RULES.md (project conventions — follow strictly):\n\n" + ai_rules)
+        layer2_parts.append("AI_RULES.md (project conventions, follow strictly):\n\n" + ai_rules)
     if design:
         layer2_parts.append(
-            "DESIGN.md (LOCKED graphic charter — follow strictly; "
+            "DESIGN.md (LOCKED graphic charter, follow strictly; "
             "do NOT rewrite this file or invent a new brand/logo/palette):\n\n" + design
         )
-        layer2_parts.append(THEME_QUALITY_HINT)
-    else:
-        layer2_parts.append(THEME_QUALITY_HINT)
+    layer2_parts.append(THEME_QUALITY_HINT)
+    media = format_project_media_layer(project_id)
+    if media:
+        layer2_parts.append(media)
+    example = format_template_example_layer(project_id, files, user_query, platform=platform)
+    if example:
+        layer2_parts.append(example)
     layer2_parts.append(build_file_skeletons(files))
     layer2 = "\n\n".join(layer2_parts)
 
@@ -421,6 +535,8 @@ async def build_llm_messages(
         )
     for idx, (role, content) in enumerate(recent):
         if role == "user" and idx == len(recent) - 1:
+            if carried:
+                content = with_carried_references(content, carried, locale)
             enriched = await enrich_user_message_with_vision(db, project_id, content)
             if isinstance(enriched, str):
                 enriched = _gateway_safe_content(enriched, fallback=user_query or "Continue.")

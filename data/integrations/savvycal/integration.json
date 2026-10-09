@@ -1,0 +1,27 @@
+{
+  "id": "savvycal",
+  "name": "SavvyCal",
+  "categories": [
+    "booking"
+  ],
+  "access": "yes",
+  "methods": [
+    "iframe",
+    "script"
+  ],
+  "docsUrl": "https://savvycal.com/help/embedding",
+  "badge": null,
+  "enabledHint": false,
+  "logo": "logo.png",
+  "simpleIcon": null,
+  "i18n": {
+    "en": {
+      "title": "SavvyCal",
+      "blurb": "Embeddable scheduling links."
+    },
+    "fr": {
+      "title": "SavvyCal",
+      "blurb": "Liens de planification embarquables."
+    }
+  }
+}

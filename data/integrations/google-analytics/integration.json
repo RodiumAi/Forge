@@ -1,0 +1,26 @@
+{
+  "id": "google-analytics",
+  "name": "Google Analytics",
+  "categories": [
+    "analytics"
+  ],
+  "access": "yes",
+  "methods": [
+    "script"
+  ],
+  "docsUrl": "https://developers.google.com/analytics/devguides/collection/ga4",
+  "badge": null,
+  "enabledHint": false,
+  "logo": "logo.png",
+  "simpleIcon": "googleanalytics",
+  "i18n": {
+    "en": {
+      "title": "Google Analytics",
+      "blurb": "gtag.js / GA4 measurement."
+    },
+    "fr": {
+      "title": "Google Analytics",
+      "blurb": "gtag.js / mesure GA4."
+    }
+  }
+}

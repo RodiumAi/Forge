@@ -11,6 +11,23 @@
 - Accent: `#7c5cff` (electric violet, play buttons and CTAs)
 - Soft: `#ece9f8` (cards, chips)
 
+## Typography
+
+- Font stack: `"Segoe UI", system-ui, sans-serif` for everything, body line-height 1.55.
+- Hero title: 1.8rem on mobile, 2.5rem from 761px, line-height 1.15, max 24ch.
+- Section titles (h2): 1.6rem. Episode and host names (h3): 1rem.
+- Logo: 1.15rem, weight 800. Buttons and links: 0.9rem to 0.95rem, weight 600.
+- Small print: chips 0.8rem / 700, duration chips 0.75rem / 600, footer 0.85rem.
+
+## Spacing & radius
+
+- Page gutter: `6vw` left and right on every band.
+- Sections: `2rem 6vw 3rem`; hero `2rem 6vw` on mobile, `3.5rem 6vw 4rem` from 761px.
+- Gaps: 0.6rem to 1.4rem inside rows and grids, 3rem between hero copy and art.
+- Radius: 999px for buttons, chips and inputs; 20px for the hero panel and subscribe strip;
+  16px host cards; 14px episode rows; 10px episode covers; 50% for play buttons and avatars.
+- Single breakpoint: mobile first, desktop layout from `min-width: 761px`.
+
 ## Tone
 
 Modern, friendly, tech-savvy. A developer-culture podcast voice: casual but

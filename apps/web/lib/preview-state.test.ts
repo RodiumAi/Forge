@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildPreviewSrc } from "./preview-state";
+import { alignPreviewOrigin, buildPreviewSrc } from "./preview-state";
 
 const API = "http://localhost:8100";
 
@@ -12,6 +12,16 @@ describe("buildPreviewSrc", () => {
     expect(buildPreviewSrc("http://localhost:8100/runner/", 3, API)).toBe(
       "http://localhost:8100/runner/?t=3",
     );
+  });
+
+  it("rewrites localhost runner urls to the client apiBase host", () => {
+    expect(
+      buildPreviewSrc(
+        "http://localhost:8100/runner/?p=abc",
+        1,
+        "http://127.0.0.1:8100",
+      ),
+    ).toBe("http://127.0.0.1:8100/runner/?p=abc&t=1");
   });
 
   it("prefixes a relative path with the api origin", () => {
@@ -30,5 +40,13 @@ describe("buildPreviewSrc", () => {
     const a = buildPreviewSrc("/runner/", 1, API);
     const b = buildPreviewSrc("/runner/", 2, API);
     expect(a).not.toBe(b);
+  });
+});
+
+describe("alignPreviewOrigin", () => {
+  it("rewrites loopback host mismatch", () => {
+    expect(
+      alignPreviewOrigin("http://localhost:8100/runner/?p=1", "http://127.0.0.1:8100"),
+    ).toBe("http://127.0.0.1:8100/runner/?p=1");
   });
 });

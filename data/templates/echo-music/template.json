@@ -1,0 +1,28 @@
+{
+  "kind": "mobile",
+  "id": "echo-music",
+  "title": {
+    "en": "Echo",
+    "fr": "Echo"
+  },
+  "description": {
+    "en": "Music streaming app: onboarding, home with recently played + playlists, search, library, and a full now-playing screen — phone shell with a persistent mini-player and bottom tabs.",
+    "fr": "App de streaming musical : onboarding, accueil écoutes récentes + playlists, recherche, bibliothèque et écran lecture — shell téléphone avec mini-lecteur persistant et tabs."
+  },
+  "tags": [
+    "mobile",
+    "music",
+    "streaming",
+    "player"
+  ],
+  "preview": "preview.html",
+  "bootHint": {
+    "en": "Adapt echo-music: artist and track names, playlist titles, genres, cover gradients, and now-playing metadata.",
+    "fr": "Adapte echo-music : noms d'artistes et de titres, playlists, genres, dégradés de pochettes et infos de lecture."
+  },
+  "accent": "#ec4899",
+  "bg": "#0c0a12",
+  "fg": "#f5f0fb",
+  "muted": "#9b90ad",
+  "tone": "vivid, immersive, night-time"
+}

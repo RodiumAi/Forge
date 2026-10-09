@@ -5,8 +5,9 @@ services:
     image: postgres:17-alpine
     container_name: forge-web-postgres
     restart: unless-stopped
+    # Dev only — bound to loopback; do not expose on a public host
     ports:
-      - "${FORGE_WEB_POSTGRES_PORT:-5434}:5432"
+      - "127.0.0.1:${FORGE_WEB_POSTGRES_PORT:-5434}:5432"
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-forge}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-forge}
@@ -29,9 +30,10 @@ services:
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-rodiumdev123}
       MINIO_SERVER_URL: http://localhost:9000
       MINIO_BROWSER_REDIRECT_URL: http://localhost:9001
+    # Dev only — bound to loopback; do not expose on a public host
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
     volumes:
       - forge_web_minio_data:/data
 
@@ -52,13 +54,25 @@ services:
   valkey:
     image: valkey/valkey:8-alpine
     container_name: forge-web-valkey
-    command: valkey-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    environment:
+      VALKEY_PASSWORD: ${VALKEY_PASSWORD:-forge-dev-valkey}
+    command:
+      - valkey-server
+      - --appendonly
+      - "yes"
+      - --maxmemory
+      - 512mb
+      - --maxmemory-policy
+      - allkeys-lru
+      - --requirepass
+      - ${VALKEY_PASSWORD:-forge-dev-valkey}
+    # Localhost-only: do not expose an unauthenticated (or weak) Redis to the LAN.
     ports:
-      - "${FORGE_WEB_VALKEY_PORT:-6380}:6379"
+      - "127.0.0.1:${FORGE_WEB_VALKEY_PORT:-6380}:6379"
     volumes:
       - forge_web_valkey_data:/data
     healthcheck:
-      test: ["CMD", "valkey-cli", "ping"]
+      test: ["CMD-SHELL", "valkey-cli -a \"$$VALKEY_PASSWORD\" ping | grep -q PONG"]
       interval: 5s
       timeout: 3s
       retries: 12
@@ -84,8 +98,10 @@ services:
       OBJECT_STORE_ACCESS_KEY: ${MINIO_ROOT_USER:-rodiumdev}
       OBJECT_STORE_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-rodiumdev123}
       OBJECT_STORE_ADDRESSING: path
-      REDIS_URL: redis://valkey:6379/0
-      API_BASE_URL: http://localhost:8100
+      REDIS_URL: redis://:${VALKEY_PASSWORD:-forge-dev-valkey}@valkey:6379/0
+      # Prefer 127.0.0.1: on Windows, localhost often resolves to ::1 and the
+      # browser iframe fails while fetch via 127.0.0.1 still works.
+      API_BASE_URL: http://127.0.0.1:8100
       # Origin used to build the links we email out (verify, reset).
       WEB_APP_URL: ${WEB_APP_URL:-http://localhost:3100}
       # `mailpit` resolves on the compose network; the host port is only for
@@ -94,12 +110,22 @@ services:
       SMTP_HOST: mailpit
       SMTP_PORT: "1025"
       TEMPLATES_ROOT: /data/templates
+      INTEGRATIONS_ROOT: /data/integrations
       RUNNER_PARENT_ORIGINS: http://localhost:3100,http://127.0.0.1:3100
       SSE_HEARTBEAT_SECONDS: "15"
       ALB_IDLE_TIMEOUT_SECONDS: "600"
+      # FastAPI internal lane. Forge reads the weekly FRODI balance and the
+      # plan with the shared token plus the platform uid.
+      RODIUM_GATEWAY_INTERNAL_URL: http://host.docker.internal:8001
+      # Transition FRODI lane (shared token). Empty on a clone (BYOK).
+      RODIUM_FORGE_GATEWAY_TOKEN: ${RODIUM_FORGE_GATEWAY_TOKEN:-}
+      # Generation with each user's own token goes to the same local gateway
+      # that trusts the local Nest issuer (RODIUM_BASE_URL may point elsewhere).
+      RODIUM_GATEWAY_URL: ${RODIUM_GATEWAY_URL:-http://host.docker.internal:8001/v1}
     volumes:
       - ./data/projects:/data/projects
       - ./data/templates:/data/templates:ro
+      - ./data/integrations:/data/integrations:ro
       - ./infra/local:/srv/infra:ro
       # Live-reload API sources while iterating on visual-edit / bridge.
       - ./apps/api/app:/app/app
@@ -155,9 +181,10 @@ services:
     environment:
       MP_SMTP_AUTH_ACCEPT_ANY: "1"
       MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+    # Dev only — bound to loopback; do not expose on a public host
     ports:
-      - "${FORGE_WEB_MAILPIT_SMTP_PORT:-1026}:1025"
-      - "${FORGE_WEB_MAILPIT_UI_PORT:-8026}:8025"
+      - "127.0.0.1:${FORGE_WEB_MAILPIT_SMTP_PORT:-1026}:1025"
+      - "127.0.0.1:${FORGE_WEB_MAILPIT_UI_PORT:-8026}:8025"
 
   caddy:
     image: caddy:2.9-alpine
@@ -175,8 +202,9 @@ services:
     image: adminer:4
     container_name: forge-web-adminer
     restart: unless-stopped
+    # Dev only — bound to loopback; do not expose on a public host
     ports:
-      - "${FORGE_WEB_ADMINER_PORT:-8089}:8080"
+      - "127.0.0.1:${FORGE_WEB_ADMINER_PORT:-8089}:8080"
     depends_on:
       postgres:
         condition: service_healthy

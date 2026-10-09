@@ -12,6 +12,7 @@
 
 - [ ] Designer (UI/UX)
 - [ ] Template kit author (`data/templates/`)
+- [ ] Integration kit author (`data/integrations/`)
 - [ ] Frontend developer
 - [ ] Backend developer
 - [ ] Cybersecurity / hardening
@@ -27,6 +28,7 @@
 - [ ] Web: `cd apps/web && npm run typecheck && npm test && npm run lint && FORGE_FONT_MODE=fallback npm run build`
 - [ ] Runtime (if touched): `cd apps/api/runtime && npm ci && node --test tests/`
 - [ ] Templates (if touched): `cd apps/api && pytest tests/test_templates.py -q`
+- [ ] Integrations (if touched): `cd apps/api && pytest tests/test_integrations.py -q`
 
 ## Screenshots
 

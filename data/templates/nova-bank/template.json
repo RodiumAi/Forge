@@ -1,0 +1,28 @@
+{
+  "kind": "mobile",
+  "id": "nova-bank",
+  "title": {
+    "en": "Nova Bank",
+    "fr": "Nova Bank"
+  },
+  "description": {
+    "en": "Neobank app: onboarding, balance hero, quick send/pay actions, cards, and activity — phone shell with bottom tabs.",
+    "fr": "App néobanque : onboarding, solde héro, actions envoi/paiement, cartes et activité — shell téléphone + tabs."
+  },
+  "tags": [
+    "mobile",
+    "fintech",
+    "banking",
+    "wallet"
+  ],
+  "preview": "preview.html",
+  "bootHint": {
+    "en": "Adapt nova-bank: currency, balance, quick actions, card names, transaction labels.",
+    "fr": "Adapte nova-bank : devise, solde, actions rapides, noms de cartes, libellés de transactions."
+  },
+  "accent": "#34d399",
+  "bg": "#0b1220",
+  "fg": "#eaf1ff",
+  "muted": "#8a97b5",
+  "tone": "trustworthy, crisp, quietly premium"
+}

@@ -21,6 +21,7 @@ You **may**:
 - Upload design assets (PNG, SVG, short screen recordings) directly in the issue or PR.
 - **Contribute frontend code** in `apps/web` when you implement or refine UI (components, styles, landing, builder).
 - **Propose or co-author template kits** in `data/templates/` (gallery starters) — see [Contributing template kits](#contributing-template-kits) below.
+- **Propose or co-author integrations** in `data/integrations/` (embed catalog) — see [Contributing integrations](#contributing-integrations) below.
 
 You **must not**:
 
@@ -58,8 +59,9 @@ You **may**:
 
 - Implement features, fix bugs, and improve prompts, orchestration, templates, and runtime behavior.
 - Propose architectural changes via an issue **before** large refactors.
-- Touch `apps/web`, `apps/api`, `apps/api/runtime`, and `data/templates` according to the change.
+- Touch `apps/web`, `apps/api`, `apps/api/runtime`, `data/templates`, and `data/integrations` according to the change.
 - **Add or improve template kits** — see [Contributing template kits](#contributing-template-kits).
+- **Add or improve integrations** — see [Contributing integrations](#contributing-integrations).
 
 You **must**:
 
@@ -87,7 +89,7 @@ git rebase origin/main   # or: git merge origin/main
 ### 2. Branch & commits
 
 1. Fork the repository (external contributors) or branch from `main` (org members).
-2. Use a clear branch name: `feat/…`, `fix/…`, `design/…`, `security/…`, `template/…`.
+2. Use a clear branch name: `feat/…`, `fix/…`, `design/…`, `security/…`, `template/…`, `integration/…`.
 3. Write commit messages in the form `type(scope): summary` (English or French).
 
 ### 3. Pull request requirements (strict)
@@ -150,9 +152,13 @@ FastAPI + SQLAlchemy + Postgres.
 ```bash
 cd apps/api
 python -m venv .venv && .venv/Scripts/activate   # or source .venv/bin/activate
-pip install -r requirements-dev.txt              # runtime deps + ruff + pytest
+pip install --require-hashes -r requirements-dev.txt # runtime deps + ruff + pytest
 uvicorn app.main:app --reload --port 8100
 ```
+
+Edit `requirements.in` or `requirements-dev.in`, then run `make lock` from the
+repository root. Commit both the input and compiled lock; do not hand-edit the
+generated `.txt` files.
 
 Checks before submitting:
 
@@ -162,10 +168,11 @@ ruff check app tests
 pytest -q
 ```
 
-Set `TEMPLATES_ROOT` when running tests outside Docker:
+Set `TEMPLATES_ROOT` / `INTEGRATIONS_ROOT` when running tests outside Docker:
 
 ```bash
 export TEMPLATES_ROOT="$(pwd)/../../data/templates"   # from apps/api
+export INTEGRATIONS_ROOT="$(pwd)/../../data/integrations"
 ```
 
 ### Runtime (`apps/api/runtime`)
@@ -175,12 +182,16 @@ In-browser Babel runner. `packages.json` is the single source of truth for the i
 ```bash
 cd apps/api/runtime
 npm ci
-node --test tests/
+npm test
 ```
 
 ### Templates (`data/templates`)
 
 See [Contributing template kits](#contributing-template-kits).
+
+### Integrations (`data/integrations`)
+
+See [Contributing integrations](#contributing-integrations).
 
 ---
 
@@ -194,7 +205,7 @@ Each kit lives at `data/templates/<id>/` where `<id>` matches `^[a-z0-9][a-z0-9-
 
 ```
 data/templates/<id>/
-├── template.json        # catalog: i18n title/description, tags, hex palette, bootHint
+├── template.json        # catalog: kind (web|mobile), i18n title/description, tags, hex palette, bootHint
 ├── DESIGN.md            # design charter (colors, tone, do/don't, image URLs)
 ├── preview.html         # static gallery thumbnail — no <script> tags
 ├── index.html
@@ -219,6 +230,7 @@ Overview: [data/templates/README.md](data/templates/README.md) · Full contract:
 | `preview.html` has **no** `<script>` | Gallery thumbnail is pure HTML/CSS |
 | `src/index.css` has **no** `@import` | No external fonts/CSS at runtime |
 | `template.json` palette uses `#rrggbb` hex | Agent and gallery read consistent tokens |
+| `template.json` includes `kind`: `web` or `mobile` | Gallery filter + project.platform on fork |
 | `title`, `description`, `bootHint` in **en** + **fr** | Bilingual product |
 
 ### Submission workflow
@@ -226,8 +238,8 @@ Overview: [data/templates/README.md](data/templates/README.md) · Full contract:
 1. Fork / branch from latest `main`.
 2. Add or edit `data/templates/<id>/` following the layout above.
 3. Register the new `<id>` in `EXPECTED_IDS` (`apps/api/tests/test_templates.py`).
-4. Update keyword routing in `apps/api/app/services/templates.py` if the kit targets new topics.
-5. Run `cd apps/api && pytest tests/test_templates.py -q`.
+4. Run `cd apps/api && pytest tests/test_templates.py -q`.
+5. Open a PR with screenshots of the gallery card and a forked preview.
 6. Open a PR with:
    - **Screenshot** of the gallery card (`preview.html` rendering)
    - **Screenshot or video** of a forked live preview in the builder
@@ -237,13 +249,57 @@ Use issue template [template_proposal.yml](.github/ISSUE_TEMPLATE/template_propo
 
 ---
 
+## Contributing integrations
+
+Integrations are catalog entries for third-party **static embeds** (iframe / script / checkout link) shown on `/integrations`. **Designers and developers** can add kits or improve guides and logos. Auth/BaaS SDKs and partial form-action APIs are out of scope.
+
+### Folder layout
+
+Each kit lives at `data/integrations/<id>/` where `<id>` matches `^[a-z0-9][a-z0-9-]{1,62}$` (example: `tally`).
+
+```
+data/integrations/<id>/
+├── integration.json   # meta: categories, access (yes), methods (iframe|script|link), docsUrl, i18n, logo
+├── logo.svg           # vendored logo (offline) — Simple Icons or initials fallback
+├── guide.en.md        # Get started
+└── guide.fr.md
+```
+
+Overview: [data/integrations/README.md](data/integrations/README.md) · Full contract: [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md) (🇫🇷 [INTEGRATIONS.fr.md](docs/INTEGRATIONS.fr.md))
+
+### Key rules (enforced by CI)
+
+| Rule | Why |
+| --- | --- |
+| `integration.json` `id` equals folder name | Stable URLs `/integrations/{id}` |
+| `access` is `yes` only | Drop-in embeds only — no partial kits |
+| `methods` includes `iframe`, `script`, and/or `link` | Must work on a static site by paste |
+| `categories` non-empty; `docsUrl` set | Discoverability + official docs link |
+| `i18n.en` + `i18n.fr` with `title` and `blurb` | Bilingual product |
+| `logo.svg` (or `logo` path) present locally | Opensource clone works offline |
+| `guide.en.md` + `guide.fr.md` non-empty, with a heading, no raw `<script>` | Get started docs stay safe and complete |
+
+### Submission workflow
+
+1. Fork / branch from latest `main`.
+2. Add or edit `data/integrations/<id>/` following the layout above.
+3. Register the new `<id>` in `EXPECTED_IDS` (`apps/api/tests/test_integrations.py`).
+4. Run `cd apps/api && pytest tests/test_integrations.py -q`.
+5. Open a PR with:
+   - Screenshot of the catalog card and the Get started page
+   - Branch name `integration/<id>` when adding a kit
+
+Use issue template [integration_proposal.yml](.github/ISSUE_TEMPLATE/integration_proposal.yml) to discuss an integration **before** large write-ups.
+
+---
+
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs on every push and pull request to `main`:
 
 | Job | What it checks |
 | --- | --- |
-| **API** | Ruff format + lint, pytest |
+| **API** | Ruff format + lint, pytest (includes **Integrations contract** on `data/integrations/`) |
 | **Web** | ESLint, typecheck, Vitest, production build |
 | **Runtime** | Python/JS manifest parity |
 | **Docker compose** | Local stack validation |
@@ -260,6 +316,21 @@ Fix CI failures on your branch before requesting review.
 - **Python:** `ruff` (format + check)
 - **TypeScript:** ESLint + `tsc`
 - Match existing patterns; avoid drive-by refactors unrelated to your PR.
+
+---
+
+## Billing / FRODI (scope note)
+
+**Plan prices, Free+500 grants, and mass activation emails** are owned by the
+RodiumAi Nest control plane (admin Forge + `/mailing`), not by this repository.
+In this repo you may:
+
+- Consume entitlements in the builder UI (`/auth/forge/status`, wallet badge).
+- Adjust Cloud UX copy and FRODI/RODI display.
+- Keep self-host BYOK (pasted `rd_sk_…` key) working when OIDC/Cloud is off.
+
+Do **not** open PRs here that change Nest plan catalogs, treasury grants, or
+campaign mailing — those belong in the Nest / admin repos.
 
 ---
 

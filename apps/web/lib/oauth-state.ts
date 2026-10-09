@@ -38,8 +38,10 @@ export async function createStateBinding(): Promise<string> {
   try {
     sessionStorage.setItem(STORAGE_KEY, secret);
   } catch {
-    // Private mode with storage disabled: the server treats a state with no
-    // binding as unbound and the flow still works, just without this guard.
+    // Private mode with storage disabled: we cannot bind the flow to this
+    // browser, and the server now refuses an unbound state (that opt-out was a
+    // login-CSRF hole). Return empty so `/auth/rodium/start` fails cleanly and
+    // the visitor falls back to password sign-in rather than an insecure flow.
     return "";
   }
   const digest = await crypto.subtle.digest(

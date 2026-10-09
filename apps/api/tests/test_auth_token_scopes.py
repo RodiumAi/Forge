@@ -14,13 +14,16 @@
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
+import jwt
 import pytest
 from fastapi import HTTPException
 
 from app import auth as auth_mod
+from app.config import get_settings
 from app.services.rodium_oidc import (
     RodiumOidcError,
     create_oauth_state,
@@ -43,6 +46,7 @@ def _user(token_version: int = 0):
         email="ada@example.com",
         password_hash=None,
         email_verified_at=None,
+        access_blocked_at=None,
     )
 
 
@@ -76,6 +80,30 @@ class TestSessionTokensAreHeaderOnly:
 
         with pytest.raises(HTTPException) as exc:
             auth_mod.get_media_user(_request({"access_token": token}), None, _db(user))
+        assert exc.value.status_code == 401
+
+    def test_an_expired_session_token_is_refused(self):
+        user = _user()
+        token = jwt.encode(
+            {"sub": str(user.id), "exp": datetime.now(UTC) - timedelta(seconds=1)},
+            get_settings().secret_key,
+            algorithm="HS256",
+        )
+
+        with pytest.raises(HTTPException) as exc:
+            auth_mod.get_current_user(_request(), SimpleNamespace(credentials=token), _db(user))
+        assert exc.value.status_code == 401
+
+    def test_a_non_hs256_session_token_is_refused(self):
+        user = _user()
+        token = jwt.encode(
+            {"sub": str(user.id), "exp": datetime.now(UTC) + timedelta(minutes=5)},
+            get_settings().secret_key,
+            algorithm="HS384",
+        )
+
+        with pytest.raises(HTTPException) as exc:
+            auth_mod.get_current_user(_request(), SimpleNamespace(credentials=token), _db(user))
         assert exc.value.status_code == 401
 
 
@@ -136,13 +164,52 @@ class TestOauthStateBinding:
         state = create_oauth_state("verifier", binding_hash)
         assert "browser-secret" not in state
 
-    def test_an_unbound_state_still_parses(self):
-        state = create_oauth_state("verifier")
-        assert parse_oauth_state(state, None) == "verifier"
-        assert parse_oauth_state(state, "anything") == "verifier"
+    def test_an_unbound_state_cannot_be_minted(self):
+        # The binding is mandatory: refusing to mint an unbound state is what
+        # stops a caller from opting out of login-CSRF protection.
+        with pytest.raises(RodiumOidcError):
+            create_oauth_state("verifier")
+        with pytest.raises(RodiumOidcError):
+            create_oauth_state("verifier", "")
+
+    def test_a_forged_unbound_state_is_refused_at_the_callback(self):
+        # An attacker crafts a signed state with no `b` claim (the shape /start
+        # would once have handed out) and feeds it to a victim whose browser
+        # holds no secret. Parsing must refuse it, not wave it through.
+        forged = jwt.encode(
+            {
+                "v": "verifier",
+                "exp": datetime.now(UTC) + timedelta(minutes=5),
+                "n": "abc",
+            },
+            get_settings().secret_key,
+            algorithm="HS256",
+        )
+        with pytest.raises(RodiumOidcError):
+            parse_oauth_state(forged, None)
+        with pytest.raises(RodiumOidcError):
+            parse_oauth_state(forged, "anything")
 
     def test_a_tampered_state_is_refused(self):
         binding_hash = hash_state_binding("browser-secret")
         state = create_oauth_state("verifier", binding_hash)
         with pytest.raises(RodiumOidcError):
             parse_oauth_state(state[:-2] + "xx", "browser-secret")
+
+    def test_an_expired_state_is_refused(self):
+        state = jwt.encode(
+            {"v": "verifier", "exp": datetime.now(UTC) - timedelta(seconds=1)},
+            get_settings().secret_key,
+            algorithm="HS256",
+        )
+        with pytest.raises(RodiumOidcError):
+            parse_oauth_state(state)
+
+    def test_a_non_hs256_state_is_refused(self):
+        state = jwt.encode(
+            {"v": "verifier", "exp": datetime.now(UTC) + timedelta(minutes=5)},
+            get_settings().secret_key,
+            algorithm="HS384",
+        )
+        with pytest.raises(RodiumOidcError):
+            parse_oauth_state(state)

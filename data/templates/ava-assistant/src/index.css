@@ -1,0 +1,107 @@
+/* Foundation: tokens, reset, app shell (navbar, main, tab bar), cards, list
+   rows, pills and buttons. Screen styles live in src/styles/<screen>.css. */
+:root {
+  color-scheme: dark;
+  --bg: #0a0a0f;
+  --fg: #f2f2f7;
+  --muted: #8b8b9a;
+  --accent: #8b5cf6;
+  --on-accent: #ffffff;
+  --surface: color-mix(in srgb, var(--fg) 6%, var(--bg));
+  --surface-2: color-mix(in srgb, var(--fg) 9%, var(--bg));
+  --line: color-mix(in srgb, var(--fg) 12%, transparent);
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --tabbar-h: 3.9rem;
+}
+
+* { box-sizing: border-box; }
+html, body, #root {
+  margin: 0; min-height: 100%; height: 100%;
+  background: var(--bg); color: var(--fg);
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+button { font: inherit; cursor: pointer; }
+
+.app-shell { min-height: 100%; display: flex; flex-direction: column; max-width: 460px; margin-inline: auto; position: relative; }
+
+/* Navbar */
+.app-navbar {
+  position: sticky; top: 0; z-index: 5;
+  display: flex; align-items: center; justify-content: space-between; gap: .75rem;
+  padding: calc(.75rem + var(--safe-top)) 1.1rem .7rem;
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line);
+}
+.app-navbar .who { display: flex; align-items: center; gap: .65rem; }
+.app-navbar h1 { margin: 0; font-size: 1.02rem; font-weight: 700; letter-spacing: -.01em; }
+.app-navbar .sub { margin: 0; font-size: .72rem; color: var(--muted); display: inline-flex; align-items: center; gap: .35rem; }
+.sub .live { width: .42rem; height: .42rem; border-radius: 999px; background: #34d399; box-shadow: 0 0 0 3px color-mix(in srgb, #34d399 22%, transparent); }
+.nav-action {
+  appearance: none; border: 1px solid var(--line); background: var(--surface);
+  color: var(--fg); width: 2.5rem; height: 2.5rem; border-radius: 999px;
+  display: grid; place-items: center;
+}
+.pfp { width: 2.35rem; height: 2.35rem; border-radius: 999px; overflow: hidden; border: 1px solid var(--line); flex-shrink: 0; background: var(--surface); display: grid; place-items: center; }
+.pfp.accent { color: var(--on-accent); border: 0; background: linear-gradient(140deg, var(--accent), color-mix(in srgb, var(--accent) 45%, #3b1a8f)); box-shadow: 0 6px 18px color-mix(in srgb, var(--accent) 40%, transparent); }
+.pfp img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* Main (non-chat screens render <main class="app-main <name>-screen">) */
+.app-main {
+  flex: 1; padding: 1.05rem 1.1rem calc(var(--tabbar-h) + 1.6rem + var(--safe-bottom));
+  display: grid; gap: 1rem; align-content: start;
+}
+.section-head { display: flex; align-items: center; justify-content: space-between; margin: .1rem 0 -.1rem; }
+.section-head h2 { margin: 0; font-size: .95rem; }
+.link { color: var(--accent); font-size: .8rem; font-weight: 600; text-decoration: none; background: none; border: 0; padding: 0; }
+.muted { color: var(--muted); margin: 0; line-height: 1.45; font-size: .9rem; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+
+.pill {
+  display: inline-flex; align-items: center; gap: .3rem;
+  font-size: .72rem; font-weight: 700; padding: .28rem .6rem; border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent); color: color-mix(in srgb, var(--accent) 80%, #fff);
+}
+
+/* Cards / lists */
+.card {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 1.15rem; padding: 1rem 1.05rem;
+}
+.card h3 { margin: 0 0 .4rem; font-size: .98rem; }
+
+.tx { display: flex; align-items: center; gap: .8rem; padding: .7rem 0; border-bottom: 1px solid var(--line); width: 100%; text-align: left; background: none; border-left: 0; border-right: 0; border-top: 0; color: var(--fg); }
+button.tx { appearance: none; cursor: pointer; }
+.tx:last-child { border-bottom: 0; }
+.card:not(.list) .tx:last-child { padding-bottom: 0; }
+.card:not(.list) .tx:first-child { padding-top: 0; }
+.tx .ava { width: 2.55rem; height: 2.55rem; border-radius: .85rem; display: grid; place-items: center; font-weight: 700; flex-shrink: 0; background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); overflow: hidden; }
+.tx .meta { flex: 1; min-width: 0; }
+.tx .meta strong { display: block; font-size: .92rem; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tx .meta span { font-size: .78rem; color: var(--muted); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Buttons */
+.btn-primary, .btn-ghost {
+  appearance: none; border: 0; border-radius: 1rem;
+  min-height: 3rem; font-weight: 700; padding: .8rem 1rem; width: 100%;
+}
+.btn-primary { background: var(--accent); color: var(--on-accent); box-shadow: 0 8px 22px color-mix(in srgb, var(--accent) 34%, transparent); }
+.btn-ghost { background: transparent; color: var(--muted); }
+
+/* Tabbar */
+.app-tabbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; max-width: 460px; margin-inline: auto;
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: .1rem;
+  padding: .45rem .5rem calc(.45rem + var(--safe-bottom));
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--line);
+}
+.tab {
+  appearance: none; border: 0; background: transparent; color: var(--muted);
+  display: flex; flex-direction: column; align-items: center; gap: .2rem;
+  font-size: .66rem; font-weight: 600; min-height: 2.9rem; padding: .35rem;
+}
+.tab.active { color: var(--accent); }

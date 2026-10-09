@@ -10,11 +10,22 @@ body:
       placeholder: "aurora-ai — Aurora AI"
     validations:
       required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind
+      description: "Gallery filter + project.platform on fork. See docs/TEMPLATES.md (`kind`)."
+      options:
+        - web
+        - mobile
+      default: 0
+    validations:
+      required: true
   - type: textarea
     id: universe
     attributes:
       label: Universe
-      description: What is this kit for? (SaaS landing, portfolio, e-commerce, blog…)
+      description: What is this kit for? (SaaS landing, portfolio, e-commerce, mobile app shell…)
     validations:
       required: true
   - type: textarea

@@ -126,6 +126,7 @@ describe("readSseStream", () => {
 
   it("throws when the response has no body", async () => {
     const res = { body: null } as unknown as Response;
-    await expect(readSseStream(res, vi.fn())).rejects.toThrow("No stream body");
+    const onEvent = vi.fn(async () => undefined);
+    await expect(readSseStream(res, onEvent)).rejects.toThrow("No stream body");
   });
 });

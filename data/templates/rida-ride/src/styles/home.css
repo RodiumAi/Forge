@@ -1,0 +1,55 @@
+/* Home screen: full-bleed CSS map + "Where to?" ride sheet. */
+.home-screen .ride-screen { display: grid; gap: 0; margin: -1.05rem -1.1rem 0; }
+
+.home-screen .map {
+  position: relative; height: 42vh; min-height: 260px; overflow: hidden;
+  background:
+    radial-gradient(120% 90% at 70% 12%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 60%),
+    linear-gradient(180deg, color-mix(in srgb, var(--fg) 5%, var(--bg)), var(--bg));
+  border-bottom: 1px solid var(--line);
+}
+.home-screen .map-route { position: absolute; inset: 0; width: 100%; height: 100%; filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 55%, transparent)); }
+.home-screen .map-car {
+  position: absolute; left: 43%; top: 46%; width: 2.3rem; height: 2.3rem; border-radius: 999px;
+  display: grid; place-items: center; color: var(--on-accent); background: var(--accent);
+  box-shadow: 0 6px 14px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.home-screen .ride-sheet {
+  position: relative; z-index: 2; margin-top: -1.25rem;
+  background: var(--surface); border: 1px solid var(--line); border-bottom: 0;
+  border-radius: 1.4rem 1.4rem 0 0; padding: .8rem 1.1rem 1.1rem;
+  display: grid; gap: .8rem;
+}
+.home-screen .grabber { width: 2.6rem; height: .28rem; border-radius: 999px; background: var(--line); margin: 0 auto .1rem; }
+.home-screen .wa-field {
+  appearance: none; width: 100%; display: flex; align-items: center; gap: .65rem;
+  border: 1px solid var(--line); background: color-mix(in srgb, var(--fg) 4%, var(--bg));
+  border-radius: 1rem; padding: .85rem .9rem; color: var(--fg); text-align: left;
+}
+.home-screen .wa-ic { color: var(--accent); display: grid; place-items: center; }
+.home-screen .wa-text { flex: 1; font-size: .95rem; font-weight: 600; }
+.home-screen .wa-tag { font-size: .72rem; font-weight: 700; color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, transparent); padding: .25rem .6rem; border-radius: 999px; }
+.home-screen .sheet-lbl { margin: 0; font-size: .74rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+
+.home-screen .rides { display: grid; gap: .5rem; }
+.home-screen .ride-opt {
+  appearance: none; width: 100%; display: flex; align-items: center; gap: .8rem;
+  border: 1px solid var(--line); background: color-mix(in srgb, var(--fg) 4%, var(--bg));
+  border-radius: 1rem; padding: .7rem .85rem; color: var(--fg); text-align: left;
+  transition: border-color .15s ease, background .15s ease;
+}
+.home-screen .ride-opt.sel {
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.home-screen .ride-opt:active { transform: scale(.99); }
+.home-screen .ride-glyph { width: 2.5rem; height: 2.5rem; border-radius: .8rem; flex-shrink: 0; display: grid; place-items: center; color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.home-screen .ride-opt.sel .ride-glyph { background: var(--accent); color: var(--on-accent); }
+.home-screen .ride-meta { flex: 1; min-width: 0; }
+.home-screen .ride-meta strong { display: block; font-size: .95rem; font-weight: 700; }
+.home-screen .ride-meta span { font-size: .76rem; color: var(--muted); }
+.home-screen .ride-price { font-weight: 800; font-variant-numeric: tabular-nums; font-size: 1rem; white-space: nowrap; }
+.home-screen .ride-price small { font-size: .68rem; font-weight: 700; opacity: .7; margin-left: .15rem; }
+
+.home-screen .book { display: inline-flex; align-items: center; justify-content: center; gap: .45rem; margin-top: .1rem; }

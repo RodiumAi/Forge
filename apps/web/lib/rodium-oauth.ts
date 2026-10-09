@@ -8,6 +8,8 @@
  * Default mode is a centered popup (Firebase-style). The OIDC round-trip must
  * start *inside* that popup so the sessionStorage state binding stays valid.
  * `mode: "redirect"` keeps the full-page flow for `?autostart=1`.
+ * If the browser blocks the popup, we automatically fall back to redirect —
+ * sites cannot force a popup-permission prompt.
  */
 
 import { api, ApiError, getToken } from "@/lib/api";
@@ -27,18 +29,56 @@ export const OAUTH_POPUP_MESSAGE_TYPE = "forge-rodium-oauth";
 const POPUP_WIDTH = 520;
 const POPUP_HEIGHT = 680;
 
+const UNSAFE_RETURN_TO_CHARS = /[\\\u0000-\u001f\u007f]/;
+
+/**
+ * Reject URL parser differentials hidden behind one or more percent-encoding
+ * layers. A malformed encoding is rejected conservatively as well.
+ */
+function hasUnsafeReturnToChars(value: string): boolean {
+  let decoded = value;
+  const seen = new Set<string>();
+
+  while (!seen.has(decoded)) {
+    if (UNSAFE_RETURN_TO_CHARS.test(decoded)) return true;
+    seen.add(decoded);
+    try {
+      const next = decodeURIComponent(decoded);
+      if (next === decoded) return false;
+      decoded = next;
+    } catch {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 /** Only allow same-origin paths (open-redirect guard). */
 export function sanitizeReturnTo(value: string | undefined | null): string | null {
   if (!value) return null;
+  if (hasUnsafeReturnToChars(value)) return null;
   const trimmed = value.trim();
-  // Preferred form: relative path.
-  if (trimmed.startsWith("/") && !trimmed.startsWith("//")) return trimmed;
-  // Absolute same-origin (e.g. ChatErrorActions used to pass location.href) → path.
+  if (!trimmed) return null;
   if (typeof window === "undefined") return null;
+
   try {
-    const url = new URL(trimmed);
-    if (url.origin !== window.location.origin) return null;
-    return `${url.pathname}${url.search}${url.hash}` || "/";
+    const base = new URL(window.location.origin);
+    const resolved = new URL(trimmed, base);
+    if (resolved.origin !== base.origin) return null;
+
+    const destination = `${resolved.pathname}${resolved.search}${resolved.hash}` || "/";
+    if (hasUnsafeReturnToChars(destination)) return null;
+
+    // Reparse the exact string handed to location.assign. This catches values
+    // such as a reconstructed `//host/path` that acquire authority semantics.
+    const verified = new URL(destination, base);
+    if (verified.origin !== base.origin) return null;
+
+    const verifiedDestination =
+      `${verified.pathname}${verified.search}${verified.hash}` || "/";
+    if (hasUnsafeReturnToChars(verifiedDestination)) return null;
+    return verifiedDestination;
   } catch {
     return null;
   }
@@ -208,7 +248,8 @@ function waitForPopupCompletion(popup: Window): Promise<StartRodiumOAuthResult> 
  * Begin OIDC.
  *
  * - `popup` (default): opens `/auth/rodium-popup`, waits for token, then lands
- *   on the stashed return path (or `/dashboard`).
+ *   on the stashed return path (or `/dashboard`). If `window.open` is blocked,
+ *   falls back to full-page redirect (browsers never prompt for popup permission).
  * - `redirect`: full-page navigation (autostart from the RodiumAi dashboard).
  *
  * On 503 (no OIDC client), optionally redirects to settings; otherwise returns.
@@ -242,24 +283,24 @@ export async function startRodiumOAuth(options?: {
   }
 
   const popupQs = prompt ? `?prompt=${encodeURIComponent(prompt)}` : "";
-  const popup = window.open(
-    `/auth/rodium-popup${popupQs}`,
-    OAUTH_POPUP_WINDOW_NAME,
-    popupFeatures(),
-  );
-  if (!popup) {
+  // Open about:blank first so a blocked popup never starts a second OIDC
+  // round-trip (some browsers still open the URL then return null — which used
+  // to race with the redirect fallback and burn two state bindings).
+  const popup = window.open("about:blank", OAUTH_POPUP_WINDOW_NAME, popupFeatures());
+  if (!popup || popup.closed) {
+    // No Permission API for pop-ups — continue in this tab instead.
+    return startRodiumOAuthRedirect({ ...options, prompt });
+  }
+  try {
+    popup.location.href = `/auth/rodium-popup${popupQs}`;
+    popup.focus();
+  } catch {
     try {
-      sessionStorage.removeItem(RETURN_TO_KEY);
+      popup.close();
     } catch {
       // ignore
     }
-    return { ok: false, reason: "popup_blocked" };
-  }
-
-  try {
-    popup.focus();
-  } catch {
-    // ignore
+    return startRodiumOAuthRedirect({ ...options, prompt });
   }
 
   return waitForPopupCompletion(popup);

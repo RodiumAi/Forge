@@ -1,7 +1,8 @@
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
 class RegisterRequest(BaseModel):
@@ -35,6 +36,9 @@ class UserOut(BaseModel):
     #: should offer "change password" rather than "managed by RodiumAi".
     has_password: bool = False
     created_at: datetime
+    #: ISO-3166 alpha-2 chosen as the default payment country. Null until the
+    #: person picks one; visitors then fall back to the IP country.
+    payment_country_iso: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -69,6 +73,17 @@ class ResendVerificationRequest(BaseModel):
 
 class ForgotPasswordRequest(BaseModel):
     email: EmailStr
+
+
+class TeamSeatRemoveCodeRequest(BaseModel):
+    member_email: EmailStr
+    reason: str = Field(min_length=3, max_length=500)
+
+
+class TeamSeatRemoveConfirmRequest(BaseModel):
+    member_email: EmailStr
+    reason: str = Field(min_length=3, max_length=500)
+    code: str = Field(min_length=6, max_length=6, pattern=r"^\d{6}$")
 
 
 class ResetPasswordRequest(BaseModel):
@@ -133,6 +148,8 @@ class RodiumAccountOut(BaseModel):
     selected_api_key_id: str | None = None
     has_generation_key: bool = False
     generation_key_hint: str | None = None
+    #: True only on the official instance (provisioning token set) when linked.
+    can_generate_key: bool = False
 
 
 class RodiumSelectKeyRequest(BaseModel):
@@ -144,6 +161,84 @@ class RodiumSelectKeyResponse(BaseModel):
     selected_api_key_id: str
     has_generation_key: bool = True
     generation_key_hint: str | None = None
+
+
+class RodiumGenerateKeyResponse(BaseModel):
+    ok: bool = True
+    selected_api_key_id: str
+    has_generation_key: bool = True
+    generation_key_hint: str | None = None
+    api_keys: list[RodiumApiKeyOut] = Field(default_factory=list)
+    can_generate_key: bool = True
+
+
+class ForgeEntitlementsOut(BaseModel):
+    """Cached Forge plan entitlements. RodiumAi remains the source of truth.
+
+    Mirrors ``ForgeEntitlementCache``. ``None`` fields (or a ``None`` object on
+    the parent) mean the entitlement layer does not apply — open-source clones
+    and accounts without a RodiumAi link — in which case the UI shows every
+    feature rather than hiding anything behind a plan.
+    """
+
+    plan_slug: str
+    status: str
+    max_projects: int | None = None
+    model_selection: bool = False
+    custom_domain: bool = False
+    export_enabled: bool = False
+    history_enabled: bool = False
+    history_limit: int | None = None
+    priority_generation: bool = False
+    allowed_model_tiers: list[str] | None = None
+    frodi_balance: int = 0
+
+
+class ForgeModelChoice(BaseModel):
+    slug: str
+    label: str
+
+
+class ForgeModelChoicesOut(BaseModel):
+    selectable: bool = False
+    models: list[ForgeModelChoice] = Field(default_factory=list)
+
+
+class ForgeStatusOut(BaseModel):
+    """Builder-header snapshot: live credit reservoirs plus cached plan.
+
+    ``frodi``/``rodi`` come from the gateway (``fetch_credit_balances``); either
+    can be ``None`` when the balance cannot be read or the account is not on
+    Forge Cloud. FRODI is the primary reservoir, RODI the fallback.
+    """
+
+    frodi: float | None = None
+    rodi: float | None = None
+    #: Weekly (or monthly, on Free) allotment behind ``frodi``. Used to draw
+    #: the usage bar. ``None`` when the gateway did not send it.
+    frodi_grant: float | None = None
+    #: When the current allotment expires. The composer banner counts down to it.
+    frodi_resets_at: datetime | None = None
+    plan: str | None = None
+    entitlements: ForgeEntitlementsOut | None = None
+
+
+class ProjectCollaboratorOut(BaseModel):
+    user_id: UUID | None = None
+    email: str
+    name: str | None = None
+    role: str
+    #: ``pending`` until the invitee accepts. ``accepted`` is the only state that
+    #: opens the project.
+    status: str = "pending"
+    frodi_cap_per_cycle: int | None = None
+    #: FRODI this collaborator has spent of the owner's balance this cycle
+    #: (owner_pays only). None when Cloud is off or the figure is unavailable.
+    frodi_used_this_cycle: float | None = None
+    invited_at: datetime | None = None
+    accepted_at: datetime | None = None
+
+    model_config = {"from_attributes": True}
 
 
 class PasswordChangeRequest(BaseModel):
@@ -170,6 +265,14 @@ class SettingsOut(BaseModel):
 
 class SettingsUpdate(BaseModel):
     rodium_api_key: str | None = None
+
+
+class PaymentCountryUpdate(BaseModel):
+    iso2: str
+
+
+class PaymentCountryOut(BaseModel):
+    iso2: str | None = None
 
 
 class RodiumKeyOut(BaseModel):
@@ -223,6 +326,13 @@ class ProjectCreate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=200)
     prompt: str | None = Field(default=None, max_length=8000)
     template_id: str | None = Field(default=None, max_length=64)
+    platform: Literal["web", "mobile"] | None = Field(default="web")
+
+
+class ProjectPersonOut(BaseModel):
+    name: str | None = None
+    email: str
+    avatar_url: str | None = None
 
 
 class ProjectOut(BaseModel):
@@ -237,10 +347,16 @@ class ProjectOut(BaseModel):
     custom_domain: str | None = None
     custom_domain_status: str | None = None
     template_id: str | None = None
+    platform: Literal["web", "mobile"] = "web"
     published_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
     has_thumbnail: bool = False
+    #: ``owner`` for projects you created, otherwise the accepted share role.
+    access_role: str = "owner"
+    #: Accepted collaborators, for the dashboard avatar stack. Empty when the
+    #: project has not been shared.
+    collaborators: list[ProjectPersonOut] = Field(default_factory=list)
 
     model_config = {"from_attributes": True}
 
@@ -278,6 +394,26 @@ class TemplateOut(BaseModel):
     accent: str | None = None
     bg: str | None = None
     preview_url: str | None = None
+    kind: Literal["web", "mobile"] = "web"
+
+
+class IntegrationOut(BaseModel):
+    id: str
+    name: str
+    title: str
+    blurb: str
+    categories: list[str] = []
+    access: Literal["yes"]
+    methods: list[str] = []
+    docs_url: str | None = None
+    badge: str | None = None
+    enabled_hint: bool = False
+    logo_url: str | None = None
+
+
+class IntegrationDetailOut(IntegrationOut):
+    guide_md: str = ""
+    guide_url: str | None = None
 
 
 class ChatOut(BaseModel):
@@ -313,10 +449,40 @@ class ChatCreate(BaseModel):
 class SendMessageRequest(BaseModel):
     content: str = Field(min_length=1, max_length=50000)
     mode: str = Field(default="agent", pattern="^(agent|plan)$")
+    model: str | None = Field(default=None, max_length=120)
 
 
 class ClarifyAnswersRequest(BaseModel):
-    answers: dict[str, str] = Field(default_factory=dict)
+    """Answers keyed by question id: a string (option id or free text) for a
+    single-choice question, a list of strings for a multiple-choice one.
+
+    Bounded server-side — the payload ends up in LLM prompts, so its size is
+    never left to the client.
+    """
+
+    answers: dict[str, str | list[str]] = Field(default_factory=dict)
+
+    @field_validator("answers")
+    @classmethod
+    def _bound_answers(cls, value: dict[str, str | list[str]]) -> dict[str, str | list[str]]:
+        if len(value) > 12:
+            raise ValueError("too many answers")
+        out: dict[str, str | list[str]] = {}
+        for key, raw in value.items():
+            qid = str(key).strip()[:40]
+            if not qid:
+                continue
+            if isinstance(raw, list):
+                if len(raw) > 10:
+                    raise ValueError("too many selections")
+                items = [str(v).strip()[:500] for v in raw if str(v).strip()]
+                if items:
+                    out[qid] = items
+            else:
+                text = str(raw).strip()[:500]
+                if text:
+                    out[qid] = text
+        return out
 
 
 class ConfirmPlanRequest(BaseModel):
@@ -329,6 +495,7 @@ class BranchMessagesRequest(BaseModel):
     from_message_id: UUID
     content: str = Field(min_length=1, max_length=50000)
     mode: str = Field(default="agent", pattern="^(agent|plan)$")
+    model: str | None = Field(default=None, max_length=120)
 
 
 class AgentRunOut(BaseModel):

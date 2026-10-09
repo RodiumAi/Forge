@@ -7,7 +7,7 @@ import { transform } from "./transform.mjs";
 import { topoSort } from "./topo.mjs";
 import { rewriteSpecifiers } from "./rewrite.mjs";
 import { toPublishJsPath } from "./resolve.mjs";
-import { DEFAULT_CDN_IMPORTS } from "./importmap.mjs";
+import { cssCdnUrl, DEFAULT_CDN_IMPORTS } from "./importmap.mjs";
 
 /**
  * SEO head carried from the project's index.html into the published page.
@@ -23,23 +23,40 @@ export function extractSeoHead(html) {
   const head = (String(html || "").match(/<head[^>]*>([\s\S]*?)<\/head>/i) || [])[1] || "";
   const titleMatch = head.match(/<title>([\s\S]*?)<\/title>/i);
   const title = titleMatch ? titleMatch[1].trim() : null;
-  const tags = [];
+  /** @type {{ at: number, tag: string }[]} */
+  const found = [];
   let m;
   const metaRe = /<meta\b[^>]*\/?>/gi;
   while ((m = metaRe.exec(head))) {
     const tag = m[0];
     // charset/viewport are owned by the publish shell.
     if (/charset\s*=/i.test(tag) || /name=["']viewport["']/i.test(tag)) continue;
-    tags.push(tag);
+    found.push({ at: m.index, tag });
   }
   const linkRe = /<link\b[^>]*\/?>/gi;
   while ((m = linkRe.exec(head))) {
     const tag = m[0];
-    if (/rel=["'][^"']*(icon|apple-touch-icon|canonical|manifest)[^"']*["']/i.test(tag)) {
-      tags.push(tag);
+    const rel = (tag.match(/rel=["']([^"']*)["']/i) || [])[1] || "";
+    const href = (tag.match(/href=["']([^"']*)["']/i) || [])[1] || "";
+    // Icons, canonical/alternate, manifest, resource hints and remote
+    // stylesheets (web fonts...). Local /src stylesheets are the preview's own.
+    if (/(icon|apple-touch-icon|canonical|manifest|alternate|preconnect|dns-prefetch|preload)/i.test(rel)) {
+      found.push({ at: m.index, tag });
+    } else if (/stylesheet/i.test(rel) && /^https:\/\//i.test(href)) {
+      found.push({ at: m.index, tag });
     }
   }
-  return { title: title || null, tags };
+  // Structured data and third-party snippets (analytics...) the user put in
+  // index.html; the preview import map and the dev entry are not carried.
+  const scriptRe = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
+  while ((m = scriptRe.exec(head))) {
+    const attrs = m[1] || "";
+    if (/type=["'](importmap|module)["']/i.test(attrs)) continue;
+    if (/src=["']\/src\//i.test(attrs)) continue;
+    found.push({ at: m.index, tag: m[0] });
+  }
+  found.sort((a, b) => a.at - b.at);
+  return { title: title || null, tags: found.map((f) => f.tag) };
 }
 
 /**
@@ -58,8 +75,11 @@ export function buildGraph(files, entry, mode = "preview", extraImports = {}) {
   const importKeys = [...Object.keys(DEFAULT_CDN_IMPORTS), ...Object.keys(extraImports)];
   const exactBare = new Set(importKeys);
   const prefixBare = importKeys.filter((k) => k.endsWith("/"));
+  // Package stylesheets (`swiper/css`) are served by the host, not by the import map.
   const isAllowedBare = (spec) =>
-    exactBare.has(spec) || prefixBare.some((prefix) => spec.startsWith(prefix));
+    exactBare.has(spec) ||
+    prefixBare.some((prefix) => spec.startsWith(prefix)) ||
+    Boolean(cssCdnUrl(spec));
 
   for (const [path, content] of Object.entries(files)) {
     if (!/\.(tsx|ts|jsx|js)$/i.test(path)) continue;

@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from app.config import get_settings
+from app.services.typography import TEXT_EXTS, strip_long_dashes
 
 _SKIP_NAMES = {"node_modules", ".git", "dist", ".vite", "__pycache__"}
 _ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{1,62}$")
@@ -26,6 +27,15 @@ class TemplateMeta:
     bg: str | None
     preview: str | None
     path: Path
+    kind: str = "web"
+    tone: str = ""
+    fg: str | None = None
+    muted: str | None = None
+
+
+def _parse_kind(raw: object) -> str:
+    kind = str(raw or "web").strip().lower()
+    return kind if kind in ("web", "mobile") else "web"
 
 
 def templates_root() -> Path:
@@ -82,10 +92,14 @@ def _load_meta(folder: Path) -> TemplateMeta | None:
         bg=str(data["bg"]) if data.get("bg") else None,
         preview=str(data["preview"]) if data.get("preview") else None,
         path=folder,
+        kind=_parse_kind(data.get("kind")),
+        tone=str(data.get("tone") or "").strip(),
+        fg=str(data["fg"]) if data.get("fg") else None,
+        muted=str(data["muted"]) if data.get("muted") else None,
     )
 
 
-def list_templates() -> list[TemplateMeta]:
+def list_templates(*, kind: str | None = None) -> list[TemplateMeta]:
     global _templates_cache, _templates_cache_mtime
     root = templates_root()
     if not root.is_dir():
@@ -95,22 +109,25 @@ def list_templates() -> list[TemplateMeta]:
     except OSError:
         mtime = None
     if _templates_cache is not None and mtime is not None and mtime == _templates_cache_mtime:
-        return _templates_cache
-
-    out: list[TemplateMeta] = []
-    try:
-        children = sorted(root.iterdir())
-    except OSError:
-        return []
-    for child in children:
-        if not child.is_dir() or child.name.startswith("_"):
-            continue
-        meta = _load_meta(child)
-        if meta is not None:
-            out.append(meta)
-    _templates_cache = out
-    _templates_cache_mtime = mtime
-    return out
+        rows = _templates_cache
+    else:
+        out: list[TemplateMeta] = []
+        try:
+            children = sorted(root.iterdir())
+        except OSError:
+            return []
+        for child in children:
+            if not child.is_dir() or child.name.startswith("_"):
+                continue
+            meta = _load_meta(child)
+            if meta is not None:
+                out.append(meta)
+        _templates_cache = out
+        _templates_cache_mtime = mtime
+        rows = out
+    if kind in ("web", "mobile"):
+        return [m for m in rows if m.kind == kind]
+    return rows
 
 
 def get_template(template_id: str) -> TemplateMeta | None:
@@ -145,10 +162,35 @@ def fork_template(template_id: str, project_id: str, app_name: str | None = None
 
     shutil.copytree(meta.path, dest, ignore=ignore)
 
-    # Drop authoring metadata from the user project copy.
+    # Drop authoring metadata from the user project copy, but remember which kit
+    # it came from (and its tone) for the agent, outside the published files.
     tpl = dest / "template.json"
     if tpl.is_file():
         tpl.unlink()
+    origin = dest / ".forge" / "template.json"
+    origin.parent.mkdir(parents=True, exist_ok=True)
+    origin.write_text(
+        json.dumps(
+            {"id": meta.id, "kind": meta.kind, "tone": meta.tone, "boot_hint": meta.boot_hint_en},
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    # House typography: the user's copy of a template carries no long dashes
+    # (the template sources are left untouched).
+    for file in dest.rglob("*"):
+        if not file.is_file() or not file.name.lower().endswith(TEXT_EXTS):
+            continue
+        try:
+            text = file.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        cleaned = strip_long_dashes(text)
+        if cleaned != text:
+            file.write_text(cleaned, encoding="utf-8")
 
     if app_name:
         pkg = dest / "package.json"

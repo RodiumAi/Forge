@@ -1,0 +1,22 @@
+{
+  "name": "Rida",
+  "short_name": "Rida",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a1417",
+  "theme_color": "#0a1417",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

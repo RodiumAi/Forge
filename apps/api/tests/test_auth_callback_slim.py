@@ -16,7 +16,7 @@ from app.services.rodium_oidc import NEST_HTTP_TIMEOUT
 
 def test_nest_http_timeout_is_bounded() -> None:
     assert NEST_HTTP_TIMEOUT.connect == 5.0
-    assert float(NEST_HTTP_TIMEOUT.read) == 12.0
+    assert float(NEST_HTTP_TIMEOUT.read) == 20.0
 
 
 class _FakeQuery:
@@ -37,12 +37,22 @@ def test_callback_critical_path_skips_keys_and_wallet(monkeypatch: pytest.Monkey
         calls.append("exchange")
         assert code == "auth-code"
         assert code_verifier == "verifier"
-        return {"access_token": "access-tok", "refresh_token": "refresh-tok", "expires_in": 3600}
+        return {
+            "access_token": "access-tok",
+            "refresh_token": "refresh-tok",
+            "expires_in": 3600,
+            # No id_token → forces userinfo fallback on the critical path.
+        }
 
-    async def fake_userinfo(access_token: str):
+    async def fake_resolve(tokens: dict):
         calls.append("userinfo")
-        assert access_token == "access-tok"
-        return {"sub": "rodium-sub-1", "email": "forge-user@example.com", "name": "Forge User"}
+        assert tokens["access_token"] == "access-tok"
+        return {
+            "sub": "rodium-sub-1",
+            "email": "forge-user@example.com",
+            "email_verified": True,
+            "name": "Forge User",
+        }
 
     async def fake_keys(access_token: str):
         calls.append("keys")
@@ -54,10 +64,10 @@ def test_callback_critical_path_skips_keys_and_wallet(monkeypatch: pytest.Monkey
 
     monkeypatch.setattr(auth_mod, "parse_oauth_state", lambda _state, _binding=None: "verifier")
     monkeypatch.setattr(auth_mod, "exchange_code", fake_exchange)
-    monkeypatch.setattr(auth_mod, "fetch_userinfo", fake_userinfo)
+    monkeypatch.setattr(auth_mod, "resolve_rodium_profile", fake_resolve)
     monkeypatch.setattr(auth_mod, "fetch_api_keys", fake_keys)
     monkeypatch.setattr(auth_mod, "fetch_wallet", fake_wallet)
-    monkeypatch.setattr(auth_mod, "token_for_user", lambda _user: "forge-jwt")
+    monkeypatch.setattr(auth_mod, "token_for_user", lambda _user, **_kwargs: "forge-jwt")
     monkeypatch.setattr(auth_mod, "_store_oauth_tokens", lambda _row, _tokens: None)
 
     user_id = uuid.uuid4()
@@ -91,6 +101,7 @@ def test_callback_critical_path_skips_keys_and_wallet(monkeypatch: pytest.Monkey
             obj.id = user_id
 
     db.refresh.side_effect = fake_refresh
+    monkeypatch.setattr(auth_mod, "SessionLocal", lambda: db)
 
     background = BackgroundTasks()
     request = MagicMock()
@@ -101,7 +112,6 @@ def test_callback_critical_path_skips_keys_and_wallet(monkeypatch: pytest.Monkey
             body=body,
             request=request,
             background_tasks=background,
-            db=db,
         )
 
     result = asyncio.run(run_callback())

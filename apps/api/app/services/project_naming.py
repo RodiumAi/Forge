@@ -203,7 +203,7 @@ async def suggest_project_name(
     ]
 
     async def _remote_name() -> str:
-        auth = await resolve_generation_auth(db, user)
+        auth = await resolve_generation_auth(db, user, usage="free")
         return await complete_chat(
             auth=auth,
             model=settings.effective_default_model,

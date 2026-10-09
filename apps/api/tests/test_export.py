@@ -128,3 +128,10 @@ class TestCompleteness:
         files, _ = exported
         for internal in ("forge.json", "AI_RULES.md", "preview.html"):
             assert internal not in files
+
+
+class TestAliasesAndForgeModules:
+    def test_vite_resolves_the_at_alias(self, exported):
+        files, _ = exported
+        config = files["vite.config.ts"].decode()
+        assert '"@": fileURLToPath(new URL("./src"' in config

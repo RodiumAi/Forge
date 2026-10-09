@@ -1,0 +1,26 @@
+{
+  "id": "plausible",
+  "name": "Plausible",
+  "categories": [
+    "analytics"
+  ],
+  "access": "yes",
+  "methods": [
+    "script"
+  ],
+  "docsUrl": "https://plausible.io/docs/plausible-script",
+  "badge": null,
+  "enabledHint": false,
+  "logo": "logo.png",
+  "simpleIcon": "plausibleanalytics",
+  "i18n": {
+    "en": {
+      "title": "Plausible",
+      "blurb": "Privacy-friendly analytics script."
+    },
+    "fr": {
+      "title": "Plausible",
+      "blurb": "Script analytics respectueux de la vie privée."
+    }
+  }
+}

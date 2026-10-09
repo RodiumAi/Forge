@@ -1,0 +1,26 @@
+{
+  "id": "google-sheets",
+  "name": "Google Sheets",
+  "categories": [
+    "data"
+  ],
+  "access": "yes",
+  "methods": [
+    "iframe"
+  ],
+  "docsUrl": "https://support.google.com/docs/answer/183965",
+  "badge": null,
+  "enabledHint": false,
+  "logo": "logo.png",
+  "simpleIcon": "googlesheets",
+  "i18n": {
+    "en": {
+      "title": "Google Sheets",
+      "blurb": "Publish to web and iframe a sheet."
+    },
+    "fr": {
+      "title": "Google Sheets",
+      "blurb": "Publiez sur le web et embarquez la feuille."
+    }
+  }
+}

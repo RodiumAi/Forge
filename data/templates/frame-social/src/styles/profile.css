@@ -1,0 +1,12 @@
+/* Profile screen: header, bio, actions, photo grid. Root: .profile-screen */
+.profile-screen .profile-head { display: flex; align-items: center; gap: 1.2rem; padding: 1.1rem 1.1rem 0; }
+.profile-screen .stats { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; }
+.profile-screen .stats div strong { display: block; font-size: 1.1rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.profile-screen .stats div span { font-size: .74rem; color: var(--muted); }
+.profile-screen .profile-bio { padding: .3rem 1.1rem 0; display: grid; gap: .15rem; }
+.profile-screen .profile-bio strong { font-size: .95rem; }
+.profile-screen .profile-cta { display: grid; grid-template-columns: 1fr 1fr; gap: .55rem; padding: .3rem 1.1rem 0; }
+.profile-screen .grid-tabs { display: grid; grid-template-columns: 1fr 1fr; margin-top: .3rem; border-top: 1px solid var(--line); }
+.profile-screen .gt { display: grid; place-items: center; padding: .6rem 0; color: var(--muted); border-bottom: 2px solid transparent; }
+.profile-screen .gt.active { color: var(--fg); border-bottom-color: var(--fg); }
+.profile-screen .profile-grid { padding-top: 0; }

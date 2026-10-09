@@ -9,11 +9,32 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
-from app.models import Project
+from app.models import Project, ProjectDomain
 from app.services import preview_babel
+from app.services.domains import cleanup_aws
 from app.services.filesystem import project_dir
 
 logger = logging.getLogger("project_delete")
+
+
+def purge_site_prefix(slug: str) -> int:
+    """Delete published objects under ``{slug}/`` in the site-assets bucket.
+
+    Callers MUST invoke this while ``slug`` is still unique in Postgres (before
+    ``db.commit()`` frees it on rename/delete). Purging after the uniqueness
+    constraint is released races a stranger's claim+publish and can wipe their
+    freshly uploaded keys (CWE-367 / cross-tenant TOCTOU).
+    """
+    if not slug:
+        return 0
+    settings = get_settings()
+    from app.providers.objects import get_object_store
+
+    store = get_object_store()
+    bucket = store.bucket_site_assets or settings.bucket_site_assets
+    if not bucket:
+        return 0
+    return store.delete_prefix(bucket, f"{slug}/")
 
 
 def delete_project_full(db: Session, project: Project) -> None:
@@ -33,16 +54,28 @@ def delete_project_full(db: Session, project: Project) -> None:
     except Exception:
         logger.exception("Failed to remove project files project=%s", pid)
 
+    # Purge while the slug row still exists so another tenant cannot reclaim
+    # the prefix mid-delete.
     try:
-        settings = get_settings()
-        from app.providers.objects import get_object_store
-
-        store = get_object_store()
-        bucket = store.bucket_site_assets or settings.bucket_site_assets
-        if bucket and slug:
-            store.delete_prefix(bucket, f"{slug}/")
+        if slug:
+            purge_site_prefix(slug)
     except Exception:
         logger.exception("Failed to cleanup published assets slug=%s", slug)
+        db.rollback()
+        raise
+
+    domain = db.query(ProjectDomain).filter(ProjectDomain.project_id == project.id).first()
+    if domain is not None:
+        try:
+            cleanup_aws(domain, get_settings())
+        except Exception:
+            logger.exception("Failed to cleanup custom domain project=%s", pid)
+        try:
+            from app.routers.sites_v1 import clear_resolve_cache
+
+            clear_resolve_cache(domain.hostname)
+        except Exception:
+            logger.exception("Failed to clear custom-domain cache project=%s", pid)
 
     db.delete(project)
     db.commit()

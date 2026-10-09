@@ -1,7 +1,8 @@
 """Outbound URL guard: user-supplied URLs must not reach private / metadata targets.
 
 DNS is monkeypatched so tests are hermetic (no real resolution) and so we can
-model a public hostname that resolves to an internal IP.
+model a public hostname that resolves to an internal IP — and a DNS-rebinding
+attacker that answers differently on the second lookup.
 """
 
 from __future__ import annotations
@@ -14,7 +15,13 @@ import pytest
 
 from app.config import clear_settings_cache
 from app.services import attachments
-from app.services.net_guard import BlockedURLError, validate_public_url
+from app.services.net_guard import (
+    BlockedURLError,
+    ValidatedTarget,
+    httpx_get_pinned_sync,
+    resolve_and_validate,
+    validate_public_url,
+)
 
 
 def _fake_getaddrinfo(ip: str):
@@ -94,6 +101,18 @@ def test_allows_public_host(monkeypatch):
     validate_public_url("https://example.com/page")
 
 
+def test_resolve_and_validate_pins_first_public_ip(monkeypatch):
+    monkeypatch.setattr(socket, "getaddrinfo", _fake_getaddrinfo("93.184.216.34"))
+    target = resolve_and_validate("https://example.com:8443/a/b?q=1")
+    assert isinstance(target, ValidatedTarget)
+    assert target.ip == "93.184.216.34"
+    assert target.host == "example.com"
+    assert target.port == 8443
+    assert target.host_header == "example.com:8443"
+    assert target.pinned_url.startswith("https://93.184.216.34:8443/")
+    assert "example.com" not in target.pinned_url.split("/")[2]
+
+
 def test_allow_private_setting_bypasses(monkeypatch):
     monkeypatch.setenv("URL_FETCH_ALLOW_PRIVATE", "true")
     clear_settings_cache()
@@ -101,6 +120,73 @@ def test_allow_private_setting_bypasses(monkeypatch):
         validate_public_url("http://127.0.0.1:8000/")  # should not raise
     finally:
         clear_settings_cache()
+
+
+# --- shared address space (CGNAT, 100.64.0.0/10) -------------------------------
+# ipaddress.is_private is False for this range, so it needs its own coverage.
+
+CGNAT_LITERALS = [
+    "http://100.64.0.0/",  # first address
+    "http://100.64.0.1/",
+    "http://100.100.50.25:8080/",
+    "http://100.127.255.255/",  # last address
+    "http://[::ffff:100.64.0.1]/",  # IPv4-mapped
+]
+
+
+@pytest.mark.parametrize("url", CGNAT_LITERALS)
+def test_blocks_cgnat_literals(url):
+    with pytest.raises(BlockedURLError):
+        validate_public_url(url)
+
+
+def test_blocks_public_host_resolving_to_cgnat(monkeypatch):
+    monkeypatch.setattr(socket, "getaddrinfo", _fake_getaddrinfo("100.64.12.34"))
+    with pytest.raises(BlockedURLError):
+        validate_public_url("http://totally-legit.example.com/")
+
+
+def test_blocks_host_when_any_resolved_address_is_cgnat(monkeypatch):
+    def _resolver(host, port, *args, **kwargs):
+        return [
+            (socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP, "", ("93.184.216.34", port)),
+            (socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP, "", ("100.64.12.34", port)),
+        ]
+
+    monkeypatch.setattr(socket, "getaddrinfo", _resolver)
+    with pytest.raises(BlockedURLError):
+        resolve_and_validate("http://mixed.example.com/")
+
+
+@pytest.mark.parametrize("ip", ["100.63.255.255", "100.128.0.0"])
+def test_addresses_next_to_cgnat_are_still_public(ip):
+    # The blocked range is exactly 100.64.0.0/10; its neighbours are ordinary public space.
+    assert resolve_and_validate(f"http://{ip}/").ip == ip
+
+
+def test_allow_private_setting_bypasses_cgnat(monkeypatch):
+    # Self-hosters reaching internal services over Tailscale (100.x) opt in the same way as for RFC 1918.
+    monkeypatch.setenv("URL_FETCH_ALLOW_PRIVATE", "true")
+    clear_settings_cache()
+    try:
+        validate_public_url("http://100.64.0.1/")  # should not raise
+    finally:
+        clear_settings_cache()
+
+
+# ipaddress.is_global is True for these, so a guard built on it alone would let them through.
+NOT_GLOBAL_BLIND_SPOTS = [
+    "http://224.0.0.1/",  # IPv4 multicast
+    "http://[ff02::1]/",  # IPv6 multicast
+    "http://[64:ff9b::808:808]/",  # NAT64: embeds an IPv4 address
+    "http://[5f00::1]/",  # unallocated IPv6 space
+]
+
+
+@pytest.mark.parametrize("url", NOT_GLOBAL_BLIND_SPOTS)
+def test_blocks_ranges_that_is_global_alone_would_allow(url):
+    with pytest.raises(BlockedURLError):
+        validate_public_url(url)
 
 
 # --- sink: attachments._fetch_url --------------------------------------------
@@ -129,3 +215,107 @@ def test_fetch_url_refuses_redirect_to_metadata(monkeypatch):
 
     monkeypatch.setattr(httpx.AsyncClient, "get", fake_get)
     assert asyncio.run(attachments._fetch_url("http://example.com/img.png")) is None
+
+
+def test_fetch_url_connects_to_pinned_ip_not_hostname(monkeypatch):
+    """The GET URL must use the validated IP — never the original hostname."""
+    monkeypatch.setattr(socket, "getaddrinfo", _fake_getaddrinfo("93.184.216.34"))
+    seen: list[tuple[str, dict | None, dict | None]] = []
+
+    async def fake_get(self, url, **kwargs):
+        seen.append((str(url), kwargs.get("headers"), kwargs.get("extensions")))
+        return httpx.Response(
+            status_code=200,
+            content=b"\x89PNG",
+            headers={"content-type": "image/png"},
+            request=httpx.Request("GET", str(url)),
+        )
+
+    monkeypatch.setattr(httpx.AsyncClient, "get", fake_get)
+    result = asyncio.run(attachments._fetch_url("http://example.com/img.png"))
+    assert result is not None
+    assert result[0] == b"\x89PNG"
+    assert len(seen) == 1
+    get_url, headers, _ext = seen[0]
+    assert "93.184.216.34" in get_url
+    assert "example.com" not in get_url.split("/")[2]
+    assert headers is not None
+    assert headers.get("Host") == "example.com"
+
+
+def test_fetch_url_immune_to_dns_rebinding(monkeypatch):
+    """Second DNS answer must not affect the TCP target (classic rebinding)."""
+    calls = {"n": 0}
+
+    def rebind(host, port, *args, **kwargs):
+        calls["n"] += 1
+        # First answer (guard): public. Later answers would be loopback —
+        # production httpx would have used those without pinning.
+        ip = "93.184.216.34" if calls["n"] == 1 else "127.0.0.1"
+        family = socket.AF_INET
+        return [(family, socket.SOCK_STREAM, socket.IPPROTO_TCP, "", (ip, port))]
+
+    monkeypatch.setattr(socket, "getaddrinfo", rebind)
+    seen_urls: list[str] = []
+
+    async def fake_get(self, url, **kwargs):
+        seen_urls.append(str(url))
+        return httpx.Response(
+            status_code=200,
+            content=b"SSRF-INTERNAL-PROOF",
+            headers={"content-type": "image/png"},
+            request=httpx.Request("GET", str(url)),
+        )
+
+    monkeypatch.setattr(httpx.AsyncClient, "get", fake_get)
+    result = asyncio.run(attachments._fetch_url("http://rebind.attacker.example/x.png"))
+    assert result is not None
+    assert result[0] == b"SSRF-INTERNAL-PROOF"
+    assert calls["n"] == 1, "DNS must be consulted once per hop, then pinned"
+    assert "93.184.216.34" in seen_urls[0]
+    assert "127.0.0.1" not in seen_urls[0]
+
+
+def test_fetch_url_https_sets_sni_hostname_extension(monkeypatch):
+    monkeypatch.setattr(socket, "getaddrinfo", _fake_getaddrinfo("93.184.216.34"))
+    seen_ext: list[dict | None] = []
+
+    async def fake_get(self, url, **kwargs):
+        seen_ext.append(kwargs.get("extensions"))
+        return httpx.Response(
+            status_code=200,
+            content=b"x",
+            headers={"content-type": "image/png"},
+            request=httpx.Request("GET", str(url)),
+        )
+
+    monkeypatch.setattr(httpx.AsyncClient, "get", fake_get)
+    assert asyncio.run(attachments._fetch_url("https://example.com/a.png")) is not None
+    assert seen_ext[0] == {"sni_hostname": "example.com"}
+
+
+def test_sync_pinned_fetch_preserves_browser_headers_host_and_sni():
+    seen: dict = {}
+
+    class Client:
+        def get(self, url, **kwargs):
+            seen.update(url=str(url), **kwargs)
+            return httpx.Response(200, request=httpx.Request("GET", str(url)))
+
+    target = ValidatedTarget(
+        url="https://example.com/page",
+        scheme="https",
+        host="example.com",
+        port=443,
+        ip="93.184.216.34",
+    )
+    httpx_get_pinned_sync(
+        Client(),  # type: ignore[arg-type]
+        target,
+        headers={"cookie": "session=browser", "host": "attacker.invalid"},
+    )
+
+    assert seen["url"] == "https://93.184.216.34:443/page"
+    assert seen["headers"]["cookie"] == "session=browser"
+    assert seen["headers"]["Host"] == "example.com"
+    assert seen["extensions"] == {"sni_hostname": "example.com"}

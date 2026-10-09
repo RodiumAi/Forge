@@ -7,7 +7,7 @@ Stack Docker sans compte cloud. Le code applicatif est identique en local et en 
 | Object storage (S3) | MinIO `:9000` (console `:9001`) | boto3 + `OBJECT_STORE_ENDPOINT` |
 | KMS | `LocalKeyProvider` | `KEY_PROVIDER=local` + `DEV_MASTER_KEY` |
 | Secrets | `.env` | `SECRET_PROVIDER=env` |
-| Valkey / Redis | Valkey `:6380` (hôte) | même implémentation Redis |
+| Valkey / Redis | Valkey `127.0.0.1:6380` + `requirepass` | `REDIS_URL=redis://:…@…` |
 | Hébergement statique | Caddy `:8080` | Host `*.lvh.me` |
 
 ## Démarrage
@@ -30,7 +30,7 @@ Les URL présignées doivent être signées avec `OBJECT_STORE_PUBLIC_ENDPOINT=h
 
 ### Caddy contre le CDN / hébergeur statique
 
-Caddy reproduit le contrat de routage (`/_rodium/*` → API, le reste → MinIO), pas le cache CDN, le WAF ni le rate limit de bord.
+Caddy reproduit le contrat de routage (fichiers et pages des sites → MinIO), pas le cache CDN, le WAF ni le rate limit de bord.
 
 ### Valkey local contre Valkey/Redis managé
 
@@ -38,7 +38,7 @@ Aucun écart : la même implémentation Redis Streams tourne en local et en prod
 
 ### Preview
 
-Le live preview dashboard reste sur `{slug}.lvh.me:3100` (middleware Next). Caddy `:8080` sert le contrat Sites Gateway (assets publiés + `/_rodium`).
+Le live preview dashboard reste sur `{slug}.lvh.me:3100` (middleware Next). Caddy `:8080` sert le contrat Sites Gateway (assets publiés).
 
 Les aperçus s'exécutent dans le navigateur via le runner Babel/ESM : l'API ne lance ni Vite ni npm. Le seul sous-processus est `git`, pour les snapshots par projet.
 

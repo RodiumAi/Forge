@@ -1,0 +1,27 @@
+{
+  "id": "mailchimp",
+  "name": "Mailchimp",
+  "categories": [
+    "email"
+  ],
+  "access": "yes",
+  "methods": [
+    "script",
+    "iframe"
+  ],
+  "docsUrl": "https://mailchimp.com/help/add-a-signup-form-to-your-website/",
+  "badge": null,
+  "enabledHint": false,
+  "logo": "logo.png",
+  "simpleIcon": "mailchimp",
+  "i18n": {
+    "en": {
+      "title": "Mailchimp",
+      "blurb": "Embedded signup forms."
+    },
+    "fr": {
+      "title": "Mailchimp",
+      "blurb": "Formulaires d’inscription embarqués."
+    }
+  }
+}

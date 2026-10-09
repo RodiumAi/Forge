@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Sabor — preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 480px; height: 300px; overflow: hidden;
+    background: radial-gradient(120% 120% at 85% 0%, #2a1608, #1a120b 60%);
+    color: #fdf3e7;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    display: flex; align-items: center; gap: 20px; padding: 0 26px;
+  }
+  .side { width: 150px; }
+  .side .logo { display: flex; align-items: center; gap: 7px; font-size: 15px; font-weight: 800; letter-spacing: -.01em; }
+  .side .logo .dot { width: 14px; height: 14px; border-radius: 5px; background: linear-gradient(135deg, #f59e0b, #7a3d05); }
+  .side h2 { font-size: 20px; font-weight: 800; letter-spacing: -.02em; line-height: 1.12; margin-top: 14px; }
+  .side p { font-size: 10px; color: #b39b82; line-height: 1.4; margin-top: 8px; }
+  .side .tag {
+    display: inline-block; margin-top: 12px; font-size: 8.5px; font-weight: 700; color: #f59e0b;
+    background: color-mix(in srgb, #f59e0b 16%, transparent); padding: 3px 8px; border-radius: 99px;
+  }
+  .phone {
+    width: 172px; height: 288px; border-radius: 26px; flex: none;
+    border: 2px solid color-mix(in srgb, #fdf3e7 16%, transparent);
+    background: #1a120b; overflow: hidden; position: relative;
+    box-shadow: 0 22px 48px rgba(0,0,0,.55);
+  }
+  .notch { width: 52px; height: 7px; border-radius: 99px; margin: 8px auto 0; background: color-mix(in srgb, #fdf3e7 16%, transparent); }
+  .nav { display: flex; align-items: center; gap: 6px; padding: 8px 11px 7px; }
+  .pfp { width: 20px; height: 20px; border-radius: 99px; overflow: hidden; flex: none; }
+  .pfp img { width: 100%; height: 100%; object-fit: cover; }
+  .nav b { font-size: 10.5px; }
+  .nav small { display: block; font-size: 6.5px; color: #b39b82; }
+  .bell { margin-left: auto; width: 18px; height: 18px; border-radius: 99px; border: 1px solid color-mix(in srgb, #fdf3e7 14%, transparent); }
+  .hero {
+    margin: 4px 11px 0; height: 78px; border-radius: 14px; position: relative; overflow: hidden;
+    background: linear-gradient(135deg, #f59e0b, #3a1d05);
+  }
+  .hero img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .hero .scrim { position: absolute; inset: 0; background: linear-gradient(0deg, rgba(20,12,6,.92), rgba(20,12,6,.1) 70%); }
+  .hero .body { position: absolute; left: 9px; right: 9px; bottom: 8px; }
+  .hero .eye { font-size: 5.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: #f59e0b; }
+  .hero .t { font-size: 10px; font-weight: 800; letter-spacing: -.02em; margin-top: 2px; text-shadow: 0 1px 5px rgba(0,0,0,.6); }
+  .hero .pills { display: flex; gap: 4px; margin-top: 4px; }
+  .hero .pill { font-size: 5.5px; font-weight: 700; padding: 2px 6px; border-radius: 99px; background: #f59e0b; color: #241505; }
+  .hero .pill.soft { background: color-mix(in srgb, #f59e0b 22%, transparent); color: #f59e0b; }
+  .chips { display: flex; gap: 4px; padding: 8px 11px 0; overflow: hidden; }
+  .chips .c { font-size: 6px; font-weight: 700; padding: 4px 8px; border-radius: 99px; background: color-mix(in srgb, #fdf3e7 7%, transparent); color: #fdf3e7; white-space: nowrap; }
+  .chips .c.on { background: #f59e0b; color: #241505; }
+  .row { display: flex; align-items: center; gap: 7px; padding: 9px 11px 0; }
+  .row .th { width: 26px; height: 26px; border-radius: 8px; overflow: hidden; flex: none; background: linear-gradient(135deg, #f59e0b, #3a1d05); }
+  .row .th img { width: 100%; height: 100%; object-fit: cover; }
+  .row .m { flex: 1; min-width: 0; }
+  .row .m b { display: block; font-size: 7.5px; }
+  .row .m span { font-size: 6px; color: #b39b82; }
+  .row .m .st { display: flex; gap: 6px; margin-top: 1px; }
+  .row .m .st .k { font-size: 5.5px; color: #b39b82; font-weight: 600; }
+  .row .m .st .r { font-size: 5.5px; color: #f59e0b; font-weight: 700; }
+  .tabs {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    display: grid; grid-template-columns: repeat(4,1fr); padding: 6px 4px 8px;
+    border-top: 1px solid color-mix(in srgb, #fdf3e7 10%, transparent);
+    background: color-mix(in srgb, #1a120b 90%, #000);
+    font-size: 5.5px; color: #b39b82; text-align: center; gap: 2px;
+  }
+  .tabs .dot { width: 12px; height: 12px; margin: 0 auto 2px; border-radius: 3px; border: 1.3px solid currentColor; }
+  .tabs .active { color: #f59e0b; font-weight: 700; }
+</style>
+</head>
+<body>
+  <div class="side">
+    <div class="logo"><span class="dot"></span> Sabor</div>
+    <h2>Dinner, sorted</h2>
+    <p>Onboarding · featured recipe · categories · saved &amp; shop — with bottom tabs.</p>
+    <span class="tag">Mobile app shell</span>
+  </div>
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="nav">
+      <span class="pfp"><img src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=120&q=70" alt="" /></span>
+      <div><b>Sabor</b><small>Good evening, Nadia</small></div>
+      <span class="bell"></span>
+    </div>
+    <div class="hero">
+      <img src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=400&q=70" alt="" />
+      <span class="scrim"></span>
+      <div class="body">
+        <span class="eye">Featured tonight</span>
+        <div class="t">Smoky Tomato Shakshuka</div>
+        <div class="pills"><span class="pill">25 min</span><span class="pill soft">Easy</span></div>
+      </div>
+    </div>
+    <div class="chips">
+      <span class="c on">Breakfast</span><span class="c">Quick</span><span class="c">Veggie</span><span class="c">Grill</span>
+    </div>
+    <div class="row">
+      <span class="th"><img src="https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=120&q=70" alt="" /></span>
+      <div class="m">
+        <b>Peanut Chicken Bowls</b>
+        <span>West African · 4 servings</span>
+        <div class="st"><span class="k">35 min</span><span class="r">★ 4.7</span></div>
+      </div>
+    </div>
+    <div class="tabs">
+      <span class="active"><span class="dot"></span>Home</span>
+      <span><span class="dot"></span>Search</span>
+      <span><span class="dot"></span>Saved</span>
+      <span><span class="dot"></span>Profile</span>
+    </div>
+  </div>
+</body>
+</html>

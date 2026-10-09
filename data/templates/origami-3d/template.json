@@ -1,11 +1,20 @@
 {
+  "kind": "web",
   "id": "origami-3d",
-  "title": { "en": "Foldspace 3D", "fr": "Foldspace 3D" },
+  "title": {
+    "en": "Foldspace 3D",
+    "fr": "Foldspace 3D"
+  },
   "description": {
     "en": "Product landing with real CSS 3D constructions: an animated pure-CSS cube in the hero, folded hinged panels, isometric feature cards and offset depth planes.",
     "fr": "Landing produit avec de vraies constructions CSS 3D : cube animé en CSS pur dans le hero, panneaux pliés sur charnières, cartes isométriques et plans décalés en profondeur."
   },
-  "tags": ["product", "3d", "landing", "saas"],
+  "tags": [
+    "product",
+    "3d",
+    "landing",
+    "saas"
+  ],
   "preview": "preview.html",
   "bootHint": {
     "en": "Adapt origami-3d: product name, hero copy, 3D feature panels.",

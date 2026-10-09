@@ -1,0 +1,39 @@
+import { Calendar, ChartNoAxesColumnIncreasing, ListChecks, User } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import type { Tab } from "../data";
+
+const TABS: { id: Tab; label: string; Icon: LucideIcon }[] = [
+  { id: "today", label: "Today", Icon: Calendar },
+  { id: "habits", label: "Habits", Icon: ListChecks },
+  { id: "stats", label: "Stats", Icon: ChartNoAxesColumnIncreasing },
+  { id: "profile", label: "Profile", Icon: User },
+];
+
+type Props = { tab: Tab; onChange: (tab: Tab) => void };
+
+export default function TabBar({ tab, onChange }: Props) {
+  return (
+    <nav className="app-tabbar" aria-label="Primary">
+      {TABS.map(({ id, label, Icon }) => {
+        const active = tab === id;
+        return (
+          <button
+            key={id}
+            className={active ? "tab active" : "tab"}
+            aria-current={active ? "page" : undefined}
+            onClick={() => onChange(id)}
+          >
+            <Icon
+              size={22}
+              strokeWidth={1.8}
+              fill={active ? "currentColor" : "none"}
+              fillOpacity={active ? 0.16 : 0}
+              aria-hidden
+            />
+            <span>{label}</span>
+          </button>
+        );
+      })}
+    </nav>
+  );
+}

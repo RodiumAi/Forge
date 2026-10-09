@@ -177,10 +177,20 @@ def _arcname_for(path: Path, source_root: Path, prefix: str) -> str:
 
 # --- frontend normalisation ---------------------------------------------------
 
-_VITE_CONFIG = """import react from "@vitejs/plugin-react";
+_VITE_CONFIG = """import { fileURLToPath, URL } from "node:url";
+import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
-export default defineConfig({ plugins: [react()] });
+// "@/x" -> src/x, as in the Forge runtime (tsconfig paths alone do not
+// configure Vite's resolver).
+export default defineConfig({
+  plugins: [react()],
+  resolve: {
+    alias: {
+      "@": fileURLToPath(new URL("./src", import.meta.url)),
+    },
+  },
+});
 """
 
 _TSCONFIG = """{
@@ -331,7 +341,7 @@ def _export_index_html(front: Path, project_name: str) -> str:
 
 def frontend_overrides(front: Path, project_name: str) -> dict[str, str]:
     """arcname (relative to the frontend root) -> normalised content."""
-    overrides: dict[str, str] = {
+    return {
         "package.json": _export_package_json(front, project_name),
         "index.html": _export_index_html(front, project_name),
         # Always ship a known-good Vite + TS config so exports don't inherit
@@ -339,7 +349,6 @@ def frontend_overrides(front: Path, project_name: str) -> dict[str, str]:
         "vite.config.ts": _VITE_CONFIG,
         "tsconfig.json": _TSCONFIG,
     }
-    return overrides
 
 
 def build_readme(*, project_name: str, layout: ExportLayout, locale: str) -> str:

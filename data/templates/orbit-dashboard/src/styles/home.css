@@ -1,0 +1,30 @@
+/* KPI cards */
+.home-screen .kpi-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 20px; }
+.home-screen .kpi-card {
+  background: var(--soft); border: 1px solid #e2e8f0; border-radius: 12px;
+  padding: 16px 18px; display: flex; flex-direction: column; gap: 6px;
+}
+.home-screen .kpi-label { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.home-screen .kpi-value { font-size: 1.5rem; font-weight: 700; }
+.home-screen .kpi-delta { font-size: 0.8rem; }
+.home-screen .kpi-delta.up { color: #16a34a; }
+.home-screen .kpi-delta.down { color: #dc2626; }
+
+/* CSS bar chart */
+.home-screen .chart { display: flex; align-items: flex-end; gap: 10px; height: 180px; }
+.home-screen .chart-col { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; gap: 6px; }
+.home-screen .chart-bar { background: var(--accent); border-radius: 5px 5px 0 0; opacity: 0.9; min-height: 4px; }
+.home-screen .chart-col:hover .chart-bar { opacity: 1; }
+.home-screen .chart-label { text-align: center; font-size: 0.55rem; color: var(--muted); }
+
+/* Recent orders */
+.home-screen .customer-cell { display: inline-flex; align-items: center; gap: 8px; }
+.home-screen .table-avatar {
+  width: 24px; height: 24px; border-radius: 50%; object-fit: cover;
+  background: linear-gradient(135deg, #e2e8f0, #cbd5e1); flex-shrink: 0;
+}
+
+@media (min-width: 761px) {
+  .home-screen .kpi-grid { grid-template-columns: repeat(4, 1fr); }
+  .home-screen .chart-label { font-size: 0.7rem; }
+}

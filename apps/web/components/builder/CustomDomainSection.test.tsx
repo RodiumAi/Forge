@@ -14,6 +14,13 @@ function domainState(overrides: Partial<DomainState> = {}): DomainState {
     cname_target: "sites.forge.rodiumai.io",
     dns_records: [
       {
+        purpose: "ownership",
+        type: "TXT",
+        name: "_rodiumai-challenge.www",
+        full_name: "_rodiumai-challenge.www.client.com",
+        value: "rodiumai-domain-verification=fresh",
+      },
+      {
         purpose: "routing",
         type: "CNAME",
         name: "www",
@@ -31,6 +38,7 @@ function domainState(overrides: Partial<DomainState> = {}): DomainState {
     public_url: null,
     last_error: null,
     verified_at: null,
+    challenge_expires_at: "2026-09-17T14:00:00Z",
     ...overrides,
   };
 }
@@ -54,14 +62,16 @@ describe("CustomDomainSection", () => {
     expect(screen.getByRole("button", { name: /Ajouter le domaine/ })).toBeDisabled();
   });
 
-  it("renders both DNS records in pending_dns", async () => {
+  it("renders ownership TXT, routing and ACM records in pending_dns", async () => {
     apiMock.mockResolvedValueOnce(domainState());
     renderSection();
     expect(await screen.findByText("www.client.com")).toBeInTheDocument();
+    expect(screen.getByText("Preuve de propriété")).toBeInTheDocument();
     expect(screen.getByText("Routage")).toBeInTheDocument();
     expect(screen.getByText("Validation SSL")).toBeInTheDocument();
     expect(screen.getByText("sites.forge.rodiumai.io")).toBeInTheDocument();
     expect(screen.getByText("_t.www")).toBeInTheDocument();
+    expect(screen.getByText("_rodiumai-challenge.www")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Vérifier/ })).toBeInTheDocument();
   });
 

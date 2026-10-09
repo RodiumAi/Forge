@@ -1,0 +1,12 @@
+/* Home screen: featured recipe hero, categories, popular list. Root: .home-screen */
+.home-screen .hero {
+  position: relative; border-radius: 1.4rem; overflow: hidden;
+  aspect-ratio: 1.5 / 1; border: 1px solid var(--line);
+  background: linear-gradient(150deg, color-mix(in srgb, var(--accent) 55%, #3a1d05), #2a1608);
+}
+.home-screen .hero > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.home-screen .hero-scrim { position: absolute; inset: 0; background: linear-gradient(0deg, rgba(20,12,6,.92) 6%, rgba(20,12,6,.35) 48%, transparent 78%); }
+.home-screen .hero-body { position: absolute; inset: auto 1.1rem 1.05rem; }
+.home-screen .hero-body .eyebrow { display: inline-block; font-size: .68rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-bottom: .3rem; }
+.home-screen .hero-body h2 { margin: 0 0 .55rem; font-size: 1.45rem; line-height: 1.1; letter-spacing: -.02em; text-shadow: 0 2px 12px rgba(0,0,0,.5); }
+.home-screen .hero-pills { display: flex; gap: .4rem; }

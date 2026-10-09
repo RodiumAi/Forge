@@ -1,0 +1,26 @@
+{
+  "id": "chatbot-com",
+  "name": "Chatbot.com",
+  "categories": [
+    "chat"
+  ],
+  "access": "yes",
+  "methods": [
+    "script"
+  ],
+  "docsUrl": "https://www.chatbot.com/help/",
+  "badge": null,
+  "enabledHint": false,
+  "logo": "logo.png",
+  "simpleIcon": null,
+  "i18n": {
+    "en": {
+      "title": "Chatbot.com",
+      "blurb": "Conversational widget via install script."
+    },
+    "fr": {
+      "title": "Chatbot.com",
+      "blurb": "Widget conversationnel via script d’install."
+    }
+  }
+}

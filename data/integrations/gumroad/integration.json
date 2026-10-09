@@ -1,0 +1,27 @@
+{
+  "id": "gumroad",
+  "name": "Gumroad",
+  "categories": [
+    "payments"
+  ],
+  "access": "yes",
+  "methods": [
+    "script",
+    "link"
+  ],
+  "docsUrl": "https://help.gumroad.com/article/68-overlay-checkout",
+  "badge": null,
+  "enabledHint": false,
+  "logo": "logo.png",
+  "simpleIcon": "gumroad",
+  "i18n": {
+    "en": {
+      "title": "Gumroad",
+      "blurb": "Overlay checkout for digital products."
+    },
+    "fr": {
+      "title": "Gumroad",
+      "blurb": "Checkout overlay pour produits numériques."
+    }
+  }
+}

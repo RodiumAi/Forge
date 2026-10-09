@@ -75,16 +75,50 @@ export function collectImports(code) {
 }
 
 /**
+ * Published builds only: `<img>` without an explicit `loading` gets
+ * `loading="lazy" decoding="async"`, except the one marked
+ * `fetchPriority="high"` (the hero image is meant to load eagerly).
+ * @param {any} api
+ */
+export function lazyImagesPlugin(api) {
+  const t = api.types;
+  const hasAttr = (attrs, names) =>
+    attrs.some(
+      (a) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name) && names.includes(a.name.name),
+    );
+  return {
+    visitor: {
+      JSXOpeningElement(path) {
+        const name = path.node.name;
+        if (!t.isJSXIdentifier(name) || name.name !== "img") return;
+        const attrs = path.node.attributes;
+        if (attrs.some((a) => t.isJSXSpreadAttribute(a))) return;
+        if (hasAttr(attrs, ["loading", "fetchPriority", "fetchpriority"])) return;
+        attrs.push(t.jsxAttribute(t.jsxIdentifier("loading"), t.stringLiteral("lazy")));
+        if (!hasAttr(attrs, ["decoding"])) {
+          attrs.push(t.jsxAttribute(t.jsxIdentifier("decoding"), t.stringLiteral("async")));
+        }
+      },
+    },
+  };
+}
+
+/**
  * @param {string} code
  * @param {string} path
+ * @param {{ production?: boolean }} [options] production: no source maps,
+ *   lazy images (publish). Preview keeps inline source maps for debugging.
  * @returns {TransformResult}
  */
-export function transform(code, path) {
+export function transform(code, path, options = {}) {
+  const production = Boolean(options.production);
   try {
     const out = Babel.transform(code, {
       filename: path,
       presets: PRESETS,
-      sourceMaps: "inline",
+      plugins: production ? [lazyImagesPlugin] : [],
+      // Inline maps would ship the original TSX inside every published file.
+      sourceMaps: production ? false : "inline",
       compact: false,
       configFile: false,
       babelrc: false,

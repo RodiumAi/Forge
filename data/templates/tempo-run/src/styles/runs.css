@@ -1,0 +1,10 @@
+/* Runs screen: recent sessions list. Root: .runs-screen */
+.runs-screen .runrow { display: flex; align-items: center; gap: .8rem; padding: .75rem 0; border-bottom: 1px solid var(--line); }
+.runs-screen .runrow:first-child { padding-top: 0; }
+.runs-screen .runrow:last-child { border-bottom: 0; padding-bottom: 0; }
+.runs-screen .runrow .meta { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.runs-screen .runrow .meta strong { font-size: .95rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.runs-screen .runrow .meta span { font-size: .76rem; color: var(--muted); }
+.runs-screen .runrow .runstat { display: flex; flex-direction: column; align-items: flex-end; }
+.runs-screen .runrow .runstat b { font-size: .98rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.runs-screen .runrow .runstat span { font-size: .74rem; color: var(--accent); font-weight: 600; }

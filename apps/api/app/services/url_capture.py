@@ -7,13 +7,16 @@ import logging
 import re
 from urllib.parse import urlparse
 
+import httpx
+
 from app.services.attachments import count_markers_by_intent
 from app.services.filesystem import write_bytes
 from app.services.llm import RodiumError
 from app.services.net_guard import (
     BlockedURLError,
-    validate_public_url,
-    validate_public_url_async,
+    httpx_get_pinned_sync,
+    resolve_and_validate,
+    resolve_and_validate_async,
 )
 
 logger = logging.getLogger("url_capture")
@@ -30,21 +33,173 @@ _IMAGE_EXT = (
     ".bmp",
     ".avif",
 )
+# Non-page assets / third-party embeds must not trigger vision site cloning.
+_ASSET_EXT = (
+    ".js",
+    ".mjs",
+    ".cjs",
+    ".css",
+    ".map",
+    ".json",
+    ".xml",
+    ".txt",
+    ".wasm",
+)
+_EMBED_PATH_RE = re.compile(
+    r"/(?:embed|widgets?|js(?:/|$)|sdk(?:/|$)|static(?:/|$)|assets(?:/|$))",
+    re.I,
+)
+# Pasted iframe/script widgets (Tally, Typeform, Calendly, …) — integrate, don't screenshot.
+# Linear scan only: the previous `_EMBED_SNIPPET_RE` used unbounded `[^>]*` /
+# `[\w-]*` / `[^\"']*` and could stall the asyncio event loop on ~50k pastes.
+_EMBED_TAG_WINDOW = 512
+_EMBED_SRC_HINTS = ("embed", "widget", "sdk", "js.", ".js?", ".js#", ".js")
+_AUTO_URL_CAPTURE_FILES_RE = re.compile(
+    r"\n*\[(?:Files|Fichiers):\s*[^\]]*\burl-capture-[^\]]*\]\s*",
+    re.I,
+)
+_AUTO_URL_CAPTURE_REF_RE = re.compile(
+    r"\n*\[(?:Reference screenshot|Capture de référence):\s*url-capture-[^\]]*\]\s*",
+    re.I,
+)
 _VIEWPORTS = (
     ("desktop", 1440, 900),
     ("mobile", 390, 844),
 )
 _NAV_TIMEOUT_MS = 45_000
+_RESPONSE_HEADERS_TO_DROP = {
+    "connection",
+    "content-encoding",
+    "content-length",
+    "keep-alive",
+    "proxy-authenticate",
+    "proxy-authorization",
+    "te",
+    "trailer",
+    "transfer-encoding",
+    "upgrade",
+}
+
+
+def is_capturable_site_url(url: str) -> bool:
+    """True when the URL looks like a browsable page worth screenshotting."""
+    lower = (url or "").lower()
+    path = urlparse(lower).path or "/"
+    bare_path = path.split("?", 1)[0]
+    if any(bare_path.endswith(ext) for ext in _IMAGE_EXT):
+        return False
+    if any(bare_path.endswith(ext) for ext in _ASSET_EXT):
+        return False
+    return not _EMBED_PATH_RE.search(path)
+
+
+def _window_has_http_attr(window: str, attr: str) -> bool:
+    """True when `attr="https://...` or `attr='https://...` appears in window."""
+    lower = window.lower()
+    needle = attr.lower() + "="
+    start = 0
+    while True:
+        idx = lower.find(needle, start)
+        if idx < 0:
+            return False
+        j = idx + len(needle)
+        while j < len(lower) and lower[j] in " \t\n\r":
+            j += 1
+        if j < len(lower) and lower[j] in ("'", '"'):
+            j += 1
+            while j < len(lower) and lower[j] in " \t\n\r":
+                j += 1
+            if lower.startswith("http://", j) or lower.startswith("https://", j):
+                return True
+        start = idx + 1
+
+
+def _iframe_window_is_embed(window: str) -> bool:
+    if _window_has_http_attr(window, "src"):
+        return True
+    # data-tally-src, data-src, data-widget-src, …
+    lower = window.lower()
+    start = 0
+    while True:
+        idx = lower.find("data-", start)
+        if idx < 0:
+            return False
+        # Bound attribute name length to avoid quadratic scans.
+        name_end = idx + 5
+        while (
+            name_end < len(lower)
+            and name_end - idx < 48
+            and (lower[name_end].isalnum() or lower[name_end] in "_-")
+        ):
+            name_end += 1
+        if name_end > idx + 5 and lower[idx:name_end].endswith("src"):
+            attr = lower[idx:name_end]
+            if _window_has_http_attr(window, attr):
+                return True
+        start = idx + 1
+
+
+def _script_window_is_embed(window: str) -> bool:
+    if not _window_has_http_attr(window, "src"):
+        return False
+    lower = window.lower()
+    # Same keywords as the former regex: embed|widget|sdk|js.|.js(?|#|$)
+    for hint in _EMBED_SRC_HINTS:
+        if hint in lower:
+            return True
+    # Bare `.js` at end of a quoted URL inside the window.
+    return '.js"' in lower or ".js'" in lower
+
+
+def looks_like_third_party_embed_snippet(text: str) -> bool:
+    """True when the user pasted an iframe/script embed to integrate, not clone.
+
+    O(n) scan with a fixed per-tag window — safe to run on the asyncio loop.
+    """
+    if not text:
+        return False
+    lower = text.lower()
+    n = len(lower)
+    i = 0
+    while i < n:
+        # Find next '<' then check for iframe/script without unbounded regex.
+        lt = lower.find("<", i)
+        if lt < 0:
+            break
+        j = lt + 1
+        while j < n and lower[j] in " \t\n\r":
+            j += 1
+        window = text[lt : min(lt + _EMBED_TAG_WINDOW, n)]
+        if (
+            lower.startswith("iframe", j)
+            and (j + 6 >= n or not lower[j + 6].isalnum())
+            and _iframe_window_is_embed(window)
+        ):
+            return True
+        if (
+            lower.startswith("script", j)
+            and (j + 6 >= n or not lower[j + 6].isalnum())
+            and _script_window_is_embed(window)
+        ):
+            return True
+        i = lt + 1
+    return False
+
+
+def strip_auto_url_capture_markers(text: str) -> str:
+    """Remove auto url-capture Files/Reference markers (keeps user-uploaded refs)."""
+    cleaned = _AUTO_URL_CAPTURE_FILES_RE.sub("\n", text or "")
+    cleaned = _AUTO_URL_CAPTURE_REF_RE.sub("\n", cleaned)
+    return re.sub(r"\n{3,}", "\n\n", cleaned).strip()
 
 
 def extract_site_urls(text: str) -> list[str]:
-    """Return http(s) URLs that look like pages (not bare image files)."""
+    """Return http(s) URLs that look like pages (not images, assets, or embeds)."""
     found: list[str] = []
     seen: set[str] = set()
     for raw in _SITE_URL_RE.findall(text or ""):
         url = raw.rstrip(").,;]")
-        lower = url.lower()
-        if any(lower.split("?", 1)[0].endswith(ext) for ext in _IMAGE_EXT):
+        if not is_capturable_site_url(url):
             continue
         if url in seen:
             continue
@@ -55,9 +210,13 @@ def extract_site_urls(text: str) -> list[str]:
 
 def site_url_needing_capture(user_text: str) -> str | None:
     """First site URL to capture, or None if enough reference shots already exist."""
-    if count_markers_by_intent(user_text or "", "reference") >= 2:
+    text = user_text or ""
+    # Embed snippets (Tally iframe + widget.js, etc.) must not trigger cloning captures.
+    if looks_like_third_party_embed_snippet(text):
         return None
-    urls = extract_site_urls(user_text or "")
+    if count_markers_by_intent(text, "reference") >= 2:
+        return None
+    urls = extract_site_urls(text)
     return urls[0] if urls else None
 
 
@@ -79,37 +238,104 @@ def _capture_sync(url: str) -> list[tuple[str, bytes]]:
         ) from exc
 
     def _guard_route(route) -> None:
-        # Re-validate every request (initial navigation, redirects, subresources)
-        # so a redirect to an internal host is aborted mid-flight.
+        # Resolve once, fetch through the pinned transport (which preserves
+        # the original TLS SNI), then give Chromium the verified response.
+        # Rewriting Chromium's URL to an IP would lose SNI and break virtual
+        # hosts even when certificate errors are ignored.
         try:
-            validate_public_url(route.request.url)
-        except BlockedURLError:
+            if route.request.method != "GET":
+                route.abort()
+                return
+            target = resolve_and_validate(route.request.url)
+            response = httpx_get_pinned_sync(
+                fetch_client,
+                target,
+                headers=route.request.headers,
+            )
+            response_headers = {
+                key: value
+                for key, value in response.headers.items()
+                if key.lower() not in _RESPONSE_HEADERS_TO_DROP
+            }
+            route.fulfill(
+                status=response.status_code,
+                headers=response_headers,
+                body=response.content,
+            )
+        except (BlockedURLError, httpx.HTTPError):
             with contextlib.suppress(Exception):
                 route.abort()
-            return
+
+    def _close_popup(page) -> None:
+        # Context routing protects popup requests too. Closing renderer-created
+        # pages is defence in depth and must not affect our own top-level pages.
         with contextlib.suppress(Exception):
-            route.continue_()
+            if page.opener() is not None:
+                page.close()
+
+    def _block_websocket(websocket_route) -> None:
+        with contextlib.suppress(Exception):
+            websocket_route.close(code=1008, reason="WebSockets are disabled during URL capture")
+
+    # Reject an invalid initial URL before starting Chromium. The context route
+    # below performs the authoritative validation and pinning for every request.
+    try:
+        resolve_and_validate(url)
+    except BlockedURLError as exc:
+        raise RodiumError(f"Could not capture screenshots for {url}", None, "upstream") from exc
 
     shots: list[tuple[str, bytes]] = []
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        try:
-            for label, width, height in _VIEWPORTS:
-                page = browser.new_page(viewport={"width": width, "height": height})
-                page.route("**/*", _guard_route)
+    # verify=False is intentional with IP pinning: after net_guard resolves and
+    # blocks private/link-local targets, httpx_get_pinned_sync dials the pinned
+    # IP while keeping the original Host/SNI. Hostname cert checks cannot pass
+    # against a raw IP, so TLS verify is off here — SSRF mitigation is the
+    # resolver allowlist, not the browser's default trust store. Same reason
+    # Playwright ignores HTTPS errors on the (fully routed) context.
+    with httpx.Client(
+        follow_redirects=False,
+        timeout=httpx.Timeout(20.0),
+        trust_env=False,
+        verify=False,
+    ) as fetch_client:
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            try:
+                context = browser.new_context(
+                    ignore_https_errors=True,
+                    service_workers="block",
+                    accept_downloads=False,
+                )
                 try:
-                    page.goto(url, wait_until="domcontentloaded", timeout=_NAV_TIMEOUT_MS)
-                    with contextlib.suppress(Exception):
-                        page.wait_for_load_state("networkidle", timeout=12_000)
-                    # Prefer full page when short enough; otherwise viewport.
-                    png = page.screenshot(full_page=True, type="png")
-                    if len(png) > 4_500_000:
-                        png = page.screenshot(full_page=False, type="png")
-                    shots.append((label, png))
+                    # Install all context-wide controls before any page exists,
+                    # so popups and workers inherit the same network policy.
+                    context.route("**/*", _guard_route)
+                    route_web_socket = getattr(context, "route_web_socket", None)
+                    if callable(route_web_socket):
+                        route_web_socket("**/*", _block_websocket)
+                    context.on("page", _close_popup)
+
+                    for label, width, height in _VIEWPORTS:
+                        page = context.new_page()
+                        page.set_viewport_size({"width": width, "height": height})
+                        try:
+                            page.goto(
+                                url,
+                                wait_until="domcontentloaded",
+                                timeout=_NAV_TIMEOUT_MS,
+                            )
+                            with contextlib.suppress(Exception):
+                                page.wait_for_load_state("networkidle", timeout=12_000)
+                            # Prefer full page when short enough; otherwise viewport.
+                            png = page.screenshot(full_page=True, type="png")
+                            if len(png) > 4_500_000:
+                                png = page.screenshot(full_page=False, type="png")
+                            shots.append((label, png))
+                        finally:
+                            page.close()
                 finally:
-                    page.close()
-        finally:
-            browser.close()
+                    context.close()
+            finally:
+                browser.close()
     if not shots:
         raise RodiumError(f"Could not capture screenshots for {url}", None, "upstream")
     return shots
@@ -125,7 +351,7 @@ async def capture_site_screenshots(
     import asyncio
 
     try:
-        await validate_public_url_async(url)
+        await resolve_and_validate_async(url)
     except BlockedURLError as exc:
         # Don't leak *why* (internal host, metadata, etc.) — same message as an
         # unreachable public site.
@@ -179,7 +405,14 @@ async def enrich_prompt_with_site_url_captures(
     user_content: str,
     locale: str = "en",
 ) -> str:
-    """If the prompt has a site URL and few references, capture and inject markers."""
+    """If the prompt has a site URL and few references, capture and inject markers.
+
+    Third-party embed pastes (iframe/script widgets) skip capture. If a prior run
+    already attached accidental ``url-capture-*`` markers, strip them so Retry
+    does not force ``code.edit.with_vision`` / multi-page planning.
+    """
+    if looks_like_third_party_embed_snippet(user_content):
+        return strip_auto_url_capture_markers(user_content)
     url = site_url_needing_capture(user_content)
     if not url:
         return user_content

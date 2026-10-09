@@ -1,11 +1,20 @@
 {
+  "kind": "web",
   "id": "terra-eco",
-  "title": { "en": "Terra Collective", "fr": "Terra Collective" },
+  "title": {
+    "en": "Terra Collective",
+    "fr": "Terra Collective"
+  },
   "description": {
     "en": "Warm organic site for a sustainability brand: blob shapes, earthy palette, animated impact counters, regenerative projects, certification badges and SVG wave dividers.",
     "fr": "Site organique et chaleureux pour une marque durable : formes blob, palette terreuse, compteurs d'impact, projets régénératifs, badges de certification et vagues SVG."
   },
-  "tags": ["eco", "sustainability", "organic", "nonprofit"],
+  "tags": [
+    "eco",
+    "sustainability",
+    "organic",
+    "nonprofit"
+  ],
   "preview": "preview.html",
   "bootHint": {
     "en": "Adapt terra-eco: brand name, mission copy, impact numbers, projects.",

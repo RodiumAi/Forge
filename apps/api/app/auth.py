@@ -2,9 +2,10 @@ from datetime import UTC, datetime, timedelta
 from typing import Annotated
 from uuid import UUID
 
+import jwt
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError, jwt
+from jwt import InvalidTokenError
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
@@ -39,7 +40,12 @@ def create_access_token(user_id: UUID, token_version: int = 0) -> str:
     return jwt.encode(payload, settings.secret_key, algorithm="HS256")
 
 
-def token_for_user(user: User) -> str:
+def token_for_user(user: User, *, locale: str = "en") -> str:
+    if getattr(user, "access_blocked_at", None) is not None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=t("access_blocked", locale),
+        )
     return create_access_token(user.id, user.token_version or 0)
 
 
@@ -113,7 +119,7 @@ def _resolve_user(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=t("invalid_token", locale),
             )
-    except JWTError as exc:
+    except InvalidTokenError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=t("invalid_token", locale),
@@ -141,6 +147,12 @@ def _resolve_user(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=t("user_not_found", locale),
+        )
+
+    if getattr(user, "access_blocked_at", None) is not None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=t("access_blocked", locale),
         )
 
     # Tokens minted before the last password change are dead. Absent `tv`

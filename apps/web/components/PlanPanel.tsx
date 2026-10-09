@@ -73,10 +73,9 @@ function PlanPanelInner({
   onOpenFile: _onOpenFile,
 }: Props) {
   const { t } = useI18n();
-  // Checklist starts collapsed only for a completed header-only glance.
-  // While awaiting confirm / resume / errors / execution it must be open —
-  // otherwise Execute lives behind "View plan" and the plan is invisible.
-  const [expanded, setExpanded] = useState(false);
+  // Open on first paint. "View plan" then hides only the checklist. Execute
+  // stays outside that block, so collapsing the plan never hides it.
+  const [expanded, setExpanded] = useState(true);
   if (!tasks.length) return null;
 
   const doneCount = tasks.filter((task) => task.status === "done").length;
@@ -102,13 +101,7 @@ function PlanPanelInner({
   else if (isDone) statusLabel = t("planStatusDone");
 
   const hasHeaderCard = Boolean(meta?.title || meta?.summary);
-  const checklistOpen =
-    !hasHeaderCard ||
-    expanded ||
-    isExecuting ||
-    isAwaiting ||
-    canResume ||
-    Boolean(errorTask);
+  const checklistOpen = !hasHeaderCard || isExecuting || expanded;
 
   let statusChipClass = "plan-status-chip";
   if (isExecuting) statusChipClass += " is-building";
@@ -208,38 +201,39 @@ function PlanPanelInner({
             ))}
           </ol>
 
-          {showExecute ? (
-            <>
-              <button type="button" className="btn plan-execute" disabled={busy} onClick={onExecute}>
-                {busy ? (
-                  <>
-                    <Icon icon={Loader2} className="ui-icon-sm agent-spin" />
-                    {t("planExecuting")}
-                  </>
-                ) : (
-                  <>
-                    <Icon icon={Play} className="ui-icon-sm" />
-                    {canResume ? t("planResume") : t("planExecute")}
-                  </>
-                )}
-              </button>
-              {onExecuteStep ? (
-                <button
-                  type="button"
-                  className="btn plan-execute plan-execute-step"
-                  disabled={busy}
-                  onClick={onExecuteStep}
-                >
-                  <Icon icon={StepForward} className="ui-icon-sm" />
-                  {partialProgress ? t("planNextStep") : t("planExecuteStep")}
-                </button>
-              ) : null}
-              {needsConfirm && onDismiss ? (
-                <button type="button" className="btn plan-dismiss" disabled={busy} onClick={onDismiss}>
-                  {t("planDismiss")}
-                </button>
-              ) : null}
-            </>
+        </div>
+      ) : null}
+
+      {showExecute ? (
+        <div className="plan-created-actions plan-stay-actions">
+          <button type="button" className="btn plan-execute" disabled={busy} onClick={onExecute}>
+            {busy ? (
+              <>
+                <Icon icon={Loader2} className="ui-icon-sm agent-spin" />
+                {t("planExecuting")}
+              </>
+            ) : (
+              <>
+                <Icon icon={Play} className="ui-icon-sm" />
+                {canResume ? t("planResume") : t("planExecute")}
+              </>
+            )}
+          </button>
+          {onExecuteStep ? (
+            <button
+              type="button"
+              className="btn plan-execute plan-execute-step"
+              disabled={busy}
+              onClick={onExecuteStep}
+            >
+              <Icon icon={StepForward} className="ui-icon-sm" />
+              {partialProgress ? t("planNextStep") : t("planExecuteStep")}
+            </button>
+          ) : null}
+          {needsConfirm && onDismiss ? (
+            <button type="button" className="btn plan-dismiss" disabled={busy} onClick={onDismiss}>
+              {t("planDismiss")}
+            </button>
           ) : null}
         </div>
       ) : null}

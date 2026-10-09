@@ -1,0 +1,93 @@
+/* Home page sections. Every selector is scoped under .home-screen. Mobile first. */
+
+/* Hero */
+.home-screen .hero { display: grid; grid-template-columns: 1fr; gap: 52px; align-items: center; padding: 40px 24px 72px; }
+.home-screen .hero h1 { font-size: 2rem; line-height: 1.15; letter-spacing: -0.02em; margin-bottom: 18px; }
+.home-screen .hero .lede { margin-bottom: 28px; }
+.home-screen .hero-cta { display: flex; gap: 14px; flex-wrap: wrap; }
+.home-screen .hero-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.home-screen .stat-card {
+  background: var(--soft); border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px; padding: 22px;
+}
+.home-screen .stat-card.big { grid-column: span 2; background: linear-gradient(135deg, #1a2140, var(--soft)); }
+.home-screen .stat-card strong { font-size: 1.7rem; display: block; }
+.home-screen .stat-card p { color: var(--muted); font-size: 0.9rem; }
+.home-screen .stat-live { color: #4ade80; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; }
+
+/* Clients */
+.home-screen .clients { text-align: center; padding-bottom: 64px; }
+.home-screen .clients-label { color: var(--muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.1em; }
+.home-screen .clients-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 18px 40px; margin-top: 18px; }
+.home-screen .clients-row span { font-weight: 700; font-size: 1.1rem; color: #566079; }
+
+/* Services */
+.home-screen .services { padding-bottom: 80px; }
+.home-screen .service-grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
+.home-screen .service-card { background: var(--soft); border: 1px solid rgba(255,255,255,0.07); border-radius: 16px; padding: 26px; }
+.home-screen .service-icon { width: 44px; height: 44px; border-radius: 10px; display: grid; place-items: center; background: rgba(99,102,241,0.15); color: var(--accent); font-size: 1.2rem; margin-bottom: 16px; }
+.home-screen .service-card h3 { font-size: 1.05rem; margin-bottom: 8px; }
+.home-screen .service-card p { color: var(--muted); font-size: 0.9rem; margin-bottom: 14px; }
+.home-screen .more { color: var(--accent); font-size: 0.9rem; font-weight: 600; }
+.home-screen .more svg { vertical-align: -2px; }
+
+/* Why */
+.home-screen .why { display: grid; grid-template-columns: 1fr; gap: 52px; align-items: center; padding-top: 40px; padding-bottom: 80px; }
+.home-screen .why-art { position: relative; height: 220px; border-radius: 20px; background: linear-gradient(160deg, #1a2140, #0e1428); overflow: hidden; }
+.home-screen .why-art img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 20px; }
+.home-screen .why-badge { position: absolute; bottom: 20px; left: 20px; background: var(--accent); color: #fff; font-size: 0.8rem; font-weight: 700; padding: 12px 16px; border-radius: 12px; line-height: 1.4; }
+.home-screen .why-list { list-style: none; margin: 20px 0 28px; }
+.home-screen .why-list li { color: var(--muted); padding: 8px 0 8px 26px; position: relative; }
+.home-screen .why-check { position: absolute; left: 0; top: 13px; color: var(--accent); }
+.home-screen .why-list strong { color: var(--fg); }
+.home-screen .stats-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+.home-screen .stats-row strong { display: block; font-size: 1.4rem; }
+.home-screen .stats-row span { color: var(--muted); font-size: 0.82rem; }
+
+/* Process */
+.home-screen .process { padding-bottom: 80px; }
+.home-screen .step-grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
+.home-screen .step { border-top: 2px solid rgba(99,102,241,0.4); padding-top: 18px; }
+.home-screen .step-n { color: var(--accent); font-weight: 700; font-size: 1.1rem; }
+.home-screen .step h3 { margin: 8px 0 6px; font-size: 1.05rem; }
+.home-screen .step p { color: var(--muted); font-size: 0.9rem; }
+
+/* Work */
+.home-screen .work { padding-bottom: 80px; }
+.home-screen .work-grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
+.home-screen .work-card { background: var(--soft); border: 1px solid rgba(255,255,255,0.07); border-radius: 16px; padding: 18px; }
+.home-screen .work-visual { height: 160px; border-radius: 10px; margin-bottom: 16px; overflow: hidden; }
+.home-screen .work-visual img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.home-screen .tone-a .work-visual { background: linear-gradient(135deg, #312e81, #6366f1); }
+.home-screen .tone-b .work-visual { background: linear-gradient(135deg, #134e4a, #14b8a6); }
+.home-screen .tone-c .work-visual { background: linear-gradient(135deg, #831843, #ec4899); }
+.home-screen .work-tag { color: var(--muted); font-size: 0.82rem; margin-bottom: 4px; }
+.home-screen .work-card h3 { font-size: 1.05rem; }
+
+/* Testimonials */
+.home-screen .quotes { padding-bottom: 80px; }
+.home-screen .quote-grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
+.home-screen .quote { background: var(--soft); border: 1px solid rgba(255,255,255,0.07); border-radius: 16px; padding: 24px; }
+.home-screen .stars { color: #facc15; }
+.home-screen .stars svg { vertical-align: -2px; margin-right: 1.33px; }
+.home-screen .quote p { color: var(--muted); font-size: 0.95rem; margin: 12px 0 18px; }
+.home-screen .quote footer { display: flex; align-items: center; gap: 12px; font-size: 0.85rem; color: var(--muted); }
+.home-screen .avatar { width: 38px; height: 38px; border-radius: 50%; background: var(--accent); object-fit: cover; display: block; }
+.home-screen .quote strong { color: var(--fg); }
+
+/* CTA */
+.home-screen .cta { padding-bottom: 80px; }
+.home-screen .cta-box { text-align: center; padding: 64px 32px; border-radius: 20px; background: linear-gradient(135deg, #1a2140, var(--soft)); border: 1px solid rgba(99,102,241,0.3); }
+.home-screen .cta-box p { color: var(--muted); margin: 12px auto 26px; max-width: 460px; }
+
+@media (min-width: 761px) {
+  .home-screen .hero { grid-template-columns: 1.2fr 1fr; padding-top: 72px; }
+  .home-screen .why { grid-template-columns: 1fr 1.2fr; padding-top: 0; }
+  .home-screen .hero h1 { font-size: 2.9rem; }
+  .home-screen .service-grid,
+  .home-screen .step-grid { grid-template-columns: repeat(4, 1fr); }
+  .home-screen .work-grid,
+  .home-screen .quote-grid { grid-template-columns: repeat(3, 1fr); }
+  .home-screen .stats-row { grid-template-columns: repeat(4, 1fr); }
+  .home-screen .why-art { height: 360px; }
+}

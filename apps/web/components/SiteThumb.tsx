@@ -70,7 +70,7 @@ const MAX_LIVE_CAPTURES = 12;
 let liveCapturesUsed = 0;
 
 /** Babel + first paint + html2canvas regularly exceeds 8s on large projects. */
-const CAPTURE_GRACE_MS = 28000;
+const CAPTURE_GRACE_MS = 32000;
 
 function acquireLiveSlot(): Promise<void> {
   if (!liveSlotBusy) {
@@ -127,16 +127,21 @@ function touchSnap(key: string) {
 function readSnap(key: string): string | null {
   const mem = SNAP_CACHE.get(key);
   if (mem) {
-    touchSnap(key);
-    return mem;
+    if (mem.length < 3500) {
+      SNAP_CACHE.delete(key);
+    } else {
+      touchSnap(key);
+      return mem;
+    }
   }
   try {
     const stored = sessionStorage.getItem(SNAP_STORAGE_PREFIX + key);
-    if (stored && stored.startsWith("data:image/")) {
+    if (stored && stored.startsWith("data:image/") && stored.length >= 3500) {
       SNAP_CACHE.set(key, stored);
       touchSnap(key);
       return stored;
     }
+    if (stored) sessionStorage.removeItem(SNAP_STORAGE_PREFIX + key);
   } catch {
     /* ignore quota / private mode */
   }
@@ -144,6 +149,8 @@ function readSnap(key: string): string | null {
 }
 
 function writeSnap(key: string, dataUrl: string) {
+  // Refuse empty/solid placeholders (html2canvas failures used to persist ~1KB JPEGs).
+  if (!dataUrl.startsWith("data:image/jpeg") || dataUrl.length < 3500) return;
   SNAP_CACHE.set(key, dataUrl);
   touchSnap(key);
   try {
@@ -163,13 +170,32 @@ function writeSnap(key: string, dataUrl: string) {
 }
 
 function suppressThumbScroll(html: string): string {
-  if (html.includes("data-forge-thumb")) return html;
-  const css =
-    "<style data-forge-thumb>html,body{overflow:hidden!important;scrollbar-width:none!important;-ms-overflow-style:none!important}html::-webkit-scrollbar,body::-webkit-scrollbar{display:none!important;width:0!important;height:0!important}</style>";
-  if (/<head[^>]*>/i.test(html)) {
-    return html.replace(/<head([^>]*)>/i, `<head$1>${css}`);
+  const needsMobileKit = /\.phone\s*\{/i.test(html);
+  if (
+    html.includes("data-forge-thumb") &&
+    (!needsMobileKit || html.includes("data-forge-thumb-mobile-v2"))
+  ) {
+    return html;
   }
-  return css + html;
+  const css = html.includes("data-forge-thumb")
+    ? ""
+    : "<style data-forge-thumb>html,body{overflow:hidden!important;scrollbar-width:none!important;-ms-overflow-style:none!important}html::-webkit-scrollbar,body::-webkit-scrollbar{display:none!important;width:0!important;height:0!important}</style>";
+  // Mobile kit previews: hide side copy + cover-scale the .phone to fill the card.
+  const mobileKit =
+    needsMobileKit && !html.includes("data-forge-thumb-mobile-v2")
+      ? `<style data-forge-thumb-mobile-v2>
+html,body{width:100%!important;height:100%!important;margin:0!important;padding:0!important;overflow:hidden!important;display:flex!important;align-items:flex-start!important;justify-content:center!important;background:#111!important;gap:0!important;position:relative!important}
+.side{display:none!important}
+.phone{width:172px!important;height:288px!important;margin:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;flex:none!important;transform:scale(2.85);transform-origin:center top}
+.notch{display:none!important}
+</style>`
+      : "";
+  const inject = css + mobileKit;
+  if (!inject) return html;
+  if (/<head[^>]*>/i.test(html)) {
+    return html.replace(/<head([^>]*)>/i, `<head$1>${inject}`);
+  }
+  return inject + html;
 }
 
 function readCache(key: string): string | null {
@@ -310,6 +336,8 @@ export function SiteThumb({
   const [capped, setCapped] = useState(false);
   /** Bumps when the host ref was missing so the capture effect re-runs. */
   const [hostKick, setHostKick] = useState(0);
+  /** Same-origin blob URL — avoids ORB/CSP breakage on localhost↔127.0.0.1 img tags. */
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const persistIdRef = useRef(persistProjectId);
   persistIdRef.current = persistProjectId;
   const onPersistedRef = useRef(onThumbPersisted);
@@ -317,7 +345,43 @@ export function SiteThumb({
 
   useEffect(() => {
     setImageFailed(false);
+    setBlobUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
   }, [imageSrc]);
+
+  // Fetch persisted JPEG as a blob so <img> is same-origin, and reject
+  // empty/legacy portrait mobile solids so we fall back to live capture.
+  useEffect(() => {
+    if (!imageSrc || imageFailed) return;
+    let cancelled = false;
+    let created: string | null = null;
+    void (async () => {
+      try {
+        const res = await fetch(imageSrc);
+        if (!res.ok) throw new Error(String(res.status));
+        const buf = await res.arrayBuffer();
+        if (buf.byteLength < 2500) throw new Error("thumbnail_too_small");
+        const blob = new Blob([buf], { type: "image/jpeg" });
+        const bmp = await createImageBitmap(blob);
+        const portraitStale =
+          viewportWidth <= 500 && bmp.height > bmp.width * 1.15;
+        const tiny = bmp.width < 80 || bmp.height < 80;
+        bmp.close();
+        if (portraitStale || tiny) throw new Error("thumbnail_stale");
+        if (cancelled) return;
+        created = URL.createObjectURL(blob);
+        setBlobUrl(created);
+      } catch {
+        if (!cancelled) setImageFailed(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+      if (created) URL.revokeObjectURL(created);
+    };
+  }, [imageSrc, imageFailed, viewportWidth]);
 
   useEffect(() => {
     const el = shellRef.current;
@@ -352,11 +416,13 @@ export function SiteThumb({
     return () => io.disconnect();
   }, []);
 
-  const usePersistedImage = Boolean(imageSrc && !imageFailed);
+  const usePersistedImage = Boolean(blobUrl && !imageFailed);
+  // While validating a persisted JPEG, don't mount a live draft iframe yet.
+  const persistChecking = Boolean(imageSrc && !imageFailed && !blobUrl);
 
   // Live draft → one-at-a-time capture → static image (backfill only).
   useLayoutEffect(() => {
-    if (usePersistedImage) return;
+    if (usePersistedImage || persistChecking) return;
     if (!frameSrc || !visible || snapshot || capped) return;
 
     // Host mounts in the same commit as `visible`; if the ref is still null
@@ -455,14 +521,21 @@ export function SiteThumb({
         if (cancelled || !iframe || e.source !== iframe.contentWindow) return;
         const type = e.data && typeof e.data === "object" ? e.data.type : "";
         if (type === "forge:thumb-snapshot" && typeof e.data.dataUrl === "string") {
-          writeSnap(keySnap, e.data.dataUrl);
-          setSnapshot(e.data.dataUrl);
+          const dataUrl = e.data.dataUrl as string;
+          if (!dataUrl.startsWith("data:image/jpeg") || dataUrl.length < 3500) {
+            refundBudget();
+            dropLive();
+            if (!cancelled) setCapped(true);
+            return;
+          }
+          writeSnap(keySnap, dataUrl);
+          setSnapshot(dataUrl);
           // Keep the budget charge — capture succeeded.
           budgetTaken = false;
           dropLive();
           const pid = persistIdRef.current;
           if (pid) {
-            void uploadProjectThumbnail(pid, e.data.dataUrl).then((res) => {
+            void uploadProjectThumbnail(pid, dataUrl).then((res) => {
               if (res.ok) onPersistedRef.current?.({ updated_at: res.updated_at });
             });
           }
@@ -485,11 +558,11 @@ export function SiteThumb({
       refundBudget();
       dropLive();
     };
-  }, [frameSrc, visible, snapshot, capped, keySnap, title, hostKick, usePersistedImage]);
+  }, [frameSrc, visible, snapshot, capped, keySnap, title, hostKick, usePersistedImage, persistChecking]);
 
   useEffect(() => {
     let alive = true;
-    if (usePersistedImage || frameSrc) return;
+    if (usePersistedImage || persistChecking || frameSrc) return;
     if (!key) {
       setHtml(null);
       setFailed(true);
@@ -521,10 +594,10 @@ export function SiteThumb({
     return () => {
       alive = false;
     };
-  }, [src, authPath, key, visible, frameSrc, usePersistedImage]);
+  }, [src, authPath, key, visible, frameSrc, usePersistedImage, persistChecking]);
 
   const showLiveCapture = Boolean(
-    !usePersistedImage && frameSrc && !snapshot && visible && !capped,
+    !usePersistedImage && !persistChecking && frameSrc && !snapshot && visible && !capped,
   );
 
   return (
@@ -541,7 +614,7 @@ export function SiteThumb({
       {usePersistedImage ? (
         <img
           className="site-thumb-snap"
-          src={imageSrc!}
+          src={blobUrl!}
           alt=""
           draggable={false}
           onError={() => setImageFailed(true)}
@@ -565,7 +638,7 @@ export function SiteThumb({
                   <div className="site-thumb-host" ref={hostRef} />
                 </div>
               )}
-              <div className="site-thumb-fallback is-loading">
+              <div className={`site-thumb-fallback${persistChecking || !snapshot ? " is-loading" : ""}`}>
                 <BrandLogo alt="" width={132} height={38} className="site-thumb-brand" />
               </div>
             </>

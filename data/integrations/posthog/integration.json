@@ -1,0 +1,26 @@
+{
+  "id": "posthog",
+  "name": "PostHog",
+  "categories": [
+    "analytics"
+  ],
+  "access": "yes",
+  "methods": [
+    "script"
+  ],
+  "docsUrl": "https://posthog.com/docs/getting-started/install",
+  "badge": null,
+  "enabledHint": false,
+  "logo": "logo.png",
+  "simpleIcon": "posthog",
+  "i18n": {
+    "en": {
+      "title": "PostHog",
+      "blurb": "Product analytics JS snippet."
+    },
+    "fr": {
+      "title": "PostHog",
+      "blurb": "Snippet analytics produit."
+    }
+  }
+}

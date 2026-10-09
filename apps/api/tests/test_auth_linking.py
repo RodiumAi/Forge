@@ -84,6 +84,12 @@ class _FakeDb:
     def commit(self):
         self.committed = True
 
+    def rollback(self):
+        return None
+
+    def close(self):
+        return None
+
     def refresh(self, row):
         if getattr(row, "token_version", None) is None:
             row.token_version = 0
@@ -151,31 +157,55 @@ def _request() -> MagicMock:
 # ── RodiumAi OIDC callback ─────────────────────────────────────────────────
 
 
-def _run_callback(db, monkeypatch, email: str = "victim@example.com", sub: str = "rodium-sub-1"):
+def _run_callback(
+    db,
+    monkeypatch,
+    email: str = "victim@example.com",
+    sub: str = "rodium-sub-1",
+    *,
+    email_verified: object = True,
+):
     async def fake_exchange(*, code: str, code_verifier: str):
         return {"access_token": "access-tok", "refresh_token": "r", "expires_in": 3600}
 
-    async def fake_userinfo(access_token: str):
-        return {"sub": sub, "email": email, "name": "Real Owner"}
+    async def fake_resolve(tokens: dict):
+        assert tokens["access_token"] == "access-tok"
+        return {
+            "sub": sub,
+            "email": email,
+            "email_verified": email_verified,
+            "name": "Real Owner",
+        }
 
     monkeypatch.setattr(auth_mod, "parse_oauth_state", lambda _s, _b=None: "verifier")
     monkeypatch.setattr(auth_mod, "exchange_code", fake_exchange)
-    monkeypatch.setattr(auth_mod, "fetch_userinfo", fake_userinfo)
-    monkeypatch.setattr(auth_mod, "token_for_user", lambda _u: "forge-jwt")
+    monkeypatch.setattr(auth_mod, "resolve_rodium_profile", fake_resolve)
+    monkeypatch.setattr(auth_mod, "token_for_user", lambda _u, **_kwargs: "forge-jwt")
     monkeypatch.setattr(auth_mod, "_store_oauth_tokens", lambda _r, _t: None)
     monkeypatch.setattr(auth_mod, "_get_or_create_settings", lambda _d, _u: db.get(UserSettings, None))
+    monkeypatch.setattr(auth_mod, "SessionLocal", lambda: db)
 
     return asyncio.run(
         auth_mod.rodium_oauth_callback(
             body=OAuthCallbackRequest(code="c", state="s"),
             request=_request(),
             background_tasks=BackgroundTasks(),
-            db=db,
         )
     )
 
 
 class TestRodiumCallbackLinking:
+    @pytest.mark.parametrize("email_verified", [False, None, "true"])
+    def test_it_refuses_userinfo_without_explicit_email_verification(self, monkeypatch, email_verified):
+        db = _FakeDb()
+
+        with pytest.raises(HTTPException) as exc:
+            _run_callback(db, monkeypatch, email_verified=email_verified)
+
+        assert exc.value.status_code == 403
+        assert db.users == []
+        assert db.committed is False
+
     def test_it_refuses_to_adopt_an_unverified_local_account(self, monkeypatch):
         # The attack: someone registered locally with the victim's address and
         # never verified it. The victim then opens Forge from their dashboard.
@@ -236,7 +266,7 @@ def _identity(email: str = "victim@example.com", *, verified: bool = True, uid: 
 def _run_firebase(db, monkeypatch, identity=None):
     monkeypatch.setattr(firebase_auth, "enabled", lambda: True)
     monkeypatch.setattr(firebase_auth, "verify_id_token", lambda _t: identity or _identity())
-    monkeypatch.setattr(auth_mod, "token_for_user", lambda _u: "forge-jwt")
+    monkeypatch.setattr(auth_mod, "token_for_user", lambda _u, **_kwargs: "forge-jwt")
     # Provisioning has its own tests; here it must not reach the network.
     monkeypatch.setattr(auth_mod.rodium_provisioning, "enabled", lambda: False)
 

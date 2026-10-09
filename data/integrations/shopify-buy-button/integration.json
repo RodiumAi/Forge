@@ -1,0 +1,26 @@
+{
+  "id": "shopify-buy-button",
+  "name": "Shopify Buy Button",
+  "categories": [
+    "payments"
+  ],
+  "access": "yes",
+  "methods": [
+    "script"
+  ],
+  "docsUrl": "https://shopify.dev/docs/storefronts/themes/product-merchandising/add-to-cart",
+  "badge": null,
+  "enabledHint": false,
+  "logo": "logo.png",
+  "simpleIcon": "shopify",
+  "i18n": {
+    "en": {
+      "title": "Shopify Buy Button",
+      "blurb": "Buy Button channel embed for products."
+    },
+    "fr": {
+      "title": "Shopify Buy Button",
+      "blurb": "Embed Buy Button pour produits Shopify."
+    }
+  }
+}

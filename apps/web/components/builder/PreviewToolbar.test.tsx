@@ -2,10 +2,14 @@ import { describe, expect, it, vi } from "vitest";
 import { renderWithProviders, screen } from "@/test/render";
 import { PreviewToolbar } from "./PreviewToolbar";
 
-function mount(tool: "select" | null = null) {
+function mount(tool: "select" | null = null, defaultCollapsed = false) {
   const onToolChange = vi.fn();
   const { user } = renderWithProviders(
-    <PreviewToolbar tool={tool} onToolChange={onToolChange} />,
+    <PreviewToolbar
+      tool={tool}
+      onToolChange={onToolChange}
+      defaultCollapsed={defaultCollapsed}
+    />,
   );
   return { onToolChange, user };
 }
@@ -15,6 +19,12 @@ describe("PreviewToolbar collapsing", () => {
     mount();
     expect(screen.getByRole("toolbar")).toBeInTheDocument();
     expect(screen.queryByLabelText(/afficher la barre/i)).toBeNull();
+  });
+
+  it("starts collapsed when defaultCollapsed is set", () => {
+    mount(null, true);
+    expect(screen.queryByRole("toolbar")).toBeNull();
+    expect(screen.getByLabelText(/afficher la barre/i)).toBeInTheDocument();
   });
 
   it("collapses to a single restore pill", async () => {

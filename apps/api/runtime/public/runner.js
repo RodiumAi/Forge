@@ -401,14 +401,108 @@ function topoSort(transformed, files) {
   return order;
 }
 
-function rewriteSpecifiers(code, imports, path, files, blobUrls) {
+// Package stylesheets (`import "swiper/css"`): specifier pattern -> CDN URL,
+// injected by the shell from runtime/packages.json.
+const PACKAGE_CSS = window.__FORGE_CSS_IMPORTS__ || {};
+
+function packageCssUrl(spec) {
+  for (const [pattern, url] of Object.entries(PACKAGE_CSS)) {
+    if (pattern.endsWith("/*") ? spec.startsWith(pattern.slice(0, -1)) : spec === pattern) return url;
+  }
+  return null;
+}
+
+function linkPackageCss(urls) {
+  const holder = document.head;
+  const wanted = new Set(urls);
+  for (const el of [...holder.querySelectorAll("link[data-forge-pkg-css]")]) {
+    if (!wanted.has(el.getAttribute("href"))) el.remove();
+  }
+  for (const url of wanted) {
+    if (holder.querySelector(`link[data-forge-pkg-css][href="${CSS.escape(url)}"]`)) continue;
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = url;
+    link.setAttribute("data-forge-pkg-css", "");
+    holder.appendChild(link);
+  }
+}
+
+// Mirrors runtime/css.mjs: @import is only valid before other rules, so the
+// imports found anywhere (web fonts on top of index.css, or in a page file)
+// are hoisted to the top of the combined sheet.
+const CSS_IMPORT_RE =
+  /@import\s+(?:url\(\s*(["'])(.*?)\1\s*\)|(["'])(.*?)\3|url\(\s*([^)\s]+)\s*\))([^;]*);/g;
+
+function assembleCss(files) {
+  const paths = Object.keys(files)
+    .filter((p) => /\.css$/i.test(p))
+    .sort((a, b) => {
+      if (a === "src/index.css" || a === "index.css") return -1;
+      if (b === "src/index.css" || b === "index.css") return 1;
+      return a < b ? -1 : 1;
+    });
+  const hoisted = [];
+  const seen = new Set();
+  const bodies = paths.map((p) =>
+    String(files[p] || "").replace(CSS_IMPORT_RE, (m) => {
+      const key = m.replace(/\s+/g, " ");
+      if (!seen.has(key)) {
+        seen.add(key);
+        hoisted.push(m);
+      }
+      return "";
+    }),
+  );
+  return [...hoisted, ...bodies].join("\n\n");
+}
+
+const ASSET_IMPORT_RE = /\.(svg|png|jpe?g|gif|webp|avif|ico|woff2?|ttf|otf|eot|mp4|webm|mp3|wav)(\?.*)?$/i;
+
+// `import logo from "./logo.png"` → the file's root URL; root-path images are
+// then rewritten to the project asset endpoint like any other <img>.
+function assetRootUrl(fromPath, spec) {
+  const clean = spec.split("?")[0];
+  if (clean.startsWith("@/")) return "/src/" + clean.slice(2);
+  if (clean.startsWith("/")) return clean;
+  const fromDir = fromPath.includes("/") ? fromPath.slice(0, fromPath.lastIndexOf("/")) : "";
+  return "/" + normalizeJoin(fromDir, clean);
+}
+
+function rewriteAssetImport(code, imp, url) {
+  const start = code.lastIndexOf("import", imp.start);
+  if (start < 0) return code;
+  let end = imp.end;
+  while (end < code.length && code[end] !== ";" && code[end] !== "\n") end++;
+  if (end < code.length && code[end] === ";") end++;
+  const statement = code.slice(start, end);
+  const binding =
+    (statement.match(/^import\s+([A-Za-z_$][\w$]*)\s+from/) || [])[1] ||
+    (statement.match(/^import\s*\{\s*default\s+as\s+([A-Za-z_$][\w$]*)\s*\}/) || [])[1];
+  // The root URL, like a literal "/images/x.png": <img> rewriting resolves it
+  // and keeps it in data-forge-src for the visual-image bridge.
+  return code.slice(0, start) + (binding ? `const ${binding} = ${JSON.stringify(url)};` : "") + code.slice(end);
+}
+
+function rewriteSpecifiers(code, imports, path, files, blobUrls, packageCss) {
   const missing = [];
   const sorted = [...imports].sort((a, b) => b.start - a.start);
   let out = code;
   for (const imp of sorted) {
-    if (imp.kind === "bare") continue;
-    if (/\.(css|scss|sass|less|svg|png|jpe?g|gif|webp|woff2?|ttf|eot)(\?.*)?$/i.test(imp.specifier)) {
+    if (imp.kind === "bare") {
+      const cssUrl = packageCssUrl(imp.specifier);
+      if (cssUrl) {
+        packageCss.add(cssUrl);
+        out = stripSideEffectImport(out, imp);
+      }
+      continue;
+    }
+    if (/\.(css|scss|sass|less)(\?.*)?$/i.test(imp.specifier)) {
       out = stripSideEffectImport(out, imp);
+      continue;
+    }
+    if (ASSET_IMPORT_RE.test(imp.specifier)) {
+      out = rewriteAssetImport(out, imp, assetRootUrl(path, imp.specifier));
       continue;
     }
     const resolved = resolveSpecifier(path, imp.specifier, files);
@@ -504,55 +598,81 @@ function isThumbMode() {
  * post it to the parent so the iframe can be destroyed (prevents Chrome OOM
  * when many project thumbs mount at once).
  */
-async function captureThumbSnapshot() {
-  const w = Math.min(window.innerWidth || 1280, 1280);
-  const h = Math.min(window.innerHeight || 800, 800);
-  const scale = 0.4;
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.max(1, Math.round(w * scale));
-  canvas.height = Math.max(1, Math.round(h * scale));
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return null;
-
-  const solid = () => {
-    ctx.fillStyle = "#111111";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    // Hint of brand orange so "empty" thumbs are distinguishable from loading.
-    ctx.fillStyle = "rgba(242, 98, 10, 0.35)";
-    ctx.fillRect(0, 0, canvas.width, Math.round(canvas.height * 0.28));
-    return canvas.toDataURL("image/jpeg", 0.7);
-  };
-
-  try {
-    // Cap the import+capture — esm.sh or a huge DOM must not block the parent
-    // grace timer (and leave dashboard cards stuck on shimmer).
-    const mod = await Promise.race([
-      import("https://esm.sh/html2canvas@1.4.1"),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("html2canvas-import-timeout")), 5000),
-      ),
-    ]);
-    const html2canvas = mod.default || mod;
-    const shot = await Promise.race([
-      html2canvas(document.body, {
-        width: w,
-        height: h,
-        windowWidth: w,
-        windowHeight: h,
-        scale,
-        useCORS: true,
-        allowTaint: true,
-        logging: false,
-        backgroundColor: "#111111",
-      }),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("html2canvas-timeout")), 6000),
-      ),
-    ]);
-    return shot.toDataURL("image/jpeg", 0.7);
-  } catch {
-    return solid();
+async function waitForThumbPaint(phoneLike) {
+  const deadline = Date.now() + (phoneLike ? 10000 : 4000);
+  while (Date.now() < deadline) {
+    const root = document.getElementById("root");
+    if (
+      root &&
+      root.childElementCount > 0 &&
+      (root.innerText || "").replace(/\s+/g, " ").trim().length > 8
+    ) {
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      await new Promise((r) => setTimeout(r, phoneLike ? 350 : 150));
+      return true;
+    }
+    await new Promise((r) => setTimeout(r, 200));
   }
+  return false;
+}
+
+function phoneWatchdogMs() {
+  return (window.innerWidth || 1280) <= 500 ? 22000 : 12000;
+}
+
+async function captureThumbSnapshot() {
+  // Phone previews are narrow. Dashboard cards are ~16:10 landscape — capture
+  // the top band of the phone UI so the JPEG fills the card (full-height
+  // 390×844 portraits letterbox badly and often persisted as empty solids).
+  const phoneLike = (window.innerWidth || 1280) <= 500;
+  const w = phoneLike
+    ? Math.min(window.innerWidth || 390, 430)
+    : Math.min(window.innerWidth || 1280, 1280);
+  const h = phoneLike
+    ? Math.round(w * (10 / 16))
+    : Math.min(window.innerHeight || 800, 800);
+  const scale = phoneLike ? 0.85 : 0.4;
+  await waitForThumbPaint(phoneLike);
+  const target = document.getElementById("root") || document.body;
+
+  const attempts = phoneLike ? 3 : 1;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      if (i > 0) await new Promise((r) => setTimeout(r, 600 * i));
+      const mod = await Promise.race([
+        import("https://esm.sh/html2canvas@1.4.1"),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("html2canvas-import-timeout")), 5000),
+        ),
+      ]);
+      const html2canvas = mod.default || mod;
+      const shot = await Promise.race([
+        html2canvas(target, {
+          width: w,
+          height: h,
+          windowWidth: Math.max(w, window.innerWidth || w),
+          windowHeight: Math.max(h, window.innerHeight || h),
+          x: 0,
+          y: 0,
+          scale,
+          useCORS: true,
+          allowTaint: true,
+          logging: false,
+          backgroundColor: "#111111",
+        }),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("html2canvas-timeout")), 7000),
+        ),
+      ]);
+      const dataUrl = shot.toDataURL("image/jpeg", 0.78);
+      // Tiny JPEGs are almost always empty/solid placeholders — refuse so the
+      // parent can retry or show the branded fallback instead of persisting junk.
+      if (dataUrl && dataUrl.length >= 3500) return dataUrl;
+    } catch {
+      /* retry */
+    }
+  }
+  return null;
 }
 
 async function mount(files, entry, tokensCss, assets) {
@@ -571,12 +691,12 @@ async function mount(files, entry, tokensCss, assets) {
       /* ignore */
     }
     const rootClear = document.getElementById("root");
-    if (rootClear) rootClear.innerHTML = "";
+    if (rootClear) rootClear.replaceChildren();
   };
   if (isThumbMode()) {
     thumbWatchdog = window.setTimeout(() => {
       void emitThumb();
-    }, 12000);
+    }, phoneWatchdogMs());
   }
   try {
   if (assets && typeof assets.base === "string" && assets.base) ASSETS = assets;
@@ -588,14 +708,7 @@ async function mount(files, entry, tokensCss, assets) {
     // Every stylesheet ships, index.css (tokens/layout) first: per-page CSS
     // files let plan tasks style their own page without rewriting — and
     // breaking — the shared foundation.
-    const cssPaths = Object.keys(files)
-      .filter((p) => /\.css$/i.test(p))
-      .sort((a, b) => {
-        if (a === "src/index.css" || a === "index.css") return -1;
-        if (b === "src/index.css" || b === "index.css") return 1;
-        return a < b ? -1 : 1;
-      });
-    cssEl.textContent = cssPaths.map((p) => files[p]).join("\n\n");
+    cssEl.textContent = assembleCss(files);
   }
   const tokensEl = document.getElementById("forge-tokens");
   if (tokensEl && tokensCss) tokensEl.textContent = tokensCss;
@@ -615,7 +728,9 @@ async function mount(files, entry, tokensCss, assets) {
   const exactBare = new Set(importMapKeys);
   const prefixBare = importMapKeys.filter((k) => k.endsWith("/"));
   const isAllowedBare = (spec) =>
-    exactBare.has(spec) || prefixBare.some((prefix) => spec.startsWith(prefix));
+    exactBare.has(spec) ||
+    prefixBare.some((prefix) => spec.startsWith(prefix)) ||
+    Boolean(packageCssUrl(spec));
 
   const transformed = new Map();
   for (const [path, content] of Object.entries(files)) {
@@ -660,9 +775,10 @@ async function mount(files, entry, tokensCss, assets) {
   }
 
   const blobUrls = new Map();
+  const packageCss = new Set();
   for (const path of order) {
     const info = transformed.get(path);
-    const { code, missing } = rewriteSpecifiers(info.code, info.imports, path, files, blobUrls);
+    const { code, missing } = rewriteSpecifiers(info.code, info.imports, path, files, blobUrls, packageCss);
     if (missing.length) {
       send({
         type: "forge:transform-error",
@@ -677,11 +793,12 @@ async function mount(files, entry, tokensCss, assets) {
     blobUrls.set(path, URL.createObjectURL(blob));
   }
 
+  linkPackageCss([...packageCss]);
   const entryUrl = blobUrls.get(entry);
   try {
-    // Clear previous React tree
+    // Clear previous React tree (replaceChildren avoids innerHTML write path).
     const root = document.getElementById("root");
-    if (root) root.innerHTML = "";
+    if (root) root.replaceChildren();
     await import(entryUrl);
     if (previousBlobs) {
       for (const url of previousBlobs.values()) {

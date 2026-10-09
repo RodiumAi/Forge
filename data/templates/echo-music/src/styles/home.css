@@ -1,0 +1,37 @@
+/* Home screen: recently played rail + "Made for you" playlists. */
+.home-screen .rail {
+  display: grid; grid-auto-flow: column; grid-auto-columns: 8.2rem; gap: .8rem;
+  overflow-x: auto; scroll-snap-type: x mandatory;
+  margin-inline: -1.1rem; padding: .2rem 1.1rem .3rem;
+  scrollbar-width: none;
+}
+.home-screen .rail::-webkit-scrollbar { display: none; }
+.home-screen .tile {
+  appearance: none; border: 0; background: transparent; color: var(--fg);
+  display: grid; gap: .1rem; text-align: left; scroll-snap-align: start; padding: 0;
+}
+.home-screen .tile .art { aspect-ratio: 1; border-radius: 1rem; margin-bottom: .45rem; box-shadow: 0 12px 26px rgba(0,0,0,.45); background-size: cover; }
+.home-screen .tile strong { font-size: .86rem; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.home-screen .tile span { font-size: .74rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.home-screen .tile:active { transform: scale(.98); }
+
+/* Made for you playlists */
+.home-screen .plist { display: grid; gap: .6rem; }
+.home-screen .pcard {
+  appearance: none; border: 1px solid var(--line); background: var(--surface);
+  border-radius: 1rem; padding: .55rem; color: var(--fg);
+  display: flex; align-items: center; gap: .8rem; text-align: left;
+}
+.home-screen .pcard .art {
+  width: 3.4rem; height: 3.4rem; border-radius: .8rem; flex-shrink: 0; position: relative;
+  background-size: cover; display: grid; place-items: center;
+}
+.home-screen .pcard .play-dot {
+  width: 1.7rem; height: 1.7rem; border-radius: 999px; display: grid; place-items: center;
+  background: color-mix(in srgb, var(--bg) 55%, transparent); color: #fff; opacity: 0; transition: opacity .15s ease;
+}
+.home-screen .pcard:active { transform: scale(.99); }
+.home-screen .pcard:active .play-dot, .home-screen .pcard:focus-visible .play-dot { opacity: 1; }
+.home-screen .pcard .meta { min-width: 0; }
+.home-screen .pcard .meta strong { display: block; font-size: .95rem; font-weight: 650; }
+.home-screen .pcard .meta span { font-size: .78rem; color: var(--muted); }

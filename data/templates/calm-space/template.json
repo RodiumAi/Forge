@@ -1,0 +1,28 @@
+{
+  "kind": "mobile",
+  "id": "calm-space",
+  "title": {
+    "en": "Calm Space",
+    "fr": "Calm Space"
+  },
+  "description": {
+    "en": "Meditation & sleep app: onboarding, daily calm hero, a breathing circle, sessions, and sleep sounds — phone shell with bottom tabs.",
+    "fr": "App méditation & sommeil : onboarding, séance du jour, cercle de respiration, séances et sons du sommeil — shell téléphone + tabs."
+  },
+  "tags": [
+    "mobile",
+    "wellness",
+    "meditation",
+    "sleep"
+  ],
+  "preview": "preview.html",
+  "bootHint": {
+    "en": "Adapt calm-space: greeting, daily session, categories, teacher names, session lengths, sleep sounds.",
+    "fr": "Adapte calm-space : salutation, séance du jour, catégories, noms de guides, durées, sons du sommeil."
+  },
+  "accent": "#a78bfa",
+  "bg": "#0f1220",
+  "fg": "#eef0ff",
+  "muted": "#9aa0c4",
+  "tone": "soothing, gentle, unhurried"
+}

@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Trove Market — preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 480px; height: 300px; overflow: hidden;
+    background: radial-gradient(120% 120% at 85% 0%, #3b3530, #211d1a 62%);
+    color: #f5f0ea;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    display: flex; align-items: center; gap: 20px; padding: 0 26px;
+  }
+  .side { width: 150px; }
+  .side .logo { display: flex; align-items: center; gap: 7px; font-size: 15px; font-weight: 800; letter-spacing: -.01em; }
+  .side .logo .dot { width: 14px; height: 14px; border-radius: 5px; background: linear-gradient(135deg, #fb923c, #ea580c); }
+  .side h2 { font-size: 20px; font-weight: 800; letter-spacing: -.02em; line-height: 1.12; margin-top: 14px; }
+  .side p { font-size: 10px; color: #b8ada2; line-height: 1.4; margin-top: 8px; }
+  .side .tag {
+    display: inline-block; margin-top: 12px; font-size: 8.5px; font-weight: 800; color: #fdba74;
+    background: color-mix(in srgb, #f97316 22%, transparent); padding: 3px 8px; border-radius: 99px;
+  }
+  .phone {
+    width: 172px; height: 288px; border-radius: 26px; flex: none;
+    border: 2px solid color-mix(in srgb, #1c1917 16%, transparent);
+    background: #faf7f2; color: #1c1917; overflow: hidden; position: relative;
+    box-shadow: 0 22px 48px rgba(0,0,0,.5);
+  }
+  .notch { width: 52px; height: 7px; border-radius: 99px; margin: 8px auto 0; background: color-mix(in srgb, #1c1917 12%, transparent); }
+  .nav { display: flex; align-items: center; gap: 6px; padding: 7px 11px 6px; }
+  .pfp { width: 20px; height: 20px; border-radius: 99px; overflow: hidden; flex: none; }
+  .pfp img { width: 100%; height: 100%; object-fit: cover; }
+  .nav b { font-size: 10.5px; }
+  .nav small { display: block; font-size: 6.5px; color: #78716c; }
+  .bag { margin-left: auto; position: relative; width: 20px; height: 20px; border-radius: 99px; border: 1px solid color-mix(in srgb, #1c1917 14%, transparent); }
+  .bag .bd { position: absolute; top: -3px; right: -3px; min-width: 11px; height: 11px; border-radius: 99px; background: #f97316; color: #fff; font-size: 6.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; border: 1.5px solid #faf7f2; }
+  .chips { display: flex; gap: 4px; padding: 3px 11px 0; overflow: hidden; }
+  .cp { font-size: 6.5px; font-weight: 700; padding: 3px 7px; border-radius: 99px; border: 1px solid color-mix(in srgb, #1c1917 10%, transparent); background: #fff; color: #1c1917; }
+  .cp.on { background: #f97316; color: #fff; border-color: #f97316; }
+  .promo {
+    margin: 7px 11px 0; border-radius: 12px; padding: 9px 11px; color: #fff; position: relative; overflow: hidden;
+    background: radial-gradient(120% 120% at 100% 0%, #fdba74, transparent 55%), linear-gradient(140deg, #fb923c, #ea580c 85%);
+  }
+  .promo .pt { font-size: 5.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; opacity: .9; }
+  .promo .ph { font-size: 11px; font-weight: 800; line-height: 1.08; margin-top: 2px; }
+  .promo .pc { font-size: 6.5px; font-weight: 700; margin-top: 4px; display: inline-block; }
+  .promo .orb { position: absolute; right: -14px; bottom: -20px; width: 52px; height: 52px; border-radius: 99px; background: color-mix(in srgb, #fff 22%, transparent); }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 8px 11px 0; }
+  .pd { background: #fff; border: 1px solid color-mix(in srgb, #1c1917 9%, transparent); border-radius: 11px; padding: 4px 4px 5px; }
+  .pd .im { aspect-ratio: 1/1; border-radius: 7px; overflow: hidden; background: linear-gradient(135deg,#fed7aa,#fdba74); }
+  .pd .im img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .pd b { display: block; font-size: 7px; margin: 4px 2px 0; }
+  .pd .rw { display: flex; align-items: center; justify-content: space-between; margin: 2px 2px 0; }
+  .pd .pr { font-size: 8px; font-weight: 800; }
+  .pd .ad { width: 14px; height: 14px; border-radius: 99px; background: #f97316; color: #fff; font-size: 10px; line-height: 13px; text-align: center; font-weight: 700; }
+  .tabs {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    display: grid; grid-template-columns: repeat(4,1fr); padding: 6px 4px 8px;
+    border-top: 1px solid color-mix(in srgb, #1c1917 9%, transparent);
+    background: color-mix(in srgb, #faf7f2 92%, #fff);
+    font-size: 5.5px; color: #78716c; text-align: center; gap: 2px;
+  }
+  .tabs .dot { width: 12px; height: 12px; margin: 0 auto 2px; border-radius: 3px; border: 1.3px solid currentColor; }
+  .tabs .active { color: #f97316; font-weight: 700; }
+</style>
+</head>
+<body>
+  <div class="side">
+    <div class="logo"><span class="dot"></span> Trove Market</div>
+    <h2>Curated finds, daily</h2>
+    <p>Onboarding · search &amp; categories · promo hero · product grid · cart — with bottom tabs.</p>
+    <span class="tag">Mobile app shell</span>
+  </div>
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="nav">
+      <span class="pfp"><img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=120&q=70" alt="" /></span>
+      <div><b>Trove</b><small>Curated for Léa</small></div>
+      <span class="bag"><span class="bd">3</span></span>
+    </div>
+    <div class="chips">
+      <span class="cp on">New</span>
+      <span class="cp">Home</span>
+      <span class="cp">Style</span>
+      <span class="cp">Tech</span>
+    </div>
+    <div class="promo">
+      <div class="pt">Autumn edit</div>
+      <div class="ph">Up to 30% off<br />makers we love</div>
+      <span class="pc">Shop the edit →</span>
+      <span class="orb"></span>
+    </div>
+    <div class="grid">
+      <div class="pd">
+        <div class="im"><img src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=200&q=70" alt="" /></div>
+        <b>Heirloom Watch</b>
+        <div class="rw"><span class="pr">$189</span><span class="ad">+</span></div>
+      </div>
+      <div class="pd">
+        <div class="im"><img src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=200&q=70" alt="" /></div>
+        <b>Trail Runner</b>
+        <div class="rw"><span class="pr">$120</span><span class="ad">+</span></div>
+      </div>
+    </div>
+    <div class="tabs">
+      <span class="active"><span class="dot"></span>Home</span>
+      <span><span class="dot"></span>Search</span>
+      <span><span class="dot"></span>Cart</span>
+      <span><span class="dot"></span>Account</span>
+    </div>
+  </div>
+</body>
+</html>

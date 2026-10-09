@@ -1,0 +1,26 @@
+{
+  "id": "common-ninja",
+  "name": "Common Ninja",
+  "categories": [
+    "widgets"
+  ],
+  "access": "yes",
+  "methods": [
+    "script"
+  ],
+  "docsUrl": "https://www.commoninja.com/docs",
+  "badge": null,
+  "enabledHint": false,
+  "logo": "logo.png",
+  "simpleIcon": null,
+  "i18n": {
+    "en": {
+      "title": "Common Ninja",
+      "blurb": "Embeddable widgets for sites and stores."
+    },
+    "fr": {
+      "title": "Common Ninja",
+      "blurb": "Widgets embarquables pour sites et boutiques."
+    }
+  }
+}

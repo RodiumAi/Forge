@@ -17,11 +17,20 @@ def project_dir(project_id: str) -> Path:
 
 def safe_resolve(project_id: str, relative: str) -> Path:
     base = project_dir(project_id).resolve()
+    requested_parts = str(relative).replace("\\", "/").split("/")
+    if any(part.casefold() == ".git" for part in requested_parts):
+        raise ValueError("Refusing to access project history")
     target = (base / relative).resolve()
     # Containment on path components, not string prefix: a sibling dir whose name
     # merely starts with the project id (e.g. "<id>extra") must not pass.
     if target != base and base not in target.parents:
         raise ValueError("Path escapes project root")
+    # `.git` is private server-side history metadata, never project content.
+    # Enforce this at the shared path boundary so every read/write/upload/edit
+    # sink is covered, including nested and case-variant paths.
+    resolved_parts = target.relative_to(base).parts
+    if any(part.casefold() == ".git" for part in resolved_parts):
+        raise ValueError("Refusing to access project history")
     return target
 
 
@@ -133,7 +142,7 @@ def content_version(project_id: str, relative: str) -> str:
 def list_files(project_id: str) -> dict[str, str]:
     base = project_dir(project_id)
     files: dict[str, str] = {}
-    skip = {"node_modules", ".git", "dist", ".vite"}
+    skip = {"node_modules", ".git", "dist", ".vite", ".forge"}
     # .gitignore belongs to the private history repo, not to the user project.
     hidden_files = {".gitignore"}
     for path in base.rglob("*"):
@@ -153,7 +162,7 @@ def list_files(project_id: str) -> dict[str, str]:
 
 def file_tree(project_id: str) -> list[FileNode]:
     base = project_dir(project_id)
-    skip = {"node_modules", ".git", "dist", ".vite"}
+    skip = {"node_modules", ".git", "dist", ".vite", ".forge"}
     # .gitignore belongs to the private history repo, not to the user project.
     hidden_files = {".gitignore"}
 

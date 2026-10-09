@@ -1,0 +1,26 @@
+{
+  "id": "elfsight",
+  "name": "Elfsight",
+  "categories": [
+    "widgets"
+  ],
+  "access": "yes",
+  "methods": [
+    "script"
+  ],
+  "docsUrl": "https://elfsight.com/help/",
+  "badge": null,
+  "enabledHint": false,
+  "logo": "logo.png",
+  "simpleIcon": null,
+  "i18n": {
+    "en": {
+      "title": "Elfsight",
+      "blurb": "No-code widget marketplace embeds."
+    },
+    "fr": {
+      "title": "Elfsight",
+      "blurb": "Widgets no-code marketplace."
+    }
+  }
+}

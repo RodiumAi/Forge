@@ -3,9 +3,24 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _ENV_FILE = Path(__file__).resolve().parent.parent / ".env"
+
+# Placeholders that must NOT enable "Continue with RodiumAi" for opensource clones.
+_OIDC_PLACEHOLDERS = frozenset(
+    {
+        "",
+        "empty",
+        "changeme",
+        "xxx",
+        "todo",
+        "replace-me",
+        "your-client-id",
+        "your-client-secret",
+    }
+)
 
 
 class Settings(BaseSettings):
@@ -40,6 +55,43 @@ class Settings(BaseSettings):
     rodium_oidc_client_secret: str = ""
     rodium_oidc_redirect_uri: str = "http://localhost:3100/auth/callback"
     rodium_oidc_scopes: str = "openid profile email api_keys.read wallet.read"
+    # Forge Cloud lane. Empty on open-source clones (BYOK).
+    rodium_forge_gateway_token: str = ""
+    rodium_gateway_internal_url: str = ""
+    # Gateway `/v1` base Forge Cloud generates through with each user's own
+    # RodiumAi access token (billed to that user's FRODI, then RODI). Empty =
+    # rodium_base_url.
+    rodium_gateway_url: str = ""
+    # Transition: when a user has no usable token, or the gateway refuses it,
+    # generate through the internal Forge lane instead. Shared projects billed
+    # to their owner still use that lane (per-collaborator FRODI ceiling).
+    forge_internal_lane_fallback: bool = True
+    # Default per-collaborator weekly FRODI ceiling applied when a project is
+    # shared `owner_pays` and the owner leaves the cap blank. A guardrail so an
+    # invitee can't silently drain the owner's whole balance. The owner can
+    # raise/lower it, or set 0 for "no cap". FRODI units.
+    forge_default_collab_frodi_cap: int = 2000
+    # Clarity gauge: before a new build, the AI scores how clear the request is
+    # (0-100). At or above the threshold Forge builds straight away; below it,
+    # the AI asks targeted questions and merges the answers into a final brief.
+    forge_clarity_gauge_enabled: bool = True
+    forge_clarity_threshold: int = 70
+
+    @field_validator("rodium_oidc_client_id", "rodium_oidc_client_secret", mode="before")
+    @classmethod
+    def _blank_oidc_placeholders(cls, value: object) -> str:
+        """Treat EMPTY/changeme as unset so opensource clones hide Rodium login."""
+        if value is None:
+            return ""
+        text = str(value).strip()
+        if text.lower() in _OIDC_PLACEHOLDERS:
+            return ""
+        return text
+
+    @property
+    def rodium_oidc_configured(self) -> bool:
+        return bool(self.rodium_oidc_client_id)
+
     # Public origin of the RodiumAi user app (avatars often live there locally).
     rodium_user_app_url: str = "http://localhost:3000"
     # Public origin of THIS web app — used to build the links we email out
@@ -77,6 +129,7 @@ class Settings(BaseSettings):
     projects_root: str = "./data/projects"
     # Forkable starter kits (Vite/React snapshots). Docker: /data/templates
     templates_root: str = "./data/templates"
+    integrations_root: str = "./data/integrations"
     cors_origins: str = "http://localhost:3100,http://127.0.0.1:3100,http://localhost:8080"
     # LLM models (override via .env or the RodiumAi admin platform settings)
     # LITE_MODEL: small edits, classify, coherence
@@ -87,7 +140,24 @@ class Settings(BaseSettings):
     default_model: str = "google/gemini-3.7-flash"
     default_image_model: str = "openai/gpt-image-2"
     enable_pro_escalation: bool = True
-    escalation_model: str = "anthropic/claude-sonnet-4-6"
+    escalation_model: str = "anthropic/claude-sonnet-5-5"
+    # Code-generation sampling. Without an explicit max_tokens the gateway caps
+    # Claude/Gemini output at 4096 tokens, far below a multi-file task.
+    generation_max_output_tokens: int = 32_000
+    generation_temperature: float = 0.4
+    # Wall-clock ceiling for one plan task, continuations included.
+    forge_task_budget_seconds: float = 600.0
+    # Full-content layer of every code prompt (characters). index.css gets its
+    # own reserved share so later tasks always see the foundation in full.
+    context_full_files_max_chars: int = 160_000
+    context_css_reserved_chars: int = 48_000
+    # First build of a blank project: write a project-specific DESIGN.md (palette
+    # + web fonts) from the brief, and generate this many brand images.
+    forge_auto_charter_enabled: bool = True
+    forge_scaffold_images: int = 2
+    # Publish: render every route to HTML in headless Chromium (falls back to a
+    # client-rendered site when no browser is available).
+    forge_prerender_enabled: bool = True
     access_token_expire_minutes: int = 60 * 24 * 7
     preview_port_start: int = 5200
     preview_port_end: int = 5299
@@ -137,9 +207,15 @@ class Settings(BaseSettings):
 
     # Queue (Valkey / Redis Streams — same impl local and prod)
     queue_provider: Literal["redis"] = "redis"
-    redis_url: str = "redis://127.0.0.1:6380/0"
+    redis_url: str = "redis://:forge-dev-valkey@127.0.0.1:6380/0"
     usage_stream: str = "sites:usage"
     usage_consumer_group: str = "billing"
+    # Rate-limit client IP: only trust X-Forwarded-For when the TCP peer is a
+    # proxy in trusted_proxy_cidrs, then take the entry at len(parts) - hops.
+    # Local/Caddy → 1; prod CloudFront+ALB → 2.
+    trusted_proxy_hops: int = 1
+    # Comma-separated CIDRs. Empty → RFC1918 + loopback (see property below).
+    trusted_proxy_cidrs: str = ""
     # SSE comment heartbeats so ALB/proxies with long idle timeouts stay open.
     sse_heartbeat_seconds: float = 15.0
     # Target ALB idle timeout (seconds) — document & IaC must match before streaming runs.
@@ -163,6 +239,20 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
+    @property
+    def trusted_proxy_cidr_list(self) -> list[str]:
+        configured = [c.strip() for c in self.trusted_proxy_cidrs.split(",") if c.strip()]
+        if configured:
+            return configured
+        # Default: loopback + RFC1918 (Docker bridge, private ALB, compose Caddy).
+        return [
+            "127.0.0.0/8",
+            "::1/128",
+            "10.0.0.0/8",
+            "172.16.0.0/12",
+            "192.168.0.0/16",
+        ]
 
     @property
     def cors_origin_regex(self) -> str:
@@ -232,6 +322,12 @@ class Settings(BaseSettings):
         return path
 
     @property
+    def integrations_path(self) -> Path:
+        path = Path(self.integrations_root).resolve()
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
+    @property
     def _rodium_oidc_server_base(self) -> str:
         return (self.rodium_oidc_internal_issuer or self.rodium_oidc_issuer).rstrip("/")
 
@@ -272,6 +368,25 @@ class Settings(BaseSettings):
     @property
     def provisioning_enabled(self) -> bool:
         return bool(self.rodium_provision_token.strip())
+
+    @property
+    def rodium_gateway_v1_url(self) -> str:
+        return (self.rodium_gateway_url.strip() or self.rodium_base_url).rstrip("/")
+
+    @property
+    def forge_cloud_enabled(self) -> bool:
+        return bool(
+            self.rodium_forge_gateway_token.strip()
+            and self.rodium_gateway_internal_url.strip()
+            and self.provisioning_enabled
+        )
+
+    @property
+    def rodium_oidc_scopes_effective(self) -> str:
+        scopes = self.rodium_oidc_scopes.strip()
+        if self.forge_cloud_enabled and "forge.read" not in scopes.split():
+            return f"{scopes} forge.read"
+        return scopes
 
     @property
     def firebase_enabled(self) -> bool:

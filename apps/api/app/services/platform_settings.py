@@ -24,7 +24,7 @@ _HARDCODED_FALLBACKS: dict[PlatformModelKey, str] = {
     "default_model": "google/gemini-3.7-flash",
     "default_image_model": "openai/gpt-image-2",
     "lite_model": "google/gemini-3.7-flash",
-    "escalation_model": "anthropic/claude-sonnet-4-6",
+    "escalation_model": "anthropic/claude-sonnet-5-5",
 }
 
 _ROLE_BY_KEY: dict[PlatformModelKey, str] = {

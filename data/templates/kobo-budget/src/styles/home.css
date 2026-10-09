@@ -1,0 +1,14 @@
+/* Home screen: budget-left hero, categories, recent expenses. Root: .home-screen */
+.home-screen .hero {
+  border-radius: 1.5rem; padding: 1.4rem 1.2rem 1.2rem;
+  display: grid; justify-items: center; gap: 1rem;
+  background:
+    radial-gradient(120% 90% at 50% -10%, color-mix(in srgb, var(--accent) 26%, transparent), transparent 60%),
+    linear-gradient(180deg, var(--surface-2), var(--surface));
+  border: 1px solid var(--line);
+}
+.home-screen .hero-legend { display: flex; flex-wrap: wrap; gap: .3rem 1.1rem; width: 100%; justify-content: center; font-size: .76rem; color: var(--muted); }
+.home-screen .hero-legend span { display: inline-flex; align-items: center; gap: .4rem; }
+.home-screen .hero-legend .d { width: .6rem; height: .6rem; border-radius: 999px; }
+.home-screen .hero-legend .d.spent { background: var(--accent); }
+.home-screen .hero-legend .d.left { background: var(--track); border: 1px solid var(--line); }

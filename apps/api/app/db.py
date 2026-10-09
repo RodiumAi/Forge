@@ -51,6 +51,7 @@ def init_db() -> None:
         "ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMPTZ",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS access_blocked_at TIMESTAMPTZ",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS rodium_provisioned_at TIMESTAMPTZ",
         # Accounts that predate local sign-up all came through RodiumAi OIDC,
         # which proves the address — backfill so they keep working under the
@@ -70,6 +71,7 @@ def init_db() -> None:
         "ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS rodium_wallet_json TEXT",
         "ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS rodium_api_keys_json TEXT",
         "ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS selected_rodium_api_key_id VARCHAR(64)",
+        "ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS payment_country_iso VARCHAR(2)",
         """
         CREATE TABLE IF NOT EXISTS auth_tokens (
             id UUID PRIMARY KEY,
@@ -127,6 +129,7 @@ def init_db() -> None:
         "ALTER TABLE projects ADD COLUMN IF NOT EXISTS design_brief TEXT",
         "ALTER TABLE projects ADD COLUMN IF NOT EXISTS template_id VARCHAR(64)",
         "ALTER TABLE projects ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ",
+        "ALTER TABLE projects ADD COLUMN IF NOT EXISTS platform VARCHAR(16) NOT NULL DEFAULT 'web'",
         # Site URLs are global ({slug}.lvh.me) — slug must be unique across all users.
         """
         DO $$
@@ -186,6 +189,8 @@ def init_db() -> None:
         """,
         "CREATE INDEX IF NOT EXISTS ix_agent_runs_chat_id ON agent_runs (chat_id)",
         "ALTER TABLE agent_runs ADD COLUMN IF NOT EXISTS plan_meta_json TEXT",
+        "ALTER TABLE agent_runs ADD COLUMN IF NOT EXISTS brief TEXT",
+        "ALTER TABLE agent_runs ADD COLUMN IF NOT EXISTS clarity_score INTEGER",
         """
         CREATE TABLE IF NOT EXISTS model_catalog (
             slug VARCHAR(128) PRIMARY KEY,
@@ -230,6 +235,153 @@ def init_db() -> None:
         """,
         "CREATE UNIQUE INDEX IF NOT EXISTS uq_project_domains_hostname ON project_domains (hostname)",
         "CREATE UNIQUE INDEX IF NOT EXISTS uq_project_domains_project ON project_domains (project_id)",
+        "ALTER TABLE project_domains ADD COLUMN IF NOT EXISTS acm_idempotency_token VARCHAR(32)",
+        "ALTER TABLE project_domains ADD COLUMN IF NOT EXISTS ownership_txt_name VARCHAR(300)",
+        "ALTER TABLE project_domains ADD COLUMN IF NOT EXISTS ownership_txt_value VARCHAR(300)",
+        "ALTER TABLE project_domains ADD COLUMN IF NOT EXISTS ownership_verified_at TIMESTAMPTZ",
+        """
+        CREATE TABLE IF NOT EXISTS project_domain_claims (
+            id UUID PRIMARY KEY,
+            project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+            user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            hostname VARCHAR(253) NOT NULL,
+            cname_target VARCHAR(253) NOT NULL,
+            ownership_txt_name VARCHAR(300) NOT NULL,
+            ownership_txt_value VARCHAR(300) NOT NULL,
+            expires_at TIMESTAMPTZ NOT NULL,
+            last_error TEXT,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+        """,
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_project_domain_claims_project ON project_domain_claims (project_id)",
+        "CREATE INDEX IF NOT EXISTS ix_project_domain_claims_project_id ON project_domain_claims (project_id)",
+        "CREATE INDEX IF NOT EXISTS ix_project_domain_claims_user_id ON project_domain_claims (user_id)",
+        # Deliberately non-unique: unproven claims never reserve a hostname.
+        "CREATE INDEX IF NOT EXISTS ix_project_domain_claims_hostname ON project_domain_claims (hostname)",
+        """
+        CREATE TABLE IF NOT EXISTS forge_schema_migrations (
+            version VARCHAR(100) PRIMARY KEY,
+            applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+        """,
+        # One-time conversion. A transaction-scoped advisory lock prevents two
+        # API tasks starting together from both attempting the data migration.
+        # Future processing/pending rows are legitimate post-proof ACM states
+        # and must never be converted again on restart.
+        """
+        DO $$
+        BEGIN
+          PERFORM pg_advisory_xact_lock(hashtext('forge-domain-ownership-claims-v1'));
+          IF NOT EXISTS (
+            SELECT 1 FROM forge_schema_migrations
+            WHERE version = 'domain-ownership-claims-v1'
+          ) THEN
+            INSERT INTO project_domain_claims (
+                id, project_id, user_id, hostname, cname_target,
+                ownership_txt_name, ownership_txt_value, expires_at,
+                last_error, created_at, updated_at
+            )
+            SELECT
+                gen_random_uuid(), d.project_id, p.user_id, d.hostname, d.cname_target,
+                '_rodiumai-challenge.' || d.hostname,
+                'rodiumai-domain-verification=' ||
+                    replace(gen_random_uuid()::text, '-', '') ||
+                    replace(gen_random_uuid()::text, '-', ''),
+                now() + interval '24 hours',
+                'ownership_reverification_required', now(), now()
+            FROM project_domains d
+            JOIN projects p ON p.id = d.project_id
+            WHERE d.status <> 'validated'
+            ON CONFLICT (project_id) DO NOTHING;
+
+            DELETE FROM project_domains WHERE status <> 'validated';
+
+            UPDATE project_domains
+            SET ownership_verified_at = COALESCE(verified_at, created_at, now())
+            WHERE status = 'validated' AND ownership_verified_at IS NULL;
+
+            INSERT INTO forge_schema_migrations (version)
+            VALUES ('domain-ownership-claims-v1');
+          END IF;
+        END $$;
+        """,
+        "ALTER TABLE projects ADD COLUMN IF NOT EXISTS visibility VARCHAR(16) NOT NULL DEFAULT 'private'",
+        "ALTER TABLE projects ADD COLUMN IF NOT EXISTS billing_policy VARCHAR(32) NOT NULL DEFAULT 'owner_pays'",
+        """
+        CREATE TABLE IF NOT EXISTS forge_entitlement_cache (
+            user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+            plan_slug VARCHAR(32) NOT NULL DEFAULT 'free',
+            status VARCHAR(32) NOT NULL DEFAULT 'active',
+            max_projects INTEGER,
+            model_selection BOOLEAN NOT NULL DEFAULT false,
+            custom_domain BOOLEAN NOT NULL DEFAULT false,
+            export_enabled BOOLEAN NOT NULL DEFAULT false,
+            history_enabled BOOLEAN NOT NULL DEFAULT false,
+            history_limit INTEGER,
+            priority_generation BOOLEAN NOT NULL DEFAULT false,
+            allowed_model_tiers TEXT,
+            frodi_balance INTEGER NOT NULL DEFAULT 0,
+            refreshed_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+        """,
+        "ALTER TABLE forge_entitlement_cache ADD COLUMN IF NOT EXISTS history_limit INTEGER",
+        """
+        CREATE TABLE IF NOT EXISTS project_collaborators (
+            project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+            user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            role VARCHAR(16) NOT NULL DEFAULT 'editor',
+            invited_by UUID,
+            invited_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            accepted_at TIMESTAMPTZ,
+            frodi_cap_per_cycle INTEGER,
+            PRIMARY KEY (project_id, user_id)
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS project_invites (
+            id UUID PRIMARY KEY,
+            project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+            email VARCHAR(320) NOT NULL,
+            role VARCHAR(16) NOT NULL DEFAULT 'editor',
+            invited_by UUID,
+            invited_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            expires_at TIMESTAMPTZ NOT NULL,
+            accepted_at TIMESTAMPTZ,
+            declined_at TIMESTAMPTZ,
+            token_hash VARCHAR(64) NOT NULL,
+            frodi_cap_per_cycle INTEGER
+        )
+        """,
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_project_invites_project_email ON project_invites (project_id, email)",
+        "CREATE UNIQUE INDEX IF NOT EXISTS ix_project_invites_token_hash ON project_invites (token_hash)",
+        """
+        DO $$
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM forge_schema_migrations WHERE version = 'collab-accepted-backfill-v1'
+          ) THEN
+            UPDATE project_collaborators
+               SET accepted_at = COALESCE(invited_at, now())
+             WHERE accepted_at IS NULL;
+            INSERT INTO forge_schema_migrations (version) VALUES ('collab-accepted-backfill-v1');
+          END IF;
+        END $$;
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS team_seats (
+            id UUID PRIMARY KEY,
+            owner_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            email VARCHAR(320) NOT NULL,
+            status VARCHAR(16) NOT NULL,
+            token_hash VARCHAR(64),
+            reason TEXT,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+        """,
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_team_seats_owner_email ON team_seats (owner_user_id, email)",
+        "CREATE INDEX IF NOT EXISTS ix_team_seats_token_hash ON team_seats (token_hash)",
     ]
     with engine.begin() as conn:
         for sql in statements:

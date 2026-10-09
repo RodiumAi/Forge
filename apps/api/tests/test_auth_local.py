@@ -40,6 +40,7 @@ def _user(**overrides):
         "email": "user@example.com",
         "password_hash": None,
         "email_verified_at": None,
+        "access_blocked_at": None,
     }
     base.update(overrides)
     return SimpleNamespace(**base)
@@ -54,6 +55,24 @@ class TestTokenVersion:
 
         resolved = auth_mod.get_current_user(_request_with_bearer(token), _credentials(token), db)
         assert resolved is user
+
+    def test_rodium_suspend_blocks_outstanding_sessions(self):
+        user = _user(token_version=1)
+        token = auth_mod.token_for_user(user)
+        user.access_blocked_at = datetime.now(UTC)
+        db = MagicMock()
+        db.get.return_value = user
+
+        with pytest.raises(HTTPException) as exc:
+            auth_mod.get_current_user(_request_with_bearer(token), _credentials(token), db)
+        assert exc.value.status_code == 401
+        assert "suspended" in str(exc.value.detail).lower() or "suspendu" in str(exc.value.detail).lower()
+
+    def test_rodium_suspend_refuses_new_session_mint(self):
+        user = _user(access_blocked_at=datetime.now(UTC))
+        with pytest.raises(HTTPException) as exc:
+            auth_mod.token_for_user(user)
+        assert exc.value.status_code == 401
 
     def test_a_password_change_kills_outstanding_tokens(self):
         user = _user(token_version=1)
@@ -85,15 +104,46 @@ class TestTokenVersion:
 
 
 def _matches(row, predicate) -> bool:
-    """Evaluate a simple `Column == value` / `Column.is_(None)` clause in Python.
+    """Evaluate a simple SQLAlchemy clause in Python for the fake session.
 
     The fake has to honour the predicates rather than ignore them, otherwise a
     test like "a reset link cannot be spent as a verification link" passes for
     the wrong reason — the filter it is checking would never have run.
     """
-    column = predicate.left.name
-    value = getattr(predicate.right, "value", None)
-    return getattr(row, column) == value
+    from sqlalchemy.sql import operators
+    from sqlalchemy.sql.elements import Null
+
+    op = getattr(predicate, "operator", None)
+    left = getattr(predicate, "left", None)
+    if left is None:
+        return False
+    column = left.name
+    actual = getattr(row, column)
+    right = getattr(predicate, "right", None)
+
+    if op is operators.is_:
+        if right is None or isinstance(right, Null):
+            return actual is None
+        return actual is getattr(right, "value", right)
+    if op is operators.isnot:
+        if right is None or isinstance(right, Null):
+            return actual is not None
+        return actual is not getattr(right, "value", right)
+    value = getattr(right, "value", right) if right is not None else None
+    if op is operators.ge:
+        if actual is None or value is None:
+            return False
+        if getattr(actual, "tzinfo", None) is None and getattr(value, "tzinfo", None) is not None:
+            actual = actual.replace(tzinfo=value.tzinfo)
+        return actual >= value
+    if op is operators.gt:
+        if actual is None or value is None:
+            return False
+        if getattr(actual, "tzinfo", None) is None and getattr(value, "tzinfo", None) is not None:
+            actual = actual.replace(tzinfo=value.tzinfo)
+        return actual > value
+    # Default: Column == value
+    return actual == value
 
 
 class _FakeTokenQuery:
@@ -107,10 +157,19 @@ class _FakeTokenQuery:
         return self._rows[0] if self._rows else None
 
     def update(self, values, synchronize_session=False):
+        # Re-check at write time so a stale filter snapshot cannot double-consume
+        # the way a real conditional UPDATE would refuse a second winner.
+        updated = 0
         for row in self._rows:
+            if (
+                "consumed_at" in {getattr(col, "name", None) for col in values}
+                and row.consumed_at is not None
+            ):
+                continue
             for column, value in values.items():
                 setattr(row, column.name, value)
-        return len(self._rows)
+            updated += 1
+        return updated
 
 
 class _FakeSession:
@@ -323,9 +382,12 @@ class TestMail:
 
 
 class TestRateLimit:
-    def _request(self, ip: str = "203.0.113.9") -> MagicMock:
+    def _request(self, ip: str = "203.0.113.9", *, xff: str | None = None) -> MagicMock:
         request = MagicMock()
-        request.headers = {}
+        headers: dict[str, str] = {}
+        if xff is not None:
+            headers["x-forwarded-for"] = xff
+        request.headers = headers
         request.client = SimpleNamespace(host=ip)
         return request
 
@@ -367,3 +429,61 @@ class TestRateLimit:
 
         monkeypatch.setattr(rate_limit, "_incr_redis", lambda *_a, **_k: None)
         rate_limit.enforce(self._request(), f"test-{uuid.uuid4()}", limit=1, window_seconds=60)
+
+    def test_untrusted_peer_ignores_spoofed_xff(self, monkeypatch):
+        from app.config import clear_settings_cache
+
+        monkeypatch.setenv("TRUSTED_PROXY_HOPS", "1")
+        clear_settings_cache()
+        try:
+            # Public peer + spoofed XFF must not become the bucket identity.
+            request = self._request("203.0.113.50", xff="198.51.100.1")
+            assert rate_limit._client_ip(request) == "203.0.113.50"
+        finally:
+            monkeypatch.delenv("TRUSTED_PROXY_HOPS", raising=False)
+            clear_settings_cache()
+
+    def test_trusted_peer_uses_xff_entry_for_one_hop(self, monkeypatch):
+        from app.config import clear_settings_cache
+
+        monkeypatch.setenv("TRUSTED_PROXY_HOPS", "1")
+        clear_settings_cache()
+        try:
+            # Caddy/ALB peer (RFC1918) + "fake, real" → real (last trusted hop).
+            request = self._request("10.0.0.2", xff="198.51.100.9, 203.0.113.7")
+            assert rate_limit._client_ip(request) == "203.0.113.7"
+        finally:
+            monkeypatch.delenv("TRUSTED_PROXY_HOPS", raising=False)
+            clear_settings_cache()
+
+    def test_trusted_peer_uses_xff_entry_for_two_hops(self, monkeypatch):
+        from app.config import clear_settings_cache
+
+        monkeypatch.setenv("TRUSTED_PROXY_HOPS", "2")
+        clear_settings_cache()
+        try:
+            # CloudFront+ALB: "fake, client, edge" → client.
+            request = self._request("172.31.10.5", xff="198.51.100.9, 203.0.113.7, 10.0.0.99")
+            assert rate_limit._client_ip(request) == "203.0.113.7"
+        finally:
+            monkeypatch.delenv("TRUSTED_PROXY_HOPS", raising=False)
+            clear_settings_cache()
+
+    def test_login_account_bucket_blocks_rotating_xff(self, monkeypatch):
+        """Same email, rotating spoofed XFF → login-account 429 (IP spray useless)."""
+        monkeypatch.setattr(rate_limit, "_incr_redis", lambda *_a, **_k: None)
+        email = f"victim-{uuid.uuid4()}@example.com"
+        limit = 3
+
+        for i in range(limit):
+            # Untrusted peer: each XFF spoof is ignored for the IP bucket, but
+            # the subject bucket is what matters for targeted brute-force.
+            req = self._request(f"203.0.113.{i + 1}", xff=f"198.51.100.{i}")
+            rate_limit.enforce(req, "login", limit=limit, window_seconds=60)
+            rate_limit.enforce(req, "login-account", limit=limit, window_seconds=60, subject=email)
+
+        with pytest.raises(HTTPException) as exc:
+            req = self._request("203.0.113.99", xff="198.51.100.99")
+            rate_limit.enforce(req, "login", limit=limit, window_seconds=60)
+            rate_limit.enforce(req, "login-account", limit=limit, window_seconds=60, subject=email)
+        assert exc.value.status_code == 429

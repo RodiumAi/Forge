@@ -18,6 +18,10 @@ import {
   type Locale,
   type MessageKey,
 } from "@/lib/i18n/dictionaries";
+import {
+  invalidateIntegrationsCache,
+  invalidateTemplatesCache,
+} from "@/lib/lists-cache";
 
 const STORAGE_KEY = "forge_locale";
 
@@ -47,6 +51,10 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     setLocaleState(next);
     localStorage.setItem(STORAGE_KEY, next);
     document.documentElement.lang = next;
+    // Drop stale localized catalogue bodies so the next ensure* hits the API
+    // with the new Accept-Language (sessionStorage only keeps one locale).
+    invalidateIntegrationsCache();
+    invalidateTemplatesCache();
   }, []);
 
   useEffect(() => {

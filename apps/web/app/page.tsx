@@ -1,21 +1,23 @@
 "use client";
 
 import { BrandLogo } from "@/components/BrandLogo";
+import { LandingPricing } from "@/components/landing/LandingPricing";
 import { LandingReveal } from "@/components/landing/LandingReveal";
 import {
   GithubMark,
   LandingSocialLinks,
 } from "@/components/landing/LandingSocialLinks";
+import { PlatformToggle, type ProjectPlatform } from "@/components/PlatformToggle";
 import { PromptFileChips } from "@/components/PromptFileChips";
-import { SiteThumb } from "@/components/SiteThumb";
-import { GalleryTemplate } from "@/components/TemplateGallery";
+import { GalleryTemplate, TemplateGallery } from "@/components/TemplateGallery";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { Icon } from "@/components/ui/icon";
-import { getToken } from "@/lib/api";
+import { getToken, ApiError } from "@/lib/api";
 import {
   FORGE_CONTRIBUTE,
   RODIUM_LEGAL,
   RODIUM_SITE,
+  rodiumRechargeUrl,
 } from "@/lib/constants/rodium-links";
 import {
   PENDING_PROMPT_KEY,
@@ -24,12 +26,13 @@ import {
   ensureCanGenerate,
   forkProjectFromTemplate,
   stashPendingFiles,
+  stashPendingPlatform,
 } from "@/lib/create-project";
 import { LocaleSwitch, useI18n } from "@/lib/i18n/I18nProvider";
+import { getSessionSnapshot } from "@/lib/session-cache";
 import {
   ensureTemplates,
   getCachedTemplates,
-  invalidateProjectsCache,
   prependProject,
   refreshTemplatesIfStale,
 } from "@/lib/lists-cache";
@@ -51,6 +54,8 @@ type PromptBoxProps = {
   compact?: boolean;
   prompt: string;
   setPrompt: (v: string) => void;
+  platform: ProjectPlatform;
+  setPlatform: (v: ProjectPlatform) => void;
   files: PromptAttachment[];
   fileError: string | null;
   error: string | null;
@@ -69,6 +74,8 @@ function LandingPromptBox({
   compact,
   prompt,
   setPrompt,
+  platform,
+  setPlatform,
   files,
   fileError,
   error,
@@ -97,6 +104,14 @@ function LandingPromptBox({
           {error}{" "}
           {error === t("createNeedsKey") ? (
             <Link href="/settings?tab=generation">{t("openSettings")}</Link>
+          ) : error === t("createNeedsRodi") ? (
+            <a
+              href={rodiumRechargeUrl(getSessionSnapshot()?.profile?.rodium_sub)}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {t("rechargeRodi")}
+            </a>
           ) : null}
         </p>
       )}
@@ -114,7 +129,9 @@ function LandingPromptBox({
         maxLength={PROMPT_MAX_CHARS}
         onChange={(e) => setPrompt(e.target.value)}
         onKeyDown={onKeyDown}
-        placeholder={t("promptPlaceholder")}
+        placeholder={
+          platform === "mobile" ? t("promptPlaceholderMobile") : t("promptPlaceholder")
+        }
         aria-label={t("promptAria")}
         rows={compact ? 2 : 3}
         disabled={submitting}
@@ -137,6 +154,12 @@ function LandingPromptBox({
         >
           <Icon icon={Plus} />
         </button>
+        <PlatformToggle
+          value={platform}
+          onChange={setPlatform}
+          disabled={submitting}
+          className="lp-platform-toggle"
+        />
         <button
           type="submit"
           className="lp-send"
@@ -161,6 +184,7 @@ export default function LandingPage() {
   const router = useRouter();
   const { t, locale } = useI18n();
   const [prompt, setPrompt] = useState("");
+  const [platform, setPlatform] = useState<ProjectPlatform>("web");
   const [files, setFiles] = useState<PromptAttachment[]>([]);
   const [fileError, setFileError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -235,6 +259,7 @@ export default function LandingPage() {
 
       if (!getToken()) {
         sessionStorage.setItem(PENDING_PROMPT_KEY, trimmed);
+        stashPendingPlatform(platform);
         const localFiles = files
           .filter(
             (item): item is LocalPromptAttachment => item.source === "local",
@@ -246,6 +271,10 @@ export default function LandingPage() {
       }
 
       const gate = await ensureCanGenerate();
+      if (gate === "no_rodi") {
+        setError(t("createNeedsRodi"));
+        return;
+      }
       if (gate === "no_key") {
         setError(t("createNeedsKey"));
         return;
@@ -257,8 +286,8 @@ export default function LandingPage() {
         t("newProject"),
         promptLabels(),
         locale,
+        platform,
       );
-      invalidateProjectsCache();
       prependProject(locale, project);
       files.forEach(revokePromptAttachment);
       setFiles([]);
@@ -267,6 +296,8 @@ export default function LandingPage() {
     } catch (err) {
       if (err instanceof PromptTooLongError) {
         setError(t("promptTooLong"));
+      } else if (err instanceof ApiError && err.code === "INSUFFICIENT_RODI") {
+        setError(t("createNeedsRodi"));
       } else {
         setError(err instanceof Error ? err.message : t("errorGeneric"));
       }
@@ -286,17 +317,25 @@ export default function LandingPage() {
     setError(null);
     try {
       const gate = await ensureCanGenerate();
+      if (gate === "no_rodi") {
+        setError(t("createNeedsRodi"));
+        setForkingId(null);
+        return;
+      }
       if (gate === "no_key") {
         setError(t("createNeedsKey"));
         setForkingId(null);
         return;
       }
       const project = await forkProjectFromTemplate(tpl);
-      invalidateProjectsCache();
       prependProject(locale, project);
       router.replace(`/projects/${project.id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("errorGeneric"));
+      if (err instanceof ApiError && err.code === "INSUFFICIENT_RODI") {
+        setError(t("createNeedsRodi"));
+      } else {
+        setError(err instanceof Error ? err.message : t("errorGeneric"));
+      }
       setForkingId(null);
     }
   }
@@ -358,6 +397,8 @@ export default function LandingPage() {
   const promptProps = {
     prompt,
     setPrompt,
+    platform,
+    setPlatform,
     files,
     fileError,
     error,
@@ -377,6 +418,7 @@ export default function LandingPage() {
           <BrandLogo alt="" width={132} height={38} priority />
         </Link>
         <nav className="lp-nav-links" aria-label={t("homeNav")}>
+          <a href="#pricing">{t("landingNavPricing")}</a>
           <a href="#templates">{t("landingNavTemplates")}</a>
           <a href="#how">{t("landingNavHow")}</a>
           <a href="#contribute">{t("landingNavContribute")}</a>
@@ -403,6 +445,10 @@ export default function LandingPage() {
       <section className="lp-hero">
         <div className="lp-hero-wash" aria-hidden />
         <div className="lp-hero-inner">
+          <p className="lp-eyebrow">
+            <span className="lp-eyebrow-dot" aria-hidden />
+            {t("landingEyebrow")}
+          </p>
           <h1 className="lp-hero-title">
             <span className="lp-hero-claim">{t("landingTitleClaim")}</span>
           </h1>
@@ -478,49 +524,28 @@ export default function LandingPage() {
         <section className="lp-templates" id="templates">
           <div className="lp-templates-head">
             <h2 className="lp-section-title">{t("landingTemplatesTitle")}</h2>
-            <button
-              type="button"
-              className="lp-templates-all"
-              onClick={() => {
+          </div>
+          {templates.length > 0 ? (
+            <TemplateGallery
+              templates={templates}
+              onSelect={(tpl) => void onSelectTemplate(tpl)}
+              busyId={forkingId}
+              useError={error}
+              limit={8}
+              variant="landing"
+              onBrowseAll={() => {
                 if (authed) router.push("/dashboard?tab=templates");
                 else router.push("/login");
               }}
-            >
-              {t("landingTemplatesAll")}
-            </button>
-          </div>
-          {templates.length > 0 ? (
-            <div className="lp-templates-grid">
-              {templates.slice(0, 8).map((tpl) => (
-                <button
-                  key={tpl.id}
-                  type="button"
-                  className="lp-tpl-card"
-                  disabled={Boolean(forkingId) || submitting}
-                  onClick={() => void onSelectTemplate(tpl)}
-                >
-                  <SiteThumb
-                    src={tpl.preview_url || `/templates/${tpl.id}/preview`}
-                    viewportWidth={480}
-                    viewportHeight={300}
-                    title={tpl.title}
-                    className="lp-tpl-thumb"
-                  />
-                  <div className="lp-tpl-meta">
-                    <strong>{tpl.title}</strong>
-                    <span>
-                      {forkingId === tpl.id
-                        ? t("forkingTemplate")
-                        : tpl.description}
-                    </span>
-                  </div>
-                </button>
-              ))}
-            </div>
+            />
           ) : (
             <p className="lp-empty">{t("noTemplates")}</p>
           )}
         </section>
+      </LandingReveal>
+
+      <LandingReveal>
+        <LandingPricing />
       </LandingReveal>
 
       <LandingReveal>
@@ -586,6 +611,7 @@ export default function LandingPage() {
           <div className="lp-footer-cols">
             <div>
               <h3>{t("landingFooterProduct")}</h3>
+              <a href="#pricing">{t("landingNavPricing")}</a>
               <a href="#templates">{t("landingNavTemplates")}</a>
               <a href="#how">{t("landingNavHow")}</a>
               <a href="#contribute">{t("landingNavContribute")}</a>

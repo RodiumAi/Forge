@@ -16,6 +16,8 @@ import type { PreviewTool } from "./types";
 type Props = {
   tool: PreviewTool | null;
   onToolChange: (tool: PreviewTool | null) => void;
+  /** Phone viewport: start collapsed so the bar does not cover the app chrome. */
+  defaultCollapsed?: boolean;
 };
 
 const TOOLS: { id: PreviewTool; icon: typeof BoxSelect; labelKey: string }[] = [
@@ -25,11 +27,10 @@ const TOOLS: { id: PreviewTool; icon: typeof BoxSelect; labelKey: string }[] = [
   { id: "image", icon: ImageIcon, labelKey: "previewToolImage" },
 ];
 
-export function PreviewToolbar({ tool, onToolChange }: Props) {
+export function PreviewToolbar({ tool, onToolChange, defaultCollapsed = false }: Props) {
   const { t } = useI18n();
-  // Visible by default; collapsing parks it as a bottom-right pill so it stops
-  // covering the page being previewed.
-  const [collapsed, setCollapsed] = useState(false);
+  // Collapsing parks it as a bottom-right pill so it stops covering the preview.
+  const [collapsed, setCollapsed] = useState(defaultCollapsed);
 
   if (collapsed) {
     return (

@@ -1,0 +1,27 @@
+{
+  "id": "calendly",
+  "name": "Calendly",
+  "categories": [
+    "booking"
+  ],
+  "access": "yes",
+  "methods": [
+    "iframe",
+    "script"
+  ],
+  "docsUrl": "https://help.calendly.com/hc/en-us/articles/223147027-Embed-options-overview",
+  "badge": null,
+  "enabledHint": false,
+  "logo": "logo.jpg",
+  "simpleIcon": "calendly",
+  "i18n": {
+    "en": {
+      "title": "Calendly",
+      "blurb": "Scheduling widget via iframe or inline script."
+    },
+    "fr": {
+      "title": "Calendly",
+      "blurb": "Widget de prise de RDV via iframe ou script."
+    }
+  }
+}

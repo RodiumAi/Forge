@@ -1,0 +1,26 @@
+{
+  "id": "airtable",
+  "name": "Airtable",
+  "categories": [
+    "data"
+  ],
+  "access": "yes",
+  "methods": [
+    "iframe"
+  ],
+  "docsUrl": "https://support.airtable.com/docs/embedding-a-view-or-base",
+  "badge": null,
+  "enabledHint": false,
+  "logo": "logo.png",
+  "simpleIcon": "airtable",
+  "i18n": {
+    "en": {
+      "title": "Airtable",
+      "blurb": "Embed shared views and bases."
+    },
+    "fr": {
+      "title": "Airtable",
+      "blurb": "Embarquez des vues et bases partagées."
+    }
+  }
+}

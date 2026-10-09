@@ -5,6 +5,7 @@ import uuid
 from datetime import UTC, datetime
 from urllib.parse import quote
 
+import httpx
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -23,6 +24,10 @@ from app.db import SessionLocal, get_db
 from app.i18n import resolve_locale, t
 from app.models import AuthToken, OauthAccount, User, UserSettings
 from app.schemas import (
+    ForgeEntitlementsOut,
+    ForgeModelChoice,
+    ForgeModelChoicesOut,
+    ForgeStatusOut,
     ForgotPasswordRequest,
     LoginRequest,
     LogoutResponse,
@@ -38,10 +43,13 @@ from app.schemas import (
     ResetPasswordRequest,
     RodiumAccountOut,
     RodiumApiKeyOut,
+    RodiumGenerateKeyResponse,
     RodiumSelectKeyRequest,
     RodiumSelectKeyResponse,
     RodiumWalletOut,
     SimpleOkResponse,
+    TeamSeatRemoveCodeRequest,
+    TeamSeatRemoveConfirmRequest,
     TokenResponse,
     UserOut,
     VerifyEmailRequest,
@@ -58,6 +66,7 @@ from app.services.rodium_generation import (
 from app.services.rodium_oidc import (
     RodiumOidcError,
     build_authorize_url,
+    create_api_key,
     create_oauth_state,
     exchange_code,
     fetch_api_keys,
@@ -65,11 +74,29 @@ from app.services.rodium_oidc import (
     fetch_wallet,
     generate_pkce,
     parse_oauth_state,
+    resolve_rodium_profile,
     revoke_token,
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 logger = logging.getLogger("auth")
+
+
+@router.get("/features")
+def auth_features() -> dict[str, bool]:
+    """Public feature flags for the login UI (no secrets).
+
+    Opensource clones leave ``RODIUM_OIDC_CLIENT_ID`` empty (or a placeholder
+    like ``EMPTY``) — the web app hides "Continue with RodiumAi" when this is
+    false, instead of showing a dead button until the first 503.
+    """
+    settings = get_settings()
+    return {
+        "rodium_oidc": settings.rodium_oidc_configured,
+        "firebase": bool(
+            settings.firebase_project_id and settings.firebase_client_email and settings.firebase_private_key
+        ),
+    }
 
 
 def _picture_from_userinfo(info: dict) -> str | None:
@@ -87,7 +114,7 @@ def _picture_from_userinfo(info: dict) -> str | None:
     return value
 
 
-def _user_out(user: User) -> UserOut:
+def _user_out(user: User, payment_country_iso: str | None = None) -> UserOut:
     return UserOut(
         id=user.id,
         email=user.email,
@@ -98,6 +125,7 @@ def _user_out(user: User) -> UserOut:
         email_verified=user.email_verified_at is not None,
         has_password=bool(user.password_hash),
         created_at=user.created_at,
+        payment_country_iso=payment_country_iso,
     )
 
 
@@ -136,8 +164,13 @@ def _wallet_out(raw: dict | None) -> RodiumWalletOut | None:
                 provided_total = str(total)
             except Exception:
                 provided_total = None
+    balance = raw.get("balanceRodi")
+    if balance in (None, ""):
+        balance = raw.get("balance_rodi")
+    if balance in (None, ""):
+        balance = raw.get("rodi")
     return RodiumWalletOut(
-        balance_rodi=str(raw.get("balanceRodi") or raw.get("balance_rodi") or "") or None,
+        balance_rodi=None if balance in (None, "") else str(balance),
         reserved_rodi=str(raw.get("reservedRodi") or raw.get("reserved_rodi") or "") or None,
         provided_total_rodi=str(provided_total) if provided_total not in (None, "") else None,
         raw=raw,
@@ -158,9 +191,28 @@ async def _ensure_default_generation_key(
 
 
 async def _hydrate_rodium_account_cache(user_id: uuid.UUID, access_token: str) -> None:
-    """Fetch Nest keys/wallet after login JWT is already returned to the browser."""
+    """Fetch Nest keys/wallet after login JWT is already returned to the browser.
+
+    New accounts often have zero keys: Nest mints ``Default · Forge`` on the
+    first list *or* via the trusted create endpoint when ``autoGenerateApiKey``
+    is on. We create here so the first dashboard paint already has a selection.
+    """
     try:
         keys = await fetch_api_keys(access_token)
+        if not isinstance(keys, list):
+            keys = []
+        if not keys:
+            try:
+                await create_api_key(access_token, name="Default · Forge")
+                keys = await fetch_api_keys(access_token)
+                if not isinstance(keys, list):
+                    keys = []
+            except Exception:
+                logger.warning(
+                    "rodium.callback.hydrate_create_key_failed",
+                    extra={"user_id": str(user_id)},
+                    exc_info=True,
+                )
         wallet = await fetch_wallet(access_token)
     except Exception:
         logger.warning(
@@ -176,19 +228,13 @@ async def _hydrate_rodium_account_cache(user_id: uuid.UUID, access_token: str) -
             if user is None:
                 return
             row = _get_or_create_settings(db, user)
-            if isinstance(keys, list):
-                row.rodium_api_keys_json = json.dumps(keys)
+            row.rodium_api_keys_json = json.dumps(keys)
             if isinstance(wallet, dict):
                 row.rodium_wallet_json = json.dumps(wallet)
             if not row.rodium_api_key_hint:
                 row.rodium_api_key_hint = "RodiumAi account"
             db.commit()
-            await _ensure_default_generation_key(
-                db,
-                user,
-                row,
-                keys if isinstance(keys, list) else [],
-            )
+            await _ensure_default_generation_key(db, user, row, keys)
     except Exception:
         logger.warning(
             "rodium.callback.hydrate_db_failed",
@@ -228,9 +274,13 @@ def rodium_oauth_start(request: Request) -> OAuthStartResponse:
     """
     locale = resolve_locale(request)
     settings = get_settings()
-    if not settings.rodium_oidc_client_id:
+    if not settings.rodium_oidc_configured:
         raise HTTPException(status_code=503, detail=t("rodium_oauth_not_configured", locale))
     binding = (request.query_params.get("state_binding") or "").strip() or None
+    if binding is None:
+        # No binding means no login-CSRF protection, and the opt-out was the
+        # attack. Refuse rather than mint an unbound state.
+        raise HTTPException(status_code=400, detail=t("rodium_oauth_binding_required", locale))
     prompt = (request.query_params.get("prompt") or "").strip() or None
     try:
         verifier, challenge = generate_pkce()
@@ -246,73 +296,126 @@ async def rodium_oauth_callback(
     body: OAuthCallbackRequest,
     request: Request,
     background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db),
 ) -> TokenResponse:
+    """Complete RodiumAi OIDC without pinning a DB connection during Nest I/O.
+
+    Nest token/profile can take several seconds. Holding ``Depends(get_db)``
+    across those awaits can exhaust the Forge pool under concurrent logins; we
+    only open a session after the issuer round-trips succeed.
+    """
     locale = resolve_locale(request)
-    # Critical path only: code exchange + userinfo. Keys/wallet hydrate in
-    # background so a slow Nest/ALB cut never surfaces as "Network request failed".
+    rate_limit.enforce(request, "oauth-rodium-callback", limit=20, window_seconds=900)
+    # Critical path only: code exchange + profile (id_token preferred over
+    # /userinfo). Keys/wallet hydrate in background so a slow Nest/ALB cut
+    # never surfaces as "Network request failed".
     try:
         verifier = parse_oauth_state(body.state, body.state_binding)
         tokens = await exchange_code(code=body.code, code_verifier=verifier)
         access = tokens["access_token"]
-        info = await fetch_userinfo(access)
+        info = await resolve_rodium_profile(tokens)
     except RodiumOidcError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    if info.get("email_verified") is not True:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=t("email_not_verified", locale),
+        )
 
     sub = str(info["sub"])
     email = str(info.get("email") or f"{sub}@rodium.local").lower()
     name = info.get("name")
     picture = _picture_from_userinfo(info)
 
-    user = db.query(User).filter(User.rodium_sub == sub).first()
-    if user is None:
-        # Adopt a local account with the same address — but only once that
-        # address is proven here too. Without the check, registering locally
-        # with someone else's address (unverified) and waiting for them to
-        # open Forge from their RodiumAi dashboard would hand the attacker
-        # their identity, their OAuth tokens and their RODI balance.
-        candidate = db.query(User).filter(User.email == email).first()
-        if candidate is not None and candidate.email_verified_at is None:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=t("account_needs_password_login", locale),
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.rodium_sub == sub).first()
+        if user is None:
+            # Adopt a local account with the same address — but only once that
+            # address is proven here too. Without the check, registering locally
+            # with someone else's address (unverified) and waiting for them to
+            # open Forge from their RodiumAi dashboard would hand the attacker
+            # their identity, their OAuth tokens and their RODI balance.
+            candidate = db.query(User).filter(User.email == email).first()
+            if candidate is not None and candidate.email_verified_at is None:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=t("account_needs_password_login", locale),
+                )
+            user = candidate
+        if user is None:
+            user = User(
+                email=email,
+                password_hash=None,
+                rodium_sub=sub,
+                name=name,
+                avatar_url=picture,
+                # Reaching us through the RodiumAi issuer proves the address.
+                email_verified_at=datetime.now(UTC),
             )
-        user = candidate
-    if user is None:
-        user = User(
-            email=email,
-            password_hash=None,
-            rodium_sub=sub,
-            name=name,
-            avatar_url=picture,
-            # Reaching us through the RodiumAi issuer proves the address.
-            email_verified_at=datetime.now(UTC),
+            db.add(user)
+            db.flush()
+            db.add(UserSettings(user_id=user.id, default_model=get_settings().effective_default_model))
+        else:
+            user.rodium_sub = sub
+            user.email = email
+            if user.email_verified_at is None:
+                user.email_verified_at = datetime.now(UTC)
+            if name:
+                user.name = name
+            if picture:
+                user.avatar_url = picture
+
+        db.commit()
+        db.refresh(user)
+
+        settings_row = _get_or_create_settings(db, user)
+        _store_oauth_tokens(settings_row, tokens)
+        if not settings_row.rodium_api_key_hint:
+            settings_row.rodium_api_key_hint = "RodiumAi account"
+        db.commit()
+
+        user_id = user.id
+        access_token = token_for_user(user, locale=locale)
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
+
+    background_tasks.add_task(_hydrate_rodium_account_cache, user_id, access)
+
+    return TokenResponse(access_token=access_token, email_verified=True)
+
+
+def _wallet_from_gateway(user: User) -> dict | None:
+    """RODI from FastAPI when the OAuth wallet call does not answer.
+
+    The same internal balance the sidebar already uses. It carries the wallet
+    figure next to the weekly FRODI.
+    """
+    settings = get_settings()
+    if not user.rodium_sub or not settings.provisioning_enabled:
+        return None
+    base = settings.rodium_gateway_internal_url.strip().rstrip("/")
+    token = settings.rodium_provision_token.strip()
+    if not base or not token:
+        return None
+    try:
+        response = httpx.get(
+            f"{base}/internal/forge/balance",
+            params={"uid": user.rodium_sub},
+            headers={"X-Internal-Token": token},
+            timeout=4.0,
         )
-        db.add(user)
-        db.flush()
-        db.add(UserSettings(user_id=user.id, default_model=get_settings().effective_default_model))
-    else:
-        user.rodium_sub = sub
-        user.email = email
-        if user.email_verified_at is None:
-            user.email_verified_at = datetime.now(UTC)
-        if name:
-            user.name = name
-        if picture:
-            user.avatar_url = picture
-
-    db.commit()
-    db.refresh(user)
-
-    settings_row = _get_or_create_settings(db, user)
-    _store_oauth_tokens(settings_row, tokens)
-    if not settings_row.rodium_api_key_hint:
-        settings_row.rodium_api_key_hint = "RodiumAi account"
-    db.commit()
-
-    background_tasks.add_task(_hydrate_rodium_account_cache, user.id, access)
-
-    return TokenResponse(access_token=token_for_user(user), email_verified=True)
+    except httpx.HTTPError:
+        return None
+    if response.status_code != 200:
+        return None
+    body = response.json()
+    if not isinstance(body, dict) or body.get("rodi") is None:
+        return None
+    return {"balanceRodi": str(body.get("rodi"))}
 
 
 @router.get("/rodium/account", response_model=RodiumAccountOut)
@@ -322,7 +425,7 @@ async def rodium_account(
     db: Session = Depends(get_db),
 ) -> RodiumAccountOut:
     if not user.rodium_sub:
-        return RodiumAccountOut(linked=False)
+        return RodiumAccountOut(linked=False, can_generate_key=False)
     locale = resolve_locale(request)
     row = _get_or_create_settings(db, user)
     # Prefer DB cache so navbar/profile never wait on Nest latency.
@@ -393,8 +496,32 @@ async def rodium_account(
         except Exception:
             pass
 
-    if not has_generation_key(user, row) and keys:
+    if live_ok:
+        if not keys:
+            try:
+                access = await _ensure_rodium_access_token(db, user)
+                await create_api_key(access, name="Default · Forge")
+                live_keys = await fetch_api_keys(access)
+                if isinstance(live_keys, list):
+                    keys = live_keys
+                    row.rodium_api_keys_json = json.dumps(keys)
+                    db.commit()
+            except Exception:
+                pass
+        if keys:
+            await _ensure_default_generation_key(db, user, row, keys if isinstance(keys, list) else [])
+    elif not has_generation_key(user, row) and keys:
         await _ensure_default_generation_key(db, user, row, keys if isinstance(keys, list) else [])
+
+    if not (
+        isinstance(wallet, dict)
+        and (wallet.get("balanceRodi") not in (None, "") or wallet.get("balance_rodi") not in (None, ""))
+    ):
+        gateway_wallet = _wallet_from_gateway(user)
+        if gateway_wallet:
+            wallet = {**(wallet if isinstance(wallet, dict) else {}), **gateway_wallet}
+            row.rodium_wallet_json = json.dumps(wallet)
+            db.commit()
 
     return RodiumAccountOut(
         linked=True,
@@ -407,6 +534,7 @@ async def rodium_account(
         selected_api_key_id=row.selected_rodium_api_key_id,
         has_generation_key=has_generation_key(user, row),
         generation_key_hint=row.rodium_api_key_hint,
+        can_generate_key=rodium_provisioning.enabled(),
     )
 
 
@@ -416,7 +544,7 @@ async def rodium_ensure_generation_key(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> RodiumSelectKeyResponse:
-    """Pick the first active account key when none is selected yet."""
+    """Pick (or mint) the first active account key when none is selected yet."""
     locale = resolve_locale(request)
     if not user.rodium_sub:
         raise HTTPException(status_code=400, detail=t("rodium_oauth_required", locale))
@@ -434,10 +562,19 @@ async def rodium_ensure_generation_key(
         live_keys = await fetch_api_keys(access)
         if isinstance(live_keys, list):
             keys = live_keys
-            row.rodium_api_keys_json = json.dumps(keys)
-            db.commit()
+        if not keys:
+            # Silent SSO path: Nest list is empty until we ask the trusted
+            # client to mint Default · Forge.
+            await create_api_key(access, name="Default · Forge")
+            live_keys = await fetch_api_keys(access)
+            if isinstance(live_keys, list):
+                keys = live_keys
+        row.rodium_api_keys_json = json.dumps(keys)
+        db.commit()
     except HTTPException:
         raise
+    except RodiumOidcError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc) or "Failed to list API keys") from exc
     ok = await _ensure_default_generation_key(db, user, row, keys)
@@ -449,6 +586,67 @@ async def rodium_ensure_generation_key(
         selected_api_key_id=row.selected_rodium_api_key_id or "",
         has_generation_key=True,
         generation_key_hint=row.rodium_api_key_hint,
+    )
+
+
+@router.post("/rodium/generate-key", response_model=RodiumGenerateKeyResponse)
+async def rodium_generate_key(
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> RodiumGenerateKeyResponse:
+    """Mint (or reuse) a RodiumAi API key and select it for generation.
+
+    Official instance only (`RODIUM_PROVISION_TOKEN`). Opensource clones paste
+    a key manually instead.
+    """
+    locale = resolve_locale(request)
+    if not rodium_provisioning.enabled():
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=t("rodium_generate_key_unavailable", locale),
+        )
+    if not user.rodium_sub:
+        raise HTTPException(status_code=400, detail=t("rodium_oauth_required", locale))
+
+    row = _get_or_create_settings(db, user)
+    try:
+        access = await _ensure_rodium_access_token(db, user)
+        created = await create_api_key(access)
+        key_id = str(created["id"])
+        live_keys = await fetch_api_keys(access)
+        if isinstance(live_keys, list):
+            row.rodium_api_keys_json = json.dumps(live_keys)
+            db.commit()
+        else:
+            live_keys = [created]
+            row.rodium_api_keys_json = json.dumps(live_keys)
+            db.commit()
+        hint = await select_api_key_id(db, user, row, key_id)
+    except RodiumOidcError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc) or "Failed to generate API key") from exc
+
+    db.refresh(row)
+    keys_raw: list = []
+    if row.rodium_api_keys_json:
+        try:
+            parsed = json.loads(row.rodium_api_keys_json)
+            if isinstance(parsed, list):
+                keys_raw = parsed
+        except Exception:
+            keys_raw = []
+
+    return RodiumGenerateKeyResponse(
+        ok=True,
+        selected_api_key_id=row.selected_rodium_api_key_id or key_id,
+        has_generation_key=True,
+        generation_key_hint=hint or row.rodium_api_key_hint,
+        api_keys=_api_keys_out(keys_raw),
+        can_generate_key=True,
     )
 
 
@@ -503,10 +701,9 @@ async def _link_rodium_account(db: Session, user: User) -> str | None:
             email=user.email, full_name=user.name, avatar_url=user.avatar_url
         )
     except rodium_provisioning.ProvisionConflict:
-        # A RodiumAi account already owns this address. Linking it requires
-        # proving ownership, which only the consent flow does — so we leave the
-        # Forge account unlinked and the UI offers "Continue with RodiumAi".
-        logger.info("rodium.provision.exists email=%s", user.email)
+        # Unexpected after Nest adopts verified emails. Keep as a soft fallback
+        # so a stale 409 never breaks email verification / login.
+        logger.warning("rodium.provision.exists email=%s", user.email)
         return None
     if result is None:
         return None
@@ -532,9 +729,7 @@ async def _reissue_rodium_tokens(db: Session, user: User) -> str | None:
     row = _get_or_create_settings(db, user)
     if row.rodium_refresh_token_encrypted:
         return None
-    result = await rodium_provisioning.reissue_tokens(
-        email=user.email, user_id=str(user.rodium_sub)
-    )
+    result = await rodium_provisioning.reissue_tokens(email=user.email, user_id=str(user.rodium_sub))
     if result is None:
         return None
     _store_oauth_tokens(row, result.tokens)
@@ -542,6 +737,29 @@ async def _reissue_rodium_tokens(db: Session, user: User) -> str | None:
         row.rodium_api_key_hint = "RodiumAi account"
     db.commit()
     return str(result.tokens.get("access_token") or "") or None
+
+
+async def _retry_link_rodium_account(user_id: uuid.UUID) -> None:
+    """Second chance when Nest was briefly unreachable during verify/login."""
+    try:
+        with SessionLocal() as db:
+            user = db.get(User, user_id)
+            if user is None or user.rodium_sub:
+                return
+            access = await _link_rodium_account(db, user)
+            if access:
+                await _hydrate_rodium_account_cache(user_id, access)
+            else:
+                logger.warning(
+                    "rodium.provision.retry_still_unlinked",
+                    extra={"user_id": str(user_id), "email": getattr(user, "email", None)},
+                )
+    except Exception:
+        logger.warning(
+            "rodium.provision.retry_failed",
+            extra={"user_id": str(user_id)},
+            exc_info=True,
+        )
 
 
 async def _ensure_rodium_tokens_after_login(
@@ -555,6 +773,10 @@ async def _ensure_rodium_tokens_after_login(
         db.refresh(user)
     if access:
         background_tasks.add_task(_hydrate_rodium_account_cache, user.id, access)
+    elif not user.rodium_sub and rodium_provisioning.enabled():
+        # Failures are still non-fatal for Forge login, but retry once off the
+        # request so a blip on Nest does not leave the account permanently unlinked.
+        background_tasks.add_task(_retry_link_rodium_account, user.id)
 
 
 def _send_verification_email(db: Session, user: User, locale: str) -> None:
@@ -583,7 +805,16 @@ def register(body: RegisterRequest, request: Request, db: Session = Depends(get_
     rate_limit.enforce(request, "register", limit=5, window_seconds=3600)
 
     email = body.email.strip().lower()
-    if db.query(User).filter(User.email == email).first() is not None:
+    existing = db.query(User).filter(User.email == email).first()
+    if existing is not None and existing.password_hash is None and existing.email_verified_at is None:
+        existing.password_hash = hash_password(body.password)
+        if body.name.strip():
+            existing.name = body.name.strip()
+        db.commit()
+        db.refresh(existing)
+        _send_verification_email(db, existing, locale)
+        return RegistrationResponse(email=existing.email, message=t("verify_email_sent", locale))
+    if existing is not None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=t("email_taken", locale))
 
     user = User(
@@ -633,12 +864,18 @@ async def verify_email(
         raise HTTPException(status_code=400, detail=t("invalid_or_expired_link", locale))
     if user.email_verified_at is None:
         user.email_verified_at = datetime.now(UTC)
+        # The address is only proven now. Until this point an attacker who
+        # registered with the victim's email and chosen a password could still
+        # log in with that registration password. Wipe that credential so only
+        # a fresh password (or SSO) works after verification.
+        user.password_hash = None
+        user.token_version = (user.token_version or 0) + 1
     db.commit()
     db.refresh(user)
 
     await _ensure_rodium_tokens_after_login(db, user, background_tasks)
 
-    return TokenResponse(access_token=token_for_user(user), email_verified=True)
+    return TokenResponse(access_token=token_for_user(user, locale=locale), email_verified=True)
 
 
 @router.post("/verify-email/resend", response_model=SimpleOkResponse)
@@ -685,16 +922,73 @@ def forgot_password(
     rate_limit.enforce(request, "forgot-password", limit=3, window_seconds=900, subject=email)
 
     user = db.query(User).filter(User.email == email).first()
-    # Accounts without a local password (created through RodiumAi or a social
-    # provider) have nothing to reset; silently skipping keeps the response
-    # identical for them too.
-    if user is not None and user.password_hash:
+    # Always return the same success payload (membership oracle).
+    #
+    # Send a real reset link when the mailbox is proven (`email_verified_at`)
+    # even if `password_hash` is None: verify-email wipes the registration
+    # password (anti pre-hijack), so treating that as "SSO-only" locked out
+    # legitimate email signups. Reset proves the same mailbox control.
+    #
+    # SSO hint only for unverified accounts with no local password (edge /
+    # invite seats that never completed email proof).
+    if user is not None and (user.password_hash or user.email_verified_at):
         auth_tokens.invalidate_outstanding(db, user.id, AuthToken.KIND_PASSWORD_RESET)
         raw = auth_tokens.issue_password_reset(db, user.id)
         db.commit()
         url = get_settings().web_url(f"/reset-password?token={quote(raw)}")
         mail.send(mail.build_reset_password(user.email, url, locale))
+    elif user is not None:
+        login_url = get_settings().web_url("/login")
+        mail.send(mail.build_reset_password_sso_hint(user.email, login_url, locale))
     return SimpleOkResponse(message=t("reset_email_sent", locale))
+
+
+@router.post("/team/seat-remove/code", response_model=SimpleOkResponse)
+def team_seat_remove_code(
+    body: TeamSeatRemoveCodeRequest,
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> SimpleOkResponse:
+    """Mail a 6-digit code to the signed-in owner before a seat is emptied."""
+    locale = resolve_locale(request)
+    member = str(body.member_email).strip().lower()
+    reason = body.reason.strip()
+    if member == user.email.strip().lower():
+        raise HTTPException(status_code=422, detail=t("team_remove_self", locale))
+    rate_limit.enforce(request, "team-seat-remove", limit=5, window_seconds=900, subject=str(user.id))
+    code = auth_tokens.issue_team_seat_removal(db, user.id, member, reason)
+    db.commit()
+    sent = mail.send(mail.build_seat_remove_code(user.email, code, member, locale))
+    if not sent:
+        raise HTTPException(status_code=503, detail=t("team_remove_mail_failed", locale))
+    return SimpleOkResponse(message=user.email)
+
+
+@router.post("/team/seat-remove/confirm", response_model=SimpleOkResponse)
+def team_seat_remove_confirm(
+    body: TeamSeatRemoveConfirmRequest,
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> SimpleOkResponse:
+    """Burn the emailed code. The seat change itself stays on the caller."""
+    locale = resolve_locale(request)
+    member = str(body.member_email).strip().lower()
+    reason = body.reason.strip()
+    rate_limit.enforce(request, "team-seat-remove-confirm", limit=8, window_seconds=900, subject=str(user.id))
+    owner_id = auth_tokens.consume(
+        db,
+        auth_tokens.seat_removal_material(body.code, member, reason),
+        AuthToken.KIND_TEAM_SEAT_REMOVE,
+    )
+    if owner_id != user.id:
+        raise HTTPException(status_code=400, detail=t("team_remove_bad_code", locale))
+    db.commit()
+    from app.services import team_seats
+
+    team_seats.mark_removed(db, user, member, reason)
+    return SimpleOkResponse()
 
 
 @router.post("/reset-password", response_model=TokenResponse)
@@ -723,7 +1017,7 @@ def reset_password(
     db.commit()
     db.refresh(user)
 
-    return TokenResponse(access_token=token_for_user(user), email_verified=True)
+    return TokenResponse(access_token=token_for_user(user, locale=locale), email_verified=True)
 
 
 @router.post("/oauth/firebase", response_model=TokenResponse)
@@ -833,7 +1127,7 @@ async def oauth_firebase(
 
     await _ensure_rodium_tokens_after_login(db, user, background_tasks)
 
-    return TokenResponse(access_token=token_for_user(user), email_verified=True)
+    return TokenResponse(access_token=token_for_user(user, locale=locale), email_verified=True)
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -844,9 +1138,12 @@ async def login(
     db: Session = Depends(get_db),
 ) -> TokenResponse:
     locale = resolve_locale(request)
+    email = body.email.strip().lower()
+    # IP bucket (spray) + per-account bucket (rotating XFF / proxies useless).
     rate_limit.enforce(request, "login", limit=10, window_seconds=900)
+    rate_limit.enforce(request, "login-account", limit=10, window_seconds=900, subject=email)
 
-    user = db.query(User).filter(User.email == body.email.strip().lower()).first()
+    user = db.query(User).filter(User.email == email).first()
     if user is None or not user.password_hash or not verify_password(body.password, user.password_hash):
         # One message for "no such account" and "wrong password" — the
         # distinction is only useful to someone enumerating addresses.
@@ -859,19 +1156,26 @@ async def login(
     # offer to resend the link. Only reachable once the password checks out, so
     # it reveals nothing to someone guessing addresses.
     if user.email_verified_at is None:
+        # The sign-in screen tells them a link is waiting. Send it now: the one
+        # from registration may be hours old, and a wiped Mailpit inbox leaves
+        # them with a message and no mail.
+        _send_verification_email(db, user, locale)
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=t("email_not_verified", locale),
         )
     await _ensure_rodium_tokens_after_login(db, user, background_tasks)
     return TokenResponse(
-        access_token=token_for_user(user),
+        access_token=token_for_user(user, locale=locale),
         email_verified=user.email_verified_at is not None,
     )
 
 
 @router.post("/media-token", response_model=MediaTokenResponse)
-def issue_media_token(user: User = Depends(get_current_user)) -> MediaTokenResponse:
+def issue_media_token(
+    request: Request,
+    user: User = Depends(get_current_user),
+) -> MediaTokenResponse:
     """Short-lived, read-only token for `<img src>` and iframe loads.
 
     Those requests cannot set an Authorization header, so their credential
@@ -879,6 +1183,7 @@ def issue_media_token(user: User = Depends(get_current_user)) -> MediaTokenRespo
     what leaks there scoped to reads and valid for an hour, instead of a
     7-day session that opens the whole API.
     """
+    rate_limit.enforce(request, "media-token", limit=30, window_seconds=900, subject=str(user.id))
     return MediaTokenResponse(
         token=media_token_for_user(user),
         expires_in=MEDIA_TOKEN_TTL_MINUTES * 60,
@@ -909,7 +1214,122 @@ async def me(user: User = Depends(get_current_user), db: Session = Depends(get_d
                 user = db.get(User, user_id) or fresh
         except Exception:
             user = db.get(User, user_id) or user
-    return _user_out(user)
+    return _user_out(user, _get_or_create_settings(db, user).payment_country_iso)
+
+
+def _model_label(slug: str) -> str:
+    name = slug.split("/")[-1].replace("-", " ")
+    return name[:1].upper() + name[1:] if name else slug
+
+
+@router.get("/forge/models", response_model=ForgeModelChoicesOut)
+def forge_models(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ForgeModelChoicesOut:
+    """Text models a Pro/Scale user may pick. Auto stays the platform default."""
+    from app.models import ModelCatalog
+    from app.services.entitlements import get_entitlements
+
+    cached = get_entitlements(db, user)
+    if cached is None or not cached.model_selection:
+        return ForgeModelChoicesOut(selectable=False, models=[])
+    allowed: set[str] | None = None
+    if cached.allowed_model_tiers:
+        try:
+            parsed = json.loads(cached.allowed_model_tiers)
+            if isinstance(parsed, list):
+                allowed = {str(item) for item in parsed}
+        except Exception:
+            allowed = None
+    rows = (
+        db.query(ModelCatalog)
+        .filter(ModelCatalog.status == "active", ModelCatalog.role == "text")
+        .order_by(ModelCatalog.slug.asc())
+        .all()
+    )
+    models = [
+        ForgeModelChoice(slug=row.slug, label=_model_label(row.slug))
+        for row in rows
+        if allowed is None or row.tier in allowed
+    ]
+    return ForgeModelChoicesOut(selectable=True, models=models)
+
+
+@router.get("/forge/status", response_model=ForgeStatusOut)
+async def forge_status(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ForgeStatusOut:
+    """Builder-header snapshot: live FRODI/RODI reservoirs plus the cached plan.
+
+    Reads FastAPI ``GET /internal/forge/balance`` with the shared internal
+    token and the platform uid, then stores the plan on this account. Off
+    Forge Cloud both come back empty.
+    """
+    from app.services.entitlements import get_entitlements, pull_forge_account
+
+    live = pull_forge_account(db, user)
+    frodi: float | None = None
+    rodi: float | None = None
+    frodi_grant: float | None = None
+    frodi_resets_at = None
+    if isinstance(live, dict):
+        try:
+            frodi = float(live.get("frodi") or 0)
+            rodi = float(live.get("rodi") or 0)
+        except (TypeError, ValueError):
+            frodi = None
+            rodi = None
+        raw_grant = live.get("frodiPerCycle", live.get("frodi_per_cycle"))
+        try:
+            if raw_grant is not None:
+                frodi_grant = float(raw_grant)
+        except (TypeError, ValueError):
+            frodi_grant = None
+        raw_reset = live.get("frodiExpiresAt", live.get("frodi_expires_at"))
+        if isinstance(raw_reset, str) and raw_reset.strip():
+            frodi_resets_at = raw_reset.strip()
+
+    row = get_entitlements(db, user)
+    entitlements: ForgeEntitlementsOut | None = None
+    plan: str | None = None
+    if row is not None:
+        plan = row.plan_slug
+        tiers: list[str] | None = None
+        if row.allowed_model_tiers:
+            try:
+                parsed = json.loads(row.allowed_model_tiers)
+                if isinstance(parsed, list):
+                    tiers = [str(item) for item in parsed]
+            except Exception:
+                tiers = None
+        entitlements = ForgeEntitlementsOut(
+            plan_slug=row.plan_slug,
+            status=row.status,
+            max_projects=row.max_projects,
+            model_selection=row.model_selection,
+            custom_domain=row.custom_domain,
+            export_enabled=row.export_enabled,
+            history_enabled=row.history_enabled,
+            history_limit=row.history_limit,
+            priority_generation=row.priority_generation,
+            allowed_model_tiers=tiers,
+            frodi_balance=row.frodi_balance,
+        )
+        # Live gateway read failed but we still have a cached FRODI figure — show
+        # it rather than a blank so the header does not regress to RODI-only.
+        if frodi is None:
+            frodi = float(row.frodi_balance)
+
+    return ForgeStatusOut(
+        frodi=frodi,
+        rodi=rodi,
+        frodi_grant=frodi_grant,
+        frodi_resets_at=frodi_resets_at,
+        plan=plan,
+        entitlements=entitlements,
+    )
 
 
 @router.post("/logout", response_model=LogoutResponse)
@@ -933,7 +1353,12 @@ async def logout(
         # Drop the cached balance so a later Google login cannot show a stale
         # figure while live Nest fetch is still re-linking tokens.
         row.rodium_wallet_json = None
-        db.commit()
+    # Revoke the session itself. Without this the caller's JWT stayed valid after
+    # logout, so the same token kept reaching authenticated routes — and, since
+    # we just cleared the cached wallet, it slipped past the RODI gate unmetered.
+    # Bumping the version makes `get_current_user` reject the old token.
+    user.token_version = (user.token_version or 0) + 1
+    db.commit()
     return LogoutResponse()
 
 
@@ -945,12 +1370,14 @@ def change_password(
     db: Session = Depends(get_db),
 ) -> PasswordChangeResponse:
     locale = resolve_locale(request)
-    if not user.password_hash:
-        raise HTTPException(status_code=400, detail=t("rodium_oauth_no_password", locale))
-    if not verify_password(body.current_password, user.password_hash):
+    # Bound credential-change attempts per account (spray / stolen-session abuse).
+    rate_limit.enforce(request, "change-password", limit=5, window_seconds=3600, subject=str(user.id))
+    if user.password_hash and not verify_password(body.current_password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=t("invalid_current_password", locale)
         )
+    # First local password (SSO or after verify-email wipe): no current
+    # credential to check when password_hash is absent.
     user.password_hash = hash_password(body.new_password)
     # Revoke every outstanding session, including any the caller does not
     # control. `access_token` below re-authenticates the current browser so
@@ -958,4 +1385,4 @@ def change_password(
     user.token_version = (user.token_version or 0) + 1
     db.commit()
     db.refresh(user)
-    return PasswordChangeResponse(access_token=token_for_user(user))
+    return PasswordChangeResponse(access_token=token_for_user(user, locale=locale))

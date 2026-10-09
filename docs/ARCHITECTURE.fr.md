@@ -12,7 +12,7 @@ ci-dessous pointe vers un fichier que vous pouvez ouvrir.
 apps/web      Next.js 15 App Router — UI du builder, consommateur SSE
 apps/api      FastAPI — routage, orchestration de l'agent, publication
   runtime/    Chaîne Babel/ESM Node + navigateur (partagée preview ET publication)
-data/         templates/ (24 kits de départ) · projects/ (workspaces générés)
+data/         templates/ (36 kits de départ) · integrations/ · projects/ (workspaces générés)
 infra/        stack Docker locale · helpers CI · sites gateway AWS
 ```
 
@@ -29,9 +29,10 @@ Trois idées expliquent l'essentiel de la conception :
    l'unique source de vérité pour l'import map, la liste blanche d'imports et
    les types Monaco. Preview et publication lisent le *même* fichier via le
    *même* resolver.
-3. **L'API ne détient aucun identifiant LLM.** Sur le chemin actuel, Forge
-   envoie le jeton d'accès OAuth de l'utilisateur et un **id** de clé API — le
-   secret de la clé n'atteint jamais ce code.
+3. **Aucun secret LLM dans le dépôt.** Sur Forge Cloud, la génération utilise le
+   jeton OAuth de l'utilisateur et un **id** de clé API — le secret n'atteint
+   jamais ce code. En self-host, on colle une clé BYOK `rd_sk_…` (chiffrée au
+   repos) ; Cloud dépense d'abord les **FRODI**, puis les **RODI**.
 
 ## Un run de génération, de bout en bout
 
@@ -101,32 +102,64 @@ définit le contrat, `apps/api/app/services/tags.py` l'analyse) :
 
 ```
 <forge-write path="src/App.tsx"> …contenu du fichier… </forge-write>
+<forge-edit path="src/App.tsx">
+<<<<<<< SEARCH
+lignes actuelles exactes
+=======
+lignes de remplacement
+>>>>>>> REPLACE
+</forge-edit>
 <forge-delete path="src/Old.tsx"></forge-delete>
 ```
 
+`forge-edit` applique des blocs chercher/remplacer au fichier courant
+(`services/edit_apply.py` : correspondance exacte, puis ligne à ligne tolérante
+aux espaces, jamais ambiguë) ; une modification qui ne s'applique pas a droit à
+une relance ciblée avec le fichier montré en entier.
+
+**Limites de sortie.** Chaque flux de code envoie `max_tokens` (sinon la
+passerelle plafonne Claude/Gemini à 4096 tokens) et lit `finish_reason`. Une
+réponse coupée par la limite, ou une balise restée ouverte, est poursuivie
+(`stream_with_continuation` dans `services/llm.py`) : le fichier réémis remplace
+la version coupée, et un fichier encore coupé après le dernier tour est signalé
+à l'utilisateur au lieu de disparaître.
+
 Conséquence à connaître : **l'agent ne choisit pas les fichiers qu'il lit.** La
-constitution du contexte est heuristique — `services/orchestration/context.py`
-sélectionne par pertinence, chemins forcés et `files` déclarés par le plan, puis
-superpose le prompt système, `AI_RULES.md`, un `DESIGN.md` verrouillé, les
-squelettes de fichiers et les corps sélectionnés. L'historique ancien est
+constitution du contexte est heuristique : `services/orchestration/context.py`
+sélectionne par pertinence, chemins forcés et `files` déclarés par le plan (les
+dossiers sont développés en fichiers), puis superpose le prompt système,
+`AI_RULES.md`, un `DESIGN.md` verrouillé, les images du projet avec leurs vraies
+dimensions, un extrait de kit comme référence de qualité sur les jeunes builds,
+les squelettes de fichiers (les CSS listent leurs classes) et les corps
+sélectionnés (160k caractères, index.css d'abord). L'historique ancien est
 compacté par une passe LLM.
 
-Phases : classification → clarification éventuelle → plan → exécution →
-vérification/réparation. Les plans de quatre tâches ou plus, et tout scaffold,
+Phases : classification → clarification éventuelle → plan → amorçage de marque
+(premier build d'un projet vierge : `services/brand_charter.py` écrit un
+DESIGN.md avec palette, paire Google Fonts validée et direction d'images, puis
+les premières images WebP) → exécution → vérification/réparation (sur le modèle
+qui a écrit le code). Les plans de quatre tâches ou plus, et tout scaffold,
 s'arrêtent pour confirmation.
+
+**Une seule règle CSS partout** : `src/index.css` est la fondation, écrite une
+fois par la tâche styles_foundation ; chaque page possède `src/styles/<page>.css`,
+scopé sous sa classe racine. Les classes orphelines sont signalées sur le
+composant et sa feuille de style.
 
 **Les écritures sont validées avant que quoi que ce soit touche le disque**
 (`apps/api/app/services/apply_writes.py`) :
 
-- Un **snapshot git** est pris d'abord — chaque projet est son propre dépôt
+- Un **snapshot git** est pris d'abord : chaque projet est son propre dépôt
   privé sous `data/projects/{id}`, ce qui alimente l'historique et le rollback.
 - Les imports sont vérifiés contre la liste blanche du manifeste via
   **tree-sitter** (`services/import_validator.py`), avec repli sur des regex.
   Violations : `BUILD_FORBIDDEN_IMPORT`, `BUILD_INVALID_NAMED_EXPORT`.
-- `DESIGN.md` et `public/logo.*` sont verrouillés et rejetés par défaut.
-- Le CSS est **fusionné, pas remplacé** : les blocs de premier niveau dont les
-  sélecteurs ont disparu sont réajoutés, pour qu'une réécriture partielle ne
-  puisse pas supprimer des styles en silence.
+- `DESIGN.md` et `public/logo.*` sont verrouillés sauf demande explicite de
+  changer la marque ; la charte provisoire d'un scaffold vierge n'est pas une
+  marque et n'est jamais verrouillée.
+- Une réécriture complète de `src/index.css` qui perd des règles les conserve
+  (fusion) ; les suppressions voulues passent par `forge-edit`. Les feuilles de
+  page appartiennent à leur tâche et se réécrivent librement.
 
 ## Preview
 
@@ -186,22 +219,45 @@ dans l'image API (`playwright install --with-deps chromium`).
 
 `POST /projects/{id}/publish` → `apps/api/app/services/publish_esm.py` :
 
-1. Lance `node apps/api/runtime/cli.mjs`, en passant le projet sur **stdin**.
-2. `cli.mjs` réutilise *le même* transform Babel et *le même* resolver que la
-   preview, mais `rewrite.mjs` émet des **chemins `.js` relatifs** au lieu
-   d'URLs blob. Il écrit un `index.html` statique avec l'import map inline, tout
-   le CSS dans un seul `<style>` (`src/index.css` en premier — exactement comme
-   la preview), et un script module.
-3. `public/` est copié tel quel ; tout est téléversé sous `{slug}/`.
+1. **Build de production.** `node apps/api/runtime/cli.mjs` (projet sur stdin)
+   applique *le même* transform Babel que la preview, puis esbuild
+   (`runtime/build.mjs`) regroupe l'app et ses dépendances (récupérées une fois
+   sur esm.sh, cache disque), élimine le code mort (lucide-react vient du paquet
+   npm), minifie et hashe `assets/*.js`, avec des liens `modulepreload` et sans
+   source map. Si le CDN est injoignable, les dépendances restent externes
+   derrière une import map limitée à ce que l'app importe. Tout le CSS est
+   minifié dans un seul `<style>` (`src/index.css` d'abord) ; les `@import` de
+   polices web deviennent des `<link>` + preconnect. Les assets importés par le
+   code sont copiés ; les images trop grandes sont redimensionnées et
+   recompressées sur place.
+2. **Pré-rendu** (`services/prerender.py`) : Chromium headless charge le build
+   depuis le disque (aucun autre réseau), suit les liens du site et enregistre
+   chaque route en `<route>/index.html` avec son contenu, son titre et les
+   balises posées via react-helmet-async ; `404.html` est rendu depuis un chemin
+   inconnu.
+3. **SEO** (`services/site_seo.py`) : `<html lang>` détecté depuis le texte,
+   canonical et og:url par page, images og/twitter absolues, og:site_name,
+   og:locale, WebSite schema.org sur l'accueil, `sitemap.xml` et `robots.txt`
+   (sauf si le projet fournit les siens).
+4. **Téléversement** sous `{slug}/` avec `Cache-Control` (assets hashés
+   immuables, pages revalidées), pages en dernier, puis suppression des clés
+   périmées.
 
-Caddy est un **pur reverse proxy vers le bucket** — aucune application
-d'origine. Il extrait le slug de l'en-tête Host et réécrit vers la clé du
-bucket, avec repli SPA sur `{slug}/index.html`.
+Caddy est un **pur reverse proxy vers le bucket** (`infra/local/Caddyfile`,
+`infra/aws/sites-gateway/Caddyfile`, un snippet commun) : `/` sert `index.html` ;
+un chemin de fichier sert le fichier ou un 404 simple ; un chemin de page sert
+`<page>/index.html`, sinon `404.html` **avec le statut 404**, sinon `index.html`
+(sites publiés avant le pré-rendu). Un 403 compte comme absent. Les réponses
+sont compressées (zstd/gzip) ; les SVG s'affichent comme images mais sont isolés
+quand on les ouvre.
+
+Un site publié est statique : le gateway ne relaie rien de sa part vers l'API.
+Formulaires et statistiques sont des embeds du catalogue d'intégrations. Le pré-rendu tourne dans un processus enfant à l'environnement épuré, avec une échéance stricte (`services/prerender.py`).
 
 `/v1/authorize-host` n'existe **que pour les domaines custom** : le
 `forward_auth` de Caddy demande à l'API si un hostname correspond à un
 `ProjectDomain` validé, et récupère le slug de réécriture. Le slug reste
-toujours la clé S3 — un domaine custom change le routage, jamais le stockage.
+toujours la clé S3 ; un domaine custom change le routage, jamais le stockage.
 
 ## Modèle de données
 
@@ -221,24 +277,41 @@ prévoyez de gérer les backfills vous-même.
 
 ## Authentification
 
-Deux couches indépendantes :
+Deux couches indépendantes (plus entitlements Cloud optionnels) :
 
-- **La session Forge** — un JWT HS256 sur `SECRET_KEY`, 7 jours, émis par
-  `POST /auth/rodium/callback`. `get_current_user` l'accepte en en-tête Bearer
-  *ou* en paramètre `?access_token=`, délibérément, pour que les `<img src>`
-  fonctionnent.
-- **Les jetons OIDC RodiumAI** — obtenus par un flux authorization code + PKCE
-  (`apps/api/app/services/rodium_oidc.py`). Le `state` OAuth est lui-même un JWT
-  signé portant le verifier PKCE, ce qui évite tout stockage de session serveur.
-  Les jetons sont chiffrés (Fernet) dans `user_settings`.
+- **Comptes Forge locaux** — `POST /auth/register` crée un utilisateur
+  email/mot de passe (HTTP 201). Le JWT de session est HS256 sur `SECRET_KEY`
+  (7 jours). `get_current_user` accepte Bearer *ou* `?access_token=` pour que
+  les `<img src>` fonctionnent. Google optionnel via jetons Firebase.
+- **OIDC RodiumAI** — authorization code + PKCE (`services/rodium_oidc.py`).
+  N'apparaît que si `RODIUM_OIDC_CLIENT_ID` est renseigné ; sinon
+  `/auth/rodium/start` renvoie 503 et l'UI masque le bouton. Jetons chiffrés
+  (Fernet) dans `user_settings`.
+- **Entitlements Forge Cloud** — quand `forge_cloud_enabled` est vrai (OIDC +
+  scopes Forge), l'API tire plan/FRODI depuis Nest
+  (`GET …/internal/forge/balance`), les met en cache, et expose
+  `GET /auth/forge/status`. **FRODI** est le réservoir principal ; **RODI** le
+  repli wallet. Les grants de plan et Free+500 vivent dans Nest, pas ici.
 
 `resolve_generation_auth` (`services/rodium_generation.py`) s'exécute en tête de
-chaque endpoint de génération. Sur le chemin actuel, il envoie le jeton d'accès
-et un **id** de clé API — **le secret de la clé n'atteint jamais Forge.**
+chaque endpoint de génération. Sur le chemin Cloud, chat et images passent par
+le `/v1` public du gateway avec **le propre jeton d'accès RodiumAI de
+l'utilisateur** (`RODIUM_GATEWAY_URL`, par défaut `RODIUM_BASE_URL`) : le gateway
+facture le titulaire du jeton, FRODI d'abord, puis RODI. Un jeton expiré est
+rafraîchi ; un jeton absent est réémis via le provisioning, et un compte Forge
+vérifié sans compte RodiumAI en reçoit un à sa première génération. En
+self-host / legacy, une clé collée peut être déchiffrée à la place.
 
-> La connexion exige le fournisseur OIDC RodiumAI, **absent de ce dépôt**. Sans
-> `RODIUM_OIDC_CLIENT_ID`, `/auth/rodium/start` renvoie 503 et il n'existe aucun
-> repli local : `/auth/register` renvoie définitivement `410 Gone`.
+Pendant la transition, la voie interne Forge (`/internal/forge/*`, jeton
+partagé) sert encore quand le gateway refuse un jeton ou que Forge n'en a pas
+(`FORGE_INTERNAL_LANE_FALLBACK=false` coupe ce repli), et pour les projets
+partagés facturés à leur propriétaire, dont le plafond FRODI par collaborateur
+n'est appliqué que par cette voie. Les lectures de plan et de solde y passent
+aussi pour l'instant.
+
+> Le self-host **n'exige pas** OIDC. `/register` local fonctionne avec
+> `RODIUM_OIDC_CLIENT_ID` vide. Forge Cloud (`forge.rodiumai.io`) utilise le SSO
+> OIDC et les plans FRODI Nest.
 
 ## Travail de fond
 
