@@ -9,7 +9,7 @@
  * the Forge card on the RodiumAI dashboard opens the builder.
  */
 
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { AuthCard, AuthDivider, AuthField } from "@/components/auth/AuthCard";
@@ -24,6 +24,13 @@ import { firebaseEnabled } from "@/lib/firebase";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 
 type TokenResponse = { access_token: string; email_verified?: boolean };
+
+/**
+ * `useRef` resets on Strict Mode remount; a second autostart overwrites the
+ * tab secret in sessionStorage while the first authorize URL is still in
+ * flight → callback "OAuth state does not match this browser".
+ */
+let autostartArmed = false;
 
 function LoginInner() {
   const router = useRouter();
@@ -47,7 +54,6 @@ function LoginInner() {
   const [rodiumAvailable, setRodiumAvailable] = useState<boolean | null>(null);
 
   const autostart = params.get("autostart") === "1";
-  const startedRef = useRef(false);
 
   function land() {
     window.location.assign(sanitizeReturnTo(params.get("next")) || "/dashboard");
@@ -122,8 +128,8 @@ function LoginInner() {
   }, []);
 
   useEffect(() => {
-    if (!autostart || startedRef.current || rodiumAvailable !== true) return;
-    startedRef.current = true;
+    if (!autostart || autostartArmed || rodiumAvailable !== true) return;
+    autostartArmed = true;
     // Dashboard CTA must always run OIDC for the *current* RodiumAi session.
     // Keeping an existing forge_token short-circuits to the previous Forge
     // account and ignores the account just opened on rodiumai.io.

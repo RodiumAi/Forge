@@ -69,33 +69,68 @@ export async function startRodiumHandoff(rawNext: string | null): Promise<StartH
 }
 
 /**
+ * Two finishes for the same `#code` in flight at once share one redeem (the
+ * second would find the tab secret already burnt). Entries are dropped as soon
+ * as they settle: a later call must go through the secret check again.
+ */
+const inflightFinishes = new Map<string, Promise<string>>();
+
+/**
  * Leg 2. Redeems the code with this tab's secret and stores the Forge
  * session. Returns the in-app path to land on. Throws when the code is
  * expired, already used, or was opened in a tab that did not request it.
  */
 export async function finishRodiumHandoff(fragment: HandoffFragment): Promise<string> {
-  const binding = consumeHandoffBinding();
-  if (!fragment.code || !binding) {
+  if (!fragment.code) {
     throw new HandoffMismatchError();
   }
-  // The dashboard just told us who is signed in on RodiumAi; whatever Forge
-  // session this browser held before belongs to the previous account.
-  setToken(null);
-  const { clearSessionCache, prepareSessionAfterRodiumLogin } = await import(
-    "@/lib/session-cache"
-  );
-  clearSessionCache();
-  const data = await api<{ access_token: string }>("/auth/rodium/handoff", {
-    method: "POST",
-    body: JSON.stringify({ code: fragment.code, binding }),
+  const key = fragment.code;
+  const existing = inflightFinishes.get(key);
+  if (existing) return existing;
+
+  let resolve!: (value: string) => void;
+  let reject!: (reason?: unknown) => void;
+  const placeholder = new Promise<string>((res, rej) => {
+    resolve = res;
+    reject = rej;
   });
-  setToken(data.access_token);
-  try {
-    await prepareSessionAfterRodiumLogin();
-  } catch {
-    // Best-effort hydrate; the dashboard refreshes again.
+  inflightFinishes.set(key, placeholder);
+
+  const binding = consumeHandoffBinding();
+  if (!binding) {
+    inflightFinishes.delete(key);
+    reject(new HandoffMismatchError());
+    return placeholder;
   }
-  return sanitizeReturnTo(fragment.next) || "/dashboard";
+
+  void (async () => {
+    try {
+      // The dashboard just told us who is signed in on RodiumAi; whatever Forge
+      // session this browser held before belongs to the previous account.
+      setToken(null);
+      const { clearSessionCache, prepareSessionAfterRodiumLogin } = await import(
+        "@/lib/session-cache"
+      );
+      clearSessionCache();
+      const data = await api<{ access_token: string }>("/auth/rodium/handoff", {
+        method: "POST",
+        body: JSON.stringify({ code: fragment.code, binding }),
+      });
+      setToken(data.access_token);
+      try {
+        await prepareSessionAfterRodiumLogin();
+      } catch {
+        // Best-effort hydrate; the dashboard refreshes again.
+      }
+      resolve(sanitizeReturnTo(fragment.next) || "/dashboard");
+    } catch (err) {
+      reject(err);
+    } finally {
+      inflightFinishes.delete(key);
+    }
+  })();
+
+  return placeholder;
 }
 
 /** The code reached a tab that never asked for it (forwarded link, new tab). */
