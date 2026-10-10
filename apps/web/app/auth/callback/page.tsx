@@ -16,6 +16,9 @@ import { useI18n } from "@/lib/i18n/I18nProvider";
  * Survive React Strict Mode's mount → unmount → remount. A component `useRef`
  * resets on remount, so the old guard still burned `state_binding` twice and
  * the second call hit the API with `null` → "OAuth state does not match".
+ *
+ * The map entry is set *before* `consumeStateBinding()` so two synchronous
+ * callers cannot both pass the `existing` check and burn the secret twice.
  */
 const inflightCallbacks = new Map<string, Promise<{ access_token: string }>>();
 
@@ -27,16 +30,26 @@ function exchangeOAuthCode(
   const existing = inflightCallbacks.get(key);
   if (existing) return existing;
 
+  let resolve!: (value: { access_token: string }) => void;
+  let reject!: (reason?: unknown) => void;
+  const placeholder = new Promise<{ access_token: string }>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  inflightCallbacks.set(key, placeholder);
+
   const stateBinding = consumeStateBinding();
-  const promise = api<{ access_token: string }>("/auth/rodium/callback", {
+  api<{ access_token: string }>("/auth/rodium/callback", {
     method: "POST",
     body: JSON.stringify({ code, state, state_binding: stateBinding }),
-  }).finally(() => {
-    // Keep long enough for Strict Mode remount to join the same promise.
-    window.setTimeout(() => inflightCallbacks.delete(key), 5_000);
-  });
-  inflightCallbacks.set(key, promise);
-  return promise;
+  })
+    .then(resolve, reject)
+    .finally(() => {
+      // Keep long enough for Strict Mode remount to join the same promise.
+      window.setTimeout(() => inflightCallbacks.delete(key), 5_000);
+    });
+
+  return placeholder;
 }
 
 function CallbackInner() {
