@@ -1,45 +1,45 @@
 version: 2
 
-# Grouped, monthly updates. Weekly per-dependency PRs on a repo this size buries
-# maintainers and trains everyone to rubber-stamp — grouping keeps the signal.
-# Security advisories are delivered separately by GitHub and are not throttled
-# by this schedule.
+# Version updates are switched off: `open-pull-requests-limit: 0` stops the
+# routine bump PRs (they piled up faster than they were reviewed, and the hashed
+# Python requirements cannot be edited by Dependabot anyway: CI recompiles them
+# with uv and diffs the result).
+#
+# Security updates are NOT affected: GitHub still opens a pull request when an
+# advisory hits a dependency, outside this limit. To update by hand:
+#   web:  cd apps/web && npm update <package>
+#   api:  cd apps/api && uv --system-certs pip compile requirements.in \
+#           --python-version 3.12 --python-platform x86_64-manylinux_2_17 \
+#           --generate-hashes --output-file requirements.txt \
+#           --upgrade-package <package>
+#         (same for requirements-dev.in / requirements-dev.txt)
 updates:
   - package-ecosystem: npm
     directory: /apps/web
     schedule:
       interval: monthly
-    open-pull-requests-limit: 5
-    groups:
-      web-minor-and-patch:
-        update-types: [minor, patch]
+    open-pull-requests-limit: 0
 
   - package-ecosystem: npm
     directory: /apps/api/runtime
     schedule:
       interval: monthly
-    open-pull-requests-limit: 3
-    groups:
-      runtime-minor-and-patch:
-        update-types: [minor, patch]
+    open-pull-requests-limit: 0
 
   - package-ecosystem: pip
     directory: /apps/api
     schedule:
       interval: monthly
-    open-pull-requests-limit: 5
-    groups:
-      api-minor-and-patch:
-        update-types: [minor, patch]
+    open-pull-requests-limit: 0
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: monthly
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 0
 
   - package-ecosystem: docker
     directory: /apps/api
     schedule:
       interval: monthly
-    open-pull-requests-limit: 2
+    open-pull-requests-limit: 0
