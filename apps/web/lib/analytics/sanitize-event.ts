@@ -16,6 +16,9 @@ const URL_PROPERTY_KEYS = [
   "page_path",
 ] as const;
 
+/** Contact details never go to analytics, whoever puts them on an event. */
+const CONTACT_PROPERTY_KEYS = ["email", "$email", "phone", "$phone"] as const;
+
 /**
  * Browser noise that is not an application error: it cannot be fixed by us and
  * only hides real exceptions (and costs billed events).
@@ -71,6 +74,12 @@ function scrubUrlProperties(bag: unknown): void {
   }
 }
 
+function dropContactProperties(bag: unknown): void {
+  if (!bag || typeof bag !== "object") return;
+  const record = bag as Record<string, unknown>;
+  for (const key of CONTACT_PROPERTY_KEYS) delete record[key];
+}
+
 /**
  * `before_send` hook shared by the web apps: drops benign exceptions and
  * removes secrets from every URL attached to an event.
@@ -86,5 +95,8 @@ export function sanitizeCaptureResult(
   scrubUrlProperties(result.properties);
   scrubUrlProperties(result.$set);
   scrubUrlProperties(result.$set_once);
+  dropContactProperties(result.properties);
+  dropContactProperties(result.$set);
+  dropContactProperties(result.$set_once);
   return result;
 }

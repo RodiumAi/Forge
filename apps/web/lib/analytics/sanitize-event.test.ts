@@ -68,6 +68,21 @@ describe("sanitizeCaptureResult", () => {
     );
   });
 
+  it("never lets an email or phone number through", () => {
+    const result = {
+      uuid: "u",
+      event: "$identify",
+      properties: { email: "a@b.com", $email: "a@b.com", plan: "free" },
+      $set: { email: "a@b.com", phone: "+22900000000", role: "user" },
+      $set_once: { $email: "a@b.com" },
+    } as unknown as CaptureResult;
+    const out = sanitizeCaptureResult(result);
+    expect(JSON.stringify(out)).not.toContain("a@b.com");
+    expect(JSON.stringify(out)).not.toContain("22900000000");
+    expect(out?.properties.plan).toBe("free");
+    expect(out?.$set?.role).toBe("user");
+  });
+
   it("passes null through", () => {
     expect(sanitizeCaptureResult(null)).toBeNull();
   });
