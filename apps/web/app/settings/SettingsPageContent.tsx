@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { ConsentSettingsBlock } from "@/components/consent/ConsentSettingsBlock";
 import { HomeLayout } from "@/components/HomeLayout";
 import { RodiumGenerationPanel } from "@/components/RodiumGenerationPanel";
 import {
@@ -189,6 +190,7 @@ export default function SettingsPageContent() {
                 </div>
               </SettingsRow>
             </SettingsBlock>
+            <ConsentSettingsBlock />
           </SettingsPanel>
         )}
 
