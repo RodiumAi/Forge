@@ -30,9 +30,7 @@ def test_environment_label_defaults_to_the_deployment_environment(monkeypatch, f
 
 
 def test_posthog_environment_overrides_the_label(monkeypatch, fake_client):
-    monkeypatch.setattr(
-        posthog_client, "get_settings", lambda: _settings(posthog_environment="production")
-    )
+    monkeypatch.setattr(posthog_client, "get_settings", lambda: _settings(posthog_environment="production"))
     posthog_client.capture_event("user-1", "forge_generation_completed")
     payload = fake_client.capture.call_args.args[2]
     assert payload["environment"] == "production"
