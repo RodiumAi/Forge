@@ -11,10 +11,21 @@ import {
   buildProjectExtraLib,
 } from "./monaco-extra-libs";
 
-const Monaco = dynamic(() => import("@monaco-editor/react"), {
-  ssr: false,
-  loading: () => <div className="code-editor-loading">…</div>,
-});
+/** Where scripts/copy-monaco.mjs publishes the editor runtime (same origin, so CSP 'self' applies). */
+const MONACO_BASE_PATH = "/monaco-vs";
+
+const Monaco = dynamic(
+  async () => {
+    const mod = await import("@monaco-editor/react");
+    // Default is a jsdelivr URL, which our CSP blocks: load the local copy.
+    mod.loader.config({ paths: { vs: MONACO_BASE_PATH } });
+    return mod.default;
+  },
+  {
+    ssr: false,
+    loading: () => <div className="code-editor-loading">…</div>,
+  },
+);
 
 type Props = {
   path: string;

@@ -94,6 +94,7 @@ import { UserMessageBody } from "@/components/UserMessageBody";
 import {
   builderStateFromUi,
   builderUrlFromState,
+  isSameBuilderUrl,
   isOptionsSubview,
   parseBuilderUrlState,
   type OptionsSubview,
@@ -635,21 +636,25 @@ export default function ProjectPage() {
           ? (overrides as Record<string, T>)[key]
           : fallback;
 
-      router.replace(
-        builderUrlFromState(
-          pathname,
-          builderStateFromUi({
-            mainMode: pick("mainMode", mainMode),
-            optionsSection: pick("optionsSection", optionsSection),
-            mobilePane: pick("mobilePane", mobilePane),
-            viewport: pick("viewport", viewport),
-            previewPath: pick("previewPath", previewPath),
-            previewTool: pick("previewTool", previewTool),
-            designOpen: pick("designOpen", designOpen),
-          }),
-        ),
-        { scroll: false },
+      const target = builderUrlFromState(
+        pathname,
+        builderStateFromUi({
+          mainMode: pick("mainMode", mainMode),
+          optionsSection: pick("optionsSection", optionsSection),
+          mobilePane: pick("mobilePane", mobilePane),
+          viewport: pick("viewport", viewport),
+          previewPath: pick("previewPath", previewPath),
+          previewTool: pick("previewTool", previewTool),
+          designOpen: pick("designOpen", designOpen),
+        }),
       );
+      // Already on that URL: replacing it again only feeds the browser's
+      // history-throttle when several effects call this in a row.
+      // Read at call time (not from a hook) so this callback keeps a stable
+      // identity: `load` depends on it.
+      const currentSearch = typeof window === "undefined" ? "" : window.location.search;
+      if (isSameBuilderUrl(target, pathname, currentSearch)) return;
+      router.replace(target, { scroll: false });
     },
     [
       designOpen,

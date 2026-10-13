@@ -7,7 +7,10 @@
     "node": ">=22"
   },
   "scripts": {
+    "copy:monaco": "node scripts/copy-monaco.mjs",
+    "predev": "npm run copy:monaco",
     "dev": "next dev -p 3100",
+    "prebuild": "npm run copy:monaco",
     "build": "next build",
     "start": "next start -p 3100",
     "lint": "eslint . --max-warnings=10",
@@ -21,6 +24,7 @@
     "firebase": "^11.10.0",
     "highlight.js": "^11.12.0",
     "lucide-react": "^1.33.0",
+    "monaco-editor": "0.56.0",
     "next": "15.5.24",
     "posthog-js": "^1.423.1",
     "qrcode": "^1.5.4",

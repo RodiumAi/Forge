@@ -118,6 +118,32 @@ export function builderUrlFromState(pathname: string, state: BuilderUrlState): s
   return qs ? `${pathname}?${qs}` : pathname;
 }
 
+function normalizedQuery(search: string): string {
+  const params = new URLSearchParams(search.replace(/^\?/, ""));
+  params.sort();
+  return params.toString();
+}
+
+/**
+ * True when `target` (as built by `builderUrlFromState`) already is the URL on
+ * screen. Calling `router.replace` with an unchanged URL still hits
+ * `history.replaceState`; a render loop doing it trips the browsers' throttle
+ * ("Throttling navigation to prevent the browser from hanging").
+ */
+export function isSameBuilderUrl(
+  target: string,
+  currentPathname: string,
+  currentSearch: string,
+): boolean {
+  const queryAt = target.indexOf("?");
+  const targetPath = queryAt === -1 ? target : target.slice(0, queryAt);
+  const targetSearch = queryAt === -1 ? "" : target.slice(queryAt + 1);
+  return (
+    targetPath === currentPathname &&
+    normalizedQuery(targetSearch) === normalizedQuery(currentSearch)
+  );
+}
+
 export function builderStateFromUi(input: {
   mainMode: BuilderMode;
   optionsSection: OptionsSubview;
