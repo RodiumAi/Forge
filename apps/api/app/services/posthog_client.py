@@ -53,7 +53,7 @@ def capture_event(
     settings = get_settings()
     payload = {
         "app": FORGE_POSTHOG_APP,
-        "environment": settings.environment,
+        "environment": settings.posthog_environment or settings.environment,
         **(properties or {}),
     }
     try:
