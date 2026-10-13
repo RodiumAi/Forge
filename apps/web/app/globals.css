@@ -14449,3 +14449,62 @@ button.file-op-path:focus-visible { outline: 2px solid #f2620a; outline-offset: 
     grid-template-columns: 1fr;
   }
 }
+
+/* Analytics consent: banner, footer link and settings. */
+.consent-banner {
+  position: fixed;
+  z-index: 60;
+  left: 1rem;
+  bottom: 1rem;
+  width: min(26rem, calc(100% - 2rem));
+  display: grid;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
+}
+
+.consent-banner-title {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.consent-banner-body {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.consent-banner-body a {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.consent-banner-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.lp-footer-link-button {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  margin-top: 0.35rem;
+  color: var(--lp-ink);
+  font: inherit;
+  font-size: 0.92rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.lp-footer-link-button:hover {
+  color: var(--lp-ember);
+}

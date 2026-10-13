@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     posthog_enabled: bool = False
     posthog_api_key: str = ""
     posthog_host: str = "https://eu.i.posthog.com"
+    # Tag sent as `environment` on every event. The production task still runs
+    # ENVIRONMENT=staging (the KMS/Secrets Manager providers are not wired), so
+    # events were all labelled staging; this decouples the analytics label.
+    posthog_environment: str = ""
     api_base_url: str = "http://localhost:8100"
     sites_base_domain: str = "lvh.me:8080"
 

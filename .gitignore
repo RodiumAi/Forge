@@ -64,3 +64,6 @@ task-definition-deploy.json
 *.tfstate
 *.tfstate.backup
 !.env.production.example
+
+# Monaco runtime copied from node_modules by apps/web/scripts/copy-monaco.mjs
+apps/web/public/monaco-vs/

@@ -1,6 +1,7 @@
 "use client";
 
 import { BrandLogo } from "@/components/BrandLogo";
+import { ConsentSettingsButton } from "@/components/consent/ConsentSettingsButton";
 import { LandingPricing } from "@/components/landing/LandingPricing";
 import { LandingReveal } from "@/components/landing/LandingReveal";
 import {
@@ -670,6 +671,7 @@ export default function LandingPage() {
               >
                 {t("landingFooterCookies")}
               </a>
+              <ConsentSettingsButton />
             </div>
           </div>
           <div className="lp-footer-bottom">

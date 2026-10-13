@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
+import { ConsentBanner } from "@/components/consent/ConsentBanner";
 import { TopProgressHost } from "@/components/TopProgressHost";
 import { LandingJsonLd } from "@/components/landing/LandingJsonLd";
-import { PostHogPageView } from "@/components/posthog/PostHogPageView";
 import { PostHogProvider } from "@/components/posthog/PostHogProvider";
 import { appFonts } from "@/lib/fonts";
 import { I18nProvider } from "@/lib/i18n/I18nProvider";
@@ -114,11 +113,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeProvider>
           <I18nProvider>
             <PostHogProvider>
-              <Suspense fallback={null}>
-                <PostHogPageView />
-              </Suspense>
               <TopProgressHost />
               {children}
+              <ConsentBanner />
             </PostHogProvider>
           </I18nProvider>
         </ThemeProvider>
