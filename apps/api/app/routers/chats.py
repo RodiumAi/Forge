@@ -23,6 +23,7 @@ from app.schemas import (
 from app.services.apply_writes import apply_validated_writes_async, brand_change_requested
 from app.services.attachments import extract_image_urls
 from app.services.capabilities import require_rodi_for_paid_capability
+from app.services.deck_ai import chat_entry as deck_chat
 from app.services.filesystem import delete_file
 from app.services.llm import (
     RodiumError,
@@ -1052,6 +1053,24 @@ async def send_message(
             detail={"code": getattr(exc, "code", None) or "upstream", "message": str(exc)[:500]},
         ) from exc
 
+    # Documents (slides, codelab, design system) have their own flows; the
+    # React site pipeline below only ever sees React projects.
+    if deck_chat.is_document_project(project):
+        return deck_chat.start_document_message(
+            db=db,
+            user=user,
+            project=project,
+            chat=chat,
+            body=body,
+            content=user_content,
+            mode=mode,
+            locale=locale,
+            route_for_request=_route_for_request,
+            effort_label=effort_label,
+            resolve_gen_auth=resolve_gen_auth,
+            event_stream=_event_stream,
+        )
+
     prior_count = db.query(Message).filter(Message.chat_id == chat.id).count()
     force_scaffold = prior_count == 0
     route = classify_and_route(user_content, force_scaffold=force_scaffold)
@@ -1574,6 +1593,18 @@ async def confirm_plan(
 ) -> StreamingResponse:
     locale = resolve_locale(request)
     project, chat, run = _owned_run(db, user, project_id, chat_id, run_id, locale)
+    if deck_chat.is_deck_outline_run(run):
+        # Paid-capability checks stay real HTTP statuses, as below.
+        await resolve_generation_auth(db, user)
+        return deck_chat.confirm_deck_outline(
+            db=db,
+            run=run,
+            project=project,
+            plan=body.plan,
+            locale=locale,
+            resolve_gen_auth=_generation_auth_resolver(user.id, locale, project.id),
+            event_stream=_event_stream,
+        )
     # "partial" is a plan that ran to the end with some steps skipped — exactly
     # the case the Resume button exists for, so it has to be resumable too.
     if run.status not in ("awaiting_plan_confirm", "error", "partial"):
@@ -1721,6 +1752,22 @@ async def branch_messages(
     db.flush()
 
     resolve_gen_auth = _generation_auth_resolver(user.id, locale)
+    if deck_chat.is_document_project(project):
+        return deck_chat.start_document_message(
+            db=db,
+            user=user,
+            project=project,
+            chat=chat,
+            body=body,
+            content=user_content,
+            mode=mode,
+            locale=locale,
+            route_for_request=_route_for_request,
+            effort_label=effort_label,
+            resolve_gen_auth=_generation_auth_resolver(user.id, locale, project.id),
+            event_stream=_event_stream,
+            anchor=anchor,
+        )
     # Messages BEFORE the edited one: editing the very first prompt is still a
     # fresh build (the anchor itself survives the truncation, so counting the
     # whole chat always gave >= 1 and never took the new-project path).
