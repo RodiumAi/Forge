@@ -4233,6 +4233,21 @@ html[data-theme="light"] .builder-msg-attach-placeholder {
   padding: 0 0.3rem;
 }
 
+.selection-scope-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.selection-scope-toggle input {
+  accent-color: #2563eb;
+  margin: 0;
+}
+
 .builder-viewport-frame {
   position: relative;
   height: 100%;
