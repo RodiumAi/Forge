@@ -1,0 +1,34 @@
+{
+  "kind": "codelab",
+  "id": "codelab-frontend",
+  "title": {
+    "fr": "Tutoriel frontend",
+    "en": "Frontend tutorial"
+  },
+  "description": {
+    "fr": "Une interface React avec Vite et TypeScript : composants, état, liste filtrable et appel d'API. Code en onglets et différences surlignées.",
+    "en": "A React interface with Vite and TypeScript: components, state, a filterable list and an API call. Tabbed code and highlighted diffs."
+  },
+  "tags": [
+    "frontend",
+    "react",
+    "typescript",
+    "vite"
+  ],
+  "category": "frontend",
+  "bootHint": {
+    "fr": "Adapte codelab-frontend : framework, composants, données affichées.",
+    "en": "Adapt codelab-frontend: framework, components, data shown."
+  },
+  "tone": "friendly, visual, step by step",
+  "preview": "preview.html",
+  "accent": "#6D4AFF",
+  "bg": "#FBFAFF",
+  "fg": "#1B1630",
+  "muted": "#5B6170",
+  "fonts": {
+    "display": "Space Grotesk",
+    "body": "Inter",
+    "mono": "JetBrains Mono"
+  }
+}

@@ -15,6 +15,7 @@ from app.middleware import MAX_BODY_BYTES, MaxBodySizeMiddleware
 from app.routers import (
     auth,
     chats,
+    codelab,
     comments,
     design,
     design_systems,
@@ -181,6 +182,7 @@ app.include_router(kinds.router)
 app.include_router(integrations.router)
 app.include_router(projects.router)
 app.include_router(documents.router)
+app.include_router(codelab.router)
 app.include_router(design_systems.router)
 app.include_router(images.router)
 app.include_router(design.router)

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<title>Analyser des ventes avec pandas preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { width: 480px; height: 300px; overflow: hidden; display: flex; background: #F7FAFF; color: #0F1B33;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+  aside { width: 150px; background: #EEF3FC; border-right: 1px solid #DCE5F5; padding: 14px 10px; }
+  .bar { height: 4px; border-radius: 4px; background: #DCE5F5; margin: 8px 0 12px; }
+  .bar i { display: block; width: 35%; height: 100%; border-radius: 4px; background: #2563EB; }
+  aside b { font-size: 11px; line-height: 1.2; display: block; }
+  ol { list-style: none; display: grid; gap: 5px; }
+  li { font-size: 9px; display: flex; gap: 6px; align-items: center; color: #5B6170; }
+  li span { width: 14px; height: 14px; border-radius: 50%; border: 1px solid #DCE5F5; display: grid;
+    place-items: center; font-size: 8px; flex-shrink: 0; }
+  li.on { color: #0F1B33; font-weight: 600; }
+  li.on span { background: #2563EB; border-color: #2563EB; color: #fff; }
+  main { flex: 1; padding: 18px 18px 0; min-width: 0; }
+  .meta { font-size: 9px; color: #5B6170; margin-bottom: 6px; }
+  h1 { font-size: 17px; line-height: 1.15; margin-bottom: 8px; }
+  p { font-size: 10px; color: #5B6170; line-height: 1.4; margin-bottom: 10px; }
+  .code { border: 1px solid #DCE5F5; border-radius: 6px; overflow: hidden; }
+  .head { font: 9px ui-monospace, monospace; padding: 4px 8px; border-bottom: 1px solid #DCE5F5;
+    background: #EEF3FC; display: flex; justify-content: space-between; }
+  .head em { color: #2563EB; font-style: normal; }
+  pre { font: 9px/1.5 ui-monospace, monospace; padding: 6px 8px; white-space: pre; overflow: hidden; }
+</style>
+</head>
+<body>
+<aside>
+  <b>Analyser des ventes avec pandas</b>
+  <div class="bar"><i></i></div>
+  <ol><li><span>1</span>Introduction</li><li class="on"><span>2</span>Charger les données</li><li><span>3</span>Nettoyer</li><li><span>4</span>Agréger</li><li><span>5</span>Tracer un graphique</li></ol>
+</aside>
+<main>
+  <div class="meta">Étape 2 sur 5 · 37 min</div>
+  <h1>Charger les données</h1>
+  <p>À partir d&#x27;un fichier CSV de ventes, vous répondez à trois questions : combien vend-on par mois, quels produits marchent le mieux, et comment le montr</p>
+  <div class="code"><div class="head"><span>code</span><em>Copier</em></div>
+  <pre>import pandas as pd
+
+ventes = pd.read_csv(&quot;ventes.csv&quot;, parse_dates=[&quot;date&quot;])
+ventes[&quot;mois&quot;] = ventes[&quot;date&quot;].dt.to_period(&quot;M&quot;)
+
+par_mois = ventes.groupby(&quot;mois&quot;)[&quot;montant&quot;].sum()</pre></div>
+</main>
+</body>
+</html>

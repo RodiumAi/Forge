@@ -376,12 +376,42 @@ def test_publish_route_sends_slides_to_the_player(deck_project, monkeypatch):
 
 
 def test_publish_route_refuses_document_kinds_without_a_player(deck_project, monkeypatch):
-    project = _project("codelab", deck_project)
+    # Every document kind has a player today; a future one without it answers 409.
+    from dataclasses import replace
+
+    project = _project("design_system", deck_project)
+    real_get_kind = publish_router.get_kind
+    monkeypatch.setattr(
+        publish_router, "get_kind", lambda platform: replace(real_get_kind(platform), publish="none")
+    )
     monkeypatch.setattr(publish_router, "get_project_domain", lambda _db, _pid: None)
     client = _client(publish_router.router, project)
     r = client.post(f"/projects/{project.id}/publish")
     assert r.status_code == 409
     assert r.json()["detail"]["code"] == "PUBLISH_NOT_AVAILABLE"
+
+
+def test_publish_route_sends_codelabs_to_the_codelab_player(deck_project, monkeypatch):
+    project = _project("codelab", deck_project)
+    seen = {}
+
+    async def fake_publish_codelab(pid, slug, **kwargs):
+        seen.update(pid=pid, slug=slug, **kwargs)
+        return {"files_uploaded": 3}
+
+    async def no_site(*_a, **_k):  # pragma: no cover - must not run
+        raise AssertionError("React build ran for a codelab")
+
+    monkeypatch.setattr(publish_router, "publish_codelab_player", fake_publish_codelab)
+    monkeypatch.setattr(publish_router, "publish_project_esm", no_site)
+    monkeypatch.setattr(publish_router, "get_project_domain", lambda _db, _pid: None)
+    monkeypatch.setattr(gating, "entitlements_apply", lambda _u: False)
+    user = SimpleNamespace(id=project.user_id, rodium_sub=None, email_verified_at=datetime.now(UTC))
+    client = _client(publish_router.router, project, user=user)
+    r = client.post(f"/projects/{project.id}/publish")
+    assert r.status_code == 200, r.text
+    assert r.json()["files_uploaded"] == 3
+    assert seen["pid"] == str(project.id) and seen["badge"] is False
 
 
 def test_fixture_images_exist(deck_project):

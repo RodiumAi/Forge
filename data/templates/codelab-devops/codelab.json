@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "title": "Docker et intégration continue",
+  "summary": "Vous emballez une API Python dans une image Docker, la lancez avec Docker Compose, puis faites tester et construire chaque commit par GitHub Actions.",
+  "level": "intermediate",
+  "durationMinutes": 37,
+  "prerequisites": [
+    "Docker Desktop ou Docker Engine",
+    "Un compte GitHub",
+    "Git"
+  ],
+  "learn": [
+    "Écrire un Dockerfile sûr",
+    "Lancer des services avec Compose",
+    "Créer un workflow GitHub Actions",
+    "Chaîner tests et build"
+  ],
+  "author": {
+    "name": "Forge par RodiumAi"
+  },
+  "theme": {
+    "designSystem": "local",
+    "tokens": "DESIGN.md"
+  },
+  "steps": [
+    {
+      "id": "intro",
+      "title": "Introduction",
+      "file": "steps/01-intro.md",
+      "minutes": 3
+    },
+    {
+      "id": "dockerfile",
+      "title": "Écrire le Dockerfile",
+      "file": "steps/02-dockerfile.md",
+      "minutes": 10
+    },
+    {
+      "id": "compose",
+      "title": "Lancer avec Compose",
+      "file": "steps/03-compose.md",
+      "minutes": 8
+    },
+    {
+      "id": "ci",
+      "title": "Intégration continue",
+      "file": "steps/04-ci.md",
+      "minutes": 12
+    },
+    {
+      "id": "next",
+      "title": "Pour aller plus loin",
+      "file": "steps/05-next.md",
+      "minutes": 4
+    }
+  ],
+  "downloads": [
+    {
+      "id": "solution",
+      "label": "Fichiers de déploiement",
+      "path": "files/solution",
+      "zip": true
+    }
+  ]
+}

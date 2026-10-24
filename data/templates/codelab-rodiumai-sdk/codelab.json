@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "title": "Intégrer l'API RodiumAi dans votre application",
+  "summary": "Vous connectez une application à l'API RodiumAi avec le SDK OpenAI, listez les modèles disponibles, obtenez une réponse en flux et gérez proprement les erreurs de crédit.",
+  "level": "beginner",
+  "durationMinutes": 36,
+  "prerequisites": [
+    "Un compte RodiumAi et une clé API rd_sk_",
+    "Python 3.12 ou Node.js 22"
+  ],
+  "learn": [
+    "Configurer la clé et l'URL de l'API",
+    "Choisir un modèle avec GET /v1/models",
+    "Recevoir une réponse en flux",
+    "Gérer les erreurs 401 et 402"
+  ],
+  "author": {
+    "name": "Forge par RodiumAi"
+  },
+  "theme": {
+    "designSystem": "local",
+    "tokens": "DESIGN.md"
+  },
+  "steps": [
+    {
+      "id": "intro",
+      "title": "Introduction",
+      "file": "steps/01-intro.md",
+      "minutes": 3
+    },
+    {
+      "id": "key",
+      "title": "Configurer la clé",
+      "file": "steps/02-key.md",
+      "minutes": 5
+    },
+    {
+      "id": "install",
+      "title": "Installer le SDK",
+      "file": "steps/03-install.md",
+      "minutes": 4
+    },
+    {
+      "id": "models",
+      "title": "Lister les modèles",
+      "file": "steps/04-models.md",
+      "minutes": 6
+    },
+    {
+      "id": "chat",
+      "title": "Une réponse en flux",
+      "file": "steps/05-chat.md",
+      "minutes": 10
+    },
+    {
+      "id": "errors",
+      "title": "Gérer les erreurs",
+      "file": "steps/06-errors.md",
+      "minutes": 8
+    }
+  ],
+  "downloads": [
+    {
+      "id": "examples",
+      "label": "Exemples Python et TypeScript",
+      "path": "files/examples",
+      "zip": true
+    }
+  ]
+}

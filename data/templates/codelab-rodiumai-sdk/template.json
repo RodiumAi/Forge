@@ -1,0 +1,37 @@
+{
+  "kind": "codelab",
+  "id": "codelab-rodiumai-sdk",
+  "title": {
+    "fr": "Intégrer l'API RodiumAi",
+    "en": "Integrate the RodiumAi API"
+  },
+  "description": {
+    "fr": "Brancher une application sur l'API RodiumAi avec un SDK compatible OpenAI, en Python et en TypeScript : clé, modèles, réponses en flux et gestion des erreurs.",
+    "en": "Connect an application to the RodiumAi API with an OpenAI compatible SDK, in Python and TypeScript: key, models, streamed answers and error handling."
+  },
+  "tags": [
+    "rodiumai",
+    "sdk",
+    "api",
+    "ia",
+    "python",
+    "typescript",
+    "dark"
+  ],
+  "category": "ai",
+  "bootHint": {
+    "fr": "Adapte codelab-rodiumai-sdk : langage, cas d'usage, modèles à présenter.",
+    "en": "Adapt codelab-rodiumai-sdk: language, use case, models to present."
+  },
+  "tone": "confident, precise, developer to developer",
+  "preview": "preview.html",
+  "accent": "#EB6118",
+  "bg": "#1C1F26",
+  "fg": "#F4F1EC",
+  "muted": "#9AA0AD",
+  "fonts": {
+    "display": "Open Sauce Sans",
+    "body": "Open Sauce Sans",
+    "mono": "JetBrains Mono"
+  }
+}

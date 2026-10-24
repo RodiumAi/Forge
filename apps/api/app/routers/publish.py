@@ -14,6 +14,7 @@ from app.i18n import resolve_locale, t
 from app.kinds import get_kind
 from app.models import Project, User
 from app.services import rate_limit
+from app.services.codelab.publish import publish_codelab_player
 from app.services.domains import get_project_domain, sites_url_for_project
 from app.services.export_project import build_export_zip
 from app.services.exports.deck_publish import publish_deck
@@ -110,6 +111,16 @@ async def publish_now(
                 badge=show_badge(db, user, opts.badge),
                 notes=opts.notes,
                 site_url=site_url,
+            )
+        elif kind is not None and kind.publish == "codelab_player":
+            # Codelabs: the prebuilt Forge codelab player plus codelab.json, steps and files.
+            opts = options or PublishOptions()
+            result = await publish_codelab_player(
+                str(project.id),
+                project.slug,
+                site_url=site_url,
+                lang=locale,
+                badge=show_badge(db, user, opts.badge),
             )
         elif kind is not None and kind.publish == "design_system_site":
             # Design system: the brand guidelines page built from the tokens.

@@ -1,0 +1,34 @@
+{
+  "kind": "codelab",
+  "id": "codelab-rest-api",
+  "title": {
+    "fr": "Tutoriel API REST",
+    "en": "REST API tutorial"
+  },
+  "description": {
+    "fr": "Construire une API REST de gestion de tâches avec FastAPI : routes, validation, erreurs et tests. Projet de départ et solution à télécharger.",
+    "en": "Build a task REST API with FastAPI: routes, validation, errors and tests. Starter project and solution to download."
+  },
+  "tags": [
+    "api",
+    "python",
+    "fastapi",
+    "backend"
+  ],
+  "category": "backend",
+  "bootHint": {
+    "fr": "Adapte codelab-rest-api : langage, framework, ressource métier, étapes.",
+    "en": "Adapt codelab-rest-api: language, framework, business resource, steps."
+  },
+  "tone": "clear, practical, encouraging",
+  "preview": "preview.html",
+  "accent": "#0E7C66",
+  "bg": "#FFFFFF",
+  "fg": "#14211C",
+  "muted": "#5B6170",
+  "fonts": {
+    "display": "Inter",
+    "body": "Inter",
+    "mono": "JetBrains Mono"
+  }
+}

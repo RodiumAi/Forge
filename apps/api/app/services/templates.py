@@ -121,6 +121,9 @@ def _has_kit_files(folder: Path, kind: str) -> bool:
     if kind == "slides":
         # A document kit: the deck plus its slide bodies, rendered by the Forge player.
         return (folder / "deck.json").is_file() and (folder / "slides").is_dir()
+    if kind == "codelab":
+        # A document kit: codelab.json plus its Markdown steps, rendered by the codelab player.
+        return (folder / "codelab.json").is_file() and (folder / "steps").is_dir()
     if kind == "design_system":
         return (folder / "design-system.json").is_file()
     return (folder / "package.json").is_file() and (folder / "src" / "App.tsx").is_file()
@@ -223,6 +226,10 @@ def fork_template(template_id: str, project_id: str, app_name: str | None = None
         _finish_slides_fork(dest, app_name)
         _snapshot(project_id, meta.id)
         return meta
+    if meta.kind == "codelab":
+        _finish_codelab_fork(dest, app_name)
+        _snapshot(project_id, meta.id)
+        return meta
 
     if meta.kind == "design_system":
         _finish_design_system_fork(dest, app_name)
@@ -310,6 +317,28 @@ def _finish_slides_fork(dest: Path, app_name: str | None) -> None:
         deck.title = name[:200]
     deck_path.write_text(
         json.dumps(dump_document(deck), ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+
+
+def _finish_codelab_fork(dest: Path, app_name: str | None) -> None:
+    """Validate the copied codelab against the contract and title it after the project.
+
+    A codelab kit is data (codelab.json, steps/*.md, files/) rendered by the
+    Forge codelab player: every step listed must exist, so a broken kit fails
+    the fork instead of opening an editor on a codelab with missing steps.
+    """
+    from app.contracts.forge_design import dump_document, validate_codelab
+
+    codelab_path = dest / "codelab.json"
+    codelab = validate_codelab(json.loads(codelab_path.read_text(encoding="utf-8")))
+    for step in codelab.steps:
+        if not (dest / step.file).is_file():
+            raise FileNotFoundError(f"Codelab kit step missing: {step.file}")
+    name = (app_name or "").strip()
+    if name:
+        codelab.title = name[:200]
+    codelab_path.write_text(
+        json.dumps(dump_document(codelab), ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
 
 

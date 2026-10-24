@@ -59,8 +59,20 @@ EXPECTED_DESIGN_SYSTEM_IDS = {
     "design-system-sante",
 }
 
+EXPECTED_CODELAB_IDS = {
+    "codelab-rest-api",
+    "codelab-frontend",
+    "codelab-mobile",
+    "codelab-data",
+    "codelab-devops",
+    "codelab-beginner-workshop",
+    "codelab-migration",
+    "codelab-rodiumai-sdk",
+}
+
 EXPECTED_IDS = (
     EXPECTED_SLIDES_IDS
+    | EXPECTED_CODELAB_IDS
     | EXPECTED_DESIGN_SYSTEM_IDS
     | {
         "astroship-startup",
@@ -117,8 +129,14 @@ EXPECTED_MOBILE_IDS = {
     "trove-market",
 }
 
-EXPECTED_WEB_IDS = EXPECTED_IDS - EXPECTED_MOBILE_IDS - EXPECTED_SLIDES_IDS - EXPECTED_DESIGN_SYSTEM_IDS
-DOCUMENT_KINDS = ("slides", "design_system")
+EXPECTED_WEB_IDS = (
+    EXPECTED_IDS
+    - EXPECTED_MOBILE_IDS
+    - EXPECTED_SLIDES_IDS
+    - EXPECTED_CODELAB_IDS
+    - EXPECTED_DESIGN_SYSTEM_IDS
+)
+DOCUMENT_KINDS = ("slides", "codelab", "design_system")
 
 
 class TestCatalog:
@@ -146,7 +164,7 @@ class TestCatalog:
         ]
         for template in list_templates():
             if template.kind in DOCUMENT_KINDS:
-                continue  # document kits: test_template_slides.py, test_template_design_systems.py
+                continue  # document kits: test_template_slides.py, test_template_codelab.py, test_template_design_systems.py
             for rel in required:
                 assert (template.path / rel).is_file(), f"{template.id} misses {rel}"
 
@@ -169,6 +187,7 @@ class TestCatalog:
         assert {t.id for t in webs} == EXPECTED_WEB_IDS
         assert {t.id for t in mobiles} == EXPECTED_MOBILE_IDS
         assert {t.id for t in decks} == EXPECTED_SLIDES_IDS
+        assert {t.id for t in list_templates(kind="codelab")} == EXPECTED_CODELAB_IDS
         assert {t.id for t in list_templates(kind="design_system")} == EXPECTED_DESIGN_SYSTEM_IDS
         assert all(t.kind == "web" for t in webs)
         assert all(t.kind == "mobile" for t in mobiles)

@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "title": "Mon premier programme en Python",
+  "summary": "Un atelier pour grands débutants : vous découvrez les variables, les conditions et les boucles, puis vous programmez un jeu du nombre mystère.",
+  "level": "beginner",
+  "durationMinutes": 105,
+  "prerequisites": [
+    "Un ordinateur",
+    "Aucune connaissance en programmation"
+  ],
+  "learn": [
+    "Lancer un programme Python",
+    "Utiliser des variables",
+    "Prendre des décisions avec if",
+    "Répéter avec while"
+  ],
+  "author": {
+    "name": "Forge par RodiumAi"
+  },
+  "theme": {
+    "designSystem": "local",
+    "tokens": "DESIGN.md"
+  },
+  "steps": [
+    {
+      "id": "welcome",
+      "title": "Bienvenue",
+      "file": "steps/01-welcome.md",
+      "minutes": 5
+    },
+    {
+      "id": "install",
+      "title": "Installer Python",
+      "file": "steps/02-install.md",
+      "minutes": 10
+    },
+    {
+      "id": "variables",
+      "title": "Les variables",
+      "file": "steps/03-variables.md",
+      "minutes": 15
+    },
+    {
+      "id": "conditions",
+      "title": "Prendre des décisions",
+      "file": "steps/04-conditions.md",
+      "minutes": 20
+    },
+    {
+      "id": "loops",
+      "title": "Répéter",
+      "file": "steps/05-loops.md",
+      "minutes": 20
+    },
+    {
+      "id": "game",
+      "title": "Le jeu du nombre mystère",
+      "file": "steps/06-game.md",
+      "minutes": 30
+    },
+    {
+      "id": "wrap-up",
+      "title": "Bilan",
+      "file": "steps/07-wrap-up.md",
+      "minutes": 5
+    }
+  ],
+  "downloads": [
+    {
+      "id": "game",
+      "label": "Le jeu terminé",
+      "path": "files/solution/nombre_mystere.py"
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "kind": "codelab",
+  "id": "codelab-migration",
+  "title": {
+    "fr": "Tutoriel de migration",
+    "en": "Migration tutorial"
+  },
+  "description": {
+    "fr": "Migrer progressivement une API Express de JavaScript vers TypeScript, fichier par fichier, sans casser la production. Diffs avant / après à chaque étape.",
+    "en": "Migrate an Express API from JavaScript to TypeScript step by step, file by file, without breaking production. Before and after diffs at every step."
+  },
+  "tags": [
+    "migration",
+    "typescript",
+    "node",
+    "express"
+  ],
+  "category": "backend",
+  "bootHint": {
+    "fr": "Adapte codelab-migration : technologie de départ, d'arrivée, stratégie progressive.",
+    "en": "Adapt codelab-migration: source and target technology, incremental strategy."
+  },
+  "tone": "careful, pragmatic",
+  "preview": "preview.html",
+  "accent": "#3178C6",
+  "bg": "#FFFFFF",
+  "fg": "#13213A",
+  "muted": "#5B6170",
+  "fonts": {
+    "display": "Inter",
+    "body": "Inter",
+    "mono": "JetBrains Mono"
+  }
+}

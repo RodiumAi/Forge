@@ -1,0 +1,34 @@
+{
+  "kind": "codelab",
+  "id": "codelab-beginner-workshop",
+  "title": {
+    "fr": "Atelier débutant",
+    "en": "Beginner workshop"
+  },
+  "description": {
+    "fr": "Un atelier de deux heures pour écrire son premier programme Python : variables, conditions, boucles et un jeu du nombre mystère. Ton bienveillant, aucun prérequis.",
+    "en": "A two-hour workshop to write a first Python program: variables, conditions, loops and a number guessing game. Kind tone, no prerequisites."
+  },
+  "tags": [
+    "atelier",
+    "débutant",
+    "python",
+    "éducation"
+  ],
+  "category": "education",
+  "bootHint": {
+    "fr": "Adapte codelab-beginner-workshop : public, durée, langage, exercice final.",
+    "en": "Adapt codelab-beginner-workshop: audience, length, language, final exercise."
+  },
+  "tone": "kind, playful, reassuring",
+  "preview": "preview.html",
+  "accent": "#C77700",
+  "bg": "#FFFDF6",
+  "fg": "#2B2416",
+  "muted": "#6F6550",
+  "fonts": {
+    "display": "Nunito",
+    "body": "Nunito",
+    "mono": "Fira Code"
+  }
+}

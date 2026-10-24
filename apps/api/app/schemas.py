@@ -489,7 +489,8 @@ class MessageTarget(BaseModel):
     """What a chat message may change. Absent = the whole project.
 
     Document kinds (slides): ``slideId`` limits the AI to that slide,
-    ``elementId`` to that element.
+    ``elementId`` to that element. Codelabs: ``stepId`` limits the AI to
+    that step.
 
     React projects (sites, mobile apps): ``route`` is the preview route the
     user is on, ``forgeId`` the ``data-forge-id`` of the selected element
@@ -503,6 +504,7 @@ class MessageTarget(BaseModel):
 
     slideId: str | None = Field(default=None, max_length=64, pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
     elementId: str | None = Field(default=None, max_length=64, pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
+    stepId: str | None = Field(default=None, max_length=64, pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
     #: Design system section edited alone (colors, typography, spacing, logo...).
     section: DesignSystemSection | None = None
     route: str | None = Field(default=None, max_length=200)
@@ -511,8 +513,11 @@ class MessageTarget(BaseModel):
     restrict: bool = False
 
 
-#: Quick actions of the deck editor (sent with a target).
-QuickAction = Literal["shorten", "punchier", "change_layout", "add_visual", "translate"]
+#: Quick actions of the deck editor (sent with a target) and of the codelab
+#: editor (``check_code`` and ``make_files`` need no target).
+QuickAction = Literal[
+    "shorten", "punchier", "change_layout", "add_visual", "translate", "check_code", "make_files"
+]
 
 
 class SendMessageRequest(BaseModel):
