@@ -480,6 +480,11 @@ class ChatCreate(BaseModel):
     title: str | None = None
 
 
+DesignSystemSection = Literal[
+    "colors", "typography", "spacing", "logo", "iconography", "imagery", "voice", "guidelines", "components"
+]
+
+
 class MessageTarget(BaseModel):
     """What a chat message may change. Absent = the whole project.
 
@@ -500,6 +505,8 @@ class MessageTarget(BaseModel):
     slideId: str | None = Field(default=None, max_length=64, pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
     elementId: str | None = Field(default=None, max_length=64, pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
     stepId: str | None = Field(default=None, max_length=64, pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
+    #: Design system section edited alone (colors, typography, spacing, logo...).
+    section: DesignSystemSection | None = None
     route: str | None = Field(default=None, max_length=200)
     forgeId: str | None = Field(default=None, max_length=320)
     filePath: str | None = Field(default=None, max_length=300)

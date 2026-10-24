@@ -392,11 +392,12 @@ async def create_project(
     deck_ratio = body.format if platform == "slides" else None
     # A design system to dress the new project: it must be a design_system
     # project the caller can open (owner or collaborator), else 404 / 400.
+    # Team members may use a design system shared with their team.
     design_system_source: str | None = None
     if body.design_system_id is not None:
-        source = accessible_project(db, user, body.design_system_id, locale)
-        if resolve_kind(source.platform) != "design_system":
-            raise SitesError(400, "NOT_A_DESIGN_SYSTEM", "This project is not a design system.")
+        from app.services.design_system.registry import design_system_project
+
+        source = design_system_project(db, user, body.design_system_id)
         design_system_source = str(source.id)
     # Templates apply ONLY when the user explicitly picks one. The old keyword
     # router silently forked a kit from prompt words ("portfolio", "shop"…),
@@ -487,7 +488,18 @@ async def create_project(
         # Best effort: a design system that cannot be read leaves the default
         # charter in place rather than failing a project that already exists.
         try:
-            await asyncio.to_thread(apply_design_system, str(project.id), design_system_source)
+            applied = await asyncio.to_thread(
+                apply_design_system, str(project.id), design_system_source, platform
+            )
+            if applied:
+                from app.services.design_system.registry import ensure_record, get_record, refresh_version
+
+                row = get_record(db, design_system_source)
+                if row is None and source is not None:
+                    row = ensure_record(db, source)
+                project.design_system_project_id = source.id
+                project.design_system_version = refresh_version(row) if row is not None else None
+                db.commit()
         except Exception:
             logger.warning(
                 "design system %s not applied to %s", design_system_source, project.id, exc_info=True

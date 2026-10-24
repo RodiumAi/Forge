@@ -1,7 +1,19 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+    text,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -145,6 +157,12 @@ class Project(Base):
     visibility: Mapped[str] = mapped_column(String(16), nullable=False, default="private")
     billing_policy: Mapped[str] = mapped_column(String(32), nullable=False, default="owner_pays")
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    #: The design_system project that dresses this one, and the version of it
+    #: last applied (an update is proposed when the design system moves on).
+    design_system_project_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="SET NULL"), index=True, nullable=True
+    )
+    design_system_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
@@ -444,3 +462,53 @@ class ProjectInvite(Base):
     declined_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
     frodi_cap_per_cycle: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+
+class DesignSystemRecord(Base):
+    """A ``design_system`` project as a reusable design system.
+
+    Personal by default (``owner_user_id``); shared with a team it gets the
+    team id (the team owner's user id, as in ``team_seats``) and
+    ``visibility="team"``, so every member can read it and attach it. One
+    default per owner and one per team, enforced by partial unique indexes.
+    ``version`` moves on each time ``design-system.json`` changes on disk
+    (``content_hash`` is the last hash seen), which is how linked projects know
+    a resync can be proposed.
+    """
+
+    __tablename__ = "design_systems"
+    __table_args__ = (
+        Index(
+            "uq_design_systems_default_user",
+            "owner_user_id",
+            unique=True,
+            postgresql_where=text("is_default_user"),
+            sqlite_where=text("is_default_user"),
+        ),
+        Index(
+            "uq_design_systems_default_team",
+            "team_id",
+            unique=True,
+            postgresql_where=text("is_default_team"),
+            sqlite_where=text("is_default_team"),
+        ),
+    )
+
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), primary_key=True
+    )
+    owner_user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    team_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), index=True, nullable=True
+    )
+    visibility: Mapped[str] = mapped_column(String(16), nullable=False, default="private")
+    is_default_user: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_default_team: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )

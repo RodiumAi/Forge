@@ -50,6 +50,15 @@ EXPECTED_SLIDES_IDS = {
     "slides-monochrome",
 }
 
+EXPECTED_DESIGN_SYSTEM_IDS = {
+    "design-system-creatif",
+    "design-system-education",
+    "design-system-fintech",
+    "design-system-luxe",
+    "design-system-saas",
+    "design-system-sante",
+}
+
 EXPECTED_CODELAB_IDS = {
     "codelab-rest-api",
     "codelab-frontend",
@@ -61,11 +70,10 @@ EXPECTED_CODELAB_IDS = {
     "codelab-rodiumai-sdk",
 }
 
-DOCUMENT_KINDS = ("slides", "codelab")
-
 EXPECTED_IDS = (
     EXPECTED_SLIDES_IDS
     | EXPECTED_CODELAB_IDS
+    | EXPECTED_DESIGN_SYSTEM_IDS
     | {
         "astroship-startup",
         "atelier-mode",
@@ -121,7 +129,14 @@ EXPECTED_MOBILE_IDS = {
     "trove-market",
 }
 
-EXPECTED_WEB_IDS = EXPECTED_IDS - EXPECTED_MOBILE_IDS - EXPECTED_SLIDES_IDS - EXPECTED_CODELAB_IDS
+EXPECTED_WEB_IDS = (
+    EXPECTED_IDS
+    - EXPECTED_MOBILE_IDS
+    - EXPECTED_SLIDES_IDS
+    - EXPECTED_CODELAB_IDS
+    - EXPECTED_DESIGN_SYSTEM_IDS
+)
+DOCUMENT_KINDS = ("slides", "codelab", "design_system")
 
 
 class TestCatalog:
@@ -149,7 +164,7 @@ class TestCatalog:
         ]
         for template in list_templates():
             if template.kind in DOCUMENT_KINDS:
-                continue  # document kits: see test_template_slides.py and test_template_codelab.py
+                continue  # document kits: test_template_slides.py, test_template_codelab.py, test_template_design_systems.py
             for rel in required:
                 assert (template.path / rel).is_file(), f"{template.id} misses {rel}"
 
@@ -163,7 +178,7 @@ class TestCatalog:
             assert meta["description"]["en"] and meta["description"]["fr"], meta["id"]
             for key in ("accent", "bg", "fg", "muted"):
                 assert re.fullmatch(r"#[0-9a-fA-F]{6}", meta[key]), f"{meta['id']}.{key}"
-            assert meta.get("kind") in ("web", "mobile", "slides", "codelab"), f"{meta['id']}.kind"
+            assert meta.get("kind") in ("web", "mobile", *DOCUMENT_KINDS), f"{meta['id']}.kind"
 
     def test_catalog_kind_filter(self):
         webs = list_templates(kind="web")
@@ -173,6 +188,7 @@ class TestCatalog:
         assert {t.id for t in mobiles} == EXPECTED_MOBILE_IDS
         assert {t.id for t in decks} == EXPECTED_SLIDES_IDS
         assert {t.id for t in list_templates(kind="codelab")} == EXPECTED_CODELAB_IDS
+        assert {t.id for t in list_templates(kind="design_system")} == EXPECTED_DESIGN_SYSTEM_IDS
         assert all(t.kind == "web" for t in webs)
         assert all(t.kind == "mobile" for t in mobiles)
 

@@ -67,6 +67,7 @@ export function editorHref(projectId: string, platform: unknown): string {
   const kind = getKind(normalizeKind(platform));
   if (kind.editor === "deck") return `/projects/${projectId}/deck`;
   if (kind.editor === "codelab") return `/projects/${projectId}/codelab`;
+  if (kind.editor === "design_system") return `/projects/${projectId}/design-system`;
   return `/projects/${projectId}`;
 }
 

@@ -1,0 +1,33 @@
+{
+  "kind": "design_system",
+  "id": "design-system-fintech",
+  "title": {
+    "fr": "Fintech",
+    "en": "Fintech"
+  },
+  "description": {
+    "fr": "Design system sombre et digne de confiance pour une néobanque : bleu nuit, vert émeraude, Manrope et chiffres en mono.",
+    "en": "Dark, trustworthy design system for a neobank: midnight blue, emerald green, Manrope and mono figures."
+  },
+  "tags": [
+    "fintech",
+    "bank",
+    "dark",
+    "trust"
+  ],
+  "preview": "preview.html",
+  "bootHint": {
+    "fr": "Adapte design-system-fintech : nom de la marque, public, ton, couleurs à garder.",
+    "en": "Adapt design-system-fintech: brand name, audience, tone, colours to keep."
+  },
+  "accent": "#10b981",
+  "bg": "#0b1220",
+  "fg": "#e8eef8",
+  "muted": "#94a3b8",
+  "tone": "trustworthy, modern, calm",
+  "fonts": {
+    "display": "Manrope",
+    "body": "Manrope",
+    "mono": "IBM Plex Mono"
+  }
+}

@@ -6,7 +6,8 @@ from app.config import get_settings
 from app.kinds import get_kind, kind_enabled
 from app.services.orchestration.router import EFFORT_LABELS, Route
 
-#: Document kinds whose AI flow exists (codelab and design_system: wave 2).
+#: Document kinds whose AI flow lives in this package (codelab: wave 2). The
+#: design_system flow is in ``services/design_system`` (see ``chat_entry``).
 AI_READY_KINDS = frozenset({"slides"})
 
 

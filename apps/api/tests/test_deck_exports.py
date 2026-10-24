@@ -376,7 +376,14 @@ def test_publish_route_sends_slides_to_the_player(deck_project, monkeypatch):
 
 
 def test_publish_route_refuses_document_kinds_without_a_player(deck_project, monkeypatch):
+    # Every document kind has a player today; a future one without it answers 409.
+    from dataclasses import replace
+
     project = _project("design_system", deck_project)
+    real_get_kind = publish_router.get_kind
+    monkeypatch.setattr(
+        publish_router, "get_kind", lambda platform: replace(real_get_kind(platform), publish="none")
+    )
     monkeypatch.setattr(publish_router, "get_project_domain", lambda _db, _pid: None)
     client = _client(publish_router.router, project)
     r = client.post(f"/projects/{project.id}/publish")

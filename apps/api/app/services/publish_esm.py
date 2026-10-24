@@ -376,3 +376,82 @@ async def publish_project_esm(
         "prerendered": site.get("prerendered"),
         "lang": site.get("lang", lang),
     }
+
+
+# ── design system brand site (publish mode "design_system_site") ───────────
+
+
+def build_design_system_site(
+    project_id: str, out: Path, *, lang: str = "en", badge: bool = True
+) -> list[str]:
+    """Write the brand guidelines page of a design_system project into ``out``.
+
+    The page is generated from ``design-system.json`` (no build step, no
+    script); the logo and the files it references under ``public/`` are copied
+    next to it. Returns the files written, relative to ``out``.
+    """
+    from app.contracts.forge_design import dump_document, validate_design_system
+    from app.services.design_system.site import brand_site_html
+    from app.services.document_scaffold import DESIGN_SYSTEM_PATH
+    from app.services.filesystem import read_file, safe_resolve
+
+    document = dump_document(validate_design_system(json.loads(read_file(project_id, DESIGN_SYSTEM_PATH))))
+    written: list[str] = []
+    logo = document.get("logo") or {}
+    for key in ("src", "darkSrc"):
+        rel = logo.get(key)
+        if not rel:
+            continue
+        try:
+            source = safe_resolve(project_id, rel)
+        except ValueError:
+            continue
+        if not source.is_file():
+            continue
+        public_rel = rel.removeprefix("public/")
+        dest = out / public_rel
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, dest)
+        written.append(public_rel)
+
+    def asset_url(path: str) -> str:
+        return "/" + path.removeprefix("public/")
+
+    html = brand_site_html(document, asset_url=asset_url, lang=lang, badge=badge)
+    (out / "index.html").write_text(html, encoding="utf-8")
+    (out / "404.html").write_text(
+        html.replace("<head>", '<head><meta name="robots" content="noindex">', 1), "utf-8"
+    )
+    written += ["index.html", "404.html"]
+    return written
+
+
+async def publish_design_system_site(
+    project_id: str,
+    slug: str,
+    *,
+    site_url: str | None = None,
+    lang: str = "en",
+    badge: bool = True,
+) -> dict:
+    """Publish the brand guidelines page of a design system on ``{slug}.domain``."""
+    from app.services import site_seo
+
+    settings = get_settings()
+    public_url = site_url or settings.sites_url_for_slug(slug)
+    with tempfile.TemporaryDirectory(prefix="forge-ds-") as tmp:
+        out = Path(tmp) / "dist"
+        out.mkdir(parents=True, exist_ok=True)
+        await asyncio.to_thread(build_design_system_site, project_id, out, lang=lang, badge=badge)
+        (out / "sitemap.xml").write_text(site_seo.sitemap_xml(public_url, ["/"]), encoding="utf-8")
+        (out / "robots.txt").write_text(site_seo.robots_txt(public_url, noindex=False), encoding="utf-8")
+        uploaded, orphans = await upload_site_dir(out, slug)
+    return {
+        "public_url": public_url,
+        "files_uploaded": uploaded,
+        "orphans_deleted": orphans,
+        "build_mode": "design_system_site",
+        "routes": ["/"],
+        "prerendered": True,
+        "lang": lang,
+    }
