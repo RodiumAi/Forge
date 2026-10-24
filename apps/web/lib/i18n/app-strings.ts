@@ -392,6 +392,41 @@ const STRINGS = {
     "Account emails (verification, invites, receipts) are sent by RodiumAi.",
     "Les e-mails du compte (vérification, invitations, reçus) sont envoyés par RodiumAi.",
   ],
+
+  // integrations
+  apIntegLead: [
+    "Services that work on a static site. Pick one and Forge wires it into your project.",
+    "Des services qui marchent sur un site statique. Choisissez-en un et Forge l'intègre à votre projet.",
+  ],
+  apSearchIntegrations: ["Search integrations", "Rechercher une intégration"],
+  apIntegView: ["View", "Voir"],
+  apIntegUse: ["Use in a project", "Utiliser dans un projet"],
+  apIntegPrompt: [
+    "Add {name} to my site and explain the account details I need to provide.",
+    "Ajoute {name} à mon site et explique-moi les informations de compte à fournir.",
+  ],
+  apIntegAbout: ["About", "À propos"],
+  apIntegHow: ["How it connects", "Comment ça se branche"],
+  apIntegMethod_script: ["A script tag added to the page", "Une balise script ajoutée à la page"],
+  apIntegMethod_iframe: ["An embedded frame (iframe)", "Un cadre intégré (iframe)"],
+  apIntegMethod_link: ["A link or button to the service", "Un lien ou un bouton vers le service"],
+  apIntegSetup: ["Setup guide", "Guide d'installation"],
+  apIntegAccess: ["Access", "Accès"],
+  apIntegAccessFull: [
+    "Works out of the box on a published Forge site.",
+    "Fonctionne tel quel sur un site Forge publié.",
+  ],
+  apIntegAccessPartial: [
+    "Some features need a paid plan or a server on the service side.",
+    "Certaines fonctions demandent une offre payante ou un serveur côté service.",
+  ],
+  apIntegResources: ["Resources", "Ressources"],
+  apIntegGuideSource: ["Full guide", "Guide complet"],
+  apIntegRelated: ["Similar integrations", "Intégrations similaires"],
+  apIntegNoConfig: [
+    "Nothing to enable here: your account details go into the project, with the AI's help.",
+    "Rien à activer ici : vos identifiants vont dans le projet, avec l'aide de l'IA.",
+  ],
 } as const;
 
 type Key = keyof typeof STRINGS;
