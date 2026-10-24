@@ -21,6 +21,7 @@ from app.routers import (
     domains,
     files,
     history,
+    images,
     integrations,
     internal_admin,
     kinds,
@@ -176,6 +177,7 @@ app.include_router(kinds.router)
 app.include_router(integrations.router)
 app.include_router(projects.router)
 app.include_router(documents.router)
+app.include_router(images.router)
 app.include_router(design.router)
 app.include_router(seo.router)
 app.include_router(chats.router)

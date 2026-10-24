@@ -167,6 +167,9 @@ class Settings(BaseSettings):
     forge_kind_slides_enabled: bool = False
     forge_kind_codelab_enabled: bool = False
     forge_kind_design_system_enabled: bool = False
+    # Free image bank behind the image panel's "Libres" tab (Pixabay). Server
+    # side only, never sent to the browser. Empty = the search answers 503.
+    pixabay_api_key: str = ""
     access_token_expire_minutes: int = 60 * 24 * 7
     preview_port_start: int = 5200
     preview_port_end: int = 5299
