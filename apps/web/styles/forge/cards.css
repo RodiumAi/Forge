@@ -1,0 +1,64 @@
+/* Forge redesign: template card (galleries) and the deck thumbnail. */
+
+.f-tgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(16px, 2vw, 28px); }
+@media (max-width: 1020px) { .f-tgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 620px) { .f-tgrid { grid-template-columns: 1fr; } }
+
+.f-tcard {
+  display: grid; gap: 14px; text-align: left; color: var(--f-text); font: inherit; font-family: var(--f-font);
+  background: none; border: 0; padding: 0; cursor: pointer; min-width: 0; width: 100%;
+  animation: f-rise .5s var(--f-ease-out) both; animation-delay: calc(var(--i, 0) * 40ms);
+}
+div.f-tcard { cursor: default; }
+.f-tcard:disabled { cursor: progress; }
+.f-tcard .f-thumb {
+  position: relative; border-radius: 20px; overflow: hidden; aspect-ratio: 16 / 9; background: var(--f-paper-2);
+  box-shadow: 0 1px 2px rgba(28, 31, 38, .06), 0 14px 30px -18px rgba(28, 31, 38, .35);
+  transition: transform .4s var(--f-ease), box-shadow .4s var(--f-ease); isolation: isolate;
+}
+.f-tcard:hover .f-thumb, .f-tcard:focus-visible .f-thumb {
+  transform: translateY(-4px); box-shadow: 0 2px 4px rgba(28, 31, 38, .06), 0 28px 50px -22px rgba(28, 31, 38, .45);
+}
+.f-tcard:focus-visible { outline: none; }
+.f-tcard:focus-visible .f-thumb { outline: 3px solid var(--f-orange); outline-offset: 3px; }
+.f-tcard-meta { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 0 4px; min-width: 0; }
+.f-tcard h3 { font-size: 17px; font-weight: 600; letter-spacing: -.01em; line-height: 1.3; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.f-tcard-sub {
+  font-size: 13.5px; color: var(--f-muted); margin-top: 2px;
+  display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;
+}
+
+/* Static preview (sites, apps, codelabs, design systems) fills the 16:9 box. */
+.f-thumb .f-thumb-site, .f-thumb .site-thumb.f-thumb-site {
+  position: absolute; inset: 0; width: 100%; height: 100%; max-height: none; aspect-ratio: auto; border-radius: 0;
+}
+
+/* Deck thumbnail */
+.f-deck-thumb { position: absolute; inset: 0; overflow: hidden; background: #0B0D12; }
+.f-deck-slide { position: absolute; inset: 0; }
+.f-deck-slide.is-in { animation: f-deck-in .6s var(--f-ease-out) both; }
+@keyframes f-deck-in { from { opacity: 0; transform: translateX(8%); } to { opacity: 1; transform: none; } }
+
+.f-thumb-overlay {
+  position: absolute; inset: auto 12px 12px 12px; display: flex; justify-content: space-between; align-items: flex-end;
+  z-index: 5; pointer-events: none;
+}
+.f-use {
+  opacity: 0; transform: translateY(6px); transition: opacity .25s, transform .25s var(--f-ease);
+  height: 34px; padding: 0 14px; border-radius: 99px; background: rgba(255, 255, 255, .95); color: #1C1F26;
+  font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 8px 20px -8px rgba(0, 0, 0, .4);
+}
+.f-tcard:hover .f-use, .f-tcard:focus-visible .f-use, .f-tcard.is-busy .f-use { opacity: 1; transform: none; }
+.f-dots { display: flex; gap: 4px; padding: 6px 8px; border-radius: 99px; background: rgba(15, 17, 21, .55); backdrop-filter: blur(6px); opacity: 0; transition: opacity .25s; }
+.f-tcard:hover .f-dots, .f-tcard.is-playing .f-dots { opacity: 1; }
+.f-dots i { width: 5px; height: 5px; border-radius: 99px; background: rgba(255, 255, 255, .45); transition: width .3s var(--f-ease), background-color .3s; }
+.f-dots i.on { width: 14px; background: #fff; }
+.f-slide-count {
+  position: absolute; top: 12px; left: 12px; z-index: 5; height: 24px; padding: 0 9px; border-radius: 99px;
+  font-size: 11.5px; font-weight: 600; background: rgba(15, 17, 21, .55); color: #fff;
+  display: inline-flex; align-items: center; gap: 5px; backdrop-filter: blur(6px);
+}
+@media (max-width: 620px), (hover: none) {
+  .f-use { opacity: 1; transform: none; }
+  .f-dots { opacity: 1; }
+}
