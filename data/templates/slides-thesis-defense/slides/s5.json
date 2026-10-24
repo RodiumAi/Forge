@@ -1,0 +1,184 @@
+{
+  "id": "s5",
+  "background": {
+    "type": "color",
+    "token": "--bg"
+  },
+  "elements": [
+    {
+      "id": "s5-image",
+      "type": "image",
+      "x": 0,
+      "y": 0,
+      "w": 880,
+      "h": 1080,
+      "z": 1,
+      "src": "public/images/lab.webp",
+      "alt": "Objectifs de microscope en gros plan",
+      "fit": "cover",
+      "matchKey": "hero-image",
+      "credit": {
+        "source": "pixabay",
+        "author": "Kost9n4",
+        "url": "https://pixabay.com/photos/analysis-biochemistry-biologist-2030265/"
+      }
+    },
+    {
+      "id": "s5-bar",
+      "type": "shape",
+      "x": 1000,
+      "y": 183,
+      "w": 96,
+      "h": 4,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 0,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s5-kicker",
+      "type": "text",
+      "role": "label",
+      "x": 1000,
+      "y": 206,
+      "w": 780,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Laboratoire"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 600,
+        "color": "--accent",
+        "align": "left",
+        "lineHeight": 1.4,
+        "letterSpacing": 3,
+        "uppercase": true
+      }
+    },
+    {
+      "id": "s5-heading",
+      "type": "text",
+      "role": "heading",
+      "x": 1000,
+      "y": 256,
+      "w": 780,
+      "h": 210,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Ce que disent les isotopes"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 60,
+        "weight": 600,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.1
+      }
+    },
+    {
+      "id": "s5-body",
+      "type": "text",
+      "role": "body",
+      "x": 1000,
+      "y": 490,
+      "w": 780,
+      "h": 180,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Les isotopes de l'eau montrent l'âge et l'origine de la recharge : 80 % provient des pluies de juillet à septembre."
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 30,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.5
+      }
+    },
+    {
+      "id": "s5-list",
+      "type": "text",
+      "role": "body",
+      "x": 1000,
+      "y": 690,
+      "w": 780,
+      "h": 250,
+      "z": 3,
+      "content": [
+        {
+          "type": "bullet-list",
+          "items": [
+            {
+              "text": "410 échantillons, 3 saisons"
+            },
+            {
+              "text": "Analyses au laboratoire d'Avignon"
+            },
+            {
+              "text": "Recharge datée de 2 à 15 ans"
+            }
+          ]
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 28,
+        "weight": 400,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.55
+      }
+    },
+    {
+      "id": "s5-page",
+      "type": "text",
+      "role": "caption",
+      "x": 1660,
+      "y": 1000,
+      "w": 120,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "05"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "right",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s5-rule",
+      "type": "shape",
+      "x": 1000,
+      "y": 184,
+      "w": 780,
+      "h": 2,
+      "z": 1,
+      "shape": "rect",
+      "fill": "--border"
+    }
+  ]
+}

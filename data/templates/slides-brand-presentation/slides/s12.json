@@ -1,0 +1,202 @@
+{
+  "id": "s12",
+  "background": {
+    "type": "color",
+    "token": "--bg"
+  },
+  "elements": [
+    {
+      "id": "s12-bar",
+      "type": "shape",
+      "x": 140,
+      "y": 260,
+      "w": 120,
+      "h": 10,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 5,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s12-title",
+      "type": "text",
+      "role": "title",
+      "x": 140,
+      "y": 300,
+      "w": 900,
+      "h": 230,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "À votre tasse"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 120,
+        "weight": 400,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.05,
+        "letterSpacing": -2
+      },
+      "animation": {
+        "type": "mask-reveal",
+        "trigger": "on-enter",
+        "direction": "up",
+        "durationMs": 700
+      }
+    },
+    {
+      "id": "s12-subtitle",
+      "type": "text",
+      "role": "subtitle",
+      "x": 140,
+      "y": 550,
+      "w": 860,
+      "h": 110,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "La charte graphique et les fichiers sources sont partagés."
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 38,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.35
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "delayMs": 120,
+        "durationMs": 500
+      }
+    },
+    {
+      "id": "s12-icon1",
+      "type": "icon",
+      "x": 140,
+      "y": 730,
+      "w": 48,
+      "h": 48,
+      "z": 3,
+      "icon": "mail",
+      "color": "--accent",
+      "strokeWidth": 1.75,
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "delayMs": 80,
+        "durationMs": 400,
+        "order": 0
+      }
+    },
+    {
+      "id": "s12-contact1",
+      "type": "text",
+      "role": "body",
+      "x": 216,
+      "y": 730,
+      "w": 860,
+      "h": 52,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "marque@okra.example"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 32,
+        "weight": 500,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.5
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "delayMs": 80,
+        "durationMs": 400,
+        "order": 0
+      }
+    },
+    {
+      "id": "s12-icon2",
+      "type": "icon",
+      "x": 140,
+      "y": 810,
+      "w": 48,
+      "h": 48,
+      "z": 3,
+      "icon": "folder-open",
+      "color": "--accent",
+      "strokeWidth": 1.75,
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "delayMs": 80,
+        "durationMs": 400,
+        "order": 1
+      }
+    },
+    {
+      "id": "s12-contact2",
+      "type": "text",
+      "role": "body",
+      "x": 216,
+      "y": 810,
+      "w": 860,
+      "h": 52,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "okra.example/marque"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 32,
+        "weight": 500,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.5
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "delayMs": 80,
+        "durationMs": 400,
+        "order": 1
+      }
+    },
+    {
+      "id": "s12-image",
+      "type": "image",
+      "x": 1100,
+      "y": 0,
+      "w": 820,
+      "h": 1080,
+      "z": 1,
+      "src": "public/images/kraft.webp",
+      "alt": "Papier kraft, rubans et ciseaux",
+      "fit": "cover",
+      "matchKey": "hero-image",
+      "credit": {
+        "source": "pixabay",
+        "author": "Pexels",
+        "url": "https://pixabay.com/photos/arts-and-crafts-bows-ribbons-gift-1867323/"
+      }
+    }
+  ]
+}

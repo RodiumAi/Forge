@@ -133,7 +133,8 @@ function fontsFromMarkdown(md: string): ThemeTokens {
     const stack = match[4].split(/\(|\.\s/)[0].replace(/\s*\(.*$/, "").trim().replace(/[.;]$/, "");
     if (!stack || stack.length > 300) continue;
     const role = /mono|code/.test(label) ? "mono" : /display|head|title/.test(label) ? "display" : "body";
-    if (!out[`--font-${role}`]) out[`--font-${role}`] = stack;
+    // Quote multi-word families: "Source Serif 4" unquoted is invalid CSS.
+    if (!out[`--font-${role}`]) out[`--font-${role}`] = stack.split(",").map(quoteFamily).filter(Boolean).join(", ");
   }
   if (out["--font-body"] && !out["--font-display"]) out["--font-display"] = out["--font-body"];
   if (out["--font-display"] && !out["--font-body"]) out["--font-body"] = out["--font-display"];

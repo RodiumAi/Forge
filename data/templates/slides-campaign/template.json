@@ -1,0 +1,49 @@
+{
+  "kind": "slides",
+  "id": "slides-campaign",
+  "title": {
+    "fr": "Campagne marketing",
+    "en": "Marketing campaign"
+  },
+  "description": {
+    "fr": "Présentation de campagne pop et énergique, rose vif sur crème : brief, insight, idée créative, dispositif, calendrier, budget et indicateurs.",
+    "en": "Pop, energetic campaign presentation in bright pink on cream: brief, insight, creative idea, media plan, calendar, budget and KPIs."
+  },
+  "tags": [
+    "campaign",
+    "marketing",
+    "social",
+    "colorful"
+  ],
+  "category": "marketing",
+  "preview": "preview.html",
+  "bootHint": {
+    "fr": "Adapte slides-campaign : marque, objectif, idée créative, canaux, budget, indicateurs.",
+    "en": "Adapt slides-campaign: brand, objective, creative idea, channels, budget, KPIs."
+  },
+  "accent": "#FF3D7F",
+  "bg": "#FFFDF5",
+  "fg": "#1A1A1A",
+  "muted": "#5E5A4E",
+  "tone": "playful, energetic, punchy",
+  "fonts": {
+    "display": "Bricolage Grotesque",
+    "body": "Figtree",
+    "mono": "Space Mono"
+  },
+  "transitionPreset": "dynamic",
+  "layouts": {
+    "title": "s1",
+    "text": "s2",
+    "quote": "s3",
+    "section": "s4",
+    "two-columns": "s5",
+    "image-text": "s6",
+    "key-figures": "s7",
+    "chart": "s8",
+    "timeline": "s9",
+    "table": "s10",
+    "team": "s11",
+    "thank-you": "s12"
+  }
+}

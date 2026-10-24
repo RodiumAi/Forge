@@ -1,0 +1,155 @@
+{
+  "id": "s1",
+  "background": {
+    "type": "image",
+    "src": "public/images/hero.webp",
+    "fit": "cover",
+    "overlay": "--bg",
+    "overlayOpacity": 0.62,
+    "credit": {
+      "source": "pixabay",
+      "author": "Waratharn",
+      "url": "https://pixabay.com/photos/fern-tree-nature-1686344/"
+    }
+  },
+  "elements": [
+    {
+      "id": "s1-meta",
+      "type": "text",
+      "role": "caption",
+      "x": 140,
+      "y": 100,
+      "w": 1100,
+      "h": 44,
+      "z": 3,
+      "opacity": 0.85,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Abidjan · Janvier 2027 · Confidentiel"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 600,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s1-topline",
+      "type": "shape",
+      "x": 140,
+      "y": 160,
+      "w": 1640,
+      "h": 2,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--fg",
+      "opacity": 0.35
+    },
+    {
+      "id": "s1-bar",
+      "type": "shape",
+      "x": 140,
+      "y": 430,
+      "w": 120,
+      "h": 10,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 5,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s1-label",
+      "type": "text",
+      "role": "label",
+      "x": 140,
+      "y": 466,
+      "w": 1400,
+      "h": 48,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Série A · 6 M€"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 26,
+        "weight": 600,
+        "color": "--accent",
+        "align": "left",
+        "lineHeight": 1.4,
+        "letterSpacing": 3,
+        "uppercase": true
+      }
+    },
+    {
+      "id": "s1-title",
+      "type": "text",
+      "role": "title",
+      "x": 140,
+      "y": 524,
+      "w": 1640,
+      "h": 270,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Koolbox garde les récoltes au frais"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 104,
+        "weight": 600,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.04,
+        "letterSpacing": -2
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "on-enter",
+        "durationMs": 500
+      }
+    },
+    {
+      "id": "s1-subtitle",
+      "type": "text",
+      "role": "subtitle",
+      "x": 140,
+      "y": 820,
+      "w": 1200,
+      "h": 110,
+      "z": 3,
+      "opacity": 0.88,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Des chambres froides solaires louées à l'usage pour les producteurs de fruits et légumes."
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 32,
+        "weight": 400,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.4
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 80,
+        "durationMs": 450
+      }
+    }
+  ]
+}

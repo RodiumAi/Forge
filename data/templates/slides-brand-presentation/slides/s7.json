@@ -1,0 +1,211 @@
+{
+  "id": "s7",
+  "background": {
+    "type": "color",
+    "token": "--bg"
+  },
+  "elements": [
+    {
+      "id": "s7-bar",
+      "type": "shape",
+      "x": 140,
+      "y": 100,
+      "w": 80,
+      "h": 8,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 4,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s7-kicker",
+      "type": "text",
+      "role": "label",
+      "x": 140,
+      "y": 126,
+      "w": 1200,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Ton de voix"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 600,
+        "color": "--accent",
+        "align": "left",
+        "lineHeight": 1.4,
+        "letterSpacing": 3,
+        "uppercase": true
+      }
+    },
+    {
+      "id": "s7-heading",
+      "type": "text",
+      "role": "heading",
+      "x": 140,
+      "y": 176,
+      "w": 1640,
+      "h": 140,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Comment nous parlons"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 64,
+        "weight": 400,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.1
+      },
+      "animation": {
+        "type": "mask-reveal",
+        "trigger": "on-enter",
+        "direction": "up",
+        "durationMs": 700
+      }
+    },
+    {
+      "id": "s7-table",
+      "type": "table",
+      "x": 140,
+      "y": 360,
+      "w": 1640,
+      "h": 530,
+      "z": 2,
+      "rows": [
+        [
+          {
+            "text": "Nous sommes"
+          },
+          {
+            "text": "Jamais"
+          },
+          {
+            "text": "Exemple"
+          }
+        ],
+        [
+          {
+            "text": "Chaleureux"
+          },
+          {
+            "text": "Familiers"
+          },
+          {
+            "text": "« Bonjour Claire, votre éthiopien vous attend. »"
+          }
+        ],
+        [
+          {
+            "text": "Précis"
+          },
+          {
+            "text": "Techniques"
+          },
+          {
+            "text": "« Notes de pêche blanche et de jasmin. »"
+          }
+        ],
+        [
+          {
+            "text": "Simples"
+          },
+          {
+            "text": "Simplistes"
+          },
+          {
+            "text": "« Moulu pour cafetière italienne. »"
+          }
+        ],
+        [
+          {
+            "text": "Engagés"
+          },
+          {
+            "text": "Moralisateurs"
+          },
+          {
+            "text": "« 4,20 € le kilo payé au producteur. »"
+          }
+        ]
+      ],
+      "headerRow": true,
+      "style": {
+        "size": 28,
+        "color": "--fg",
+        "headerFill": "--surface",
+        "border": "--border"
+      },
+      "columnWidths": [
+        0.9,
+        0.9,
+        2.4
+      ],
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "delayMs": 120,
+        "durationMs": 500
+      }
+    },
+    {
+      "id": "s7-footer",
+      "type": "text",
+      "role": "caption",
+      "x": 140,
+      "y": 1000,
+      "w": 1100,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Maison Okra · Plateforme de marque"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s7-page",
+      "type": "text",
+      "role": "caption",
+      "x": 1660,
+      "y": 1000,
+      "w": 120,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "07"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "right",
+        "lineHeight": 1.4
+      }
+    }
+  ]
+}

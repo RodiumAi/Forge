@@ -163,3 +163,11 @@ def test_a_broken_slides_kit_is_not_listed(monkeypatch, tmp_path):
         assert get_template("slides-broken") is not None
     finally:
         clear_settings_cache()
+
+
+@pytest.mark.parametrize("name", ["", "   ", None, "New project", "Nouveau projet", "nouveau PROJET "])
+def test_a_generic_project_name_keeps_the_kit_deck_title(projects_tmp, name):
+    kit_title = _read_json(get_template("slides-pitch-startup").path / "deck.json")["title"]
+    fork_template("slides-pitch-startup", "deck-generic", name)
+    deck = _read_json(get_settings().projects_path / "deck-generic" / "deck.json")
+    assert deck["title"] == kit_title

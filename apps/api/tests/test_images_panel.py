@@ -206,6 +206,36 @@ def test_import_downloads_into_the_project_with_credit(bank, monkeypatch):
     assert entry["alt"] == "sunset, sea, beach"
 
 
+def test_uploaded_image_is_copied_into_the_project_as_webp(bank, monkeypatch):
+    client = _client(monkeypatch)
+    object_id = uuid.uuid4()
+    seen: list[str] = []
+
+    def fake_bytes(_db, project_id, oid):
+        seen.append(str(oid))
+        return _png(800, 600)
+
+    monkeypatch.setattr(images_mod, "_stored_asset_bytes", fake_bytes)
+    r = client.post(f"/projects/{client.project_id}/images/from-upload", json={"object_id": str(object_id)})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    stem = f"upload-{str(object_id)[:8]}"
+    assert body["path"] == f"public/images/{stem}.webp"
+    assert (body["width"], body["height"]) == (800, 600)
+    assert body["credit"]["source"] == "upload"
+    assert seen == [str(object_id)]
+    root = get_settings().projects_path / client.project_id
+    assert (root / f"public/images/{stem}.webp").is_file()
+
+
+def test_uploaded_image_refuses_unreadable_bytes(bank, monkeypatch):
+    client = _client(monkeypatch)
+    monkeypatch.setattr(images_mod, "_stored_asset_bytes", lambda *_a: b"not an image")
+    r = client.post(f"/projects/{client.project_id}/images/from-upload", json={"object_id": str(uuid.uuid4())})
+    assert r.status_code == 422
+    assert r.json()["detail"]["code"] == "IMAGE_UNREADABLE"
+
+
 def test_import_refuses_foreign_download_hosts(bank, monkeypatch):
     def fake_get(url, params=None, timeout=None):
         hit = {**_hit(5), "largeImageURL": "https://evil.example.com/x.jpg"}

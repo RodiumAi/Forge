@@ -1,0 +1,192 @@
+{
+  "id": "s12",
+  "background": {
+    "type": "image",
+    "src": "public/images/lights.webp",
+    "fit": "cover",
+    "overlay": "--bg",
+    "overlayOpacity": 0.82,
+    "credit": {
+      "source": "pixabay",
+      "author": "Pexels",
+      "url": "https://pixabay.com/photos/photography-studio-photo-shoot-1850469/"
+    }
+  },
+  "elements": [
+    {
+      "id": "s12-bar",
+      "type": "shape",
+      "x": 900,
+      "y": 260,
+      "w": 120,
+      "h": 10,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 5,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s12-title",
+      "type": "text",
+      "role": "title",
+      "x": 160,
+      "y": 300,
+      "w": 1600,
+      "h": 230,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Parlons-en"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 150,
+        "weight": 400,
+        "color": "--fg",
+        "align": "center",
+        "lineHeight": 1.05,
+        "letterSpacing": -2,
+        "uppercase": true
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "on-enter",
+        "durationMs": 500
+      }
+    },
+    {
+      "id": "s12-subtitle",
+      "type": "text",
+      "role": "subtitle",
+      "x": 160,
+      "y": 550,
+      "w": 1600,
+      "h": 110,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Un café aux Chartrons ou une visio, comme vous préférez."
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 38,
+        "weight": 400,
+        "color": "--muted",
+        "align": "center",
+        "lineHeight": 1.35
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 80,
+        "durationMs": 450
+      }
+    },
+    {
+      "id": "s12-icon1",
+      "type": "icon",
+      "x": 260,
+      "y": 760,
+      "w": 48,
+      "h": 48,
+      "z": 3,
+      "icon": "mail",
+      "color": "--accent",
+      "strokeWidth": 1.75,
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 0
+      }
+    },
+    {
+      "id": "s12-contact1",
+      "type": "text",
+      "role": "body",
+      "x": 330,
+      "y": 760,
+      "w": 640,
+      "h": 52,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "bonjour@trame.example"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 32,
+        "weight": 500,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.5
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 0
+      }
+    },
+    {
+      "id": "s12-icon2",
+      "type": "icon",
+      "x": 1000,
+      "y": 760,
+      "w": 48,
+      "h": 48,
+      "z": 3,
+      "icon": "at-sign",
+      "color": "--accent",
+      "strokeWidth": 1.75,
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 1
+      }
+    },
+    {
+      "id": "s12-contact2",
+      "type": "text",
+      "role": "body",
+      "x": 1070,
+      "y": 760,
+      "w": 640,
+      "h": 52,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "@studio.trame"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 32,
+        "weight": 500,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.5
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 1
+      }
+    }
+  ]
+}

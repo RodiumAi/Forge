@@ -42,6 +42,16 @@ describe("Next security headers", () => {
     );
   });
 
+  it("lets deck videos embed YouTube (nocookie) and Vimeo players only", async () => {
+    const routes = await configuredHeaders();
+    const global = routes.find((route) => route.source === "/:path*");
+    const csp = (global?.headers ?? []).find(({ key }) => key === "Content-Security-Policy")?.value ?? "";
+    const frameSrc = csp.split(";").map((part) => part.trim()).find((part) => part.startsWith("frame-src")) ?? "";
+    expect(frameSrc).toContain("https://www.youtube-nocookie.com");
+    expect(frameSrc).toContain("https://player.vimeo.com");
+    expect(frameSrc).not.toContain("https://www.youtube.com");
+  });
+
   it.each(["/login", "/register", "/auth/:path*"])(
     "preserves Firebase/OAuth popup opener on %s",
     async (source) => {

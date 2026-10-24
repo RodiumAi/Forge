@@ -1,0 +1,212 @@
+{
+  "id": "s9",
+  "background": {
+    "type": "color",
+    "token": "--bg"
+  },
+  "elements": [
+    {
+      "id": "s9-bar",
+      "type": "shape",
+      "x": 140,
+      "y": 100,
+      "w": 80,
+      "h": 8,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 4,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s9-kicker",
+      "type": "text",
+      "role": "label",
+      "x": 140,
+      "y": 126,
+      "w": 1200,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Comparatif"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 600,
+        "color": "--accent",
+        "align": "left",
+        "lineHeight": 1.4,
+        "letterSpacing": 3,
+        "uppercase": true
+      }
+    },
+    {
+      "id": "s9-heading",
+      "type": "text",
+      "role": "heading",
+      "x": 140,
+      "y": 176,
+      "w": 1640,
+      "h": 140,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Trois approches de la maintenance"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 64,
+        "weight": 700,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.1
+      }
+    },
+    {
+      "id": "s9-table",
+      "type": "table",
+      "x": 140,
+      "y": 360,
+      "w": 1640,
+      "h": 420,
+      "z": 2,
+      "rows": [
+        [
+          {
+            "text": "Approche"
+          },
+          {
+            "text": "Déclencheur"
+          },
+          {
+            "text": "Coût"
+          },
+          {
+            "text": "Arrêts évités"
+          }
+        ],
+        [
+          {
+            "text": "Corrective"
+          },
+          {
+            "text": "La panne"
+          },
+          {
+            "text": "Très élevé"
+          },
+          {
+            "text": "Aucun"
+          }
+        ],
+        [
+          {
+            "text": "Préventive"
+          },
+          {
+            "text": "Le calendrier"
+          },
+          {
+            "text": "Élevé"
+          },
+          {
+            "text": "Environ 40 %"
+          }
+        ],
+        [
+          {
+            "text": "Prédictive Optima"
+          },
+          {
+            "text": "L'état réel de la machine"
+          },
+          {
+            "text": "Maîtrisé"
+          },
+          {
+            "text": "80 à 90 %"
+          }
+        ]
+      ],
+      "headerRow": true,
+      "style": {
+        "size": 28,
+        "color": "--fg",
+        "headerFill": "--surface",
+        "border": "--border"
+      },
+      "columnWidths": [
+        1.2,
+        1.6,
+        0.9,
+        1
+      ]
+    },
+    {
+      "id": "s9-footer",
+      "type": "text",
+      "role": "caption",
+      "x": 140,
+      "y": 1000,
+      "w": 1100,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Optima Maintenance · Études de cas 2026"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s9-page",
+      "type": "text",
+      "role": "caption",
+      "x": 1660,
+      "y": 1000,
+      "w": 120,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "09"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "right",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s9-footrule",
+      "type": "shape",
+      "x": 140,
+      "y": 978,
+      "w": 1640,
+      "h": 2,
+      "z": 1,
+      "shape": "rect",
+      "fill": "--border"
+    }
+  ]
+}

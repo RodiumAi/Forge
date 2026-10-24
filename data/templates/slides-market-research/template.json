@@ -1,0 +1,49 @@
+{
+  "kind": "slides",
+  "id": "slides-market-research",
+  "title": {
+    "fr": "Étude de marché",
+    "en": "Market research"
+  },
+  "description": {
+    "fr": "Étude de marché claire et factuelle, vert sauge : taille du marché, segments, comportements d'achat, concurrence, méthodologie et recommandations.",
+    "en": "Clear, factual market research in sage green: market size, segments, buying behaviour, competition, methodology and recommendations."
+  },
+  "tags": [
+    "market",
+    "research",
+    "data",
+    "light"
+  ],
+  "category": "business",
+  "preview": "preview.html",
+  "bootHint": {
+    "fr": "Adapte slides-market-research : marché étudié, méthodologie, chiffres clés, concurrents, recommandations.",
+    "en": "Adapt slides-market-research: market studied, methodology, key figures, competitors, recommendations."
+  },
+  "accent": "#3B6E3F",
+  "bg": "#F6F7F4",
+  "fg": "#1B1F1A",
+  "muted": "#5F665C",
+  "tone": "factual, curious, evidence-based",
+  "fonts": {
+    "display": "Schibsted Grotesk",
+    "body": "Work Sans",
+    "mono": "IBM Plex Mono"
+  },
+  "transitionPreset": "sober",
+  "layouts": {
+    "title": "s1",
+    "text": "s2",
+    "key-figures": "s3",
+    "chart": "s4",
+    "section": "s5",
+    "two-columns": "s6",
+    "image-text": "s7",
+    "quote": "s8",
+    "table": "s9",
+    "team": "s10",
+    "timeline": "s11",
+    "thank-you": "s12"
+  }
+}

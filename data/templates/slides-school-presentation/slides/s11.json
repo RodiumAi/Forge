@@ -1,0 +1,729 @@
+{
+  "id": "s11",
+  "background": {
+    "type": "color",
+    "token": "--bg"
+  },
+  "elements": [
+    {
+      "id": "s11-blob1",
+      "type": "shape",
+      "x": 1620,
+      "y": -170,
+      "w": 470,
+      "h": 470,
+      "z": 0,
+      "shape": "ellipse",
+      "fill": "--accent-2",
+      "opacity": 0.22
+    },
+    {
+      "id": "s11-blob2",
+      "type": "shape",
+      "x": 1500,
+      "y": 140,
+      "w": 150,
+      "h": 150,
+      "z": 0,
+      "shape": "ellipse",
+      "fill": "--accent",
+      "opacity": 0.18
+    },
+    {
+      "id": "s11-bar",
+      "type": "shape",
+      "x": 140,
+      "y": 137,
+      "w": 20,
+      "h": 20,
+      "z": 2,
+      "shape": "ellipse",
+      "fill": "--accent",
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s11-kicker",
+      "type": "text",
+      "role": "label",
+      "x": 176,
+      "y": 126,
+      "w": 1164,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Notre groupe"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 600,
+        "color": "--accent",
+        "align": "left",
+        "lineHeight": 1.4,
+        "letterSpacing": 3,
+        "uppercase": true
+      }
+    },
+    {
+      "id": "s11-heading",
+      "type": "text",
+      "role": "heading",
+      "x": 140,
+      "y": 176,
+      "w": 1640,
+      "h": 140,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Qui a fait quoi"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 64,
+        "weight": 600,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.1
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "on-enter",
+        "durationMs": 500
+      }
+    },
+    {
+      "id": "s11-avatar1",
+      "type": "shape",
+      "x": 230,
+      "y": 370,
+      "w": 200,
+      "h": 200,
+      "z": 1,
+      "shape": "ellipse",
+      "fill": "--surface",
+      "stroke": "--accent",
+      "strokeWidth": 4,
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 0
+      }
+    },
+    {
+      "id": "s11-initials1",
+      "type": "text",
+      "role": "label",
+      "x": 230,
+      "y": 370,
+      "w": 200,
+      "h": 200,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "IM"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 64,
+        "weight": 600,
+        "color": "--accent",
+        "align": "center",
+        "lineHeight": 1.0,
+        "valign": "middle"
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 0
+      }
+    },
+    {
+      "id": "s11-name1",
+      "type": "text",
+      "role": "heading",
+      "x": 140,
+      "y": 600,
+      "w": 380,
+      "h": 50,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Inès Moreau"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 32,
+        "weight": 700,
+        "color": "--fg",
+        "align": "center",
+        "lineHeight": 1.3
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 0
+      }
+    },
+    {
+      "id": "s11-role1",
+      "type": "text",
+      "role": "caption",
+      "x": 140,
+      "y": 656,
+      "w": 380,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Recherches"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 600,
+        "color": "--accent",
+        "align": "center",
+        "lineHeight": 1.4
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 0
+      }
+    },
+    {
+      "id": "s11-bio1",
+      "type": "text",
+      "role": "caption",
+      "x": 150,
+      "y": 710,
+      "w": 360,
+      "h": 110,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Les éruptions et l'expérience"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 22,
+        "weight": 400,
+        "color": "--muted",
+        "align": "center",
+        "lineHeight": 1.45
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 0
+      }
+    },
+    {
+      "id": "s11-avatar2",
+      "type": "shape",
+      "x": 650,
+      "y": 370,
+      "w": 200,
+      "h": 200,
+      "z": 1,
+      "shape": "ellipse",
+      "fill": "--surface",
+      "stroke": "--accent",
+      "strokeWidth": 4,
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 1
+      }
+    },
+    {
+      "id": "s11-initials2",
+      "type": "text",
+      "role": "label",
+      "x": 650,
+      "y": 370,
+      "w": 200,
+      "h": 200,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "LB"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 64,
+        "weight": 600,
+        "color": "--accent",
+        "align": "center",
+        "lineHeight": 1.0,
+        "valign": "middle"
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 1
+      }
+    },
+    {
+      "id": "s11-name2",
+      "type": "text",
+      "role": "heading",
+      "x": 560,
+      "y": 600,
+      "w": 380,
+      "h": 50,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Lucas Bernard"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 32,
+        "weight": 700,
+        "color": "--fg",
+        "align": "center",
+        "lineHeight": 1.3
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 1
+      }
+    },
+    {
+      "id": "s11-role2",
+      "type": "text",
+      "role": "caption",
+      "x": 560,
+      "y": 656,
+      "w": 380,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Cartes"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 600,
+        "color": "--accent",
+        "align": "center",
+        "lineHeight": 1.4
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 1
+      }
+    },
+    {
+      "id": "s11-bio2",
+      "type": "text",
+      "role": "caption",
+      "x": 570,
+      "y": 710,
+      "w": 360,
+      "h": 110,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Où sont les volcans"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 22,
+        "weight": 400,
+        "color": "--muted",
+        "align": "center",
+        "lineHeight": 1.45
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 1
+      }
+    },
+    {
+      "id": "s11-avatar3",
+      "type": "shape",
+      "x": 1070,
+      "y": 370,
+      "w": 200,
+      "h": 200,
+      "z": 1,
+      "shape": "ellipse",
+      "fill": "--surface",
+      "stroke": "--accent",
+      "strokeWidth": 4,
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 2
+      }
+    },
+    {
+      "id": "s11-initials3",
+      "type": "text",
+      "role": "label",
+      "x": 1070,
+      "y": 370,
+      "w": 200,
+      "h": 200,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "MD"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 64,
+        "weight": 600,
+        "color": "--accent",
+        "align": "center",
+        "lineHeight": 1.0,
+        "valign": "middle"
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 2
+      }
+    },
+    {
+      "id": "s11-name3",
+      "type": "text",
+      "role": "heading",
+      "x": 980,
+      "y": 600,
+      "w": 380,
+      "h": 50,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Maëlle Diallo"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 32,
+        "weight": 700,
+        "color": "--fg",
+        "align": "center",
+        "lineHeight": 1.3
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 2
+      }
+    },
+    {
+      "id": "s11-role3",
+      "type": "text",
+      "role": "caption",
+      "x": 980,
+      "y": 656,
+      "w": 380,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Diaporama"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 600,
+        "color": "--accent",
+        "align": "center",
+        "lineHeight": 1.4
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 2
+      }
+    },
+    {
+      "id": "s11-bio3",
+      "type": "text",
+      "role": "caption",
+      "x": 990,
+      "y": 710,
+      "w": 360,
+      "h": 110,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Chiffres et graphique"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 22,
+        "weight": 400,
+        "color": "--muted",
+        "align": "center",
+        "lineHeight": 1.45
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 2
+      }
+    },
+    {
+      "id": "s11-avatar4",
+      "type": "shape",
+      "x": 1490,
+      "y": 370,
+      "w": 200,
+      "h": 200,
+      "z": 1,
+      "shape": "ellipse",
+      "fill": "--surface",
+      "stroke": "--accent",
+      "strokeWidth": 4,
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 3
+      }
+    },
+    {
+      "id": "s11-initials4",
+      "type": "text",
+      "role": "label",
+      "x": 1490,
+      "y": 370,
+      "w": 200,
+      "h": 200,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "ML"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 64,
+        "weight": 600,
+        "color": "--accent",
+        "align": "center",
+        "lineHeight": 1.0,
+        "valign": "middle"
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 3
+      }
+    },
+    {
+      "id": "s11-name4",
+      "type": "text",
+      "role": "heading",
+      "x": 1400,
+      "y": 600,
+      "w": 380,
+      "h": 50,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Mme Laurent"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 32,
+        "weight": 700,
+        "color": "--fg",
+        "align": "center",
+        "lineHeight": 1.3
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 3
+      }
+    },
+    {
+      "id": "s11-role4",
+      "type": "text",
+      "role": "caption",
+      "x": 1400,
+      "y": 656,
+      "w": 380,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Professeure"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 600,
+        "color": "--accent",
+        "align": "center",
+        "lineHeight": 1.4
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 3
+      }
+    },
+    {
+      "id": "s11-bio4",
+      "type": "text",
+      "role": "caption",
+      "x": 1410,
+      "y": 710,
+      "w": 360,
+      "h": 110,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Nous a aidés à trouver les sources"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 22,
+        "weight": 400,
+        "color": "--muted",
+        "align": "center",
+        "lineHeight": 1.45
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 3
+      }
+    },
+    {
+      "id": "s11-footer",
+      "type": "text",
+      "role": "caption",
+      "x": 140,
+      "y": 1000,
+      "w": 1100,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Les volcans · Exposé de 5e B · Collège Jean-Moulin"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s11-page",
+      "type": "text",
+      "role": "caption",
+      "x": 1660,
+      "y": 1000,
+      "w": 120,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "11"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "right",
+        "lineHeight": 1.4
+      }
+    }
+  ]
+}

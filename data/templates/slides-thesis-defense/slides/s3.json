@@ -1,0 +1,95 @@
+{
+  "id": "s3",
+  "background": {
+    "type": "color",
+    "token": "--surface"
+  },
+  "elements": [
+    {
+      "id": "s3-number",
+      "type": "text",
+      "role": "label",
+      "x": 460,
+      "y": 200,
+      "w": 1000,
+      "h": 260,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "I"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 220,
+        "weight": 600,
+        "color": "--accent",
+        "align": "center",
+        "lineHeight": 1.1
+      }
+    },
+    {
+      "id": "s3-bar",
+      "type": "shape",
+      "x": 900,
+      "y": 500,
+      "w": 120,
+      "h": 10,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 5,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s3-title",
+      "type": "text",
+      "role": "title",
+      "x": 160,
+      "y": 540,
+      "w": 1600,
+      "h": 200,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Méthode"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 88,
+        "weight": 600,
+        "color": "--fg",
+        "align": "center",
+        "lineHeight": 1.1
+      }
+    },
+    {
+      "id": "s3-subtitle",
+      "type": "text",
+      "role": "subtitle",
+      "x": 310,
+      "y": 760,
+      "w": 1300,
+      "h": 100,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Mesurer, modéliser, projeter."
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 34,
+        "weight": 400,
+        "color": "--muted",
+        "align": "center",
+        "lineHeight": 1.35
+      }
+    }
+  ]
+}

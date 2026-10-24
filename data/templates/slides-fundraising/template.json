@@ -1,0 +1,49 @@
+{
+  "kind": "slides",
+  "id": "slides-fundraising",
+  "title": {
+    "fr": "Levée de fonds",
+    "en": "Fundraising round"
+  },
+  "description": {
+    "fr": "Deck de levée de fonds série A, sombre et percutant, accent citron vert : thèse d'investissement, marché, traction, unit economics, équipe, utilisation des fonds et calendrier.",
+    "en": "Bold, dark Series A fundraising deck with a lime accent: investment thesis, market, traction, unit economics, team, use of funds and timeline."
+  },
+  "tags": [
+    "fundraising",
+    "investors",
+    "series-a",
+    "dark"
+  ],
+  "category": "business",
+  "preview": "preview.html",
+  "bootHint": {
+    "fr": "Adapte slides-fundraising : société, montant levé, chiffres de traction, utilisation des fonds.",
+    "en": "Adapt slides-fundraising: company, amount raised, traction figures, use of funds."
+  },
+  "accent": "#C9F24D",
+  "bg": "#0E0F12",
+  "fg": "#F5F5F2",
+  "muted": "#9C9FA8",
+  "tone": "confident, sharp, numbers first",
+  "fonts": {
+    "display": "Unbounded",
+    "body": "Manrope",
+    "mono": "JetBrains Mono"
+  },
+  "transitionPreset": "dynamic",
+  "layouts": {
+    "title": "s1",
+    "section": "s2",
+    "text": "s3",
+    "two-columns": "s4",
+    "key-figures": "s5",
+    "chart": "s6",
+    "image-text": "s7",
+    "quote": "s8",
+    "team": "s9",
+    "table": "s10",
+    "timeline": "s11",
+    "thank-you": "s12"
+  }
+}

@@ -1,10 +1,12 @@
-"""Build the six reference slides kits into data/templates/slides-<id>/.
+"""Build slides kits into data/templates/slides-<id>/.
 
 usage: python build_kits.py <repo root> <converted images root> [content module] [kit id ...]
 
 The content module defaults to kits_content (the six reference kits); wave 2
-modules (kits_content_f2...) can be passed instead, optionally with kit ids to
-rebuild only some kits.
+modules (kits_content_f1, kits_content_f2...) can be passed instead, optionally
+with kit ids to rebuild only some kits. A content module may also export LAYOUTS
+(layout builders), layout_notes(theme), style_lines(theme) and preview_html(...)
+to override the kitlib defaults.
 """
 from __future__ import annotations
 
@@ -22,8 +24,10 @@ from PIL import Image
 sys.path.insert(0, str(Path(__file__).parent))
 import kitlib
 
-KITS = importlib.import_module(sys.argv[3] if len(sys.argv) > 3 else "kits_content").KITS
+CONTENT = importlib.import_module(sys.argv[3] if len(sys.argv) > 3 else "kits_content")
+KITS = CONTENT.KITS
 ONLY = set(sys.argv[4:])
+LAYOUT_BUILDERS = getattr(CONTENT, "LAYOUTS", kitlib.LAYOUTS)
 
 REPO = Path(sys.argv[1])
 IMAGES = Path(sys.argv[2])
@@ -103,8 +107,11 @@ def design_md(kit, theme, layouts_map):
         "## Layouts",
         "One example slide per layout; reuse these positions when adding slides.",
     ]
+    notes = CONTENT.layout_notes(theme) if hasattr(CONTENT, "layout_notes") else {}
     for layout, sid in layouts_map.items():
-        lines.append(f"- {layout} ({sid}): {LAYOUT_DESC[layout]}")
+        lines.append(f"- {layout} ({sid}): {notes.get(layout, LAYOUT_DESC[layout])}")
+    if hasattr(CONTENT, "style_lines"):
+        lines += ["", "## Style", *CONTENT.style_lines(theme)]
     lines += [
         "",
         "## Transitions",
@@ -215,7 +222,7 @@ def build(kit):
     for i, content in enumerate(kit["slides"], start=1):
         sid = f"s{i}"
         layout = content["layout"]
-        bg, els = kitlib.LAYOUTS[layout](theme, content, sid, i)
+        bg, els = LAYOUT_BUILDERS[layout](theme, content, sid, i)
         if kit.get("post"):
             # Optional per-kit restyling hook (wave 2 kits): header, patterns, image treatments.
             bg, els = kit["post"](theme, content, sid, i, layout, bg, els)
@@ -254,8 +261,9 @@ def build(kit):
     }
     (dest / "template.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     hero_key = kit["slides"][0]["image"]
+    preview = getattr(CONTENT, "preview_html", preview_html)
     (dest / "preview.html").write_text(
-        preview_html(kit, theme, IMAGES / kit["id"] / "public" / "images" / f"{hero_key}.webp", slides[0]),
+        preview(kit, theme, IMAGES / kit["id"] / "public" / "images" / f"{hero_key}.webp", slides[0]),
         encoding="utf-8")
     size = sum(p.stat().st_size for p in dest.rglob("*") if p.is_file())
     print(f"{kit['id']}: {len(slides)} slides, {size / 1024:.0f} KiB")

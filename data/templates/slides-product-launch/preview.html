@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<title>Product launch preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 480px; height: 300px; overflow: hidden; position: relative;
+    background: #0A0A0F; color: #FAFAFA;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  }
+  .hero { position: absolute; inset: 0; background: url(data:image/webp;base64,UklGRoAOAABXRUJQVlA4IHQOAABwcACdASrgAUABPsFaqVCnpKyqotBZsZAYCWdu4WTQwHBd6QPkSdeQ/nsjXaX9ycvPLvc+3t/4dIzTN6AnHw+7xVdDDl6Txw6HZUTfLoOXpPHDodlMwcEMqdwkrUdn6ORYiooJ0icqNtE0y6lbY1n0hHL0njN5mMKesttOakRXGUJFHdVVqdF373XNJpEXcYFKscK3vy8X+ZCP2+WN8tK1QYLXuavgl5gKoLlySFGjZKoyHGJ3Wn2VlLWJFiD5UhQwtb1qW9ulfTZG8YZq83A+qJpCvd/+DpHgsyi3F4bauK6gqgaIzaKzMn6UerAb8+/LvE47XFjlQBFD+t17ClWdIdNg5wzrdBwgXch62V6vh+gbv9AWA5ZqtzoRIk4rrk63xJjVSIhJQs8ZZMG683K+nykQCw9z+5wZZDpbfgncuUIQles0Hv5IEjkl2LlL8+1HuwFibKH0fII1a4/fsXRTjHqYOe6xWLvJLwvxuCvRrelXyOZ6hcbpVruJ2+8fgcyTlmX/FML6RMRYcqvorrC+SrVcYlvbpXbO4TwTfLaxEHYkTgdt+hwMgbway3EH/73n/iu44OKKj1VzoiSH2zB8PjAzoLYlRCuh/FjN09tf3xuLHtQc0RWbtGD/gDFHSjU6jfCgEyJVBHqBGY3Tki0p+vUcGi+o5qSTYYt3KE36vGdu2k8Q8OHz3nQcvSenfUdQKa7smYPZE9j1UzMIAkqTz5yrYd4juW+eJDX3ipHO/At23nWvpkAWirD7W1WUJE5AAUEDn5EY68hwppqoUNVURZ/0GZMSw+NMaLAUoPAzm+aNuOMFHIaes0PkOKVR+D06DlVEzeo2CEYIjXUxOhMQUJ0qoeHdQFANjQ7yNqb35K5NodppGxGMskACVcM/ZxsAdL++sxAH2WIe+V/BrUUuj1pYjqpclw5ek2lG8oWl7b2tgos9TtjhrM9/EeTtbhdkoqz7ZdNTRM2La44S6WjzYWKdyt7TNfVgWp5jt2k8cPjidHWi7F5zGRqE9TDhN0fn36zaCwFISN6uAVZ1UJRGej6dnw0vGtgVNMl6IeVlu+tWqdY2OxH4YbCVb2D8c7eg5ygHCZUTkLyl9jUm5/Tm2wULkcRisNGE6ctN1wgvPZAOh2eq7C4gb54kytaATBZnH2L9IUxiG0mD83d4KSKTS6KElsrd9n5dB0LtLy7lUSJvl0HL0njh2TGIYAD++6pAAFCPvCmSmS5dxiAQJHu/ejouPHQxYlCYHIrqwoBG75LIGgiWqKDzKGm9f9K54K5UvzNrVKbd9TpaCE4geJDJ9g6UWXsq37qOCf+/e30QaWNSY8QlNGGq/9NdRExt6XAm4utCLwp+1fnfZKSD+jbPuan6WuX+wtLI1YQBV/fRZxXJ45j6UL97UXlzgRKwnKU20Xr1SNcWsxLk3v99I/Z63RFB+LSlMba3smKe5a92SWzbafFUz3gqcwMKq5FyLgFAJ5N1e+HO0Olj4txjxB+E9EFK38YO3PRY3PZ2I6rRjObQk+aqRX2YfAK10e2TFfG6KBkYQr3GXq1UmQuiR5f10B51Dxv0vltNyTLw45xt03OpenpXbye0suCd93ie1QQ4Ch++t1tQ6PU5vx2FR8gXtGh6lzW1dbkOQdmFpvr8JHMCqPYJY31CpJI04AiR6TuMelkuUwwQDBRVQ7jqd6O+H06tq6RozNSdb9bBnEFlgylVL05BJpv5BRSvDr7KcubfoG2CgfOi8tIVzG761XOiK2sB2wywPSq1I/FIY6YmmfB1pSEIVkTJxqVQu87IpMD7fCQ7EuVrYwZbbxSShXf5f3MguRo6+uXpkMTmPL0gw4a5di6yQrgfBB4n/kksVT44CvO1x4F7SN4Tyu59cdbRZvfrPZWu0WhNo0NrSDgJURiPprvY/v2zj63XgB8rD0uhiMSQYHOXd5xP3kSut70TBg4pZT5MaKlWyHrZc9vn8YihBRLbjbQBR280L11d/y6PYqJac4EmH4wn2SnRJNSUhMn5n5HjWGA+R+KHnbLr2a5MAJ+4iNhDIIX6z4D8/92asT4Smmf/3+KCPmvJUP4gfeoE2jGwaUpxOQXvzXebi8gUMvoqXEtLXVXidF4ImnwMYFUyXAZxyi7Bnrp18vKWv+Ag7dELWfLri1LNbH8GuX75chwc9yBQpARRPhVtkwwwHbJZ8zLXL6HFM6zU5RmXtxAV7PaeomoNWCysFg/+xzqUzHdnoMu7He7E5bGAFPovBRTdgyp3ohtaMo/dBy/8rlJNIxMULh1iWn8dGA+HB+Ldl0Fjs7Ngj4PUz7QGl5+1aTmv1yKAEsX8R/e741eJtXsveEeVzc6YZ/ItBPMqRnTaBhZytffOKcv4jEbxxLg/6JDXTEyBmBaIeiD2drNbCZCQicbS86Gthkjk5PlbQucz7gOab97aZh9f0s4IFsyR6GXY9H8P6S1Ap2PeLdH0zVEXlWwz+MSPOb8fnd934pfTULOfn11TXs1WoVVklUH7ra6mivE6BsswNLtxf91/G7gBfG0vgFnWdWZEN09HzeenJ3DcIQqseHBxJTCA7v6Yr+L8v4Zc00mgxBZvaVq64HPTJ344CMj0f77XqwUEmC6LjUBAbkt0L8FUkH2Ht2npkAIm1yJjmi5fqwHMp4FTAyL6VFk1JavDUbei24w8IXESK99F///t3qs+2wYzcR8JQqZK4Y/SOh35n//0thaDB3EWCfGeB8jlBF1xD+Dg5MpWIBMFcIkLkdlOpcF1gCsmBaKRu7EUlkKhuA9INueA6vktncowlZMpcEnmvNjJcz2kIoRzF3+iU26ZnQgEg2C90eiCRHsxBYB/VIeu3qCTApJLmSNOSVVAd8MMg+iSOUWXc4lN8SxSo2z/zjs/sQCkI8Kvj6TgdA3LgH4cmlz6ET7b3FT2uJGn8c5/EF1NngPXw/cHGE30WRp71pOSJ5Yjlj4FJVVPUoT1wKoJ1y2pkjiU8WpiIDBv4O2ADHOHN/mSzaLvPVkHXYl24v1GcmYWd38jkGyalR+4+DYSBHtUhoaMY99GRdcHB6b8L4iJBJNIB8QnUXVOc/0nfdEezHCHM8UdAjxWed0QMawIvKCYyf7Iu2nj9esFYkRPOq/jOgIQzi8ulBthl168/o4RYXjIZty0NxKis2YgL1M2iQG3e44DI7YY6eWMN1XXqBOzet17AlyU2MJyn0SQMUUBvcUcAEFeR80rlMAJgkq3+lgp0Mk1O8hBKZAS3vJzdXtKHkhlqOjnFtjcmU7KDc+ViwtIDv3g/lvRIKGdQmyL5zb8w2PQNDZ82mSGan+lTjerLwQ/CI3QX++Pgb+cOiLRp+CpfYVzJxQL4MTeW+/TwjOt8DHCdXbB7tIdMYe5sBXMGovHbLYNvsr8VPv+3fnL3Kpt59S+s9ZVDIay3hizVCK0K2PHayfbYeFma8bRI216nDbVROd1dZBRCPnAwBuNP6UBZWtT4hE0gLA0onoJ/U9ZXlTcZ7n4YZsps5uh/vRnXMwAjNWxT1/6LV26/d1aRqfHezxyKbwWaALmNmfKuu3LtqUKDoMwwM8YdGqvGBS/71NTYg0HVPdgV1vb+tTw4gJiUpnH7gUI2FspVK6ur3N843HecZEdaA8wCewJyX68QKD+4herJOm98jWheyJ8cbN+D8c+jaralH42GLNxKuKeSqyX9g1DWpW+Aoe1tSq7xKA8YMqWZF0iDPr8wftQpFhCHmVcKmv8WL0g1ZGSNBmaLODY2XwwmwgNPeh/+Rb2qtXbujE65EiEqk+XJNrAxwSK0PpmW90D4puH/ebkgI/U91LCrWKPyWMwWxIY34oyLLbo2AC432aC+WL4b9iRoY/0fRgBhrkTvxbNMwLjTP+WI7F0ojhPgwCml2gsd8L0ztE9Bxym3knsUizqTdtnFMR9IEmhzEC8WYIHOGJKWbsqcbOefduJuL7dm30pngcbtejiQAEDx6tEqFyHaQXOu3QXJ3NL0cKGPiQv74CfKLJ/zzMH0Szv9GzNfC6fk+2qQoi/Lp1qpGJJcjS3y4MyrPTefHo0r8E1wKXya15xADeMdQswdUI8Z4WlH1VtY7mDfqWxMMovSvp2SfssUocvDWcQS6MaMK4OHOzSGX33qYU29KH+ByY0H/njffjOuU8VjPw1HrFINvpvbDeZU3K+5cjwDvCmmcVtN7mtBzCTlGfxgwYqxhd8vQoZj2x3Vnw5wQjcPP4J4KyHhmc3rW7rEX/kJuWpWfzib2O7wM2KJVK/FZOyPl0vfhMAvtEyTFn7++yDjhsLWRElgQVPnuTG5R1QqafWeIHUsrHLoKZ7fvrOEJrdXVuepuplV96Gefu+GualdGMyQeJj1OINU/u0k+3ozXr0tRn+4Ed8m5ENqGAQW526iDGWaJNp203oTvq9bbxCLRqN8ufF8BIWG6Ebwj1UV3vyz14x7epMArGiLMsNSrG/J5HHXzmp+VPhaKix1MGezxAPpvwMM57xbzFKQIjrKtGF/K6rT/CLEUwhXhih/8YCDvY4LGHhtkHfcg6NHmw8MzaIpnTIAP1j0RkmserK+a1UXktie4o7aCMOCuvqkuAXnMFypKed1/6mQfqXjpDyqEiL2CIV4Hw8PBRyXPa3MbtXE8SHy1rPd6vRl+FR6Gbn3UUi+YXtqIoH+p933ek5fAiahaxKK/UukAgSt2dwk9d7aZt/dIlsGzrDqhZ+bAz7zt+m2ByXO7qR+Z7f/7s02/Ak5wH/VTLX60G17FU8AkaxZI2986gIAikTrMvpWinlbeILjMXEipelvHUyj8g/+ph8cjfz5cA+fnWvFuGcZ9PfcQTQRaJxjDWwGV/eyp0MIMrRNU98NbfGqYpC+airwoOhSyD5T8OWpRjVp0QthWaR+afDidJyGbHOZMUE/igq85FkFoTWrut/vgmHdx0g7e8MAAAAOANuAgAAASlgAAAA) center/cover; }
+  .veil { position: absolute; inset: 0; background: #0A0A0F; opacity: 0.55; }
+  .text { position: absolute; left: 40px; right: 40px; top: 84px; text-align: center; }
+  .bar { width: 30px; height: 3px; border-radius: 2px; background: #FF4D2E; margin: 0 auto 8px; }
+  .label { font-size: 7px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: #FF4D2E; margin-bottom: 8px; }
+  h1 { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 26px; line-height: 1.05; font-weight: 700; letter-spacing: -.01em; text-transform: uppercase; }
+  p { font-size: 8.5px; line-height: 1.4; margin-top: 10px; opacity: .85; }
+  .count { position: absolute; right: 12px; bottom: 10px; font-size: 7px; font-weight: 600;
+    color: #FAFAFA; background: #16161F; border: 1px solid #27272F; padding: 3px 7px; border-radius: 99px; }
+</style>
+</head>
+<body>
+  <div class="hero"></div>
+  <div class="veil"></div>
+  <div class="text">
+    <div class="bar"></div>
+    <div class="label">Keynote · 3 novembre 2026</div>
+    <h1>Voici Halo</h1>
+    <p>L'enceinte qui remplit la pièce et s'efface du regard.</p>
+  </div>
+  <div class="count">12 slides</div>
+</body>
+</html>

@@ -128,8 +128,8 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    # Downloads read the file name and the export warnings from headers.
-    expose_headers=["Content-Disposition", "X-Forge-Export-Warnings"],
+    # Document editors read the ETag; downloads read the file name and export warnings.
+    expose_headers=["ETag", "Content-Disposition", "X-Forge-Export-Warnings"],
 )
 
 
