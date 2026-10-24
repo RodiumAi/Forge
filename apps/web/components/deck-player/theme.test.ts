@@ -58,6 +58,12 @@ describe("themeTokensFromDesign", () => {
     expect(tokens["--shadow"]).toBe("rgba(0, 0, 0, 0.4)");
   });
 
+  it("quotes multi-word font families read from a charter", () => {
+    const tokens = themeTokensFromDesign(["- Display font: Source Serif 4, serif", "- Body font: Inter"].join("\n"));
+    expect(tokens["--font-display"]).toBe('"Source Serif 4", serif');
+    expect(tokens["--font-body"]).toBe("Inter");
+  });
+
   it("falls back to defaults on empty or broken input", () => {
     expect(themeTokensFromDesign("")).toEqual(DEFAULT_TOKENS);
     expect(themeTokensFromDesign("{ not json")).toEqual(DEFAULT_TOKENS);
