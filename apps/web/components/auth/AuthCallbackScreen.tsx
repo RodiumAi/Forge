@@ -1,9 +1,19 @@
 "use client";
 
-import { BrandLogo } from "@/components/BrandLogo";
-import { Icon } from "@/components/ui/icon";
+/**
+ * The screen shown while a RodiumAi sign-in completes (OIDC callback, the
+ * dashboard handoff, the sign-in popup, autostart) and when it fails.
+ *
+ * It sits in the auth frame without the showcase: it is on screen for a
+ * second or two, so a calm card with the three steps reads better than a
+ * gallery that would barely start loading.
+ */
+
+import { AuthAlert, AuthFrame } from "@/components/auth/AuthCard";
+import { Button } from "@/components/ui/Button";
+import { cx } from "@/components/ui/cx";
+import { Glyph } from "@/components/ui/glyph";
 import { useI18n } from "@/lib/i18n/I18nProvider";
-import { AlertCircle, Loader2 } from "lucide-react";
 
 type Props = {
   error?: string | null;
@@ -13,58 +23,53 @@ type Props = {
 export function AuthCallbackScreen({ error, onRetry }: Props) {
   const { t } = useI18n();
 
+  const steps = [
+    { key: "loginRodiumStepAuth" as const, state: "done" },
+    { key: "loginRodiumStepSync" as const, state: "active" },
+    { key: "loginRodiumStepOpen" as const, state: "todo" },
+  ];
+
   return (
-    <div className="auth-callback-page" aria-live="polite">
-      <div className="auth-callback-glow auth-callback-glow--a" aria-hidden="true" />
-      <div className="auth-callback-glow auth-callback-glow--b" aria-hidden="true" />
-
-      <div className="auth-callback-card">
-        <div className="auth-callback-brand">
-          <BrandLogo alt={t("brandAlt")} width={200} height={58} priority />
-        </div>
-
+    <AuthFrame showcase={false}>
+      <div className="f-auth-card f-auth-callback" aria-live="polite">
         {error ? (
-          <div className="auth-callback-error">
-            <span className="auth-callback-error-icon" aria-hidden="true">
-              <Icon icon={AlertCircle} className="ui-icon-lg" />
-            </span>
-            <h1 className="auth-callback-title">{t("loginRodiumErrorTitle")}</h1>
-            <p className="auth-callback-error-text">{error}</p>
+          <>
+            <div className="f-auth-head has-tile">
+              <span className="f-auth-tile is-danger" aria-hidden>
+                <Glyph name="alert" size="md" />
+              </span>
+              <h1>{t("loginRodiumErrorTitle")}</h1>
+            </div>
+            <AuthAlert tone="err">{error}</AuthAlert>
             {onRetry ? (
-              <button className="btn auth-callback-retry" type="button" onClick={onRetry}>
+              <Button block size="lg" icon="refresh" onClick={onRetry}>
                 {t("loginTitle")}
-              </button>
+              </Button>
             ) : null}
-          </div>
+          </>
         ) : (
           <>
-            <div className="auth-callback-loader" aria-hidden="true">
-              <span className="auth-callback-loader-ring" />
-              <span className="auth-callback-loader-core">
-                <Icon icon={Loader2} className="ui-icon-md agent-spin" />
+            <div className="f-auth-head has-tile">
+              <span className="f-auth-orbit" aria-hidden>
+                <span className="ring" />
+                <img src="/brand/forge/forge-app-icon-orange.svg" alt="" width={44} height={44} />
               </span>
+              <h1>{t("loginRodiumCompleting")}</h1>
+              <p>{t("loginRodiumCompletingSub")}</p>
             </div>
-
-            <h1 className="auth-callback-title">{t("loginRodiumCompleting")}</h1>
-            <p className="auth-callback-sub">{t("loginRodiumCompletingSub")}</p>
-
-            <ol className="auth-callback-steps">
-              <li className="auth-callback-step is-done">
-                <span className="auth-callback-step-dot" />
-                <span>{t("loginRodiumStepAuth")}</span>
-              </li>
-              <li className="auth-callback-step is-active">
-                <span className="auth-callback-step-dot" />
-                <span>{t("loginRodiumStepSync")}</span>
-              </li>
-              <li className="auth-callback-step">
-                <span className="auth-callback-step-dot" />
-                <span>{t("loginRodiumStepOpen")}</span>
-              </li>
+            <ol className="f-auth-steps">
+              {steps.map((step) => (
+                <li key={step.key} className={cx(`is-${step.state}`)}>
+                  <span className="dot" aria-hidden>
+                    {step.state === "done" ? <Glyph name="check" size="sm" /> : null}
+                  </span>
+                  <span>{t(step.key)}</span>
+                </li>
+              ))}
             </ol>
           </>
         )}
       </div>
-    </div>
+    </AuthFrame>
   );
 }

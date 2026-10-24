@@ -40,7 +40,7 @@ import {
 } from "@/lib/prompt-attachments";
 import { galleryHref, kindOf } from "@/lib/public-templates";
 
-const STEPS_PATH = "M0 0H1000V1000H740V785H525V735H475V525H260V475H215V260H0Z";
+export const STEPS_PATH = "M0 0H1000V1000H740V785H525V735H475V525H260V475H215V260H0Z";
 
 /** The mockup's ribbon picks, in order; missing ids are skipped. */
 const RIBBON_IDS = [

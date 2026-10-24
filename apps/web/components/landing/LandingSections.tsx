@@ -304,7 +304,7 @@ export function LandingTemplates({ templates, error }: { templates: GalleryTempl
     return () => window.clearTimeout(timer);
   }, [query]);
 
-  const all = templates ?? [];
+  const all = useMemo(() => templates ?? [], [templates]);
   const lists = useMemo(() => byKind(all), [all]);
   const filters = GALLERY_FILTERS.filter((f) => f.id === "all" || (enabled.includes(f.id) && lists[f.id].length > 0));
   const items = useMemo(() => {

@@ -12,12 +12,15 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-import { AuthCard, AuthDivider, AuthField } from "@/components/auth/AuthCard";
+import { AuthCard, AuthDivider, AuthField, AuthLink } from "@/components/auth/AuthCard";
 import { AuthCallbackScreen } from "@/components/auth/AuthCallbackScreen";
 import { CheckInboxNotice } from "@/components/auth/CheckInboxNotice";
 import { PasswordField } from "@/components/auth/PasswordField";
 import { SocialButtons } from "@/components/auth/SocialButtons";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 import { ApiError, api, setToken } from "@/lib/api";
+import { emailError, focusFirstInvalid, passwordError, useTouched } from "@/lib/auth-validation";
 import { sanitizeReturnTo, startRodiumOAuth } from "@/lib/rodium-oauth";
 import { clearSessionCache } from "@/lib/session-cache";
 import { firebaseEnabled } from "@/lib/firebase";
@@ -53,6 +56,8 @@ function LoginInner() {
    */
   const [rodiumAvailable, setRodiumAvailable] = useState<boolean | null>(null);
 
+  const check = useTouched<"email" | "password">();
+
   const autostart = params.get("autostart") === "1";
 
   function land() {
@@ -78,7 +83,7 @@ function LoginInner() {
       setRodiumAvailable(false);
       if (autostart) setError(t("loginRodiumOidcUnavailable"));
     } else if (result.reason === "cancelled") {
-      // User closed the popup — not an error worth shouting about.
+      // User closed the popup, not an error worth shouting about.
     } else if (result.error instanceof Error) {
       setError(result.error.message);
     } else if (result.reason === "error") {
@@ -89,6 +94,16 @@ function LoginInner() {
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    check.markSubmitted();
+    const emailErrNow = emailError(email);
+    const passErrNow = passwordError(password);
+    if (emailErrNow || passErrNow) {
+      focusFirstInvalid([
+        ["login-email", emailErrNow],
+        ["login-password", passErrNow],
+      ]);
+      return;
+    }
     setLoading(true);
     setError(null);
     setNeedsVerification(null);
@@ -149,15 +164,10 @@ function LoginInner() {
     return (
       <AuthCard
         title={t("authCheckInboxTitle")}
+        icon="mail"
         footer={
-          <p className="auth-alt" style={{ marginTop: 0 }}>
-            <button
-              type="button"
-              className="auth-link"
-              onClick={() => setNeedsVerification(null)}
-            >
-              {t("authBackToLogin")}
-            </button>
+          <p className="f-auth-alt">
+            <AuthLink onClick={() => setNeedsVerification(null)}>{t("authBackToLogin")}</AuthLink>
           </p>
         }
       >
@@ -166,22 +176,37 @@ function LoginInner() {
     );
   }
 
+  const emailErr = check.show("email") ? emailError(email) : null;
+  const passErr = check.show("password") ? passwordError(password) : null;
+
+  function goRegister() {
+    const next = sanitizeReturnTo(params.get("next"));
+    router.push(next ? `/register?next=${encodeURIComponent(next)}` : "/register");
+  }
+
   return (
-    <AuthCard title={t("loginTitle")} subtitle={t("authLoginSub")} error={error}>
+    <AuthCard title={t("loginTitle")} subtitle={t("authLoginSub")} error={error} legal>
       <SocialButtons onSuccess={land} onError={setError} disabled={busy} />
       {firebaseEnabled ? <AuthDivider /> : null}
 
-      <form onSubmit={(e) => void submit(e)}>
-        <AuthField id="login-email" label={t("email")}>
-          <input
-            id="login-email"
-            className="input"
+      <form className="f-auth-form" noValidate onSubmit={(e) => void submit(e)}>
+        <AuthField
+          id="login-email"
+          label={t("email")}
+          error={emailErr ? t(emailErr) : null}
+        >
+          <Input
             type="email"
+            inputMode="email"
             autoComplete="email"
+            autoCapitalize="none"
+            spellCheck={false}
             required
             placeholder={t("authEmailPlaceholder")}
             value={email}
+            disabled={busy}
             onChange={(e) => setEmail(e.target.value)}
+            onBlur={() => check.touch("email")}
           />
         </AuthField>
 
@@ -191,36 +216,19 @@ function LoginInner() {
           autoComplete="current-password"
           value={password}
           onChange={setPassword}
+          onBlur={() => check.touch("password")}
           disabled={busy}
+          error={passErr ? t(passErr) : null}
+          aside={<AuthLink onClick={() => router.push("/forgot-password")}>{t("authForgotPassword")}</AuthLink>}
         />
 
-        <button className="btn" type="submit" style={{ width: "100%" }} disabled={busy}>
+        <Button type="submit" size="lg" block loading={loading} disabled={busy}>
           {loading ? t("authWorking") : t("authSignInCta")}
-        </button>
+        </Button>
       </form>
 
-      <p className="auth-alt">
-        <button
-          type="button"
-          className="auth-link"
-          onClick={() => router.push("/forgot-password")}
-        >
-          {t("authForgotPassword")}
-        </button>
-      </p>
-
-      <p className="auth-alt">
-        {t("authNoAccount")}{" "}
-        <button
-          type="button"
-          className="auth-link"
-          onClick={() => {
-            const next = sanitizeReturnTo(params.get("next"));
-            router.push(next ? `/register?next=${encodeURIComponent(next)}` : "/register");
-          }}
-        >
-          {t("authSignUpCta")}
-        </button>
+      <p className="f-auth-alt">
+        {t("authNoAccount")} <AuthLink onClick={goRegister}>{t("authSignUpCta")}</AuthLink>
       </p>
     </AuthCard>
   );

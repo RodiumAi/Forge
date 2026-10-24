@@ -9,14 +9,15 @@
  * runs effects twice in development and the link only works once.
  *
  * When the link is expired or already used, we keep the raw token and offer
- * "Resend" — the API looks the address up from that token so the visitor does
+ * "Resend", the API looks the address up from that token so the visitor does
  * not bounce to login just to request another mail.
  */
 
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-import { AuthCard } from "@/components/auth/AuthCard";
+import { AuthAlert, AuthCard, AuthLink } from "@/components/auth/AuthCard";
+import { Button } from "@/components/ui/Button";
 import { ApiError, api, setToken } from "@/lib/api";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 
@@ -76,25 +77,16 @@ function VerifyEmailInner() {
 
   if (phase === "working") {
     return (
-      <AuthCard title={t("authVerifyTitle")}>
-        <div style={{ display: "flex", justifyContent: "center", padding: "1.5rem 0" }}>
-          <div className="forge-top-loader-spinner" style={{ width: 32, height: 32, borderWidth: 3 }} />
-        </div>
-      </AuthCard>
+      <AuthCard title={t("authVerifyTitle")} subtitle={t("lndAuthWorkingHint")} icon="spinner" />
     );
   }
 
   if (phase === "ok") {
     return (
-      <AuthCard title={t("authVerifyOkTitle")} subtitle={t("authVerifyOkBody")}>
-        <button
-          className="btn"
-          type="button"
-          style={{ width: "100%" }}
-          onClick={() => window.location.assign("/dashboard")}
-        >
+      <AuthCard title={t("authVerifyOkTitle")} subtitle={t("authVerifyOkBody")} icon="check" tone="ok">
+        <Button size="lg" block iconEnd="arrow-right" onClick={() => window.location.assign("/dashboard")}>
           {t("authVerifyGoToForge")}
-        </button>
+        </Button>
       </AuthCard>
     );
   }
@@ -104,11 +96,18 @@ function VerifyEmailInner() {
       <AuthCard
         title={t("authVerifyNetworkTitle")}
         subtitle={t("authVerifyNetworkBody")}
+        icon="signal"
+        tone="danger"
+        footer={
+          <p className="f-auth-alt">
+            <AuthLink onClick={() => router.push("/login")}>{t("authBackToLogin")}</AuthLink>
+          </p>
+        }
       >
-        <button
-          className="btn"
-          type="button"
-          style={{ width: "100%" }}
+        <Button
+          size="lg"
+          block
+          icon="refresh"
           onClick={() => {
             startedRef.current = false;
             setPhase("working");
@@ -116,12 +115,7 @@ function VerifyEmailInner() {
           }}
         >
           {t("authVerifyRetry")}
-        </button>
-        <p className="auth-alt" style={{ marginTop: "0.75rem" }}>
-          <button type="button" className="auth-link" onClick={() => router.push("/login")}>
-            {t("authBackToLogin")}
-          </button>
-        </p>
+        </Button>
       </AuthCard>
     );
   }
@@ -130,28 +124,20 @@ function VerifyEmailInner() {
     <AuthCard
       title={t("authVerifyFailTitle")}
       subtitle={t("authVerifyFailBody")}
+      icon="clock"
+      tone="danger"
       footer={
-        <p className="auth-alt" style={{ marginTop: 0 }}>
-          <button type="button" className="auth-link" onClick={() => router.push("/login")}>
-            {t("authVerifyTryLogin")}
-          </button>
+        <p className="f-auth-alt">
+          <AuthLink onClick={() => router.push("/login")}>{t("authVerifyTryLogin")}</AuthLink>
         </p>
       }
     >
       {resent ? (
-        <p className="auth-notice" role="status" style={{ marginBottom: 0 }}>
-          {t("authVerifyResendDone")}
-        </p>
+        <AuthAlert tone="ok">{t("authVerifyResendDone")}</AuthAlert>
       ) : token ? (
-        <button
-          className="btn"
-          type="button"
-          style={{ width: "100%" }}
-          disabled={resendBusy}
-          onClick={() => void resendFromToken()}
-        >
+        <Button size="lg" block icon="send" loading={resendBusy} onClick={() => void resendFromToken()}>
           {resendBusy ? t("authWorking") : t("authVerifyResend")}
-        </button>
+        </Button>
       ) : null}
     </AuthCard>
   );
