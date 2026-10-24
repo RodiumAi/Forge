@@ -1,0 +1,33 @@
+{
+  "kind": "design_system",
+  "id": "design-system-education",
+  "title": {
+    "fr": "Éducation",
+    "en": "Education"
+  },
+  "description": {
+    "fr": "Design system chaleureux et encourageant pour l'apprentissage : orange, bleu profond, Fredoka et Nunito.",
+    "en": "Warm, encouraging design system for learning: orange, deep blue, Fredoka and Nunito."
+  },
+  "tags": [
+    "education",
+    "learning",
+    "friendly",
+    "light"
+  ],
+  "preview": "preview.html",
+  "bootHint": {
+    "fr": "Adapte design-system-education : nom de la marque, public, ton, couleurs à garder.",
+    "en": "Adapt design-system-education: brand name, audience, tone, colours to keep."
+  },
+  "accent": "#c2410c",
+  "bg": "#fffaf3",
+  "fg": "#1f2a44",
+  "muted": "#55607a",
+  "tone": "warm, encouraging, playful",
+  "fonts": {
+    "display": "Fredoka",
+    "body": "Nunito",
+    "mono": "Space Mono"
+  }
+}

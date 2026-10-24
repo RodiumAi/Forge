@@ -1,0 +1,33 @@
+{
+  "kind": "design_system",
+  "id": "design-system-sante",
+  "title": {
+    "fr": "Santé",
+    "en": "Health"
+  },
+  "description": {
+    "fr": "Design system apaisant et très lisible pour un service de santé : sarcelle, fond crème, Lexend et Nunito Sans.",
+    "en": "Soothing, highly readable design system for a health service: teal, cream background, Lexend and Nunito Sans."
+  },
+  "tags": [
+    "health",
+    "care",
+    "accessible",
+    "light"
+  ],
+  "preview": "preview.html",
+  "bootHint": {
+    "fr": "Adapte design-system-sante : nom de la marque, public, ton, couleurs à garder.",
+    "en": "Adapt design-system-sante: brand name, audience, tone, colours to keep."
+  },
+  "accent": "#0f766e",
+  "bg": "#fbfaf6",
+  "fg": "#16302b",
+  "muted": "#4b635d",
+  "tone": "caring, clear, accessible",
+  "fonts": {
+    "display": "Lexend",
+    "body": "Nunito Sans",
+    "mono": "IBM Plex Mono"
+  }
+}

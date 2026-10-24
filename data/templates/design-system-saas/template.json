@@ -1,0 +1,33 @@
+{
+  "kind": "design_system",
+  "id": "design-system-saas",
+  "title": {
+    "fr": "SaaS sobre",
+    "en": "Sober SaaS"
+  },
+  "description": {
+    "fr": "Design system clair et précis pour un logiciel B2B : blanc, gris ardoise, un bleu franc, Inter partout.",
+    "en": "Clear, precise design system for B2B software: white, slate greys, a frank blue, Inter everywhere."
+  },
+  "tags": [
+    "saas",
+    "b2b",
+    "minimal",
+    "light"
+  ],
+  "preview": "preview.html",
+  "bootHint": {
+    "fr": "Adapte design-system-saas : nom de la marque, public, ton, couleurs à garder.",
+    "en": "Adapt design-system-saas: brand name, audience, tone, colours to keep."
+  },
+  "accent": "#2563eb",
+  "bg": "#ffffff",
+  "fg": "#0f172a",
+  "muted": "#475569",
+  "tone": "clear, precise, reassuring",
+  "fonts": {
+    "display": "Inter",
+    "body": "Inter",
+    "mono": "JetBrains Mono"
+  }
+}

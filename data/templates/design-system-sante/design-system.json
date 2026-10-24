@@ -1,0 +1,724 @@
+{
+  "version": 1,
+  "name": "Soina",
+  "description": "Téléconsultation et suivi de santé pour les familles. Bienveillant, clair, accessible.",
+  "tokens": {
+    "color": {
+      "$type": "color",
+      "bg": {
+        "$value": "#fbfaf6",
+        "$description": "Page and slide background",
+        "$extensions": {
+          "forge": {
+            "role": "bg"
+          }
+        }
+      },
+      "surface": {
+        "$value": "#ffffff",
+        "$description": "Cards, panels and inputs",
+        "$extensions": {
+          "forge": {
+            "role": "surface"
+          }
+        }
+      },
+      "fg": {
+        "$value": "#16302b",
+        "$description": "Main text",
+        "$extensions": {
+          "forge": {
+            "role": "fg",
+            "contrast": [
+              {
+                "on": "bg",
+                "ratio": 13.48,
+                "level": "AAA",
+                "required": 4.5
+              },
+              {
+                "on": "surface",
+                "ratio": 14.08,
+                "level": "AAA",
+                "required": 4.5
+              }
+            ]
+          }
+        }
+      },
+      "muted": {
+        "$value": "#4b635d",
+        "$description": "Secondary text",
+        "$extensions": {
+          "forge": {
+            "role": "muted",
+            "contrast": [
+              {
+                "on": "bg",
+                "ratio": 6.2,
+                "level": "AA",
+                "required": 4.5
+              },
+              {
+                "on": "surface",
+                "ratio": 6.48,
+                "level": "AA",
+                "required": 4.5
+              }
+            ]
+          }
+        }
+      },
+      "accent": {
+        "$value": "#0f766e",
+        "$description": "Brand accent: buttons, links, highlights",
+        "$extensions": {
+          "forge": {
+            "role": "accent",
+            "contrast": [
+              {
+                "on": "bg",
+                "ratio": 5.24,
+                "level": "AA",
+                "required": 3
+              }
+            ]
+          }
+        }
+      },
+      "border": {
+        "$value": "#dfe7e3",
+        "$description": "Hairlines, dividers and input borders",
+        "$extensions": {
+          "forge": {
+            "role": "border"
+          }
+        }
+      },
+      "accent-contrast": {
+        "$value": "#ffffff",
+        "$description": "Text and icons on the accent colour",
+        "$extensions": {
+          "forge": {
+            "role": "accent-contrast",
+            "contrast": [
+              {
+                "on": "accent",
+                "ratio": 5.47,
+                "level": "AA",
+                "required": 4.5
+              }
+            ]
+          }
+        }
+      },
+      "secondary": {
+        "$value": "#7c9a3d",
+        "$description": "Secondary brand colour",
+        "$extensions": {
+          "forge": {
+            "role": "secondary"
+          }
+        }
+      },
+      "success": {
+        "$value": "#15803d",
+        "$description": "Positive status",
+        "$extensions": {
+          "forge": {
+            "role": "success",
+            "contrast": [
+              {
+                "on": "bg",
+                "ratio": 4.8,
+                "level": "AA",
+                "required": 3
+              }
+            ]
+          }
+        }
+      },
+      "warning": {
+        "$value": "#a16207",
+        "$description": "Warning status",
+        "$extensions": {
+          "forge": {
+            "role": "warning",
+            "contrast": [
+              {
+                "on": "bg",
+                "ratio": 4.71,
+                "level": "AA",
+                "required": 3
+              }
+            ]
+          }
+        }
+      },
+      "danger": {
+        "$value": "#b42318",
+        "$description": "Errors and destructive actions",
+        "$extensions": {
+          "forge": {
+            "role": "danger",
+            "contrast": [
+              {
+                "on": "bg",
+                "ratio": 6.29,
+                "level": "AA",
+                "required": 3
+              }
+            ]
+          }
+        }
+      },
+      "info": {
+        "$value": "#1e6091",
+        "$description": "Neutral information",
+        "$extensions": {
+          "forge": {
+            "role": "info",
+            "contrast": [
+              {
+                "on": "bg",
+                "ratio": 6.41,
+                "level": "AA",
+                "required": 3
+              }
+            ]
+          }
+        }
+      }
+    },
+    "font": {
+      "$type": "fontFamily",
+      "display": {
+        "$value": [
+          "Lexend",
+          "system-ui",
+          "-apple-system",
+          "Segoe UI",
+          "Roboto",
+          "sans-serif"
+        ],
+        "$description": "Titles and headings"
+      },
+      "body": {
+        "$value": [
+          "Nunito Sans",
+          "system-ui",
+          "-apple-system",
+          "Segoe UI",
+          "Roboto",
+          "sans-serif"
+        ],
+        "$description": "Body text and interface"
+      },
+      "mono": {
+        "$value": [
+          "IBM Plex Mono",
+          "ui-monospace",
+          "SFMono-Regular",
+          "Menlo",
+          "monospace"
+        ],
+        "$description": "Code and figures"
+      }
+    },
+    "weight": {
+      "$type": "fontWeight",
+      "regular": {
+        "$value": 400
+      },
+      "medium": {
+        "$value": 500
+      },
+      "semibold": {
+        "$value": 600
+      },
+      "bold": {
+        "$value": 700
+      }
+    },
+    "text": {
+      "$type": "dimension",
+      "xs": {
+        "$value": {
+          "value": 13,
+          "unit": "px"
+        }
+      },
+      "sm": {
+        "$value": {
+          "value": 15,
+          "unit": "px"
+        }
+      },
+      "base": {
+        "$value": {
+          "value": 18,
+          "unit": "px"
+        },
+        "$extensions": {
+          "forge": {
+            "base": 18,
+            "ratio": 1.2
+          }
+        }
+      },
+      "lg": {
+        "$value": {
+          "value": 22,
+          "unit": "px"
+        }
+      },
+      "xl": {
+        "$value": {
+          "value": 26,
+          "unit": "px"
+        }
+      },
+      "2xl": {
+        "$value": {
+          "value": 31,
+          "unit": "px"
+        }
+      },
+      "3xl": {
+        "$value": {
+          "value": 37,
+          "unit": "px"
+        }
+      },
+      "4xl": {
+        "$value": {
+          "value": 45,
+          "unit": "px"
+        }
+      },
+      "5xl": {
+        "$value": {
+          "value": 54,
+          "unit": "px"
+        }
+      }
+    },
+    "leading": {
+      "$type": "number",
+      "tight": {
+        "$value": 1.15
+      },
+      "snug": {
+        "$value": 1.3
+      },
+      "normal": {
+        "$value": 1.55
+      }
+    },
+    "type": {
+      "$type": "typography",
+      "display": {
+        "$value": {
+          "fontFamily": "{font.display}",
+          "fontSize": "{text.5xl}",
+          "fontWeight": "{weight.bold}",
+          "lineHeight": "{leading.tight}",
+          "letterSpacing": {
+            "value": -1,
+            "unit": "px"
+          }
+        }
+      },
+      "h1": {
+        "$value": {
+          "fontFamily": "{font.display}",
+          "fontSize": "{text.4xl}",
+          "fontWeight": "{weight.bold}",
+          "lineHeight": "{leading.tight}",
+          "letterSpacing": {
+            "value": -0.5,
+            "unit": "px"
+          }
+        }
+      },
+      "h2": {
+        "$value": {
+          "fontFamily": "{font.display}",
+          "fontSize": "{text.3xl}",
+          "fontWeight": "{weight.semibold}",
+          "lineHeight": "{leading.snug}",
+          "letterSpacing": {
+            "value": 0,
+            "unit": "px"
+          }
+        }
+      },
+      "h3": {
+        "$value": {
+          "fontFamily": "{font.display}",
+          "fontSize": "{text.2xl}",
+          "fontWeight": "{weight.semibold}",
+          "lineHeight": "{leading.snug}",
+          "letterSpacing": {
+            "value": 0,
+            "unit": "px"
+          }
+        }
+      },
+      "body": {
+        "$value": {
+          "fontFamily": "{font.body}",
+          "fontSize": "{text.base}",
+          "fontWeight": "{weight.regular}",
+          "lineHeight": "{leading.normal}",
+          "letterSpacing": {
+            "value": 0,
+            "unit": "px"
+          }
+        }
+      },
+      "small": {
+        "$value": {
+          "fontFamily": "{font.body}",
+          "fontSize": "{text.sm}",
+          "fontWeight": "{weight.regular}",
+          "lineHeight": "{leading.normal}",
+          "letterSpacing": {
+            "value": 0,
+            "unit": "px"
+          }
+        }
+      },
+      "caption": {
+        "$value": {
+          "fontFamily": "{font.body}",
+          "fontSize": "{text.xs}",
+          "fontWeight": "{weight.medium}",
+          "lineHeight": "{leading.normal}",
+          "letterSpacing": {
+            "value": 0.2,
+            "unit": "px"
+          }
+        }
+      },
+      "code": {
+        "$value": {
+          "fontFamily": "{font.mono}",
+          "fontSize": "{text.sm}",
+          "fontWeight": "{weight.regular}",
+          "lineHeight": "{leading.normal}",
+          "letterSpacing": {
+            "value": 0,
+            "unit": "px"
+          }
+        }
+      }
+    },
+    "space": {
+      "$type": "dimension",
+      "xs": {
+        "$value": {
+          "value": 4,
+          "unit": "px"
+        }
+      },
+      "sm": {
+        "$value": {
+          "value": 8,
+          "unit": "px"
+        },
+        "$extensions": {
+          "forge": {
+            "unit": 8
+          }
+        }
+      },
+      "md": {
+        "$value": {
+          "value": 16,
+          "unit": "px"
+        }
+      },
+      "lg": {
+        "$value": {
+          "value": 24,
+          "unit": "px"
+        }
+      },
+      "xl": {
+        "$value": {
+          "value": 32,
+          "unit": "px"
+        }
+      },
+      "2xl": {
+        "$value": {
+          "value": 48,
+          "unit": "px"
+        }
+      },
+      "3xl": {
+        "$value": {
+          "value": 64,
+          "unit": "px"
+        }
+      }
+    },
+    "radius": {
+      "$type": "dimension",
+      "none": {
+        "$value": {
+          "value": 0,
+          "unit": "px"
+        }
+      },
+      "sm": {
+        "$value": {
+          "value": 8,
+          "unit": "px"
+        }
+      },
+      "md": {
+        "$value": {
+          "value": 12,
+          "unit": "px"
+        }
+      },
+      "lg": {
+        "$value": {
+          "value": 20,
+          "unit": "px"
+        }
+      },
+      "xl": {
+        "$value": {
+          "value": 30,
+          "unit": "px"
+        }
+      },
+      "full": {
+        "$value": {
+          "value": 9999,
+          "unit": "px"
+        }
+      }
+    },
+    "shadow": {
+      "$type": "shadow",
+      "sm": {
+        "$value": {
+          "color": "#0000000f",
+          "offsetX": {
+            "value": 0,
+            "unit": "px"
+          },
+          "offsetY": {
+            "value": 1,
+            "unit": "px"
+          },
+          "blur": {
+            "value": 2,
+            "unit": "px"
+          },
+          "spread": {
+            "value": 0,
+            "unit": "px"
+          }
+        }
+      },
+      "md": {
+        "$value": {
+          "color": "#0000001a",
+          "offsetX": {
+            "value": 0,
+            "unit": "px"
+          },
+          "offsetY": {
+            "value": 4,
+            "unit": "px"
+          },
+          "blur": {
+            "value": 12,
+            "unit": "px"
+          },
+          "spread": {
+            "value": -2,
+            "unit": "px"
+          }
+        },
+        "$extensions": {
+          "forge": {
+            "style": "soft"
+          }
+        }
+      },
+      "lg": {
+        "$value": {
+          "color": "#00000029",
+          "offsetX": {
+            "value": 0,
+            "unit": "px"
+          },
+          "offsetY": {
+            "value": 12,
+            "unit": "px"
+          },
+          "blur": {
+            "value": 32,
+            "unit": "px"
+          },
+          "spread": {
+            "value": -8,
+            "unit": "px"
+          }
+        }
+      }
+    },
+    "motion": {
+      "$type": "duration",
+      "fast": {
+        "$value": {
+          "value": 200,
+          "unit": "ms"
+        }
+      },
+      "base": {
+        "$value": {
+          "value": 400,
+          "unit": "ms"
+        },
+        "$extensions": {
+          "forge": {
+            "style": "calm"
+          }
+        }
+      },
+      "slow": {
+        "$value": {
+          "value": 700,
+          "unit": "ms"
+        }
+      }
+    },
+    "ease": {
+      "$type": "cubicBezier",
+      "standard": {
+        "$value": [
+          0.4,
+          0,
+          0.2,
+          1
+        ]
+      }
+    },
+    "icon": {
+      "library": {
+        "$value": "lucide",
+        "$description": "Icônes rondes et douces, toujours avec un libellé."
+      },
+      "style": {
+        "$value": "outline",
+        "$extensions": {
+          "forge": {
+            "guidance": {
+              "summary": "Icônes rondes et douces, toujours avec un libellé.",
+              "do": [
+                "Libellé sous chaque icône d'action",
+                "Grandes zones de toucher (44 px)"
+              ],
+              "dont": [
+                "Icônes anatomiques réalistes",
+                "Seringues ou sang"
+              ]
+            }
+          }
+        }
+      },
+      "stroke": {
+        "$type": "dimension",
+        "$value": {
+          "value": 2,
+          "unit": "px"
+        }
+      },
+      "size": {
+        "$type": "dimension",
+        "sm": {
+          "$value": {
+            "value": 16,
+            "unit": "px"
+          }
+        },
+        "md": {
+          "$value": {
+            "value": 20,
+            "unit": "px"
+          }
+        },
+        "lg": {
+          "$value": {
+            "value": 24,
+            "unit": "px"
+          }
+        }
+      }
+    }
+  },
+  "logo": {
+    "src": "public/brand/logo.svg",
+    "minSizePx": 32,
+    "clearSpace": "La hauteur de la lettre S tout autour",
+    "usage": [
+      "Sur fond crème ou blanc",
+      "Version blanche sur la sarcelle",
+      "Avoid: Utiliser une croix médicale à côté du logo",
+      "Avoid: Recolorer en rouge",
+      "Avoid: Réduire sous 32 px"
+    ]
+  },
+  "voice": {
+    "summary": "Bienveillant et précis. On rassure sans minimiser.",
+    "do": [
+      "Mots simples, phrases courtes",
+      "Dire quoi faire ensuite",
+      "Vouvoyer"
+    ],
+    "dont": [
+      "Jargon médical non expliqué",
+      "Humour sur les symptômes",
+      "Promesses de guérison"
+    ]
+  },
+  "imagery": {
+    "summary": "Moments du quotidien, lumière douce, personnes de tous âges.",
+    "do": [
+      "Familles et soignants en situation réelle",
+      "Couleurs chaudes et naturelles"
+    ],
+    "dont": [
+      "Blouses blanches posées en studio",
+      "Images médicales anxiogènes"
+    ]
+  },
+  "guidelines": {
+    "summary": "Accessibilité d'abord : texte 18 px, contraste AAA quand c'est possible.",
+    "do": [
+      "Texte de base à 18 px",
+      "Contraste AAA pour le texte courant",
+      "Une seule tâche par écran"
+    ],
+    "dont": [
+      "Couleur comme seul signal",
+      "Délais courts sur les messages",
+      "Formulaires de plus de 5 champs"
+    ]
+  },
+  "components": [
+    "button",
+    "input",
+    "card",
+    "badge",
+    "alert",
+    "table"
+  ]
+}

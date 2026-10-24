@@ -266,7 +266,10 @@ def brand_site_html(
     asset_url: Callable[[str], str],
     lang: str = "en",
     badge: bool = True,
+    remote_fonts: bool = True,
 ) -> str:
+    """The page. ``remote_fonts=False`` leaves out the Google Fonts stylesheet
+    (gallery previews stay single origin and fall back to the font stacks)."""
     labels = _LABELS["fr" if lang == "fr" else "en"]
     name = escape(str(document.get("name") or "Design system"))
     variables = css_variables(document)
@@ -383,7 +386,7 @@ def brand_site_html(
     logo = document.get("logo") if isinstance(document.get("logo"), dict) else None
     if logo and logo.get("src"):
         src = asset_url(str(logo["src"]))
-        dark_src = asset_url(str(logo["darkSrc"])) if logo.get("darkSrc") else src
+        dark_src = asset_url(str(logo["darkSrc"])) if logo.get("darkSrc") else ""
         usage = [line for line in logo.get("usage") or [] if not line.startswith(MISUSE_PREFIX)]
         misuse = [
             line[len(MISUSE_PREFIX) :] for line in logo.get("usage") or [] if line.startswith(MISUSE_PREFIX)
@@ -396,12 +399,22 @@ def brand_site_html(
         facts += [f"<li>{escape(line)}</li>" for line in usage]
         misuse_html = "".join(f"<li>{escape(line)}</li>" for line in misuse)
         img = f'<img src="{escape(src)}" alt="{name}">' if src else f"<b>{name}</b>"
-        dark = f'<img src="{escape(dark_src)}" alt="{name}">' if dark_src else f"<b>{name}</b>"
+        # The dark-background version when there is one, else the logo at its minimum size.
+        min_px = int(logo.get("minSizePx") or 24)
+        if dark_src:
+            second = f'<div class="logo-box dark"><img src="{escape(dark_src)}" alt="{name}"></div>'
+        elif src:
+            second = (
+                f'<div class="logo-box"><img src="{escape(src)}" alt="{name}" style="height:{min_px}px">'
+                f'<span class="muted" style="margin-left:12px">{min_px} px</span></div>'
+            )
+        else:
+            second = ""
         section(
             "logo",
             labels["logo"],
             f'<div class="two"><div class="logo-box"><span class="space">{img}</span></div>'
-            f'<div class="logo-box dark">{dark}</div></div>'
+            f"{second}</div>"
             f'<div class="two dd" style="margin-top:24px"><div class="panel"><ul class="list">{"".join(facts)}</ul></div>'
             + (
                 f'<div class="panel"><h3 class="dont">{labels["misuse"]}</h3><ul class="list">{misuse_html}</ul></div>'
@@ -486,7 +499,7 @@ def brand_site_html(
         '<link rel="preconnect" href="https://fonts.googleapis.com">'
         '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'
         f'<link rel="stylesheet" href="{escape(fonts_url)}">'
-        if fonts_url
+        if fonts_url and remote_fonts
         else ""
     )
     forge_badge = (
