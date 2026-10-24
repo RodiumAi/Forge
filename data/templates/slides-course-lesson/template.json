@@ -1,0 +1,49 @@
+{
+  "kind": "slides",
+  "id": "slides-course-lesson",
+  "title": {
+    "fr": "Cours",
+    "en": "Lesson"
+  },
+  "description": {
+    "fr": "Support de cours chaleureux et lisible : objectifs, notions clés, expérience, chiffres, tableau de synthèse et déroulé de la séquence. Exemple : la photosynthèse.",
+    "en": "Warm, readable lesson deck: learning goals, key notions, an experiment, figures, a summary table and the sequence plan. Example: photosynthesis."
+  },
+  "tags": [
+    "education",
+    "course",
+    "school",
+    "light"
+  ],
+  "category": "education",
+  "preview": "preview.html",
+  "bootHint": {
+    "fr": "Adapte slides-course-lesson : matière, niveau, notions du chapitre, exercices.",
+    "en": "Adapt slides-course-lesson: subject, level, chapter notions, exercises."
+  },
+  "accent": "#2F7D4F",
+  "bg": "#FFF8EE",
+  "fg": "#2B2118",
+  "muted": "#6E5E4E",
+  "tone": "warm, clear, encouraging",
+  "fonts": {
+    "display": "Fraunces",
+    "body": "Nunito Sans",
+    "mono": "JetBrains Mono"
+  },
+  "transitionPreset": "sober",
+  "layouts": {
+    "title": "s1",
+    "section": "s2",
+    "text": "s3",
+    "two-columns": "s4",
+    "image-text": "s5",
+    "quote": "s6",
+    "key-figures": "s7",
+    "chart": "s8",
+    "table": "s9",
+    "team": "s10",
+    "timeline": "s11",
+    "thank-you": "s12"
+  }
+}
