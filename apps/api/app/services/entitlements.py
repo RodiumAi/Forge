@@ -59,6 +59,12 @@ def upsert_entitlements(db: Session, user: User, payload: dict) -> ForgeEntitlem
         row.history_enabled = False
         row.history_limit = 0
     row.priority_generation = bool(ents.get("priority_generation"))
+    # Forge Design rights. Absent from an older plan payload = not granted.
+    row.export_pdf = bool(ents.get("export_pdf"))
+    row.export_html = bool(ents.get("export_html"))
+    row.export_pptx = bool(ents.get("export_pptx"))
+    row.remove_badge = bool(ents.get("remove_badge"))
+    row.design_system_sharing = bool(ents.get("design_system_sharing"))
     tiers = ents.get("allowed_model_tiers")
     row.allowed_model_tiers = json.dumps(tiers) if isinstance(tiers, list) else None
     try:

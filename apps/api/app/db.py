@@ -326,6 +326,11 @@ def init_db() -> None:
         )
         """,
         "ALTER TABLE forge_entitlement_cache ADD COLUMN IF NOT EXISTS history_limit INTEGER",
+        "ALTER TABLE forge_entitlement_cache ADD COLUMN IF NOT EXISTS export_pdf BOOLEAN NOT NULL DEFAULT false",
+        "ALTER TABLE forge_entitlement_cache ADD COLUMN IF NOT EXISTS export_html BOOLEAN NOT NULL DEFAULT false",
+        "ALTER TABLE forge_entitlement_cache ADD COLUMN IF NOT EXISTS export_pptx BOOLEAN NOT NULL DEFAULT false",
+        "ALTER TABLE forge_entitlement_cache ADD COLUMN IF NOT EXISTS remove_badge BOOLEAN NOT NULL DEFAULT false",
+        "ALTER TABLE forge_entitlement_cache ADD COLUMN IF NOT EXISTS design_system_sharing BOOLEAN NOT NULL DEFAULT false",
         """
         CREATE TABLE IF NOT EXISTS project_collaborators (
             project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,

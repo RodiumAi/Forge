@@ -394,6 +394,12 @@ class ForgeEntitlementCache(Base):
     priority_generation: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     allowed_model_tiers: Mapped[str | None] = mapped_column(Text, nullable=True)
     frodi_balance: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    # Forge Design rights (docs/plans/forge-design-plan.md, section 8).
+    export_pdf: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    export_html: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    export_pptx: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    remove_badge: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    design_system_sharing: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     refreshed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

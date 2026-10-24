@@ -203,6 +203,13 @@ class ForgeEntitlementsOut(BaseModel):
     priority_generation: bool = False
     allowed_model_tiers: list[str] | None = None
     frodi_balance: int = 0
+    # Forge Design rights: exports of decks and codelabs, the "Made with
+    # Forge" badge, and sharing a design system with the team.
+    export_pdf: bool = False
+    export_html: bool = False
+    export_pptx: bool = False
+    remove_badge: bool = False
+    design_system_sharing: bool = False
 
 
 class ForgeModelChoice(BaseModel):

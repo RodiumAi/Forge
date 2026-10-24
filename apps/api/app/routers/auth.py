@@ -1368,6 +1368,11 @@ async def forge_status(
             priority_generation=row.priority_generation,
             allowed_model_tiers=tiers,
             frodi_balance=row.frodi_balance,
+            export_pdf=bool(row.export_pdf),
+            export_html=bool(row.export_html),
+            export_pptx=bool(row.export_pptx),
+            remove_badge=bool(row.remove_badge),
+            design_system_sharing=bool(row.design_system_sharing),
         )
         # Live gateway read failed but we still have a cached FRODI figure — show
         # it rather than a blank so the header does not regress to RODI-only.
