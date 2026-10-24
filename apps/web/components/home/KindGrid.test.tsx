@@ -15,6 +15,7 @@ describe("KindGrid", () => {
     const shortcuts = screen.getByRole("list", { name: "Raccourcis" });
     expect(within(shortcuts).getAllByRole("button").map((b) => b.getAttribute("data-tile"))).toEqual([
       "landing_page",
+      "onboarding",
     ]);
     expect(screen.queryByRole("button", { name: /Présentation/ })).toBeNull();
   });

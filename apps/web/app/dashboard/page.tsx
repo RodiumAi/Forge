@@ -10,12 +10,10 @@ import "@/components/home/home.css";
 
 import { VerifyEmailBanner } from "@/components/auth/VerifyEmailBanner";
 import { ShareProjectModal } from "@/components/builder/ShareProjectModal";
-import { CreatePrompt, type CreatePromptHandle } from "@/components/home/CreatePrompt";
-import type { DesignSystemOption } from "@/components/home/DesignSystemPicker";
+import { Composer, type ComposerDesignSystem, type ComposerHandle } from "@/components/composer/Composer";
 import { AnnouncementBanner, DeleteDialog, RenameDialog } from "@/components/home/HomeDialogs";
 import { HomeTabs, type HomeTab } from "@/components/home/HomeTabs";
 import { buildCreateRequest, getTile, type HomeTile, type HomeTileId } from "@/components/home/home-kinds";
-import { KindGrid } from "@/components/home/KindGrid";
 import type { ProjectActions } from "@/components/home/ProjectCard";
 import { listDesignSystems, type DesignSystemList } from "@/components/design-system/api";
 import { kindOf, type HomeProject } from "@/components/home/projects";
@@ -42,6 +40,7 @@ import {
   restorePendingFilesAsAttachments,
   type CreateOptions,
   type CreatedProject,
+  type DeckRatio,
   type ProjectQuota,
 } from "@/lib/create-project";
 import { shareSeatLimit, useForgeStatus } from "@/lib/forge-status";
@@ -106,6 +105,7 @@ function DashboardInner() {
   const [files, setFiles] = useState<PromptAttachment[]>([]);
   const [fileError, setFileError] = useState<string | null>(null);
   const [tileId, setTileId] = useState<HomeTileId>("blank");
+  const [deckFormat, setDeckFormat] = useState<DeckRatio | undefined>(undefined);
   const [designSystemId, setDesignSystemId] = useState<string | null>(null);
   const [tab, setTab] = useState<HomeTab>(() => tabFromParam(searchParams.get("tab")) ?? "projects");
   const [galleryKind, setGalleryKind] = useState<ProjectKindId>("web");
@@ -123,7 +123,7 @@ function DashboardInner() {
     typeof window !== "undefined" ? (getSessionSnapshot()?.profile ?? null) : null,
   );
 
-  const promptRef = useRef<CreatePromptHandle>(null);
+  const promptRef = useRef<ComposerHandle>(null);
   const tabsRef = useRef<HTMLDivElement>(null);
   const account = profile?.email ?? null;
   const favorites = useFavorites(account);
@@ -132,6 +132,17 @@ function DashboardInner() {
   const busy = creating || Boolean(forkingId);
 
   useEffect(() => setMounted(true), []);
+
+  // "New project" (sidebar, bottom bar, the N key) lands on /dashboard#create.
+  useEffect(() => {
+    const focusCreate = () => {
+      if (window.location.hash !== "#create") return;
+      window.requestAnimationFrame(() => promptRef.current?.focus());
+    };
+    focusCreate();
+    window.addEventListener("hashchange", focusCreate);
+    return () => window.removeEventListener("hashchange", focusCreate);
+  }, []);
 
   useEffect(() => {
     setProfile(getSessionSnapshot()?.profile ?? null);
@@ -185,10 +196,10 @@ function DashboardInner() {
       alive = false;
     };
   }, [showDesignSystems, dsProjectCount]);
-  const designSystems: DesignSystemOption[] = useMemo(
+  const designSystems: ComposerDesignSystem[] = useMemo(
     () =>
       dsList
-        ? dsList.items.map((item) => ({ id: item.id, name: item.name }))
+        ? dsList.items.map((item) => ({ id: item.id, name: item.name, scope: item.scope, preview: item.preview }))
         : projects.filter((p) => kindOf(p) === "design_system").map((p) => ({ id: p.id, name: p.name })),
     [dsList, projects],
   );
@@ -336,7 +347,7 @@ function DashboardInner() {
 
   async function createWithTile(chosen: HomeTile, text: string) {
     const request = buildCreateRequest({
-      tile: chosen,
+      tile: deckFormat && chosen.kind === "slides" ? { ...chosen, format: deckFormat } : chosen,
       text,
       enabled: enabledKinds,
       designSystemId: effectiveDesignSystemId,
@@ -382,23 +393,10 @@ function DashboardInner() {
     }
   }
 
-  function onSelectTile(next: HomeTile) {
+  function selectTile(next: HomeTileId) {
     if (busy) return;
-    setTileId(next.id);
-    if (prompt.trim() || files.length) {
-      // With a request typed, a tile launches it right away.
-      void createWithTile(next, prompt);
-      return;
-    }
-    if (!next.kind) {
-      promptRef.current?.focus();
-      return;
-    }
-    // Without text: the gallery of that kind (shortcuts seed its search).
-    setGalleryKind(next.kind);
-    setGalleryQuery(next.galleryQuery);
-    selectTab("templates");
-    window.requestAnimationFrame(() => tabsRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" }));
+    setTileId(next);
+    setDeckFormat(undefined);
   }
 
   function addFiles(list: FileList) {
@@ -522,7 +520,7 @@ function DashboardInner() {
   const showAnnouncement = enabledKinds.some((kind) => kind !== "web" && kind !== "mobile");
 
   return (
-    <HomeLayout activeNav={tab === "templates" ? "templates" : "projects"}>
+    <HomeLayout activeNav={tab === "templates" ? "templates" : "home"}>
       {notice && typeof document !== "undefined"
         ? createPortal(
             <div key={notice.id} className="home-push-toast" role="alert">
@@ -546,7 +544,7 @@ function DashboardInner() {
         <section className="fdh-hero">
           <h1 className="fdh-title">{t("homeTitle")}</h1>
           <TeamInviteNotice />
-          <CreatePrompt
+          <Composer
             ref={promptRef}
             value={prompt}
             onChange={setPrompt}
@@ -554,8 +552,13 @@ function DashboardInner() {
             files={files}
             onAddFiles={addFiles}
             onRemoveFile={removeFile}
-            tile={tile.kind ? tile : null}
-            onClearTile={() => setTileId("blank")}
+            tileId={tileId}
+            onTileChange={selectTile}
+            enabledKinds={enabledKinds}
+            deckFormat={deckFormat}
+            onDeckFormatChange={setDeckFormat}
+            manageDesignSystemsHref="/dashboard?tab=design-systems"
+            kindsDefaultOpen={false}
             designSystems={designSystems}
             designSystemId={effectiveDesignSystemId}
             onDesignSystemChange={chooseDesignSystem}
@@ -563,6 +566,7 @@ function DashboardInner() {
             busy={busy}
             suggestions={suggestions}
             alerts={
+              fileError || gateError ? (
               <>
                 {fileError ? <p className="landing-file-error">{fileError}</p> : null}
                 {gateError ? (
@@ -578,9 +582,9 @@ function DashboardInner() {
                   </p>
                 ) : null}
               </>
+              ) : null
             }
           />
-          <KindGrid enabledKinds={enabledKinds} selected={tileId} onSelect={onSelectTile} disabled={busy} />
         </section>
 
         <div ref={tabsRef}>

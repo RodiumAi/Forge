@@ -34,8 +34,8 @@ function body(id: HomeTileId, text: string, enabled: ProjectKindId[] = ALL, ds: 
 }
 
 describe("visibleTiles", () => {
-  it("offers Blank, web and mobile (and the landing shortcut) while document kinds are off", () => {
-    expect(visibleTiles(WEB_ONLY).map((t) => t.id)).toEqual(["blank", "web", "mobile", "landing_page"]);
+  it("offers Blank, web and mobile (and their landing and onboarding shortcuts) while document kinds are off", () => {
+    expect(visibleTiles(WEB_ONLY).map((t) => t.id)).toEqual(["blank", "web", "mobile", "landing_page", "onboarding"]);
   });
 
   it("offers every tile once every kind is on", () => {

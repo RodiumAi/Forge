@@ -50,6 +50,7 @@ export type HomeTileId =
   | "pitch_deck"
   | "social_carousel"
   | "landing_page"
+  | "onboarding"
   | "tutorial"
   | "palette";
 
@@ -100,6 +101,14 @@ export const HOME_TILES: readonly HomeTile[] = [
     icon: PanelsTopLeft,
     shortcut: true,
     galleryQuery: "landing",
+  },
+  {
+    id: "onboarding",
+    kind: "mobile",
+    labelKey: "homeTileOnboarding",
+    icon: Smartphone,
+    shortcut: true,
+    galleryQuery: "onboarding",
   },
   { id: "tutorial", kind: "codelab", labelKey: "homeTileTutorial", icon: BookOpen, shortcut: true },
   { id: "palette", kind: "design_system", labelKey: "homeTilePalette", icon: SwatchBook, shortcut: true },
