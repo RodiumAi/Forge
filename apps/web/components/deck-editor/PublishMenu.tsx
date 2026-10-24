@@ -83,8 +83,8 @@ export function PublishMenu({ publisher, badge, onBadgeChange, beforePublish, di
 
   return (
     <div className="de-insert" ref={root}>
-      <button type="button" className="de-button" onClick={() => setOpen(!open)} aria-expanded={open} aria-haspopup="dialog" disabled={disabled}>
-        <Send size={14} aria-hidden /> {t("publish")}
+      <button type="button" className="f-btn f-btn-ghost f-btn-sm" onClick={() => setOpen(!open)} aria-expanded={open} aria-haspopup="dialog" disabled={disabled}>
+        <Send size={14} aria-hidden /> <span className="f-bd-lbl">{t("publish")}</span>
       </button>
       {open ? (
         <div className="de-menu de-publish" role="dialog" aria-label={t("publishTitle")}>

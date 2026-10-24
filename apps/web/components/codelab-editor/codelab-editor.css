@@ -2,18 +2,18 @@
    dark); the preview carries the codelab's own design system tokens. */
 
 .cle-root {
-  --cle-accent: var(--accent, #f2620a);
-  --cle-panel: var(--bg-elevated, #fff);
-  --cle-soft: var(--bg-soft, #fafafa);
-  --cle-line: var(--border, #e4e4e7);
-  --cle-radius: var(--radius-control, 10px);
+  --cle-accent: var(--f-orange);
+  --cle-panel: var(--f-surface);
+  --cle-soft: var(--f-surface-2);
+  --cle-line: var(--f-line);
+  --cle-radius: var(--f-r-sm);
   position: fixed;
   inset: 0;
   display: flex;
   flex-direction: column;
-  background: var(--bg);
-  color: var(--fg);
-  font-family: var(--font-body, system-ui, sans-serif);
+  background: var(--f-bg);
+  color: var(--f-text);
+  font-family: var(--f-font);
   font-size: 13px;
   z-index: 1;
 }
@@ -65,7 +65,7 @@
 }
 
 .cle-hint {
-  color: var(--muted, #71717a);
+  color: var(--f-muted);
   font-size: 12px;
 }
 
@@ -94,7 +94,7 @@
 }
 
 .cle-save {
-  color: var(--muted, #71717a);
+  color: var(--f-muted);
   font-size: 12px;
 }
 
@@ -120,7 +120,7 @@
 
 .cle-banner {
   padding: 8px 14px;
-  background: color-mix(in srgb, #dc2626 10%, var(--bg));
+  background: color-mix(in srgb, #dc2626 10%, var(--f-bg));
   border-bottom: 1px solid var(--cle-line);
   cursor: default;
 }
@@ -204,7 +204,7 @@
 
 .cle-step-min {
   font-size: 11px;
-  color: var(--muted, #71717a);
+  color: var(--f-muted);
 }
 
 .cle-step-tools {
@@ -273,7 +273,7 @@
 
 .cle-root .cle-markdown {
   resize: none;
-  font-family: var(--font-mono, ui-monospace, monospace);
+  font-family: var(--f-mono);
   font-size: 12.5px;
   line-height: 1.55;
   height: 100%;
@@ -407,7 +407,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: var(--font-mono, ui-monospace, monospace);
+  font-family: var(--f-mono);
   font-size: 12px;
 }
 
@@ -443,7 +443,7 @@
 
 .cle-msg-who {
   font-size: 11px;
-  color: var(--muted, #71717a);
+  color: var(--f-muted);
 }
 
 .cle-msg-error p {
@@ -499,7 +499,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  color: var(--muted, #71717a);
+  color: var(--f-muted);
 }
 
 .cle-chat-actions {
