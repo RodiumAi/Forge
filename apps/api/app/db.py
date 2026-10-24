@@ -387,6 +387,37 @@ def init_db() -> None:
         """,
         "CREATE UNIQUE INDEX IF NOT EXISTS uq_team_seats_owner_email ON team_seats (owner_user_id, email)",
         "CREATE INDEX IF NOT EXISTS ix_team_seats_token_hash ON team_seats (token_hash)",
+        # Forge Design: reusable design systems and the projects they dress.
+        """
+        CREATE TABLE IF NOT EXISTS design_systems (
+            project_id UUID PRIMARY KEY REFERENCES projects(id) ON DELETE CASCADE,
+            owner_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            team_id UUID REFERENCES users(id) ON DELETE SET NULL,
+            visibility VARCHAR(16) NOT NULL DEFAULT 'private',
+            is_default_user BOOLEAN NOT NULL DEFAULT false,
+            is_default_team BOOLEAN NOT NULL DEFAULT false,
+            version INTEGER NOT NULL DEFAULT 1,
+            content_hash VARCHAR(64),
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+        """,
+        "CREATE INDEX IF NOT EXISTS ix_design_systems_owner_user_id ON design_systems (owner_user_id)",
+        "CREATE INDEX IF NOT EXISTS ix_design_systems_team_id ON design_systems (team_id)",
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_design_systems_default_user
+            ON design_systems (owner_user_id) WHERE is_default_user
+        """,
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_design_systems_default_team
+            ON design_systems (team_id) WHERE is_default_team
+        """,
+        """
+        ALTER TABLE projects ADD COLUMN IF NOT EXISTS design_system_project_id UUID
+            REFERENCES projects(id) ON DELETE SET NULL
+        """,
+        "ALTER TABLE projects ADD COLUMN IF NOT EXISTS design_system_version INTEGER",
+        "CREATE INDEX IF NOT EXISTS ix_projects_design_system_project_id ON projects (design_system_project_id)",
     ]
     with engine.begin() as conn:
         for sql in statements:
