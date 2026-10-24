@@ -392,7 +392,7 @@ export function ImageEditPanel({ projectId, selection, onClose, onReplaced }: Pr
               <li className="comments-empty">{t("filesEmpty")}</li>
             ) : (
               assets.map((asset) => {
-                // Prefer the authenticated proxy — public_url hits a private bucket.
+                // Prefer the authenticated proxy: public_url hits a private bucket.
                 const thumbUrl = assetContentUrl(projectId, asset.id);
                 return (
                   <li key={asset.id}>
