@@ -424,6 +424,7 @@ async def build_llm_messages(
     surgical_edit: bool = False,
     focus_paths: list[str] | None = None,
     carry_references: bool = True,
+    target_hint: str | None = None,
 ) -> list[dict[str, Any]]:
     """
     history: list of (role, content) including the latest user message.
@@ -432,6 +433,10 @@ async def build_llm_messages(
     ``carry_references``: re-attach the most recent reference screenshot to the
     final turn when that turn has none, so a follow-up about the same design is
     answered WITH the image (callers on a text-only lite model pass False).
+
+    ``target_hint``: what the user selected in the preview (see
+    ``app.services.edit_target.target_instruction``), sent right after the
+    file layers so it reads as the current task's scope.
     """
     carried = carried_reference_markers(history) if carry_references else []
     ensure_ai_rules_md(project_id)
@@ -514,6 +519,10 @@ async def build_llm_messages(
     ]
     if surgical_edit:
         messages.append({"role": "system", "content": SURGICAL_EDIT_HINT})
+    if target_hint:
+        messages.append(
+            {"role": "system", "content": _gateway_safe_content(target_hint, fallback="Targeted edit.")}
+        )
 
     compacted_summary: str | None = None
     if len(early) >= 4 and auth is not None and model:

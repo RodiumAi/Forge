@@ -484,14 +484,24 @@ class MessageTarget(BaseModel):
     """What a chat message may change. Absent = the whole project.
 
     Document kinds (slides): ``slideId`` limits the AI to that slide,
-    ``elementId`` to that element. Other keys are ignored so site targets
-    (route, forgeId, filePath) can be added without breaking clients.
+    ``elementId`` to that element.
+
+    React projects (sites, mobile apps): ``route`` is the preview route the
+    user is on, ``forgeId`` the ``data-forge-id`` of the selected element
+    (``<file>:<line>:<col>``), ``filePath`` an explicit source file. With
+    ``restrict`` the server refuses writes outside the selection's files
+    (``TARGET_SCOPE`` warnings); the builder resends with ``restrict: false``
+    to widen. Unknown keys are ignored.
     """
 
     model_config = ConfigDict(extra="ignore")
 
     slideId: str | None = Field(default=None, max_length=64, pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
     elementId: str | None = Field(default=None, max_length=64, pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
+    route: str | None = Field(default=None, max_length=200)
+    forgeId: str | None = Field(default=None, max_length=320)
+    filePath: str | None = Field(default=None, max_length=300)
+    restrict: bool = False
 
 
 #: Quick actions of the deck editor (sent with a target).
