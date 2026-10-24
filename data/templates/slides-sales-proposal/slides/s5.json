@@ -1,0 +1,173 @@
+{
+  "id": "s5",
+  "background": {
+    "type": "color",
+    "token": "--bg"
+  },
+  "elements": [
+    {
+      "id": "s5-image",
+      "type": "image",
+      "x": 0,
+      "y": 0,
+      "w": 880,
+      "h": 1080,
+      "z": 1,
+      "src": "public/images/workshop.webp",
+      "alt": "Mains posant des notes adhésives sur une table",
+      "fit": "cover",
+      "matchKey": "hero-image",
+      "credit": {
+        "source": "pixabay",
+        "author": "Nappiness",
+        "url": "https://pixabay.com/photos/brainstorming-business-professional-441010/"
+      }
+    },
+    {
+      "id": "s5-bar",
+      "type": "shape",
+      "x": 1000,
+      "y": 200,
+      "w": 188,
+      "h": 50,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 25,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s5-kicker",
+      "type": "text",
+      "role": "label",
+      "x": 1026,
+      "y": 204,
+      "w": 188,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Méthode"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 600,
+        "color": "--accent-contrast",
+        "align": "left",
+        "lineHeight": 1.4,
+        "letterSpacing": 3,
+        "uppercase": true
+      }
+    },
+    {
+      "id": "s5-heading",
+      "type": "text",
+      "role": "heading",
+      "x": 1000,
+      "y": 272,
+      "w": 780,
+      "h": 210,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Co-construit avec vos réceptions"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 60,
+        "weight": 600,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.1
+      }
+    },
+    {
+      "id": "s5-body",
+      "type": "text",
+      "role": "body",
+      "x": 1000,
+      "y": 490,
+      "w": 780,
+      "h": 180,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Trois ateliers avec les chefs de réception fixent les règles de la fiche client avant tout paramétrage."
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 30,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.5
+      }
+    },
+    {
+      "id": "s5-list",
+      "type": "text",
+      "role": "body",
+      "x": 1000,
+      "y": 690,
+      "w": 780,
+      "h": 250,
+      "z": 3,
+      "content": [
+        {
+          "type": "bullet-list",
+          "items": [
+            {
+              "text": "Un pilote à Nice pendant six semaines"
+            },
+            {
+              "text": "Formation de 140 réceptionnistes sur site"
+            },
+            {
+              "text": "Support dédié en français et en anglais"
+            }
+          ]
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 28,
+        "weight": 400,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.55
+      }
+    },
+    {
+      "id": "s5-page",
+      "type": "text",
+      "role": "caption",
+      "x": 1660,
+      "y": 1000,
+      "w": 120,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "05"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "right",
+        "lineHeight": 1.4
+      }
+    }
+  ]
+}

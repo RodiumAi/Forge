@@ -1,0 +1,121 @@
+{
+  "id": "s4",
+  "background": {
+    "type": "image",
+    "src": "public/images/textile.webp",
+    "fit": "cover",
+    "overlay": "--bg",
+    "overlayOpacity": 0.78,
+    "credit": {
+      "source": "pixabay",
+      "author": "virin000",
+      "url": "https://pixabay.com/photos/textile-jute-brown-fabric-texture-2918844/"
+    }
+  },
+  "elements": [
+    {
+      "id": "s4-number",
+      "type": "text",
+      "role": "label",
+      "x": 140,
+      "y": 250,
+      "w": 600,
+      "h": 240,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "01"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 200,
+        "weight": 400,
+        "color": "--accent",
+        "align": "left",
+        "lineHeight": 1.1
+      },
+      "animation": {
+        "type": "mask-reveal",
+        "trigger": "on-enter",
+        "direction": "up",
+        "durationMs": 700
+      }
+    },
+    {
+      "id": "s4-bar",
+      "type": "shape",
+      "x": 140,
+      "y": 510,
+      "w": 120,
+      "h": 10,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 5,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s4-title",
+      "type": "text",
+      "role": "title",
+      "x": 140,
+      "y": 550,
+      "w": 1500,
+      "h": 200,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Ce qui nous guide"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 88,
+        "weight": 400,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.1
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "delayMs": 120,
+        "durationMs": 500
+      }
+    },
+    {
+      "id": "s4-subtitle",
+      "type": "text",
+      "role": "subtitle",
+      "x": 140,
+      "y": 770,
+      "w": 1400,
+      "h": 100,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Mission, valeurs et ton de voix."
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 34,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.35
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "delayMs": 120,
+        "durationMs": 500
+      }
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "kind": "slides",
+  "id": "slides-agency-portfolio",
+  "title": {
+    "fr": "Portfolio d'agence",
+    "en": "Agency portfolio"
+  },
+  "description": {
+    "fr": "Portfolio d'agence créative en noir et jaune, titres en capitales Archivo Black : manifeste, expertises, projets, clients, méthode et contact.",
+    "en": "Creative agency portfolio in black and yellow with uppercase Archivo Black titles: manifesto, expertise, projects, clients, process and contact."
+  },
+  "tags": [
+    "agency",
+    "portfolio",
+    "creative",
+    "dark"
+  ],
+  "category": "marketing",
+  "preview": "preview.html",
+  "bootHint": {
+    "fr": "Adapte slides-agency-portfolio : nom de l'agence, expertises, projets, clients, contact.",
+    "en": "Adapt slides-agency-portfolio: agency name, expertise, projects, clients, contact."
+  },
+  "accent": "#F4D35E",
+  "bg": "#111111",
+  "fg": "#F4F1EA",
+  "muted": "#A39E93",
+  "tone": "bold, confident, a little cheeky",
+  "fonts": {
+    "display": "Archivo Black",
+    "body": "Instrument Sans",
+    "mono": "Space Mono"
+  },
+  "transitionPreset": "dynamic",
+  "layouts": {
+    "title": "s1",
+    "quote": "s2",
+    "two-columns": "s3",
+    "section": "s4",
+    "image-text": "s5",
+    "key-figures": "s6",
+    "chart": "s7",
+    "table": "s8",
+    "text": "s9",
+    "team": "s10",
+    "timeline": "s11",
+    "thank-you": "s12"
+  }
+}

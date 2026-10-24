@@ -1,0 +1,123 @@
+{
+  "version": 1,
+  "title": "Valtéo, Horizon 2030",
+  "format": {
+    "ratio": "16:9",
+    "width": 1920,
+    "height": 1080
+  },
+  "theme": {
+    "designSystem": "local",
+    "tokens": "DESIGN.md"
+  },
+  "slides": [
+    {
+      "id": "s1",
+      "layout": "title",
+      "transition": {
+        "type": "fade",
+        "durationMs": 700,
+        "easing": "ease-in-out"
+      }
+    },
+    {
+      "id": "s2",
+      "layout": "quote",
+      "transition": {
+        "type": "morph",
+        "durationMs": 800,
+        "easing": "ease-in-out"
+      }
+    },
+    {
+      "id": "s3",
+      "layout": "section",
+      "transition": {
+        "type": "morph",
+        "durationMs": 800,
+        "easing": "ease-in-out"
+      }
+    },
+    {
+      "id": "s4",
+      "layout": "text",
+      "transition": {
+        "type": "morph",
+        "durationMs": 800,
+        "easing": "ease-in-out"
+      }
+    },
+    {
+      "id": "s5",
+      "layout": "two-columns",
+      "transition": {
+        "type": "morph",
+        "durationMs": 800,
+        "easing": "ease-in-out"
+      }
+    },
+    {
+      "id": "s6",
+      "layout": "image-text",
+      "transition": {
+        "type": "morph",
+        "durationMs": 800,
+        "easing": "ease-in-out"
+      }
+    },
+    {
+      "id": "s7",
+      "layout": "key-figures",
+      "transition": {
+        "type": "morph",
+        "durationMs": 800,
+        "easing": "ease-in-out"
+      }
+    },
+    {
+      "id": "s8",
+      "layout": "chart",
+      "transition": {
+        "type": "morph",
+        "durationMs": 800,
+        "easing": "ease-in-out"
+      }
+    },
+    {
+      "id": "s9",
+      "layout": "timeline",
+      "transition": {
+        "type": "morph",
+        "durationMs": 800,
+        "easing": "ease-in-out"
+      }
+    },
+    {
+      "id": "s10",
+      "layout": "team",
+      "transition": {
+        "type": "morph",
+        "durationMs": 800,
+        "easing": "ease-in-out"
+      }
+    },
+    {
+      "id": "s11",
+      "layout": "table",
+      "transition": {
+        "type": "morph",
+        "durationMs": 800,
+        "easing": "ease-in-out"
+      }
+    },
+    {
+      "id": "s12",
+      "layout": "thank-you",
+      "transition": {
+        "type": "morph",
+        "durationMs": 800,
+        "easing": "ease-in-out"
+      }
+    }
+  ]
+}

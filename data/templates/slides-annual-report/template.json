@@ -1,0 +1,49 @@
+{
+  "kind": "slides",
+  "id": "slides-annual-report",
+  "title": {
+    "fr": "Rapport annuel",
+    "en": "Annual report"
+  },
+  "description": {
+    "fr": "Rapport annuel éditorial et posé, serif sur papier crème : mot de la présidence, chiffres de l'année, résultats financiers, impact, gouvernance et perspectives.",
+    "en": "Calm, editorial annual report with a serif on cream paper: chair's message, the year in figures, financial results, impact, governance and outlook."
+  },
+  "tags": [
+    "annual-report",
+    "corporate",
+    "editorial",
+    "light"
+  ],
+  "category": "business",
+  "preview": "preview.html",
+  "bootHint": {
+    "fr": "Adapte slides-annual-report : organisation, année, chiffres clés, faits marquants, perspectives.",
+    "en": "Adapt slides-annual-report: organisation, year, key figures, highlights, outlook."
+  },
+  "accent": "#1E5B4F",
+  "bg": "#FBFAF7",
+  "fg": "#1F1D1A",
+  "muted": "#6A655C",
+  "tone": "measured, transparent, institutional",
+  "fonts": {
+    "display": "Newsreader",
+    "body": "Public Sans",
+    "mono": "IBM Plex Mono"
+  },
+  "transitionPreset": "elegant",
+  "layouts": {
+    "title": "s1",
+    "quote": "s2",
+    "section": "s3",
+    "key-figures": "s4",
+    "chart": "s5",
+    "table": "s6",
+    "image-text": "s7",
+    "two-columns": "s8",
+    "team": "s9",
+    "timeline": "s10",
+    "text": "s11",
+    "thank-you": "s12"
+  }
+}

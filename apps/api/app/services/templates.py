@@ -268,8 +268,18 @@ def _snapshot(project_id: str, template_id: str) -> None:
         pass
 
 
+def _is_generic_project_name(name: str) -> bool:
+    from app.i18n import MESSAGES
+
+    generic = {messages["new_project"].casefold() for messages in MESSAGES.values() if "new_project" in messages}
+    return name.strip().casefold() in generic
+
+
 def _finish_slides_fork(dest: Path, app_name: str | None) -> None:
     """Validate the copied deck against the contract and title it after the project.
+
+    A blank or generic project name ("New project", "Nouveau projet") keeps the
+    kit's own deck title.
 
     A slides kit has no package.json, index.html or favicon: the deck is data
     rendered by the Forge player. Every document is checked so a broken kit
@@ -287,7 +297,9 @@ def _finish_slides_fork(dest: Path, app_name: str | None) -> None:
             notes.parent.mkdir(parents=True, exist_ok=True)
             notes.write_text("", encoding="utf-8")
     name = (app_name or "").strip()
-    if name:
+    # A blank or generic project name ("New project") keeps the kit's own deck
+    # title: it reads better than a placeholder on the cover and in exports.
+    if name and not _is_generic_project_name(name):
         deck.title = name[:200]
     deck_path.write_text(
         json.dumps(dump_document(deck), ensure_ascii=False, indent=2) + "\n", encoding="utf-8"

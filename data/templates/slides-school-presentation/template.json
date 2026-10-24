@@ -1,0 +1,49 @@
+{
+  "kind": "slides",
+  "id": "slides-school-presentation",
+  "title": {
+    "fr": "Exposé scolaire",
+    "en": "School presentation"
+  },
+  "description": {
+    "fr": "Exposé scolaire joyeux et lisible, orange et turquoise sur jaune pâle : sujet, plan, explications, chiffres, comparaison, quiz et sources.",
+    "en": "Cheerful, readable school presentation in orange and turquoise on pale yellow: topic, outline, explanations, figures, comparison, quiz and sources."
+  },
+  "tags": [
+    "school",
+    "kids",
+    "education",
+    "colorful"
+  ],
+  "category": "education",
+  "preview": "preview.html",
+  "bootHint": {
+    "fr": "Adapte slides-school-presentation : sujet de l'exposé, classe, élèves, plan, sources.",
+    "en": "Adapt slides-school-presentation: topic, class, students, outline, sources."
+  },
+  "accent": "#FF6B35",
+  "bg": "#FFFBEA",
+  "fg": "#1E2A3A",
+  "muted": "#586474",
+  "tone": "friendly, curious, simple",
+  "fonts": {
+    "display": "Fredoka",
+    "body": "Nunito",
+    "mono": "Space Mono"
+  },
+  "transitionPreset": "dynamic",
+  "layouts": {
+    "title": "s1",
+    "text": "s2",
+    "section": "s3",
+    "image-text": "s4",
+    "two-columns": "s5",
+    "key-figures": "s6",
+    "table": "s7",
+    "chart": "s8",
+    "quote": "s9",
+    "timeline": "s10",
+    "team": "s11",
+    "thank-you": "s12"
+  }
+}

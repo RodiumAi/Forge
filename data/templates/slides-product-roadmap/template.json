@@ -1,0 +1,49 @@
+{
+  "kind": "slides",
+  "id": "slides-product-roadmap",
+  "title": {
+    "fr": "Roadmap produit",
+    "en": "Product roadmap"
+  },
+  "description": {
+    "fr": "Roadmap produit sombre et précise, violet électrique : vision, objectifs, thèmes, priorités, jalons trimestriels, métriques et risques.",
+    "en": "Dark, precise product roadmap in electric violet: vision, goals, themes, priorities, quarterly milestones, metrics and risks."
+  },
+  "tags": [
+    "roadmap",
+    "product",
+    "planning",
+    "dark"
+  ],
+  "category": "marketing",
+  "preview": "preview.html",
+  "bootHint": {
+    "fr": "Adapte slides-product-roadmap : produit, vision, thèmes, jalons par trimestre, indicateurs.",
+    "en": "Adapt slides-product-roadmap: product, vision, themes, quarterly milestones, metrics."
+  },
+  "accent": "#7C5CFF",
+  "bg": "#0F1115",
+  "fg": "#ECEEF2",
+  "muted": "#9198A5",
+  "tone": "clear, pragmatic, outcome-focused",
+  "fonts": {
+    "display": "Space Grotesk",
+    "body": "Inter",
+    "mono": "JetBrains Mono"
+  },
+  "transitionPreset": "sober",
+  "layouts": {
+    "title": "s1",
+    "text": "s2",
+    "section": "s3",
+    "two-columns": "s4",
+    "image-text": "s5",
+    "timeline": "s6",
+    "table": "s7",
+    "key-figures": "s8",
+    "chart": "s9",
+    "quote": "s10",
+    "team": "s11",
+    "thank-you": "s12"
+  }
+}

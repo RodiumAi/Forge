@@ -11,12 +11,27 @@ import re
 from app.services.templates import list_templates, templates_root
 
 EXPECTED_SLIDES_IDS = {
+    "slides-agency-portfolio",
+    "slides-annual-report",
+    "slides-brand-presentation",
+    "slides-campaign",
+    "slides-case-studies",
     "slides-course-lesson",
+    "slides-fundraising",
+    "slides-market-research",
+    "slides-media-kit",
     "slides-minimal-dark",
     "slides-pitch-startup",
     "slides-portfolio",
     "slides-product-demo",
+    "slides-product-launch",
+    "slides-product-roadmap",
     "slides-quarterly-review",
+    "slides-sales-proposal",
+    "slides-school-presentation",
+    "slides-strategic-plan",
+    "slides-thesis-defense",
+    "slides-workshop",
     # wave 2, agent F2
     "slides-science-conference",
     "slides-internal-training",

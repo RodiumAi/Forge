@@ -1,0 +1,268 @@
+{
+  "id": "s8",
+  "background": {
+    "type": "color",
+    "token": "--bg"
+  },
+  "elements": [
+    {
+      "id": "s8-ring1",
+      "type": "shape",
+      "x": 1500,
+      "y": -330,
+      "w": 700,
+      "h": 700,
+      "z": 0,
+      "shape": "ellipse",
+      "fill": "#00000000",
+      "stroke": "--border",
+      "strokeWidth": 2
+    },
+    {
+      "id": "s8-ring2",
+      "type": "shape",
+      "x": 1620,
+      "y": -210,
+      "w": 460,
+      "h": 460,
+      "z": 0,
+      "shape": "ellipse",
+      "fill": "#00000000",
+      "stroke": "--border",
+      "strokeWidth": 2
+    },
+    {
+      "id": "s8-bar",
+      "type": "shape",
+      "x": 0,
+      "y": 126,
+      "w": 14,
+      "h": 170,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 0,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s8-kicker",
+      "type": "text",
+      "role": "label",
+      "x": 140,
+      "y": 126,
+      "w": 1200,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Investissements"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 600,
+        "color": "--accent",
+        "align": "left",
+        "lineHeight": 1.4,
+        "letterSpacing": 3,
+        "uppercase": true
+      }
+    },
+    {
+      "id": "s8-heading",
+      "type": "text",
+      "role": "heading",
+      "x": 140,
+      "y": 176,
+      "w": 1640,
+      "h": 140,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "480 M€ sur cinq ans"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 64,
+        "weight": 700,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.1
+      },
+      "animation": {
+        "type": "mask-reveal",
+        "trigger": "on-enter",
+        "direction": "up",
+        "durationMs": 700
+      }
+    },
+    {
+      "id": "s8-chart",
+      "type": "chart",
+      "x": 700,
+      "y": 350,
+      "w": 1080,
+      "h": 600,
+      "z": 2,
+      "chart": "pie",
+      "data": {
+        "labels": [
+          "Réseau",
+          "Énergie",
+          "Ressource",
+          "Compétences",
+          "Numérique"
+        ],
+        "series": [
+          {
+            "name": "Répartition",
+            "values": [
+              52,
+              18,
+              15,
+              8,
+              7
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": true,
+        "values": true
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "delayMs": 120,
+        "durationMs": 500
+      }
+    },
+    {
+      "id": "s8-icon",
+      "type": "icon",
+      "x": 140,
+      "y": 380,
+      "w": 56,
+      "h": 56,
+      "z": 3,
+      "icon": "chart-pie",
+      "color": "--accent",
+      "strokeWidth": 1.75
+    },
+    {
+      "id": "s8-takeaway",
+      "type": "text",
+      "role": "heading",
+      "x": 140,
+      "y": 460,
+      "w": 460,
+      "h": 130,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "La moitié pour le réseau"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 40,
+        "weight": 700,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.2
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "delayMs": 80,
+        "durationMs": 400,
+        "order": 1
+      }
+    },
+    {
+      "id": "s8-comment",
+      "type": "text",
+      "role": "body",
+      "x": 140,
+      "y": 610,
+      "w": 460,
+      "h": 300,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Le réseau absorbe 250 M€. Financement : 60 % autofinancement, 25 % emprunt, 15 % aides."
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 26,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.5
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "delayMs": 80,
+        "durationMs": 400,
+        "order": 2
+      }
+    },
+    {
+      "id": "s8-footer",
+      "type": "text",
+      "role": "caption",
+      "x": 140,
+      "y": 1000,
+      "w": 1100,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Valtéo · Plan stratégique Horizon 2030"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s8-page",
+      "type": "text",
+      "role": "caption",
+      "x": 1660,
+      "y": 1000,
+      "w": 120,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "08"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "right",
+        "lineHeight": 1.4
+      }
+    }
+  ]
+}

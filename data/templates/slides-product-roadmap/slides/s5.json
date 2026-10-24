@@ -1,0 +1,185 @@
+{
+  "id": "s5",
+  "background": {
+    "type": "color",
+    "token": "--bg"
+  },
+  "elements": [
+    {
+      "id": "s5-image",
+      "type": "image",
+      "x": 80,
+      "y": 80,
+      "w": 800,
+      "h": 920,
+      "z": 1,
+      "src": "public/images/notes.webp",
+      "alt": "Mur couvert de notes adhésives colorées",
+      "fit": "cover",
+      "matchKey": "hero-image",
+      "credit": {
+        "source": "pixabay",
+        "author": "Pexels",
+        "url": "https://pixabay.com/photos/sticky-notes-note-notice-board-1284667/"
+      },
+      "radius": 24
+    },
+    {
+      "id": "s5-bar",
+      "type": "shape",
+      "x": 1000,
+      "y": 183,
+      "w": 96,
+      "h": 4,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 0,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s5-kicker",
+      "type": "text",
+      "role": "label",
+      "x": 1000,
+      "y": 206,
+      "w": 780,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Méthode"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 600,
+        "color": "--accent",
+        "align": "left",
+        "lineHeight": 1.4,
+        "letterSpacing": 3,
+        "uppercase": true
+      }
+    },
+    {
+      "id": "s5-heading",
+      "type": "text",
+      "role": "heading",
+      "x": 1000,
+      "y": 256,
+      "w": 780,
+      "h": 210,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Comment nous avons choisi"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 60,
+        "weight": 700,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.1
+      }
+    },
+    {
+      "id": "s5-body",
+      "type": "text",
+      "role": "body",
+      "x": 1000,
+      "y": 490,
+      "w": 780,
+      "h": 180,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Chaque demande est notée selon sa portée, son impact et l'effort. Les 30 premières passent en atelier avec des clients."
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 30,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.5
+      }
+    },
+    {
+      "id": "s5-list",
+      "type": "text",
+      "role": "body",
+      "x": 1000,
+      "y": 690,
+      "w": 780,
+      "h": 250,
+      "z": 3,
+      "content": [
+        {
+          "type": "bullet-list",
+          "items": [
+            {
+              "text": "412 retours clients analysés"
+            },
+            {
+              "text": "18 entretiens de découverte"
+            },
+            {
+              "text": "6 prototypes testés en décembre"
+            }
+          ]
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 28,
+        "weight": 400,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.55
+      }
+    },
+    {
+      "id": "s5-page",
+      "type": "text",
+      "role": "caption",
+      "x": 1660,
+      "y": 1000,
+      "w": 120,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "05"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "right",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s5-rule",
+      "type": "shape",
+      "x": 1000,
+      "y": 184,
+      "w": 780,
+      "h": 2,
+      "z": 1,
+      "shape": "rect",
+      "fill": "--border"
+    }
+  ]
+}

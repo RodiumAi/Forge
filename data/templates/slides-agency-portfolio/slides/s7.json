@@ -1,0 +1,257 @@
+{
+  "id": "s7",
+  "background": {
+    "type": "color",
+    "token": "--bg"
+  },
+  "elements": [
+    {
+      "id": "s7-frame",
+      "type": "shape",
+      "x": 40,
+      "y": 40,
+      "w": 1840,
+      "h": 1000,
+      "z": 0,
+      "shape": "rect",
+      "fill": "#00000000",
+      "stroke": "--border",
+      "strokeWidth": 2
+    },
+    {
+      "id": "s7-bar",
+      "type": "shape",
+      "x": 140,
+      "y": 100,
+      "w": 80,
+      "h": 8,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 4,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s7-kicker",
+      "type": "text",
+      "role": "label",
+      "x": 140,
+      "y": 126,
+      "w": 1200,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Répartition"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 600,
+        "color": "--accent",
+        "align": "left",
+        "lineHeight": 1.4,
+        "letterSpacing": 3,
+        "uppercase": true
+      }
+    },
+    {
+      "id": "s7-heading",
+      "type": "text",
+      "role": "heading",
+      "x": 140,
+      "y": 176,
+      "w": 1640,
+      "h": 140,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Ce que nous faisons vraiment"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 54,
+        "weight": 400,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.1,
+        "uppercase": true,
+        "letterSpacing": 1
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "on-enter",
+        "durationMs": 500
+      }
+    },
+    {
+      "id": "s7-chart",
+      "type": "chart",
+      "x": 700,
+      "y": 350,
+      "w": 1080,
+      "h": 600,
+      "z": 2,
+      "chart": "bar",
+      "data": {
+        "labels": [
+          "Identité",
+          "Campagnes",
+          "Sites",
+          "Édition",
+          "Motion"
+        ],
+        "series": [
+          {
+            "name": "Part du chiffre d'affaires 2026 (%)",
+            "values": [
+              38,
+              27,
+              21,
+              9,
+              5
+            ],
+            "color": "--accent"
+          }
+        ]
+      },
+      "options": {
+        "legend": false,
+        "values": true
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 80,
+        "durationMs": 450
+      }
+    },
+    {
+      "id": "s7-icon",
+      "type": "icon",
+      "x": 140,
+      "y": 380,
+      "w": 56,
+      "h": 56,
+      "z": 3,
+      "icon": "chart-bar",
+      "color": "--accent",
+      "strokeWidth": 1.75
+    },
+    {
+      "id": "s7-takeaway",
+      "type": "text",
+      "role": "heading",
+      "x": 140,
+      "y": 460,
+      "w": 460,
+      "h": 130,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "L'identité d'abord"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 40,
+        "weight": 400,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.2
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 1
+      }
+    },
+    {
+      "id": "s7-comment",
+      "type": "text",
+      "role": "body",
+      "x": 140,
+      "y": 610,
+      "w": 460,
+      "h": 300,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "38 % de notre activité vient des identités de marque, souvent le début d'une relation longue."
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 26,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.5
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 2
+      }
+    },
+    {
+      "id": "s7-footer",
+      "type": "text",
+      "role": "caption",
+      "x": 140,
+      "y": 1000,
+      "w": 1100,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Studio Trame · Portfolio 2026"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s7-page",
+      "type": "text",
+      "role": "caption",
+      "x": 1660,
+      "y": 1000,
+      "w": 120,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "07"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "right",
+        "lineHeight": 1.4
+      }
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "kind": "slides",
+  "id": "slides-product-launch",
+  "title": {
+    "fr": "Lancement produit",
+    "en": "Product launch"
+  },
+  "description": {
+    "fr": "Lancement produit spectaculaire sur fond noir, rouge vif et typographie Syne en capitales : révélation, fonctionnalités, chiffres, prix, disponibilité.",
+    "en": "Dramatic product launch on black, vivid red and uppercase Syne type: the reveal, features, figures, pricing and availability."
+  },
+  "tags": [
+    "launch",
+    "product",
+    "keynote",
+    "dark"
+  ],
+  "category": "business",
+  "preview": "preview.html",
+  "bootHint": {
+    "fr": "Adapte slides-product-launch : produit, promesse, fonctionnalités clés, prix, date de sortie.",
+    "en": "Adapt slides-product-launch: product, promise, key features, price, release date."
+  },
+  "accent": "#FF4D2E",
+  "bg": "#0A0A0F",
+  "fg": "#FAFAFA",
+  "muted": "#A1A1AA",
+  "tone": "bold, theatrical, punchy",
+  "fonts": {
+    "display": "Syne",
+    "body": "DM Sans",
+    "mono": "JetBrains Mono"
+  },
+  "transitionPreset": "dynamic",
+  "layouts": {
+    "title": "s1",
+    "section": "s2",
+    "text": "s3",
+    "image-text": "s4",
+    "two-columns": "s5",
+    "key-figures": "s6",
+    "chart": "s7",
+    "quote": "s8",
+    "table": "s9",
+    "team": "s10",
+    "timeline": "s11",
+    "thank-you": "s12"
+  }
+}

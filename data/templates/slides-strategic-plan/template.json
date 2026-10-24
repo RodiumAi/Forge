@@ -1,0 +1,49 @@
+{
+  "kind": "slides",
+  "id": "slides-strategic-plan",
+  "title": {
+    "fr": "Plan stratégique",
+    "en": "Strategic plan"
+  },
+  "description": {
+    "fr": "Plan stratégique sombre et solennel, accent ambre : vision, diagnostic, axes stratégiques, objectifs chiffrés, feuille de route et gouvernance.",
+    "en": "Solemn, dark strategic plan with an amber accent: vision, diagnosis, strategic pillars, quantified goals, roadmap and governance."
+  },
+  "tags": [
+    "strategy",
+    "plan",
+    "leadership",
+    "dark"
+  ],
+  "category": "business",
+  "preview": "preview.html",
+  "bootHint": {
+    "fr": "Adapte slides-strategic-plan : organisation, horizon, vision, axes, objectifs chiffrés.",
+    "en": "Adapt slides-strategic-plan: organisation, horizon, vision, pillars, quantified goals."
+  },
+  "accent": "#F2A93B",
+  "bg": "#10141C",
+  "fg": "#EEF1F6",
+  "muted": "#95A0B4",
+  "tone": "visionary, structured, decisive",
+  "fonts": {
+    "display": "Archivo",
+    "body": "IBM Plex Sans",
+    "mono": "IBM Plex Mono"
+  },
+  "transitionPreset": "elegant",
+  "layouts": {
+    "title": "s1",
+    "quote": "s2",
+    "section": "s3",
+    "text": "s4",
+    "two-columns": "s5",
+    "image-text": "s6",
+    "key-figures": "s7",
+    "chart": "s8",
+    "timeline": "s9",
+    "team": "s10",
+    "table": "s11",
+    "thank-you": "s12"
+  }
+}
