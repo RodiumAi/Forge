@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { DeckPlayer, SlideView, themeTokensFromDesign } from "@/components/deck-player";
+import { DeckPlayer, PresenterView, SlideView, themeTokensFromDesign } from "@/components/deck-player";
 import type { Deck, Slide, SlideElement } from "@/lib/contracts/forge-design";
 
 export type DemoFixtures = {
@@ -123,7 +123,7 @@ type DeckChoice = "showcase" | "full" | "minimal" | "square";
 export function DeckPlayerDemo({ fixtures }: { fixtures: DemoFixtures }) {
   const tokens = useMemo(() => themeTokensFromDesign(JSON.stringify(fixtures.designSystem)), [fixtures.designSystem]);
   const [choice, setChoice] = useState<DeckChoice>("showcase");
-  const [view, setView] = useState<"player" | "slides">("player");
+  const [view, setView] = useState<"player" | "slides" | "presenter">("player");
   const [badge, setBadge] = useState(true);
 
   const data = useMemo(() => {
@@ -170,6 +170,9 @@ export function DeckPlayerDemo({ fixtures }: { fixtures: DemoFixtures }) {
         <button type="button" style={button(view === "slides")} onClick={() => setView("slides")}>
           slide views
         </button>
+        <button type="button" style={button(view === "presenter")} onClick={() => setView("presenter")} title="Open the player in another tab: this view follows it">
+          presenter (inline)
+        </button>
         <label style={{ marginLeft: 12, display: "flex", gap: 6, alignItems: "center" }}>
           <input type="checkbox" checked={badge} onChange={(e) => setBadge(e.target.checked)} /> badge
         </label>
@@ -177,6 +180,10 @@ export function DeckPlayerDemo({ fixtures }: { fixtures: DemoFixtures }) {
       {view === "player" ? (
         <div style={{ height: "calc(100vh - 90px)" }}>
           <DeckPlayer key={choice} deck={data.deck} slides={data.slides} notes={data.notes} tokens={tokens} assetUrl={placeholderAsset} badge={badge} />
+        </div>
+      ) : view === "presenter" ? (
+        <div style={{ position: "relative", height: "calc(100vh - 90px)", transform: "translateZ(0)" }}>
+          <PresenterView deck={data.deck} slides={data.slides} notes={data.notes} tokens={tokens} assetUrl={placeholderAsset} />
         </div>
       ) : (
         <div style={{ display: "grid", gap: 16 }}>

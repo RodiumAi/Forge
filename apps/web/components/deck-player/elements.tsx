@@ -249,7 +249,14 @@ function TextView({ element }: { element: TextElement }) {
         }
         const List = block.type === "ordered-list" ? "ol" : "ul";
         return (
-          <List key={i} style={{ margin: 0, paddingLeft: "1.2em" }}>
+          <List
+            key={i}
+            style={{
+              margin: 0,
+              paddingLeft: css.textAlign === "left" || css.textAlign === "justify" ? "1.2em" : 0,
+              listStylePosition: css.textAlign === "left" || css.textAlign === "justify" ? "outside" : "inside",
+            }}
+          >
             {block.items.map((item, j) => (
               <li key={j} style={{ marginLeft: `${(item.level ?? 0) * 1.2}em` }}>
                 <InlineContent inline={item} />
