@@ -14,13 +14,14 @@ import json
 from typing import Any
 
 from app.contracts.forge_design import (
+    FORMAT_SIZES,
     dump_document,
     validate_codelab,
     validate_deck,
     validate_design_system,
     validate_slide,
 )
-from app.services.filesystem import project_dir, write_file
+from app.services.filesystem import project_dir, read_file, write_file
 
 DECK_PATH = "deck.json"
 CODELAB_PATH = "codelab.json"
@@ -108,12 +109,25 @@ def default_design_system(name: str) -> dict[str, Any]:
     return dump_document(validate_design_system(document))
 
 
-def default_deck(title: str) -> tuple[dict[str, Any], dict[str, Any]]:
-    """deck.json and slides/s1.json of a new presentation."""
+def default_deck(title: str, ratio: str = "16:9") -> tuple[dict[str, Any], dict[str, Any]]:
+    """deck.json and slides/s1.json of a new presentation.
+
+    ``ratio`` is one of the contract formats (16:9, 4:3, 1:1). The title slide
+    keeps the 16:9 proportions: margins and type sizes follow the canvas width.
+    """
+    if ratio not in FORMAT_SIZES:
+        ratio = "16:9"
+    width, height = FORMAT_SIZES[ratio]
+    scale = width / 1920
+
+    def px(value: float) -> int:
+        return round(value * scale)
+
+    margin = px(160)
     deck = {
         "version": 1,
         "title": (title or "").strip()[:200] or "Presentation",
-        "format": {"ratio": "16:9", "width": 1920, "height": 1080},
+        "format": {"ratio": ratio, "width": width, "height": height},
         "theme": dict(DEFAULT_THEME),
         "slides": [{"id": "s1", "layout": "title", "transition": {"type": "fade", "durationMs": 500}}],
     }
@@ -125,23 +139,35 @@ def default_deck(title: str) -> tuple[dict[str, Any], dict[str, Any]]:
                 "id": "title",
                 "type": "text",
                 "role": "title",
-                "x": 160,
-                "y": 380,
-                "w": 1600,
-                "h": 200,
+                "x": margin,
+                "y": round(height * 380 / 1080),
+                "w": width - 2 * margin,
+                "h": max(px(200), 120),
                 "content": [{"type": "paragraph", "text": deck["title"]}],
-                "style": {"font": "display", "size": 96, "weight": 700, "color": "--fg", "align": "left"},
+                "style": {
+                    "font": "display",
+                    "size": max(px(96), 64),
+                    "weight": 700,
+                    "color": "--fg",
+                    "align": "left",
+                },
             },
             {
                 "id": "subtitle",
                 "type": "text",
                 "role": "subtitle",
-                "x": 160,
-                "y": 600,
-                "w": 1600,
-                "h": 80,
+                "x": margin,
+                "y": round(height * 600 / 1080),
+                "w": width - 2 * margin,
+                "h": max(px(80), 56),
                 "content": [{"type": "paragraph", "text": ""}],
-                "style": {"font": "body", "size": 40, "weight": 400, "color": "--muted", "align": "left"},
+                "style": {
+                    "font": "body",
+                    "size": max(px(40), 32),
+                    "weight": 400,
+                    "color": "--muted",
+                    "align": "left",
+                },
             },
         ],
     }
@@ -164,18 +190,18 @@ def default_codelab(title: str) -> dict[str, Any]:
     return dump_document(validate_codelab(codelab))
 
 
-def _snapshot(project_id: str) -> None:
+def _snapshot(project_id: str, message: str = "initial scaffold") -> None:
     try:
         from app.services import history
 
-        history.snapshot(project_id, "initial scaffold")
+        history.snapshot(project_id, message)
     except Exception:  # pragma: no cover - history is best effort
         pass
 
 
-def scaffold_slides(project_id: str, app_name: str) -> None:
+def scaffold_slides(project_id: str, app_name: str, *, ratio: str = "16:9") -> None:
     project_dir(project_id)
-    deck, slide = default_deck(app_name)
+    deck, slide = default_deck(app_name, ratio)
     _write_json(project_id, DECK_PATH, deck)
     _write_json(project_id, "slides/s1.json", slide)
     write_file(project_id, "notes/s1.md", "")
@@ -202,3 +228,32 @@ def scaffold_design_system(project_id: str, app_name: str) -> None:
     _write_json(project_id, DESIGN_SYSTEM_PATH, design_system)
     write_file(project_id, DESIGN_MD_PATH, design_md_from_design_system(design_system))
     _snapshot(project_id)
+
+
+def apply_design_system(project_id: str, source_project_id: str) -> bool:
+    """Dress a new project with the tokens of a design_system project.
+
+    Writes DESIGN.md from the source ``design-system.json`` and, for a deck or a
+    codelab, points ``theme.designSystem`` at the source project id. Returns
+    False (nothing written) when the source has no valid design system. The
+    dedicated design system table arrives with wave 2; until then the link is
+    this id in the document theme.
+    """
+    try:
+        source = json.loads(read_file(source_project_id, DESIGN_SYSTEM_PATH))
+        design_system = dump_document(validate_design_system(source))
+    except Exception:
+        return False
+    write_file(project_id, DESIGN_MD_PATH, design_md_from_design_system(design_system))
+    for relative, validate in ((DECK_PATH, validate_deck), (CODELAB_PATH, validate_codelab)):
+        try:
+            document = json.loads(read_file(project_id, relative))
+        except Exception:
+            continue
+        theme = document.get("theme")
+        if not isinstance(theme, dict):
+            continue
+        theme["designSystem"] = source_project_id
+        _write_json(project_id, relative, dump_document(validate(document)))
+    _snapshot(project_id, "apply design system")
+    return True
