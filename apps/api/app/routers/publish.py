@@ -15,7 +15,7 @@ from app.services import rate_limit
 from app.services.domains import get_project_domain, sites_url_for_project
 from app.services.export_project import build_export_zip
 from app.services.project_access import accessible_project
-from app.services.publish_esm import publish_project_esm
+from app.services.publish_esm import publish_design_system_site, publish_project_esm
 
 router = APIRouter(prefix="/projects", tags=["publish"])
 PUBLISH_LIMIT_PER_HOUR = 20
@@ -83,17 +83,27 @@ async def publish_now(
     # Canonical URLs, sitemap and og:url point at the address visitors use: the
     # validated custom domain when there is one, else the slug subdomain.
     site_url = sites_url_for_project(get_settings(), project, get_project_domain(db, project.id))
+    from app.kinds import get_kind
+
+    kind = get_kind(project.platform)
     try:
-        result = await publish_project_esm(
-            str(project.id),
-            project.slug,
-            owner_user_id=str(user.id),
-            # Fallback title when the project index.html has no <title>.
-            title=project.name or "Forge app",
-            site_url=site_url,
-            # Starting guess only: the published language is detected from the page text.
-            lang=locale,
-        )
+        if kind is not None and kind.publish == "design_system_site":
+            from app.services.design_system.exports import show_badge
+
+            result = await publish_design_system_site(
+                str(project.id), project.slug, site_url=site_url, lang=locale, badge=show_badge(db, user)
+            )
+        else:
+            result = await publish_project_esm(
+                str(project.id),
+                project.slug,
+                owner_user_id=str(user.id),
+                # Fallback title when the project index.html has no <title>.
+                title=project.name or "Forge app",
+                site_url=site_url,
+                # Starting guess only: the published language is detected from the page text.
+                lang=locale,
+            )
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)[:2000]) from exc
 

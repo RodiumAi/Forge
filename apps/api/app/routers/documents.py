@@ -425,6 +425,19 @@ def put_step(
 # ── Design system ──────────────────────────────────────────────────────────
 
 
+def _design_system_project(
+    db: Session, user: User, project_id: UUID, *, require_edit: bool = False
+) -> Project:
+    """Owner and collaborators as usual, plus the members of a team it is shared with
+    (read) and that team's admin (edit). See ``services/design_system/registry.py``."""
+    from app.services.design_system import registry
+
+    project = registry.design_system_project(db, user, project_id, require_edit=require_edit)
+    if not kind_enabled("design_system"):
+        raise SitesError(404, "KIND_DISABLED", "This project type is not available yet.")
+    return project
+
+
 @router.get("/{project_id}/design-system")
 def get_design_system(
     project_id: UUID,
@@ -432,7 +445,7 @@ def get_design_system(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> JSONResponse:
-    _document_project(db, user, project_id, request, "design_system")
+    _design_system_project(db, user, project_id)
     pid = str(project_id)
     return _respond(pid, DESIGN_SYSTEM_PATH, _read_json(pid, DESIGN_SYSTEM_PATH))
 
@@ -446,10 +459,14 @@ def put_design_system(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> JSONResponse:
-    _document_project(db, user, project_id, request, "design_system", require_edit=True)
+    from app.services.design_system.tokens import annotate_contrast
+
+    _design_system_project(db, user, project_id, require_edit=True)
     pid = str(project_id)
     _validated(validate_design_system, document)
     _check_version(pid, DESIGN_SYSTEM_PATH, if_match)
+    # The contrast notes describe the colours actually saved, never stale ones.
+    document = annotate_contrast(document)
     _checkpoint(pid, "before design system edit")
     _write_json(pid, DESIGN_SYSTEM_PATH, document)
     # DESIGN.md is generated from the tokens; the agent reads it like a charter.

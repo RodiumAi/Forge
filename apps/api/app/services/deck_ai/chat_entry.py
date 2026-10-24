@@ -17,6 +17,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.i18n import t
+from app.kinds import kind_enabled
 from app.models import AgentRun, Chat, Message, Project, User
 from app.services.deck_ai import store
 from app.services.deck_ai.flow import DeckContext, document_stream, spawn_deck_write_job, unavailable_stream
@@ -54,6 +55,24 @@ def start_document_message(
 ):
     """The SSE response for a chat message on a document project."""
     kind_id = document_kind(project.platform) or ""
+    if kind_id == "design_system" and kind_enabled(kind_id):
+        from app.services.design_system.chat_entry import start_message
+
+        return start_message(
+            db=db,
+            user=user,
+            project=project,
+            chat=chat,
+            body=body,
+            content=content,
+            mode=mode,
+            locale=locale,
+            route_for_request=route_for_request,
+            effort_label=effort_label,
+            resolve_gen_auth=resolve_gen_auth,
+            event_stream=event_stream,
+            anchor=anchor,
+        )
     if not ai_available(kind_id):
         return event_stream(unavailable_stream(kind_id, locale))
 

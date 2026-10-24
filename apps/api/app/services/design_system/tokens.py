@@ -83,8 +83,9 @@ CONTRAST_PAIRS: tuple[tuple[str, str, float, str], ...] = (
     ("fg", "surface", AA, "Text on cards"),
     ("muted", "bg", AA, "Secondary text"),
     ("muted", "surface", AA, "Secondary text on cards"),
-    ("accent-contrast", "accent", AA, "Button label"),
+    # The accent is settled against the background before its label colour.
     ("accent", "bg", AA_LARGE, "Accent elements and large text"),
+    ("accent-contrast", "accent", AA, "Button label"),
     ("success", "bg", AA_LARGE, "Status colour"),
     ("warning", "bg", AA_LARGE, "Status colour"),
     ("danger", "bg", AA_LARGE, "Status colour"),
