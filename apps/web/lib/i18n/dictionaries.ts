@@ -1,7 +1,10 @@
+import { homeEn, homeFr } from "@/lib/i18n/home-strings";
+
 export type Locale = "en" | "fr";
 
 export const dictionaries = {
   en: {
+    ...homeEn,
     brandAlt: "Forge by RodiumAi",
     openForge: "Open Forge",
     langEn: "EN",
@@ -996,6 +999,7 @@ export const dictionaries = {
     optionsDangerDeleting: "Deleting…",
   },
   fr: {
+    ...homeFr,
     brandAlt: "Forge by RodiumAi",
     openForge: "Ouvrir Forge",
     langEn: "EN",

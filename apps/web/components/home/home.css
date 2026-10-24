@@ -1,0 +1,1085 @@
+/* Forge Design home (components/home). Built on the --home-* tokens of
+   globals.css, so it follows the dark (default) and light themes. Kind tones:
+   orange slides, violet design system, green codelab, blue web, teal mobile. */
+
+.fdh {
+  --fdh-tone-slides: #eb6118;
+  --fdh-tone-design_system: #7c5cff;
+  --fdh-tone-codelab: #22a06b;
+  --fdh-tone-web: #3b82f6;
+  --fdh-tone-mobile: #14b8a6;
+  --fdh-tone-blank: var(--home-text-muted);
+  --fdh-radius: var(--radius-surface, 12px);
+  width: 100%;
+  max-width: 76rem;
+  margin: 0 auto;
+  padding: 1.25rem 1.75rem 3rem;
+  box-sizing: border-box;
+  color: var(--home-text);
+}
+
+.fdh-tone-slides { --fdh-tone: var(--fdh-tone-slides); }
+.fdh-tone-design_system { --fdh-tone: var(--fdh-tone-design_system); }
+.fdh-tone-codelab { --fdh-tone: var(--fdh-tone-codelab); }
+.fdh-tone-web { --fdh-tone: var(--fdh-tone-web); }
+.fdh-tone-mobile { --fdh-tone: var(--fdh-tone-mobile); }
+.fdh-tone-blank { --fdh-tone: var(--fdh-tone-blank); }
+
+.fdh button:focus-visible,
+.fdh select:focus-visible,
+.fdh input:focus-visible,
+.fdh textarea:focus-visible,
+.fdh [tabindex]:focus-visible,
+.fdh-dialog :focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ── Announcement ─────────────────────────────────────────────── */
+
+.fdh-announce {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0 auto 1rem;
+  max-width: 48rem;
+  padding: 0.6rem 0.6rem 0.6rem 0.9rem;
+  border-radius: var(--fdh-radius);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  font-size: 0.86rem;
+}
+
+.fdh-announce p {
+  margin: 0;
+  flex: 1;
+  color: var(--home-text-muted);
+}
+
+.fdh-announce strong {
+  color: var(--home-text);
+}
+
+.fdh-announce-icon {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+/* ── Hero and prompt ──────────────────────────────────────────── */
+
+.fdh-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.5rem 0 1.25rem;
+}
+
+.fdh-title {
+  margin: 0 0 1rem;
+  font-family: var(--font-serif-display, var(--font-display));
+  font-size: clamp(1.6rem, 3.4vw, 2.4rem);
+  font-weight: 550;
+  letter-spacing: -0.02em;
+  text-align: center;
+}
+
+.fdh-prompt {
+  width: 100%;
+  max-width: 48rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.85rem 0.85rem 0.7rem;
+  border-radius: 18px;
+  border: 1px solid var(--home-border-strong);
+  background: var(--home-input-bg);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+  box-sizing: border-box;
+}
+
+.fdh-prompt:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--home-border-strong));
+}
+
+.fdh-prompt textarea {
+  width: 100%;
+  min-height: 88px;
+  resize: none;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--home-text);
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1.5;
+  padding: 0.2rem 0.3rem;
+}
+
+.fdh-prompt textarea::placeholder {
+  color: var(--home-text-soft);
+}
+
+.fdh-prompt-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.fdh-send {
+  margin-left: auto;
+}
+
+.fdh-suggestions {
+  margin-top: 0.25rem;
+}
+
+/* Shared small controls. */
+.fdh-icon-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--home-text-muted);
+  cursor: pointer;
+}
+
+.fdh-icon-btn:hover {
+  background: var(--home-hover);
+  color: var(--home-text);
+}
+
+.fdh-plus {
+  border-color: var(--home-border-strong);
+}
+
+.fdh-pill {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2rem;
+  padding: 0 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--home-border-strong);
+  background: var(--home-chip);
+  color: var(--home-text);
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.fdh-pill:hover:not(:disabled) {
+  background: var(--home-chip-strong);
+}
+
+.fdh-pill:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.fdh-pill.is-on {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.fdh-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #111;
+}
+
+.fdh-primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 88%, #fff);
+}
+
+.fdh-danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+}
+
+.fdh-type-chip {
+  border-color: color-mix(in srgb, var(--fdh-tone) 60%, transparent);
+  background: color-mix(in srgb, var(--fdh-tone) 14%, transparent);
+  padding-right: 0.2rem;
+}
+
+.fdh-type-chip > .ui-icon-sm {
+  color: var(--fdh-tone);
+}
+
+.fdh-chip-clear {
+  appearance: none;
+  display: inline-flex;
+  border: none;
+  background: transparent;
+  color: inherit;
+  padding: 0.2rem;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.fdh-chip-clear:hover {
+  background: var(--home-hover);
+}
+
+.fdh-model select {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  max-width: 11rem;
+  cursor: pointer;
+}
+
+.fdh-model select option {
+  color: #111;
+}
+
+/* ── Design system picker ─────────────────────────────────────── */
+
+.fdh-ds {
+  position: relative;
+}
+
+.fdh-ds-current {
+  max-width: 10rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fdh-ds-swatches {
+  display: inline-flex;
+}
+
+.fdh-ds-swatch {
+  width: 0.8rem;
+  height: 0.8rem;
+  border-radius: 999px;
+  border: 1px solid var(--home-border-strong);
+  margin-left: -0.2rem;
+}
+
+.fdh-ds-swatch:first-child {
+  margin-left: 0;
+}
+
+.fdh-popover {
+  position: absolute;
+  z-index: 30;
+  bottom: calc(100% + 0.4rem);
+  left: 0;
+  width: min(20rem, 80vw);
+  padding: 0.35rem;
+  border-radius: var(--fdh-radius);
+  border: 1px solid var(--home-border-strong);
+  background: var(--home-panel);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+  text-align: left;
+}
+
+.fdh-ds-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 18rem;
+  overflow-y: auto;
+  outline: none;
+}
+
+.fdh-ds-option {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.5rem 2rem 0.5rem 0.6rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.fdh-ds-option.is-active {
+  background: var(--home-hover);
+}
+
+.fdh-ds-option-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.fdh-ds-fonts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.75rem;
+  font-size: 0.75rem;
+  color: var(--home-text-muted);
+}
+
+.fdh-ds-check {
+  position: absolute;
+  right: 0.55rem;
+  top: 0.6rem;
+  color: var(--accent);
+}
+
+.fdh-ds-empty {
+  margin: 0.35rem 0.5rem 0.4rem;
+  font-size: 0.78rem;
+  color: var(--home-text-muted);
+}
+
+/* ── Kind grid ────────────────────────────────────────────────── */
+
+.fdh-kinds {
+  width: 100%;
+  max-width: 48rem;
+  margin-top: 1.1rem;
+}
+
+.fdh-kinds-head {
+  margin: 0 0 0.5rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.fdh-kinds-toggle {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border: none;
+  background: transparent;
+  color: var(--home-text-muted);
+  font: inherit;
+  padding: 0.2rem 0.1rem;
+  cursor: pointer;
+}
+
+.fdh-kinds-toggle:hover {
+  color: var(--home-text);
+}
+
+.fdh-chevron {
+  transition: transform 0.15s ease;
+  transform: rotate(-90deg);
+}
+
+.fdh-chevron.is-open {
+  transform: none;
+}
+
+.fdh-kinds-sub {
+  margin: 0.8rem 0 0.45rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--home-text-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.fdh-tiles {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: 0.5rem;
+}
+
+.fdh-tile {
+  appearance: none;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.7rem;
+  border-radius: var(--fdh-radius);
+  border: 1px solid var(--home-border);
+  background: var(--home-panel);
+  color: var(--home-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.fdh-tile:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--fdh-tone) 55%, var(--home-border));
+  transform: translateY(-1px);
+}
+
+.fdh-tile.is-selected {
+  border-color: var(--fdh-tone);
+  background: color-mix(in srgb, var(--fdh-tone) 12%, var(--home-panel));
+}
+
+.fdh-tile:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.fdh-tile-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9px;
+  color: var(--fdh-tone);
+  background: color-mix(in srgb, var(--fdh-tone) 16%, transparent);
+}
+
+.fdh-tile-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.fdh-tile-label {
+  font-size: 0.86rem;
+  font-weight: 550;
+}
+
+.fdh-tile-hint {
+  font-size: 0.72rem;
+  color: var(--home-text-muted);
+}
+
+/* ── Tabs, toolbar ────────────────────────────────────────────── */
+
+.fdh-tabs {
+  margin-top: 1rem;
+}
+
+.fdh-tabs-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-bottom: 1px solid var(--home-border);
+  padding-bottom: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.fdh-tablist {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.fdh-tablist button {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--home-text-muted);
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 550;
+  padding: 0.45rem 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.fdh-tablist button:hover {
+  color: var(--home-text);
+  background: var(--home-hover);
+}
+
+.fdh-tablist button.active {
+  color: var(--home-text);
+  background: var(--home-chip-strong);
+}
+
+.fdh-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.fdh-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2rem;
+  padding: 0 0.65rem;
+  border-radius: 999px;
+  border: 1px solid var(--home-border-strong);
+  background: var(--home-input-bg);
+  color: var(--home-text-muted);
+}
+
+.fdh-search input {
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--home-text);
+  font: inherit;
+  font-size: 0.85rem;
+  width: 11rem;
+}
+
+.fdh-segment {
+  display: inline-flex;
+  padding: 0.15rem;
+  border-radius: 999px;
+  border: 1px solid var(--home-border-strong);
+  background: var(--home-chip);
+}
+
+.fdh-segment button {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  border: none;
+  background: transparent;
+  color: var(--home-text-muted);
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.fdh-segment button.active {
+  background: var(--home-panel);
+  color: var(--home-text);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.fdh-select {
+  min-height: 2rem;
+  padding: 0 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--home-border-strong);
+  background: var(--home-input-bg);
+  color: var(--home-text);
+  font: inherit;
+  font-size: 0.82rem;
+}
+
+.fdh-new {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+.fdh-panel {
+  outline: none;
+}
+
+.fdh-gallery-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.6rem;
+}
+
+/* ── Grid cards ───────────────────────────────────────────────── */
+
+.fdh-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 1.1rem;
+}
+
+.fdh-card {
+  position: relative;
+  border-radius: var(--fdh-radius);
+}
+
+.fdh-card-open {
+  appearance: none;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--home-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fdh-card-open:hover .fdh-thumb {
+  transform: translateY(-2px);
+}
+
+.fdh-thumb {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--fdh-radius);
+  border: 1px solid color-mix(in srgb, var(--fdh-tone) 30%, var(--home-border));
+  background: color-mix(in srgb, var(--fdh-tone) 18%, var(--home-panel));
+  transition: transform 0.15s ease;
+}
+
+.fdh-thumb-card {
+  aspect-ratio: 16 / 10;
+}
+
+.fdh-thumb-card .site-thumb,
+.fdh-thumb-card .home-card-thumb {
+  width: 100%;
+  height: 100%;
+}
+
+.fdh-thumb-row {
+  width: 3.4rem;
+  height: 2.2rem;
+  flex-shrink: 0;
+  border-radius: 7px;
+}
+
+.fdh-thumb-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(120% 90% at 20% 0%, color-mix(in srgb, var(--fdh-tone) 45%, transparent), transparent 60%),
+    color-mix(in srgb, var(--fdh-tone) 22%, var(--home-panel));
+}
+
+.fdh-thumb-icon {
+  display: inline-flex;
+  color: var(--fdh-tone);
+}
+
+/* Stacked "several slides" effect of a deck without a real thumbnail. */
+.fdh-stack {
+  position: relative;
+  width: 58%;
+  aspect-ratio: 16 / 9;
+}
+
+.fdh-thumb-row .fdh-stack {
+  width: 62%;
+}
+
+.fdh-stack-sheet {
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--fdh-tone) 30%, #fff);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+}
+
+.fdh-stack-back {
+  transform: translate(14%, -14%) scale(0.92);
+  opacity: 0.45;
+}
+
+.fdh-stack-mid {
+  transform: translate(7%, -7%) scale(0.96);
+  opacity: 0.7;
+}
+
+.fdh-stack-front {
+  background: #fff;
+  border: 2px solid var(--fdh-tone);
+}
+
+.fdh-stack-line {
+  position: absolute;
+  left: 12%;
+  height: 9%;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--fdh-tone) 70%, #fff);
+}
+
+.fdh-stack-line-a {
+  top: 38%;
+  width: 62%;
+}
+
+.fdh-stack-line-b {
+  top: 56%;
+  width: 40%;
+  opacity: 0.55;
+}
+
+.fdh-thumb-row .fdh-stack-line {
+  display: none;
+}
+
+.fdh-card-body {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0 0.15rem;
+  min-width: 0;
+}
+
+.fdh-card-kind {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 8px;
+  color: var(--fdh-tone);
+  background: color-mix(in srgb, var(--fdh-tone) 16%, transparent);
+}
+
+.fdh-card-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.fdh-card-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fdh-card-when {
+  font-size: 0.76rem;
+  color: var(--home-text-muted);
+}
+
+.fdh-card-badges {
+  position: absolute;
+  left: 0.55rem;
+  top: 0.55rem;
+  display: flex;
+  gap: 0.3rem;
+  pointer-events: none;
+}
+
+.fdh-card-badges .home-card-badge {
+  position: static;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  height: fit-content;
+}
+
+.fdh-card-tools {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.45rem;
+  display: flex;
+  gap: 0.2rem;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.fdh-card:hover .fdh-card-tools,
+.fdh-card:focus-within .fdh-card-tools,
+.fdh-card-tools:has(.fdh-star.is-on),
+.fdh-card-tools:has([aria-expanded="true"]) {
+  opacity: 1;
+}
+
+.fdh-card-tools .fdh-icon-btn {
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+}
+
+.fdh-star.is-on {
+  color: #f5b301;
+}
+
+.fdh-star.is-on svg {
+  fill: currentColor;
+}
+
+/* ── List rows ────────────────────────────────────────────────── */
+
+.fdh-list {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 0.85rem;
+}
+
+.fdh-list .fdh-col-opened {
+  width: 11rem;
+}
+
+.fdh-list .fdh-col-owner {
+  width: 10rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fdh-list .fdh-col-access {
+  width: 4.5rem;
+}
+
+.fdh-list .fdh-col-tools {
+  width: 5.5rem;
+}
+
+.fdh-list th {
+  text-align: left;
+  font-weight: 500;
+  font-size: 0.75rem;
+  color: var(--home-text-soft);
+  padding: 0 0.6rem 0.5rem;
+  border-bottom: 1px solid var(--home-border);
+}
+
+.fdh-list td {
+  padding: 0.45rem 0.6rem;
+  border-bottom: 1px solid var(--home-border);
+  color: var(--home-text-muted);
+  vertical-align: middle;
+}
+
+.fdh-list tbody tr:hover {
+  background: var(--home-hover);
+}
+
+.fdh-row-open {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  border: none;
+  background: transparent;
+  color: var(--home-text);
+  font: inherit;
+  text-align: left;
+  padding: 0;
+  cursor: pointer;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.fdh-row-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.fdh-row-text strong {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fdh-row-kind {
+  font-size: 0.72rem;
+  color: var(--home-text-soft);
+}
+
+.fdh-col-tools {
+  white-space: nowrap;
+}
+
+.fdh-row-tools {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.15rem;
+}
+
+.fdh-access {
+  display: inline-flex;
+  color: var(--home-text-muted);
+}
+
+/* ── Menu ─────────────────────────────────────────────────────── */
+
+.fdh-menu {
+  position: relative;
+}
+
+.fdh-menu-list {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 0.3rem);
+  right: 0;
+  min-width: 11rem;
+  padding: 0.3rem;
+  border-radius: 10px;
+  border: 1px solid var(--home-border-strong);
+  background: var(--home-panel);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+}
+
+.fdh-menu-item {
+  appearance: none;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.45rem 0.55rem;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--home-text);
+  font: inherit;
+  font-size: 0.84rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fdh-menu-item:hover,
+.fdh-menu-item:focus-visible {
+  background: var(--home-hover);
+  outline: none;
+}
+
+.fdh-menu-item.is-danger {
+  color: var(--home-danger-text);
+}
+
+/* ── Dialogs ──────────────────────────────────────────────────── */
+
+.fdh-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.fdh-dialog {
+  width: min(28rem, 100%);
+  padding: 1.2rem;
+  border-radius: 14px;
+  border: 1px solid var(--home-border-strong);
+  background: var(--home-panel);
+  color: var(--home-text);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
+}
+
+.fdh-dialog-title {
+  margin: 0 0 0.8rem;
+  font-size: 1.05rem;
+}
+
+.fdh-dialog-text {
+  margin: 0 0 0.8rem;
+  font-size: 0.85rem;
+  color: var(--home-text-muted);
+}
+
+.fdh-dialog-label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--home-text-muted);
+}
+
+.fdh-dialog-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.55rem 0.7rem;
+  border-radius: 9px;
+  border: 1px solid var(--home-border-strong);
+  background: var(--home-input-bg);
+  color: var(--home-text);
+  font: inherit;
+}
+
+.fdh-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+/* ── Phone width ──────────────────────────────────────────────── */
+
+@media (max-width: 720px) {
+  .fdh {
+    padding: 0.75rem 1rem 2.5rem;
+  }
+
+  .fdh-hero {
+    padding-top: 0.75rem;
+  }
+
+  .fdh-announce {
+    font-size: 0.78rem;
+  }
+
+  .fdh-tablist button {
+    padding: 0.4rem 0.55rem;
+    font-size: 0.85rem;
+  }
+
+  .fdh-tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .fdh-tabs-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .fdh-tablist {
+    overflow-x: auto;
+  }
+
+  .fdh-search {
+    flex: 1 1 100%;
+  }
+
+  .fdh-search input {
+    width: 100%;
+  }
+
+  .fdh-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr));
+  }
+
+  .fdh-list .fdh-col-owner,
+  .fdh-list .fdh-col-access,
+  .fdh-list .fdh-col-opened {
+    display: none;
+  }
+
+  /* No hover on touch: the star and the menu stay visible. */
+  .fdh-card-tools {
+    opacity: 1;
+  }
+
+  .fdh-send .lp-send-label {
+    display: none;
+  }
+
+  .fdh-ds-current {
+    max-width: 6rem;
+  }
+}
+
+@media (hover: none) {
+  .fdh-card-tools {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fdh-tile,
+  .fdh-thumb,
+  .fdh-chevron {
+    transition: none;
+  }
+}

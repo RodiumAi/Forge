@@ -345,6 +345,11 @@ class ProjectCreate(BaseModel):
     prompt: str | None = Field(default=None, max_length=8000)
     template_id: str | None = Field(default=None, max_length=64)
     platform: KindId | None = Field(default="web")
+    #: Slides only: canvas ratio of the new deck. Absent means 16:9.
+    format: Literal["16:9", "4:3", "1:1"] | None = None
+    #: A design_system project the caller can open: its tokens dress the new
+    #: project (DESIGN.md, and the theme of a deck or codelab).
+    design_system_id: UUID | None = None
 
 
 class ProjectPersonOut(BaseModel):
