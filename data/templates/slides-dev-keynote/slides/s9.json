@@ -1,0 +1,305 @@
+{
+  "id": "s9",
+  "background": {
+    "type": "color",
+    "token": "--bg"
+  },
+  "elements": [
+    {
+      "id": "s9-ptchrome",
+      "type": "shape",
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 56,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--surface"
+    },
+    {
+      "id": "s9-ptlight0",
+      "type": "shape",
+      "x": 28,
+      "y": 18,
+      "w": 20,
+      "h": 20,
+      "z": 1,
+      "shape": "ellipse",
+      "fill": "--accent"
+    },
+    {
+      "id": "s9-ptlight1",
+      "type": "shape",
+      "x": 62,
+      "y": 18,
+      "w": 20,
+      "h": 20,
+      "z": 1,
+      "shape": "ellipse",
+      "fill": "--accent-2"
+    },
+    {
+      "id": "s9-ptlight2",
+      "type": "shape",
+      "x": 96,
+      "y": 18,
+      "w": 20,
+      "h": 20,
+      "z": 1,
+      "shape": "ellipse",
+      "fill": "--muted"
+    },
+    {
+      "id": "s9-ptpath",
+      "type": "text",
+      "role": "caption",
+      "x": 160,
+      "y": 12,
+      "w": 1200,
+      "h": 34,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "~/devdays-2026/keynote.nebula"
+        }
+      ],
+      "style": {
+        "font": "mono",
+        "size": 22,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s9-ptglow",
+      "type": "shape",
+      "x": 1380,
+      "y": 640,
+      "w": 900,
+      "h": 900,
+      "z": 0,
+      "shape": "ellipse",
+      "fill": "--accent",
+      "opacity": 0.07
+    },
+    {
+      "id": "s9-bar",
+      "type": "shape",
+      "x": 140,
+      "y": 100,
+      "w": 80,
+      "h": 8,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 4,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s9-kicker",
+      "type": "text",
+      "role": "label",
+      "x": 140,
+      "y": 126,
+      "w": 1200,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "// compatibilité"
+        }
+      ],
+      "style": {
+        "font": "mono",
+        "size": 26,
+        "weight": 600,
+        "color": "--accent",
+        "align": "left",
+        "lineHeight": 1.4,
+        "letterSpacing": 0
+      }
+    },
+    {
+      "id": "s9-heading",
+      "type": "text",
+      "role": "heading",
+      "x": 140,
+      "y": 176,
+      "w": 1640,
+      "h": 140,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Où déployer Nebula 4"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 64,
+        "weight": 700,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.1
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "on-enter",
+        "durationMs": 500
+      }
+    },
+    {
+      "id": "s9-table",
+      "type": "table",
+      "x": 140,
+      "y": 360,
+      "w": 1640,
+      "h": 530,
+      "z": 2,
+      "rows": [
+        [
+          {
+            "text": "Plateforme"
+          },
+          {
+            "text": "Edge"
+          },
+          {
+            "text": "Serveur"
+          },
+          {
+            "text": "Statut"
+          }
+        ],
+        [
+          {
+            "text": "Cloudflare Workers"
+          },
+          {
+            "text": "Oui"
+          },
+          {
+            "text": "Oui"
+          },
+          {
+            "text": "Stable"
+          }
+        ],
+        [
+          {
+            "text": "Vercel"
+          },
+          {
+            "text": "Oui"
+          },
+          {
+            "text": "Oui"
+          },
+          {
+            "text": "Stable"
+          }
+        ],
+        [
+          {
+            "text": "AWS Lambda"
+          },
+          {
+            "text": "Non"
+          },
+          {
+            "text": "Oui"
+          },
+          {
+            "text": "Stable"
+          }
+        ],
+        [
+          {
+            "text": "Docker auto-hébergé"
+          },
+          {
+            "text": "Oui"
+          },
+          {
+            "text": "Oui"
+          },
+          {
+            "text": "Bêta"
+          }
+        ]
+      ],
+      "headerRow": true,
+      "style": {
+        "size": 28,
+        "color": "--fg",
+        "headerFill": "--surface",
+        "border": "--border"
+      },
+      "columnWidths": [
+        1.6,
+        0.8,
+        0.8,
+        0.9
+      ],
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 80,
+        "durationMs": 450
+      }
+    },
+    {
+      "id": "s9-footer",
+      "type": "text",
+      "role": "caption",
+      "x": 140,
+      "y": 1000,
+      "w": 1100,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Nebula 4.0 · DevDays Lyon 2026"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s9-page",
+      "type": "text",
+      "role": "caption",
+      "x": 1660,
+      "y": 1000,
+      "w": 120,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "09"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "right",
+        "lineHeight": 1.4
+      }
+    }
+  ]
+}

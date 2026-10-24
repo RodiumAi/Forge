@@ -1,0 +1,49 @@
+{
+  "kind": "slides",
+  "id": "slides-internal-training",
+  "title": {
+    "fr": "Formation interne",
+    "en": "Internal training"
+  },
+  "description": {
+    "fr": "Module de formation interne clair et pédagogique : objectifs, bons réflexes, cas concrets, quiz chiffré, contacts utiles et parcours de formation.",
+    "en": "Clear, teaching-friendly internal training module: goals, good habits, real cases, figures, useful contacts and the learning path."
+  },
+  "tags": [
+    "training",
+    "education",
+    "corporate",
+    "light"
+  ],
+  "category": "education",
+  "preview": "preview.html",
+  "bootHint": {
+    "fr": "Adapte slides-internal-training : thème de la formation, entreprise, réflexes à retenir, contacts.",
+    "en": "Adapt slides-internal-training: training topic, company, key habits, contacts."
+  },
+  "accent": "#0EA5E9",
+  "bg": "#F8FAFC",
+  "fg": "#0F172A",
+  "muted": "#546072",
+  "tone": "friendly, practical, reassuring",
+  "fonts": {
+    "display": "Onest",
+    "body": "Onest",
+    "mono": "JetBrains Mono"
+  },
+  "transitionPreset": "sober",
+  "layouts": {
+    "title": "s1",
+    "section": "s2",
+    "text": "s3",
+    "two-columns": "s4",
+    "image-text": "s5",
+    "quote": "s6",
+    "key-figures": "s7",
+    "chart": "s8",
+    "table": "s9",
+    "team": "s10",
+    "timeline": "s11",
+    "thank-you": "s12"
+  }
+}

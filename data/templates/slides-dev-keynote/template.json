@@ -1,0 +1,49 @@
+{
+  "kind": "slides",
+  "id": "slides-dev-keynote",
+  "title": {
+    "fr": "Keynote développeurs",
+    "en": "Developer keynote"
+  },
+  "description": {
+    "fr": "Keynote néon pour une conférence développeurs : annonce de version, code sur scène, avant et après, benchmarks, compatibilité et feuille de route.",
+    "en": "Neon keynote for a developer conference: release announcement, code on stage, before and after, benchmarks, compatibility and roadmap."
+  },
+  "tags": [
+    "tech",
+    "keynote",
+    "developers",
+    "dark"
+  ],
+  "category": "tech",
+  "preview": "preview.html",
+  "bootHint": {
+    "fr": "Adapte slides-dev-keynote : produit, version, extrait de code, benchmarks, intervenants et feuille de route.",
+    "en": "Adapt slides-dev-keynote: product, version, code excerpt, benchmarks, speakers and roadmap."
+  },
+  "accent": "#FF79C6",
+  "bg": "#282A36",
+  "fg": "#F8F8F2",
+  "muted": "#A4A8BE",
+  "tone": "bold, playful, technical",
+  "fonts": {
+    "display": "Unbounded",
+    "body": "Inter",
+    "mono": "JetBrains Mono"
+  },
+  "transitionPreset": "dynamic",
+  "layouts": {
+    "title": "s1",
+    "section": "s2",
+    "text": "s3",
+    "two-columns": "s4",
+    "image-text": "s5",
+    "quote": "s6",
+    "key-figures": "s7",
+    "chart": "s8",
+    "table": "s9",
+    "team": "s10",
+    "timeline": "s11",
+    "thank-you": "s12"
+  }
+}
