@@ -28,6 +28,7 @@ from dataclasses import dataclass, field
 from typing import Any
 from uuid import UUID
 
+from app.config import get_settings
 from app.errors import SitesError
 from app.services.codelab import files as codelab_files
 from app.services.codelab import store
@@ -274,6 +275,7 @@ async def stream_markdown(
                 locale=locale,
                 temperature=0.3,
                 max_tokens=MAX_STEP_TOKENS,
+                reasoning_effort=get_settings().generation_effort,
             ):
                 if chunk.kind != "token":
                     continue

@@ -149,6 +149,9 @@ class Settings(BaseSettings):
     # Claude/Gemini output at 4096 tokens, far below a multi-file task.
     generation_max_output_tokens: int = 32_000
     generation_temperature: float = 0.4
+    # Effort for code and document generation on Claude models (low|medium|high|xhigh|max).
+    # Short calls (planner, naming, compaction) use low. Ignored by non-Claude models.
+    generation_effort: str = "medium"
     # Wall-clock ceiling for one plan task, continuations included.
     forge_task_budget_seconds: float = 600.0
     # Full-content layer of every code prompt (characters). index.css gets its

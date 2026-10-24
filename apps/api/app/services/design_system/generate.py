@@ -16,6 +16,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
+from app.config import get_settings
 from app.services.deck_ai.jsonio import ModelJsonError, parse_json_object
 from app.services.deck_ai.llm import describe_errors
 from app.services.design_system.prompts import (
@@ -69,6 +70,7 @@ async def ask_spec(
             locale=locale,  # type: ignore[arg-type]
             temperature=0.5,
             max_tokens=MAX_TOKENS,
+            reasoning_effort=get_settings().generation_effort,
         )
         try:
             return SpecAnswer(spec=check(parse_json_object(text)), repairs=attempt)

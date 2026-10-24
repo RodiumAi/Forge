@@ -14,6 +14,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
+from app.config import get_settings
 from app.prompts.deck import REPAIR_PROMPT
 from app.services.deck_ai.jsonio import ModelJsonError, parse_json_object
 from app.services.llm import complete_chat
@@ -72,6 +73,7 @@ async def ask_json[T](
             locale=locale,  # type: ignore[arg-type]
             temperature=temperature,
             max_tokens=MAX_TOKENS,
+            reasoning_effort=get_settings().generation_effort,
         )
         try:
             data = parse_json_object(text)
