@@ -33,13 +33,13 @@ export const APP_ROUTES = {
   home: "/dashboard",
   /** Create flow: the overview focuses its composer on #create. */
   create: "/dashboard#create",
-  projects: "/dashboard?tab=projects",
-  templates: "/dashboard?tab=templates",
+  projects: "/projects",
+  templates: "/templates",
   integrations: "/integrations",
   team: "/team",
-  billing: "/dashboard/pricing",
+  billing: "/billing",
   settings: "/settings",
-  profile: "/settings",
+  profile: "/settings#profile",
   website: "/",
 } as const;
 
