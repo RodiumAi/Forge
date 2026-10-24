@@ -11,7 +11,11 @@ import re
 from app.services.templates import list_templates, templates_root
 
 EXPECTED_SLIDES_IDS = {
+    "slides-agency-portfolio",
     "slides-annual-report",
+    "slides-brand-presentation",
+    "slides-campaign",
+    "slides-case-studies",
     "slides-course-lesson",
     "slides-fundraising",
     "slides-market-research",

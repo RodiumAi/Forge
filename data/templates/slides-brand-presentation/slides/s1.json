@@ -1,0 +1,153 @@
+{
+  "id": "s1",
+  "background": {
+    "type": "color",
+    "token": "--bg"
+  },
+  "elements": [
+    {
+      "id": "s1-image",
+      "type": "image",
+      "x": 0,
+      "y": 0,
+      "w": 920,
+      "h": 1080,
+      "z": 1,
+      "src": "public/images/flatlay.webp",
+      "alt": "Tasses de café et grains sur une table en bois",
+      "fit": "cover",
+      "matchKey": "hero-image",
+      "credit": {
+        "source": "pixabay",
+        "author": "AdelinaZw",
+        "url": "https://pixabay.com/photos/coffee-cups-coffee-beans-caffeine-6334106/"
+      }
+    },
+    {
+      "id": "s1-bar",
+      "type": "shape",
+      "x": 1040,
+      "y": 300,
+      "w": 120,
+      "h": 10,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 5,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s1-label",
+      "type": "text",
+      "role": "label",
+      "x": 1040,
+      "y": 336,
+      "w": 740,
+      "h": 48,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Plateforme de marque"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 26,
+        "weight": 600,
+        "color": "--accent",
+        "align": "left",
+        "lineHeight": 1.4,
+        "letterSpacing": 3,
+        "uppercase": true
+      }
+    },
+    {
+      "id": "s1-title",
+      "type": "text",
+      "role": "title",
+      "x": 1040,
+      "y": 396,
+      "w": 740,
+      "h": 300,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Maison Okra"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 120,
+        "weight": 400,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.05,
+        "letterSpacing": -1
+      },
+      "animation": {
+        "type": "mask-reveal",
+        "trigger": "on-enter",
+        "direction": "up",
+        "durationMs": 700
+      }
+    },
+    {
+      "id": "s1-subtitle",
+      "type": "text",
+      "role": "subtitle",
+      "x": 1040,
+      "y": 720,
+      "w": 740,
+      "h": 150,
+      "z": 3,
+      "opacity": 0.86,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Torréfacteur à Marseille depuis 2014. Le café comme un art de recevoir."
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 32,
+        "weight": 400,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.4
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "delayMs": 120,
+        "durationMs": 500
+      }
+    },
+    {
+      "id": "s1-meta",
+      "type": "text",
+      "role": "caption",
+      "x": 1040,
+      "y": 930,
+      "w": 740,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Édition 2027 · Équipe et partenaires"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 500,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      }
+    }
+  ]
+}
