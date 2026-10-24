@@ -49,8 +49,12 @@ export function morphedSourceIds(prev: Pick<Slide, "elements"> | null | undefine
   const ids = new Set<string>();
   if (!prev || !next) return ids;
   const keys = new Set(next.elements.filter((e) => e.matchKey && !e.hidden).map((e) => e.matchKey as string));
+  const taken = new Set<string>();
   for (const element of prev.elements) {
-    if (element.matchKey && keys.has(element.matchKey)) ids.add(element.id);
+    const key = element.matchKey;
+    if (!key || element.hidden || taken.has(key) || !keys.has(key)) continue;
+    taken.add(key);
+    ids.add(element.id);
   }
   return ids;
 }

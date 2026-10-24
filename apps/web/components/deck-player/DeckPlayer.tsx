@@ -251,7 +251,6 @@ export function DeckPlayer({
       channelRef.current = null;
     };
     // The channel lives as long as the deck; state is read through refs.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [name]);
   useEffect(() => {
     channelRef.current?.post({ kind: "state", index: pos.index, step: pos.step, total, screen });

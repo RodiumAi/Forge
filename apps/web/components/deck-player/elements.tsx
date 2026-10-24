@@ -460,7 +460,7 @@ export function videoEmbedUrl(url: string, opts: { autoplay?: boolean; muted?: b
   } else if (host === "youtu.be") {
     id = parsed.pathname.slice(1).split("/")[0] || null;
   }
-  if (id && /^[A-Za-z0-9_-]{6,20}$/.test(id)) {
+  if (id && /^[A-Za-z0-9_-]{1,64}$/.test(id)) {
     const q = params.toString();
     return `https://www.youtube-nocookie.com/embed/${id}${q ? `?${q}` : ""}`;
   }
