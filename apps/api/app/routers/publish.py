@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -9,17 +9,30 @@ from sqlalchemy.orm import Session
 from app.auth import get_current_user
 from app.config import get_settings
 from app.db import get_db
+from app.errors import SitesError
 from app.i18n import resolve_locale, t
+from app.kinds import get_kind
 from app.models import Project, User
 from app.services import rate_limit
 from app.services.domains import get_project_domain, sites_url_for_project
 from app.services.export_project import build_export_zip
+from app.services.exports.deck_publish import publish_deck
+from app.services.exports.gating import show_badge
 from app.services.project_access import accessible_project
 from app.services.publish_esm import publish_design_system_site, publish_project_esm
 
 router = APIRouter(prefix="/projects", tags=["publish"])
 PUBLISH_LIMIT_PER_HOUR = 20
 PUBLISH_IP_LIMIT_PER_HOUR = 60
+
+
+class PublishOptions(BaseModel):
+    """Options of a slides publication (ignored for web and mobile sites)."""
+
+    #: Share the speaker notes on the published presenter view (default: hidden).
+    notes: bool = False
+    #: Keep the "Made with Forge" badge; only plans that may remove it can say no.
+    badge: bool | None = None
 
 
 class PublishResponse(BaseModel):
@@ -60,6 +73,7 @@ def publish_status(
 async def publish_now(
     project_id: UUID,
     request: Request,
+    options: PublishOptions | None = Body(default=None),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> PublishResponse:
@@ -83,15 +97,33 @@ async def publish_now(
     # Canonical URLs, sitemap and og:url point at the address visitors use: the
     # validated custom domain when there is one, else the slug subdomain.
     site_url = sites_url_for_project(get_settings(), project, get_project_domain(db, project.id))
-    from app.kinds import get_kind
-
     kind = get_kind(project.platform)
     try:
-        if kind is not None and kind.publish == "design_system_site":
-            from app.services.design_system.exports import show_badge
-
+        if kind is not None and kind.publish == "deck_player":
+            # Slides: the fixed Forge player plus the deck's documents and images.
+            opts = options or PublishOptions()
+            result = await publish_deck(
+                str(project.id),
+                project.slug,
+                title=project.name or "Presentation",
+                lang=locale,
+                badge=show_badge(db, user, opts.badge),
+                notes=opts.notes,
+                site_url=site_url,
+            )
+        elif kind is not None and kind.publish == "design_system_site":
+            # Design system: the brand guidelines page built from the tokens.
+            opts = options or PublishOptions()
             result = await publish_design_system_site(
-                str(project.id), project.slug, site_url=site_url, lang=locale, badge=show_badge(db, user)
+                str(project.id),
+                project.slug,
+                site_url=site_url,
+                lang=locale,
+                badge=show_badge(db, user, opts.badge),
+            )
+        elif kind is not None and kind.engine == "document":
+            raise SitesError(
+                409, "PUBLISH_NOT_AVAILABLE", "Publishing this project type is not available yet."
             )
         else:
             result = await publish_project_esm(
@@ -104,6 +136,8 @@ async def publish_now(
                 # Starting guess only: the published language is detected from the page text.
                 lang=locale,
             )
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)[:2000]) from exc
 

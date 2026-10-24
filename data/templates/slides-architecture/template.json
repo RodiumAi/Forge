@@ -1,0 +1,49 @@
+{
+  "kind": "slides",
+  "id": "slides-architecture",
+  "title": {
+    "fr": "Architecture technique",
+    "en": "Architecture overview"
+  },
+  "description": {
+    "fr": "Revue d'architecture sombre façon plan technique : limites de l'existant, schéma d'événements en code, avant et après, latences, composants et plan de migration.",
+    "en": "Dark, blueprint-style architecture review: current limits, event schema as code, before and after, latencies, components and migration plan."
+  },
+  "tags": [
+    "tech",
+    "architecture",
+    "engineering",
+    "dark"
+  ],
+  "category": "tech",
+  "preview": "preview.html",
+  "bootHint": {
+    "fr": "Adapte slides-architecture : système, composants, extrait de code ou de schéma, chiffres de performance, étapes de migration.",
+    "en": "Adapt slides-architecture: system, components, code or schema excerpt, performance figures, migration steps."
+  },
+  "accent": "#FFB454",
+  "bg": "#0F1419",
+  "fg": "#E6E1CF",
+  "muted": "#9A9583",
+  "tone": "precise, structured, pragmatic",
+  "fonts": {
+    "display": "Space Grotesk",
+    "body": "IBM Plex Sans",
+    "mono": "JetBrains Mono"
+  },
+  "transitionPreset": "sober",
+  "layouts": {
+    "title": "s1",
+    "section": "s2",
+    "text": "s3",
+    "two-columns": "s4",
+    "image-text": "s5",
+    "quote": "s6",
+    "key-figures": "s7",
+    "chart": "s8",
+    "table": "s9",
+    "team": "s10",
+    "timeline": "s11",
+    "thank-you": "s12"
+  }
+}

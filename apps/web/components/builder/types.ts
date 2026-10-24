@@ -8,12 +8,16 @@ export type ElementSelection = {
   className: string | null;
   selector: string;
   text: string;
+  /** `data-forge-id` of the element (`<file>:<line>:<col>`), when the preview tagged it. */
+  forgeId?: string | null;
 };
 
 export type ImageSelection = {
   src: string;
   alt: string;
   selector: string;
+  /** `data-forge-id` of the selected <img>: pins the replacement to it. */
+  forgeId?: string | null;
 };
 
 export type FileNode = {

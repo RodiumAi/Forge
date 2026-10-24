@@ -54,13 +54,10 @@ def require_export(db: Session, user: User, fmt: str) -> None:
 
 
 def show_badge(db: Session, user: User) -> bool:
-    """The "Made with Forge" badge stays unless the plan has ``remove_badge``."""
-    from app.services.entitlements import entitlements_apply, get_entitlements
+    """The "Made with Forge" badge, same rule as the decks (``exports.gating``)."""
+    from app.services.exports.gating import show_badge as gating_badge
 
-    if not entitlements_apply(user):
-        return False
-    row = get_entitlements(db, user)
-    return not bool(row is not None and row.remove_badge)
+    return gating_badge(db, user, None)
 
 
 def _slug(name: str) -> str:

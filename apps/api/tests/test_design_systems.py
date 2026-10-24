@@ -448,3 +448,28 @@ def test_logo_upload_refuses_svg_and_non_images(env):
         ).status_code
         == 400
     )
+
+
+def test_publish_sends_a_design_system_to_the_brand_site(env, monkeypatch):
+    from app.routers import publish as publish_router
+    from app.services.exports import gating
+
+    alice = env.user("alice")
+    alice.email_verified_at = datetime.now(UTC)
+    ds = env.project(alice, "design_system", "Acme")
+    seen = {}
+
+    async def fake_publish(pid, slug, **kwargs):
+        seen.update(pid=pid, slug=slug, **kwargs)
+        return {"files_uploaded": 3}
+
+    monkeypatch.setattr(publish_router, "publish_design_system_site", fake_publish)
+    monkeypatch.setattr(publish_router, "get_project_domain", lambda _db, _pid: None)
+    monkeypatch.setattr(gating, "entitlements_apply", lambda _u: False)
+    app = FastAPI()
+    app.include_router(publish_router.router)
+    app.dependency_overrides[get_current_user] = lambda: alice
+    app.dependency_overrides[get_db] = lambda: env.Session()
+    r = TestClient(app).post(f"/projects/{ds.id}/publish")
+    assert r.status_code == 200, r.text
+    assert seen["pid"] == str(ds.id) and seen["badge"] is False

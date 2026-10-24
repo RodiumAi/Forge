@@ -1,0 +1,49 @@
+{
+  "kind": "slides",
+  "id": "slides-post-mortem",
+  "title": {
+    "fr": "Post-mortem",
+    "en": "Incident post-mortem"
+  },
+  "description": {
+    "fr": "Post-mortem d'incident sobre et sans blâme : impact, chronologie minute par minute, cause racine avec extrait de journal, mesures, et plan d'actions daté.",
+    "en": "Sober, blameless incident post-mortem: impact, minute by minute timeline, root cause with a log excerpt, metrics and a dated action plan."
+  },
+  "tags": [
+    "tech",
+    "incident",
+    "sre",
+    "dark"
+  ],
+  "category": "tech",
+  "preview": "preview.html",
+  "bootHint": {
+    "fr": "Adapte slides-post-mortem : incident, sévérité, chronologie, cause racine, actions et responsables.",
+    "en": "Adapt slides-post-mortem: incident, severity, timeline, root cause, actions and owners."
+  },
+  "accent": "#FF5F56",
+  "bg": "#121212",
+  "fg": "#EDEDED",
+  "muted": "#9E9E9E",
+  "tone": "factual, blameless, precise",
+  "fonts": {
+    "display": "IBM Plex Sans",
+    "body": "IBM Plex Sans",
+    "mono": "IBM Plex Mono"
+  },
+  "transitionPreset": "sober",
+  "layouts": {
+    "title": "s1",
+    "section": "s2",
+    "text": "s3",
+    "two-columns": "s4",
+    "image-text": "s5",
+    "quote": "s6",
+    "key-figures": "s7",
+    "chart": "s8",
+    "table": "s9",
+    "team": "s10",
+    "timeline": "s11",
+    "thank-you": "s12"
+  }
+}

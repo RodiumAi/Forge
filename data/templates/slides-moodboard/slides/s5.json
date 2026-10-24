@@ -1,0 +1,246 @@
+{
+  "id": "s5",
+  "background": {
+    "type": "color",
+    "token": "--bg"
+  },
+  "elements": [
+    {
+      "id": "s5-image",
+      "type": "image",
+      "x": 80,
+      "y": 80,
+      "w": 520,
+      "h": 920,
+      "z": 1,
+      "src": "public/images/paper.webp",
+      "alt": "Papier kraft brut",
+      "fit": "cover",
+      "matchKey": "hero-image",
+      "credit": {
+        "source": "pixabay",
+        "author": "566547",
+        "url": "https://pixabay.com/photos/recycling-paper-background-texture-520423/"
+      },
+      "radius": 2
+    },
+    {
+      "id": "s5-bar",
+      "type": "shape",
+      "x": 1040,
+      "y": 180,
+      "w": 80,
+      "h": 8,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 4,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s5-kicker",
+      "type": "text",
+      "role": "label",
+      "x": 1040,
+      "y": 206,
+      "w": 740,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Textures"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 600,
+        "color": "--accent",
+        "align": "left",
+        "lineHeight": 1.4,
+        "letterSpacing": 3,
+        "uppercase": true
+      }
+    },
+    {
+      "id": "s5-heading",
+      "type": "text",
+      "role": "heading",
+      "x": 1040,
+      "y": 256,
+      "w": 740,
+      "h": 210,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Le kraft, l'argile, la toile"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 60,
+        "weight": 500,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.1
+      },
+      "animation": {
+        "type": "mask-reveal",
+        "trigger": "on-enter",
+        "direction": "up",
+        "durationMs": 700
+      }
+    },
+    {
+      "id": "s5-body",
+      "type": "text",
+      "role": "body",
+      "x": 1040,
+      "y": 490,
+      "w": 740,
+      "h": 180,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Les surfaces mates et un peu irrégulières guident l'emballage, les étiquettes et la mise en scène en boutique."
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 30,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.5
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "delayMs": 120,
+        "durationMs": 500
+      }
+    },
+    {
+      "id": "s5-list",
+      "type": "text",
+      "role": "body",
+      "x": 1040,
+      "y": 690,
+      "w": 740,
+      "h": 250,
+      "z": 3,
+      "content": [
+        {
+          "type": "bullet-list",
+          "items": [
+            {
+              "text": "Étiquettes en kraft non blanchi"
+            },
+            {
+              "text": "Boîtes sans plastique"
+            },
+            {
+              "text": "Présentoirs en chêne brut"
+            }
+          ]
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 28,
+        "weight": 400,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.55
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "delayMs": 120,
+        "durationMs": 500
+      }
+    },
+    {
+      "id": "s5-page",
+      "type": "text",
+      "role": "caption",
+      "x": 1660,
+      "y": 1000,
+      "w": 120,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "05"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "right",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s5-image2",
+      "type": "image",
+      "x": 620,
+      "y": 80,
+      "w": 300,
+      "h": 450,
+      "z": 1,
+      "src": "public/images/ceramic.webp",
+      "alt": "Poteries en terre cuite empilées",
+      "fit": "cover",
+      "radius": 2,
+      "credit": {
+        "source": "pixabay",
+        "author": "Pexels",
+        "url": "https://pixabay.com/photos/ancient-pottery-pots-clay-antique-2179091/"
+      }
+    },
+    {
+      "id": "s5-swatch",
+      "type": "shape",
+      "x": 620,
+      "y": 550,
+      "w": 300,
+      "h": 450,
+      "z": 1,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 2
+    },
+    {
+      "id": "s5-swatchlabel",
+      "type": "text",
+      "role": "caption",
+      "x": 650,
+      "y": 900,
+      "w": 240,
+      "h": 70,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Argile #9C6644"
+        }
+      ],
+      "style": {
+        "font": "mono",
+        "size": 22,
+        "weight": 400,
+        "color": "--accent-contrast",
+        "align": "left",
+        "lineHeight": 1.4
+      }
+    }
+  ]
+}
