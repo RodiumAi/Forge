@@ -55,6 +55,10 @@ jobs:
         working-directory: apps/api/runtime
         run: npm ci
 
+      - name: Install deck runtime (player bundle, PPTX)
+        working-directory: apps/api/runtime/deck
+        run: npm ci
+
       - name: Ruff lint
         run: ruff check app tests
 
@@ -124,6 +128,12 @@ jobs:
         run: |
           npm ci
           npm test --if-present
+
+      - name: Deck runtime tests (player bundle, PPTX mapping)
+        working-directory: apps/api/runtime/deck
+        run: |
+          npm ci
+          npm test
 
       - name: Import map and AST allowlist must agree
         run: python infra/ci/check_manifest_parity.py
