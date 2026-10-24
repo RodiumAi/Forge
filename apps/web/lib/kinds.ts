@@ -62,6 +62,12 @@ export function getKind(id: ProjectKindId): ProjectKind {
   return PROJECT_KINDS.find((kind) => kind.id === id) ?? PROJECT_KINDS[0];
 }
 
+/** Route of the editor of a project: the builder, or the document editor of its kind. */
+export function editorHref(projectId: string, platform: unknown): string {
+  const kind = getKind(normalizeKind(platform));
+  return kind.editor === "deck" ? `/projects/${projectId}/deck` : `/projects/${projectId}`;
+}
+
 export function isReactKind(id: unknown): boolean {
   return isKindId(id) && getKind(id).engine === "react";
 }

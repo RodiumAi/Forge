@@ -108,7 +108,7 @@ import {
   type ChatStreamState,
 } from "@/lib/chat-stream";
 import { failedTasksFromPlan, isPlanStopped, isResumableRunStatus } from "@/lib/plan-resume";
-import { isReactKind, type ProjectKindId } from "@/lib/kinds";
+import { editorHref, isReactKind, type ProjectKindId } from "@/lib/kinds";
 import { buildChatTarget, forgeIdLabel, scopeRefusedPaths, type ChatTarget } from "@/lib/edit-target";
 
 type Project = {
@@ -829,6 +829,12 @@ export default function ProjectPage() {
 
     const p = await api<Project>(`/projects/${projectId}`);
     if (streamAbortRef.current || streamingRunIdRef.current) return;
+    // Document kinds with their own editor (slides: the deck editor) never open the builder.
+    const ownEditor = editorHref(projectId, p.platform);
+    if (ownEditor !== `/projects/${projectId}`) {
+      router.replace(ownEditor);
+      return;
+    }
     setProject(p);
     if (p.platform === "mobile") {
       setViewport((current) => {
@@ -953,7 +959,7 @@ export default function ProjectPage() {
     if (streamAbortRef.current || streamingRunIdRef.current) return;
     if (status.running && status.url) setPreviewUrl(status.url);
     void refreshRoutes();
-  }, [projectId, t, refreshRoutes, setPreviewUrl, syncBuilderUrl]);
+  }, [projectId, t, refreshRoutes, setPreviewUrl, syncBuilderUrl, router]);
 
   const pushChatError = useCallback(
     (
