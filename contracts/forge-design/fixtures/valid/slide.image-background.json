@@ -1,0 +1,14 @@
+{
+  "id": "s3",
+  "background": {
+    "type": "image",
+    "src": "public/images/bg.webp",
+    "fit": "cover",
+    "overlay": "--bg",
+    "overlayOpacity": 0.4,
+    "credit": {
+      "source": "generated"
+    }
+  },
+  "elements": []
+}

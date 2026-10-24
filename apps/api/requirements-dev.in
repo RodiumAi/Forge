@@ -3,3 +3,5 @@
 ruff>=0.16.4,<1
 pytest>=9.1.1,<10
 pytest-asyncio>=1.0,<2
+# Contract tests validate fixtures against the shared JSON Schemas.
+jsonschema>=4.23,<5

@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "format": {
+    "ratio": "1:1",
+    "width": 1080,
+    "height": 1080
+  },
+  "theme": {
+    "designSystem": "local",
+    "tokens": "DESIGN.md"
+  },
+  "slides": []
+}

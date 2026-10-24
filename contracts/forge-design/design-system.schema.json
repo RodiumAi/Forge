@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge.rodiumai.io/contracts/forge-design/design-system.schema.json",
+  "title": "Forge design system",
+  "description": "design-system.json of a `design_system` project. `tokens` follows the W3C Design Tokens format (groups of tokens, each token an object with `$value`, optional `$type` and `$description`). Token paths become CSS custom properties: color.<name> is --<name>, any other group is --<group>-<name>. DESIGN.md is generated from this file. Version 1.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "name", "tokens"],
+  "properties": {
+    "version": { "const": 1 },
+    "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "description": { "type": "string", "maxLength": 2000 },
+    "tokens": {
+      "allOf": [{ "$ref": "#/$defs/group" }],
+      "required": ["color", "font"]
+    },
+    "logo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["src"],
+      "properties": {
+        "src": { "$ref": "#/$defs/assetPath" },
+        "darkSrc": { "$ref": "#/$defs/assetPath" },
+        "minSizePx": { "type": "integer", "minimum": 8, "maximum": 2000 },
+        "clearSpace": { "type": "string", "maxLength": 200 },
+        "usage": { "$ref": "#/$defs/lines" }
+      }
+    },
+    "voice": { "$ref": "#/$defs/guidance" },
+    "imagery": { "$ref": "#/$defs/guidance" },
+    "guidelines": { "$ref": "#/$defs/guidance" },
+    "components": {
+      "description": "Components shown in the showcase, in display order.",
+      "type": "array",
+      "maxItems": 20,
+      "items": { "enum": ["button", "input", "card", "badge", "alert", "table"] }
+    }
+  },
+  "$defs": {
+    "name": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"
+    },
+    "assetPath": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 400,
+      "pattern": "^(?!.*\\.\\.)(?!/)[A-Za-z0-9_./-]+$"
+    },
+    "lines": {
+      "type": "array",
+      "maxItems": 40,
+      "items": { "type": "string", "minLength": 1, "maxLength": 400 }
+    },
+    "guidance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "summary": { "type": "string", "maxLength": 2000 },
+        "do": { "$ref": "#/$defs/lines" },
+        "dont": { "$ref": "#/$defs/lines" }
+      }
+    },
+    "tokenType": {
+      "enum": [
+        "color",
+        "dimension",
+        "fontFamily",
+        "fontWeight",
+        "duration",
+        "cubicBezier",
+        "number",
+        "shadow",
+        "border",
+        "gradient",
+        "typography",
+        "transition",
+        "strokeStyle"
+      ]
+    },
+    "token": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["$value"],
+      "properties": {
+        "$value": {
+          "type": ["string", "number", "array", "object"]
+        },
+        "$type": { "$ref": "#/$defs/tokenType" },
+        "$description": { "type": "string", "maxLength": 500 },
+        "$extensions": { "type": "object" }
+      }
+    },
+    "group": {
+      "type": "object",
+      "not": { "required": ["$value"] },
+      "properties": {
+        "$type": { "$ref": "#/$defs/tokenType" },
+        "$description": { "type": "string", "maxLength": 500 }
+      },
+      "patternProperties": {
+        "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$": {
+          "anyOf": [{ "$ref": "#/$defs/token" }, { "$ref": "#/$defs/group" }]
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

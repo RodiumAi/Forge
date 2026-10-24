@@ -1,0 +1,294 @@
+{
+  "id": "s2",
+  "background": {
+    "type": "gradient",
+    "angle": 135,
+    "stops": [
+      {
+        "color": "--bg",
+        "at": 0
+      },
+      {
+        "color": "#101828",
+        "at": 1
+      }
+    ]
+  },
+  "elements": [
+    {
+      "id": "title",
+      "type": "text",
+      "role": "title",
+      "x": 160,
+      "y": 120,
+      "w": 1600,
+      "h": 160,
+      "rotation": 0,
+      "z": 2,
+      "matchKey": "headline",
+      "content": [
+        {
+          "type": "paragraph",
+          "runs": [
+            {
+              "text": "Rapport ",
+              "bold": true
+            },
+            {
+              "text": "annuel",
+              "italic": true,
+              "color": "--accent"
+            }
+          ]
+        },
+        {
+          "type": "bullet-list",
+          "items": [
+            {
+              "text": "Croissance"
+            },
+            {
+              "text": "Equipe",
+              "level": 1
+            }
+          ]
+        },
+        {
+          "type": "ordered-list",
+          "items": [
+            {
+              "runs": [
+                {
+                  "text": "Docs",
+                  "link": "https://example.com"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 72,
+        "weight": 700,
+        "color": "--fg",
+        "align": "center",
+        "valign": "middle",
+        "lineHeight": 1.1,
+        "letterSpacing": -1,
+        "uppercase": false
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "on-click",
+        "delayMs": 0,
+        "durationMs": 400,
+        "order": 1
+      }
+    },
+    {
+      "id": "hero",
+      "type": "image",
+      "x": 1100,
+      "y": 0,
+      "w": 820,
+      "h": 1080,
+      "src": "public/images/hero.webp",
+      "fit": "cover",
+      "alt": "Hero",
+      "radius": 12,
+      "crop": {
+        "x": 0,
+        "y": 0.1,
+        "w": 1,
+        "h": 0.8
+      },
+      "credit": {
+        "source": "pixabay",
+        "author": "Jane Doe",
+        "url": "https://pixabay.com/photos/123"
+      },
+      "animation": {
+        "type": "mask-reveal",
+        "trigger": "after-previous",
+        "direction": "left"
+      }
+    },
+    {
+      "id": "box",
+      "type": "shape",
+      "shape": "rect",
+      "fill": "--surface",
+      "stroke": "#E5E7EB",
+      "strokeWidth": 2,
+      "radius": 16,
+      "x": 0,
+      "y": 0,
+      "w": 100,
+      "h": 100,
+      "opacity": 0.8,
+      "locked": true
+    },
+    {
+      "id": "arrow",
+      "type": "shape",
+      "shape": "arrow",
+      "stroke": "--accent",
+      "strokeWidth": 4,
+      "x": 0,
+      "y": 0,
+      "w": 100,
+      "h": 100
+    },
+    {
+      "id": "ico",
+      "type": "icon",
+      "icon": "trending-up",
+      "color": "--accent",
+      "strokeWidth": 2,
+      "x": 0,
+      "y": 0,
+      "w": 100,
+      "h": 100
+    },
+    {
+      "id": "tbl",
+      "type": "table",
+      "x": 0,
+      "y": 0,
+      "w": 800,
+      "h": 300,
+      "headerRow": true,
+      "columnWidths": [
+        2,
+        1
+      ],
+      "rows": [
+        [
+          {
+            "text": "Region"
+          },
+          {
+            "text": "CA"
+          }
+        ],
+        [
+          {
+            "text": "Europe"
+          },
+          {
+            "runs": [
+              {
+                "text": "12 M",
+                "bold": true
+              }
+            ]
+          }
+        ]
+      ],
+      "style": {
+        "size": 24,
+        "color": "--fg",
+        "headerFill": "--surface",
+        "border": "--border"
+      }
+    },
+    {
+      "id": "chart",
+      "type": "chart",
+      "chart": "bar",
+      "x": 0,
+      "y": 0,
+      "w": 900,
+      "h": 500,
+      "data": {
+        "labels": [
+          "2024",
+          "2025",
+          "2026"
+        ],
+        "series": [
+          {
+            "name": "CA",
+            "values": [
+              1.2,
+              2.5,
+              4
+            ],
+            "color": "--accent"
+          }
+        ]
+      },
+      "options": {
+        "stacked": false,
+        "legend": true,
+        "values": true
+      }
+    },
+    {
+      "id": "vid",
+      "type": "video",
+      "url": "https://www.youtube.com/watch?v=abc",
+      "poster": "public/images/poster.webp",
+      "autoplay": false,
+      "muted": true,
+      "x": 0,
+      "y": 0,
+      "w": 100,
+      "h": 100
+    },
+    {
+      "id": "code",
+      "type": "code",
+      "language": "python",
+      "code": "print('hi')\n",
+      "lineNumbers": true,
+      "highlight": "1,3-5",
+      "size": 20,
+      "x": 0,
+      "y": 0,
+      "w": 100,
+      "h": 100
+    },
+    {
+      "id": "grp",
+      "type": "group",
+      "x": 0,
+      "y": 0,
+      "w": 100,
+      "h": 100,
+      "hidden": false,
+      "children": [
+        {
+          "id": "grp-a",
+          "type": "shape",
+          "shape": "ellipse",
+          "fill": "#fff",
+          "x": 0,
+          "y": 0,
+          "w": 100,
+          "h": 100
+        },
+        {
+          "id": "grp-b",
+          "type": "group",
+          "x": 0,
+          "y": 0,
+          "w": 100,
+          "h": 100,
+          "children": [
+            {
+              "id": "grp-c",
+              "type": "icon",
+              "icon": "star",
+              "x": 0,
+              "y": 0,
+              "w": 100,
+              "h": 100
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
