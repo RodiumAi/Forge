@@ -274,6 +274,62 @@ def patch_slide_element(
     return _respond(pid, relative, slide)
 
 
+# ── Speaker notes ──────────────────────────────────────────────────────────
+
+MAX_NOTES_CHARS = 20_000
+
+
+class NotesMarkdown(BaseModel):
+    markdown: str = Field(max_length=MAX_NOTES_CHARS)
+
+
+def _notes_response(pid: str, slide_id: str, relative: str, markdown: str) -> JSONResponse:
+    return JSONResponse(
+        content={"id": slide_id, "file": relative, "markdown": markdown},
+        headers={"ETag": f'"{content_version(pid, relative)}"', "Cache-Control": "no-store"},
+    )
+
+
+@router.get("/{project_id}/notes/{slide_id}")
+def get_notes(
+    project_id: UUID,
+    slide_id: str,
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    """Speaker notes of a slide (``notes/<id>.md``); empty when none were written."""
+    _document_project(db, user, project_id, request, "slides")
+    pid = str(project_id)
+    _slide_path(pid, slide_id)
+    relative = f"notes/{slide_id}.md"
+    try:
+        markdown = read_file(pid, relative)
+    except FileNotFoundError:
+        markdown = ""
+    return _notes_response(pid, slide_id, relative, markdown)
+
+
+@router.put("/{project_id}/notes/{slide_id}")
+def put_notes(
+    project_id: UUID,
+    slide_id: str,
+    request: Request,
+    body: NotesMarkdown,
+    if_match: str | None = Header(default=None),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    _document_project(db, user, project_id, request, "slides", require_edit=True)
+    pid = str(project_id)
+    _slide_path(pid, slide_id)
+    relative = f"notes/{slide_id}.md"
+    _check_version(pid, relative, if_match)
+    _checkpoint(pid, "before notes edit")
+    write_file(pid, relative, body.markdown)
+    return _notes_response(pid, slide_id, relative, body.markdown)
+
+
 # ── Codelab ────────────────────────────────────────────────────────────────
 
 
