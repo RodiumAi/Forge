@@ -1,0 +1,586 @@
+{
+  "id": "s8",
+  "background": {
+    "type": "color",
+    "token": "--bg"
+  },
+  "elements": [
+    {
+      "id": "s8-pthz0",
+      "type": "shape",
+      "x": -40,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s8-pthz1",
+      "type": "shape",
+      "x": 40,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent-2",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s8-pthz2",
+      "type": "shape",
+      "x": 120,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s8-pthz3",
+      "type": "shape",
+      "x": 200,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent-2",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s8-pthz4",
+      "type": "shape",
+      "x": 280,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s8-pthz5",
+      "type": "shape",
+      "x": 360,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent-2",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s8-pthz6",
+      "type": "shape",
+      "x": 440,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s8-pthz7",
+      "type": "shape",
+      "x": 520,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent-2",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s8-pthz8",
+      "type": "shape",
+      "x": 600,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s8-pthz9",
+      "type": "shape",
+      "x": 680,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent-2",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s8-pthz10",
+      "type": "shape",
+      "x": 760,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s8-pthz11",
+      "type": "shape",
+      "x": 840,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent-2",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s8-pthz12",
+      "type": "shape",
+      "x": 920,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s8-pthz13",
+      "type": "shape",
+      "x": 1000,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent-2",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s8-pthz14",
+      "type": "shape",
+      "x": 1080,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s8-pthz15",
+      "type": "shape",
+      "x": 1160,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent-2",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s8-pthz16",
+      "type": "shape",
+      "x": 1240,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s8-pthz17",
+      "type": "shape",
+      "x": 1320,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent-2",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s8-pthz18",
+      "type": "shape",
+      "x": 1400,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s8-pthz19",
+      "type": "shape",
+      "x": 1480,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent-2",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s8-pthz20",
+      "type": "shape",
+      "x": 1560,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s8-pthz21",
+      "type": "shape",
+      "x": 1640,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent-2",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s8-pthz22",
+      "type": "shape",
+      "x": 1720,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s8-pthz23",
+      "type": "shape",
+      "x": 1800,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent-2",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s8-pthz24",
+      "type": "shape",
+      "x": 1880,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s8-pthz25",
+      "type": "shape",
+      "x": 1960,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent-2",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s8-pthzline",
+      "type": "shape",
+      "x": 0,
+      "y": 26,
+      "w": 1920,
+      "h": 2,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border"
+    },
+    {
+      "id": "s8-bar",
+      "type": "shape",
+      "x": 140,
+      "y": 102,
+      "w": 404,
+      "h": 54,
+      "z": 2,
+      "shape": "rect",
+      "fill": "#0000",
+      "radius": 6,
+      "matchKey": "accent-bar",
+      "stroke": "--accent",
+      "strokeWidth": 2
+    },
+    {
+      "id": "s8-kicker",
+      "type": "text",
+      "role": "label",
+      "x": 168,
+      "y": 108,
+      "w": 600,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Pendant l'incident"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 600,
+        "color": "--accent",
+        "align": "left",
+        "lineHeight": 1.4,
+        "letterSpacing": 3,
+        "uppercase": true
+      }
+    },
+    {
+      "id": "s8-heading",
+      "type": "text",
+      "role": "heading",
+      "x": 140,
+      "y": 184,
+      "w": 1640,
+      "h": 140,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Taux de succès des paiements (%)"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 64,
+        "weight": 600,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.1
+      }
+    },
+    {
+      "id": "s8-chart",
+      "type": "chart",
+      "x": 140,
+      "y": 350,
+      "w": 1080,
+      "h": 600,
+      "z": 2,
+      "chart": "line",
+      "data": {
+        "labels": [
+          "19h50",
+          "20h00",
+          "20h10",
+          "20h20",
+          "20h30",
+          "20h40",
+          "20h50",
+          "21h00"
+        ],
+        "series": [
+          {
+            "name": "Succès",
+            "values": [
+              99,
+              97,
+              41,
+              52,
+              58,
+              61,
+              63,
+              99
+            ],
+            "color": "--accent"
+          }
+        ]
+      },
+      "options": {
+        "legend": false,
+        "values": false
+      }
+    },
+    {
+      "id": "s8-icon",
+      "type": "icon",
+      "x": 1320,
+      "y": 380,
+      "w": 56,
+      "h": 56,
+      "z": 3,
+      "icon": "activity",
+      "color": "--accent",
+      "strokeWidth": 1.75
+    },
+    {
+      "id": "s8-takeaway",
+      "type": "text",
+      "role": "heading",
+      "x": 1320,
+      "y": 460,
+      "w": 460,
+      "h": 130,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Chute à 41 %, remontée à 61 %"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 40,
+        "weight": 600,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.2
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 1
+      }
+    },
+    {
+      "id": "s8-comment",
+      "type": "text",
+      "role": "body",
+      "x": 1320,
+      "y": 610,
+      "w": 460,
+      "h": 300,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "La remontée à partir de 20 h 15 correspond à la bascule manuelle vers le second prestataire."
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 26,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.5
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 2
+      }
+    },
+    {
+      "id": "s8-footer",
+      "type": "text",
+      "role": "caption",
+      "x": 140,
+      "y": 1000,
+      "w": 1100,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Payvia · Post-mortem INC-2026-1003 · Sans blâme"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s8-page",
+      "type": "text",
+      "role": "caption",
+      "x": 1660,
+      "y": 1000,
+      "w": 120,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "08"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "right",
+        "lineHeight": 1.4
+      }
+    }
+  ]
+}

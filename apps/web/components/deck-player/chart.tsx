@@ -12,10 +12,17 @@ type ChartElement = Extract<SlideElement, { type: "chart" }>;
 
 const PALETTE_FALLBACK = ["#F2620A", "#3B82F6", "#10B981", "#A855F7", "#F59E0B", "#EF4444", "#14B8A6", "#EC4899", "#6366F1", "#84CC16", "#0EA5E9", "#F97316"];
 
+const THEME_SERIES = ["--accent-2", "--muted", "--fg", "--border"];
+
 export function seriesColor(index: number, ref: string | undefined): string {
   if (ref) return colorRef(ref);
-  if (index === 0) return `var(--accent, ${PALETTE_FALLBACK[0]})`;
-  return `var(--chart-${index + 1}, ${PALETTE_FALLBACK[index % PALETTE_FALLBACK.length]})`;
+  const fallback = PALETTE_FALLBACK[index % PALETTE_FALLBACK.length];
+  if (index === 0) return `var(--accent, ${fallback})`;
+  // Stay inside the deck theme first, then a neutral palette.
+  const theme = THEME_SERIES[index - 1];
+  return theme
+    ? `var(--chart-${index + 1}, var(${theme}, ${fallback}))`
+    : `var(--chart-${index + 1}, ${fallback})`;
 }
 
 function formatValue(value: number): string {

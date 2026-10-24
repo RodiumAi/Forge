@@ -1,0 +1,49 @@
+{
+  "kind": "slides",
+  "id": "slides-visual-resume",
+  "title": {
+    "fr": "CV visuel",
+    "en": "Visual resume"
+  },
+  "description": {
+    "fr": "CV visuel élégant et aéré : photo d'ambiance en médaillon, apports, parcours, compétences en graphique, expériences en tableau et références.",
+    "en": "Elegant, airy visual resume: round mood photo, strengths, career path, skills chart, experience table and references."
+  },
+  "tags": [
+    "resume",
+    "personal",
+    "career",
+    "light"
+  ],
+  "category": "creative",
+  "preview": "preview.html",
+  "bootHint": {
+    "fr": "Adapte slides-visual-resume : nom, métier, parcours, compétences, expériences et contacts.",
+    "en": "Adapt slides-visual-resume: name, job, career path, skills, experience and contacts."
+  },
+  "accent": "#2563EB",
+  "bg": "#FFFFFF",
+  "fg": "#18181B",
+  "muted": "#61616B",
+  "tone": "confident, warm, concise",
+  "fonts": {
+    "display": "Urbanist",
+    "body": "Urbanist",
+    "mono": "JetBrains Mono"
+  },
+  "transitionPreset": "elegant",
+  "layouts": {
+    "title": "s1",
+    "section": "s2",
+    "text": "s3",
+    "two-columns": "s4",
+    "image-text": "s5",
+    "quote": "s6",
+    "key-figures": "s7",
+    "chart": "s8",
+    "table": "s9",
+    "team": "s10",
+    "timeline": "s11",
+    "thank-you": "s12"
+  }
+}

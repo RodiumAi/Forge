@@ -1,0 +1,262 @@
+{
+  "id": "s8",
+  "background": {
+    "type": "color",
+    "token": "--bg"
+  },
+  "elements": [
+    {
+      "id": "s8-bar",
+      "type": "shape",
+      "x": 140,
+      "y": 96,
+      "w": 1640,
+      "h": 5,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--fg",
+      "radius": 0,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s8-kicker",
+      "type": "text",
+      "role": "label",
+      "x": 140,
+      "y": 124,
+      "w": 1200,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Support"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 600,
+        "color": "--accent",
+        "align": "left",
+        "lineHeight": 1.4,
+        "letterSpacing": 3,
+        "uppercase": true
+      }
+    },
+    {
+      "id": "s8-heading",
+      "type": "text",
+      "role": "heading",
+      "x": 140,
+      "y": 172,
+      "w": 1640,
+      "h": 140,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Support principal selon l'âge (%)"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 64,
+        "weight": 500,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.1
+      },
+      "animation": {
+        "type": "mask-reveal",
+        "trigger": "on-enter",
+        "direction": "up",
+        "durationMs": 700
+      }
+    },
+    {
+      "id": "s8-chart",
+      "type": "chart",
+      "x": 140,
+      "y": 350,
+      "w": 1080,
+      "h": 600,
+      "z": 2,
+      "chart": "bar",
+      "data": {
+        "labels": [
+          "15 à 24 ans",
+          "25 à 39 ans",
+          "40 à 59 ans",
+          "60 ans et plus"
+        ],
+        "series": [
+          {
+            "name": "Papier",
+            "values": [
+              61,
+              52,
+              63,
+              78
+            ],
+            "color": "--accent"
+          },
+          {
+            "name": "Numérique",
+            "values": [
+              39,
+              48,
+              37,
+              22
+            ],
+            "color": "--accent-2"
+          }
+        ]
+      },
+      "options": {
+        "legend": true,
+        "values": true
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "delayMs": 120,
+        "durationMs": 500
+      }
+    },
+    {
+      "id": "s8-icon",
+      "type": "icon",
+      "x": 1320,
+      "y": 380,
+      "w": 56,
+      "h": 56,
+      "z": 3,
+      "icon": "library",
+      "color": "--accent",
+      "strokeWidth": 1.75
+    },
+    {
+      "id": "s8-takeaway",
+      "type": "text",
+      "role": "heading",
+      "x": 1320,
+      "y": 460,
+      "w": 460,
+      "h": 130,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Les plus jeunes lisent sur papier"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 40,
+        "weight": 500,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.2
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "delayMs": 80,
+        "durationMs": 400,
+        "order": 1
+      }
+    },
+    {
+      "id": "s8-comment",
+      "type": "text",
+      "role": "body",
+      "x": 1320,
+      "y": 610,
+      "w": 460,
+      "h": 300,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Le numérique domine seulement chez les 25 à 39 ans, en lien avec les trajets quotidiens."
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 26,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.5
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "delayMs": 80,
+        "durationMs": 400,
+        "order": 2
+      }
+    },
+    {
+      "id": "s8-footer",
+      "type": "text",
+      "role": "caption",
+      "x": 140,
+      "y": 1000,
+      "w": 1100,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Encre, la revue · Dossier lecture · Novembre 2026"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s8-page",
+      "type": "text",
+      "role": "caption",
+      "x": 1660,
+      "y": 1000,
+      "w": 120,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "08"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "right",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s8-bar-thin",
+      "type": "shape",
+      "x": 140,
+      "y": 108,
+      "w": 1640,
+      "h": 1,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--fg"
+    }
+  ]
+}

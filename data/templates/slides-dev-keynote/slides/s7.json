@@ -1,0 +1,665 @@
+{
+  "id": "s7",
+  "background": {
+    "type": "color",
+    "token": "--bg"
+  },
+  "elements": [
+    {
+      "id": "s7-ptchrome",
+      "type": "shape",
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 56,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--surface"
+    },
+    {
+      "id": "s7-ptlight0",
+      "type": "shape",
+      "x": 28,
+      "y": 18,
+      "w": 20,
+      "h": 20,
+      "z": 1,
+      "shape": "ellipse",
+      "fill": "--accent"
+    },
+    {
+      "id": "s7-ptlight1",
+      "type": "shape",
+      "x": 62,
+      "y": 18,
+      "w": 20,
+      "h": 20,
+      "z": 1,
+      "shape": "ellipse",
+      "fill": "--accent-2"
+    },
+    {
+      "id": "s7-ptlight2",
+      "type": "shape",
+      "x": 96,
+      "y": 18,
+      "w": 20,
+      "h": 20,
+      "z": 1,
+      "shape": "ellipse",
+      "fill": "--muted"
+    },
+    {
+      "id": "s7-ptpath",
+      "type": "text",
+      "role": "caption",
+      "x": 160,
+      "y": 12,
+      "w": 1200,
+      "h": 34,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "~/devdays-2026/keynote.nebula"
+        }
+      ],
+      "style": {
+        "font": "mono",
+        "size": 22,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s7-ptglow",
+      "type": "shape",
+      "x": 1380,
+      "y": 640,
+      "w": 900,
+      "h": 900,
+      "z": 0,
+      "shape": "ellipse",
+      "fill": "--accent",
+      "opacity": 0.07
+    },
+    {
+      "id": "s7-bar",
+      "type": "shape",
+      "x": 140,
+      "y": 100,
+      "w": 80,
+      "h": 8,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 4,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s7-kicker",
+      "type": "text",
+      "role": "label",
+      "x": 140,
+      "y": 126,
+      "w": 1200,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "// benchmarks"
+        }
+      ],
+      "style": {
+        "font": "mono",
+        "size": 26,
+        "weight": 600,
+        "color": "--accent",
+        "align": "left",
+        "lineHeight": 1.4,
+        "letterSpacing": 0
+      }
+    },
+    {
+      "id": "s7-heading",
+      "type": "text",
+      "role": "heading",
+      "x": 140,
+      "y": 176,
+      "w": 1640,
+      "h": 140,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Mesuré sur 500 apps en production"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 64,
+        "weight": 700,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.1
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "on-enter",
+        "durationMs": 500
+      }
+    },
+    {
+      "id": "s7-card1",
+      "type": "shape",
+      "x": 140,
+      "y": 380,
+      "w": 380,
+      "h": 460,
+      "z": 1,
+      "shape": "rect",
+      "fill": "#0000",
+      "stroke": "--accent",
+      "strokeWidth": 2,
+      "radius": 18,
+      "animation": {
+        "type": "pop",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 0
+      }
+    },
+    {
+      "id": "s7-value1",
+      "type": "text",
+      "role": "heading",
+      "x": 180,
+      "y": 420,
+      "w": 300,
+      "h": 150,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "3,2×"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 76,
+        "weight": 700,
+        "color": "--accent",
+        "align": "left",
+        "lineHeight": 1.1,
+        "letterSpacing": -1
+      },
+      "animation": {
+        "type": "pop",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 0
+      }
+    },
+    {
+      "id": "s7-label1",
+      "type": "text",
+      "role": "body",
+      "x": 180,
+      "y": 600,
+      "w": 300,
+      "h": 90,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "plus rapide"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 30,
+        "weight": 600,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.3
+      },
+      "animation": {
+        "type": "pop",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 0
+      }
+    },
+    {
+      "id": "s7-detail1",
+      "type": "text",
+      "role": "caption",
+      "x": 180,
+      "y": 700,
+      "w": 300,
+      "h": 110,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Temps de réponse médian"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      },
+      "animation": {
+        "type": "pop",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 0
+      }
+    },
+    {
+      "id": "s7-card2",
+      "type": "shape",
+      "x": 560,
+      "y": 380,
+      "w": 380,
+      "h": 460,
+      "z": 1,
+      "shape": "rect",
+      "fill": "#0000",
+      "stroke": "--accent",
+      "strokeWidth": 2,
+      "radius": 18,
+      "animation": {
+        "type": "pop",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 1
+      }
+    },
+    {
+      "id": "s7-value2",
+      "type": "text",
+      "role": "heading",
+      "x": 600,
+      "y": 420,
+      "w": 300,
+      "h": 150,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "48 ms"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 76,
+        "weight": 700,
+        "color": "--accent",
+        "align": "left",
+        "lineHeight": 1.1,
+        "letterSpacing": -1
+      },
+      "animation": {
+        "type": "pop",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 1
+      }
+    },
+    {
+      "id": "s7-label2",
+      "type": "text",
+      "role": "body",
+      "x": 600,
+      "y": 600,
+      "w": 300,
+      "h": 90,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "hot reload"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 30,
+        "weight": 600,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.3
+      },
+      "animation": {
+        "type": "pop",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 1
+      }
+    },
+    {
+      "id": "s7-detail2",
+      "type": "text",
+      "role": "caption",
+      "x": 600,
+      "y": 700,
+      "w": 300,
+      "h": 110,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Projet de 2 000 modules"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      },
+      "animation": {
+        "type": "pop",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 1
+      }
+    },
+    {
+      "id": "s7-card3",
+      "type": "shape",
+      "x": 980,
+      "y": 380,
+      "w": 380,
+      "h": 460,
+      "z": 1,
+      "shape": "rect",
+      "fill": "#0000",
+      "stroke": "--accent",
+      "strokeWidth": 2,
+      "radius": 18,
+      "animation": {
+        "type": "pop",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 2
+      }
+    },
+    {
+      "id": "s7-value3",
+      "type": "text",
+      "role": "heading",
+      "x": 1020,
+      "y": 420,
+      "w": 300,
+      "h": 150,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "-51 %"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 76,
+        "weight": 700,
+        "color": "--accent",
+        "align": "left",
+        "lineHeight": 1.1,
+        "letterSpacing": -1
+      },
+      "animation": {
+        "type": "pop",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 2
+      }
+    },
+    {
+      "id": "s7-label3",
+      "type": "text",
+      "role": "body",
+      "x": 1020,
+      "y": 600,
+      "w": 300,
+      "h": 90,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "d'hébergement"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 30,
+        "weight": 600,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.3
+      },
+      "animation": {
+        "type": "pop",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 2
+      }
+    },
+    {
+      "id": "s7-detail3",
+      "type": "text",
+      "role": "caption",
+      "x": 1020,
+      "y": 700,
+      "w": 300,
+      "h": 110,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Coût moyen par requête"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      },
+      "animation": {
+        "type": "pop",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 2
+      }
+    },
+    {
+      "id": "s7-card4",
+      "type": "shape",
+      "x": 1400,
+      "y": 380,
+      "w": 380,
+      "h": 460,
+      "z": 1,
+      "shape": "rect",
+      "fill": "#0000",
+      "stroke": "--accent",
+      "strokeWidth": 2,
+      "radius": 18,
+      "animation": {
+        "type": "pop",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 3
+      }
+    },
+    {
+      "id": "s7-value4",
+      "type": "text",
+      "role": "heading",
+      "x": 1440,
+      "y": 420,
+      "w": 300,
+      "h": 150,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "0"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 76,
+        "weight": 700,
+        "color": "--accent",
+        "align": "left",
+        "lineHeight": 1.1,
+        "letterSpacing": -1
+      },
+      "animation": {
+        "type": "pop",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 3
+      }
+    },
+    {
+      "id": "s7-label4",
+      "type": "text",
+      "role": "body",
+      "x": 1440,
+      "y": 600,
+      "w": 300,
+      "h": 90,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "fichier"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 30,
+        "weight": 600,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.3
+      },
+      "animation": {
+        "type": "pop",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 3
+      }
+    },
+    {
+      "id": "s7-detail4",
+      "type": "text",
+      "role": "caption",
+      "x": 1440,
+      "y": 700,
+      "w": 300,
+      "h": 110,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "De configuration requis"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      },
+      "animation": {
+        "type": "pop",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 3
+      }
+    },
+    {
+      "id": "s7-footer",
+      "type": "text",
+      "role": "caption",
+      "x": 140,
+      "y": 1000,
+      "w": 1100,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Nebula 4.0 · DevDays Lyon 2026"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s7-page",
+      "type": "text",
+      "role": "caption",
+      "x": 1660,
+      "y": 1000,
+      "w": 120,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "07"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "right",
+        "lineHeight": 1.4
+      }
+    }
+  ]
+}
