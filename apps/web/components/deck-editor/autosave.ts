@@ -107,6 +107,11 @@ export class Autosaver {
     this.clearTimers();
   }
 
+  /** Undo `dispose` (React mounts effects twice in development). */
+  revive() {
+    this.disposed = false;
+  }
+
   /** Files whose local copy differs from what the server has. */
   dirtyKeys(): SaveKey[] {
     const doc = this.hooks.getDoc();

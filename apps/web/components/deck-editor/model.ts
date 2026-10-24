@@ -267,6 +267,30 @@ export function ungroupElement(slide: Slide, groupId: string): Slide {
   return { ...slide, elements: replace(slide.elements) };
 }
 
+/**
+ * Children of a group resized from `sx` x `sy`: positions and sizes follow,
+ * and text, table and code sizes follow `textScale` (corner handles only).
+ */
+export function scaleChildren(children: SlideElement[], sx: number, sy: number, textScale = 1): SlideElement[] {
+  const clampSize = (v: number, max: number) => Math.max(6, Math.min(max, Math.round(v * textScale * 10) / 10));
+  return children.map((child) => {
+    const next = {
+      ...child,
+      x: round(child.x * sx),
+      y: round(child.y * sy),
+      w: Math.max(1, round(child.w * sx)),
+      h: Math.max(1, round(child.h * sy)),
+    } as SlideElement;
+    if (textScale !== 1) {
+      if (next.type === "text" && next.style?.size) next.style = { ...next.style, size: clampSize(next.style.size, 400) };
+      if (next.type === "table" && next.style?.size) next.style = { ...next.style, size: clampSize(next.style.size, 200) };
+      if (next.type === "code" && next.size) next.size = clampSize(next.size, 200);
+    }
+    if (next.type === "group") next.children = scaleChildren(next.children, sx, sy, textScale);
+    return next;
+  });
+}
+
 // ── duplication and clipboard ───────────────────────────────────────────────
 
 export function cloneWithFreshIds(element: SlideElement, taken: Set<string>): SlideElement {

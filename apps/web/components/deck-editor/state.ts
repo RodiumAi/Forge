@@ -8,7 +8,8 @@
  * - `edit` applies a change and records it. Edits with the same `key` within
  *   `COALESCE_MS` merge into one undo step (typing in a field, nudging).
  * - `preview` changes the document during a gesture (drag, resize, rotate)
- *   without recording; `commit` then records the whole gesture as one step.
+ *   without recording; `gesture` does the same from the document as it was
+ *   when the gesture began; `commit` then records the whole gesture as one step.
  * - `remote` replaces content from the server (AI events, conflict merges);
  *   it is recorded so the user can undo an AI change, unless `record: false`.
  */
@@ -42,6 +43,7 @@ export type EditorAction =
   | { type: "load"; doc: Doc }
   | { type: "edit"; recipe: (doc: Doc) => Doc; key?: string; at?: number; select?: string[]; slideId?: string }
   | { type: "preview"; recipe: (doc: Doc) => Doc }
+  | { type: "gesture"; recipe: (doc: Doc) => Doc }
   | { type: "commit" }
   | { type: "cancelGesture" }
   | { type: "remote"; recipe: (doc: Doc) => Doc; record?: boolean }
@@ -127,6 +129,14 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
       const next = action.recipe(state.doc);
       if (next === state.doc) return state;
       return { ...state, doc: next, gestureBase: state.gestureBase ?? state.doc };
+    }
+
+    case "gesture": {
+      // Each pointer move recomputes from the document as it was when the gesture began.
+      if (!state.doc) return state;
+      const base = state.gestureBase ?? state.doc;
+      const next = action.recipe(base);
+      return { ...state, doc: next, gestureBase: base };
     }
 
     case "commit": {
