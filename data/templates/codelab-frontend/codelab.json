@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "title": "Votre première interface React",
+  "summary": "Vous créez une petite application React avec Vite et TypeScript : un compteur, puis une liste de films filtrable alimentée par une API.",
+  "level": "beginner",
+  "durationMinutes": 41,
+  "prerequisites": [
+    "Node.js 22",
+    "Des bases en HTML et JavaScript"
+  ],
+  "learn": [
+    "Créer un projet Vite",
+    "Écrire des composants typés",
+    "Gérer l'état avec useState",
+    "Charger des données avec useEffect"
+  ],
+  "author": {
+    "name": "Forge par RodiumAi"
+  },
+  "theme": {
+    "designSystem": "local",
+    "tokens": "DESIGN.md"
+  },
+  "steps": [
+    {
+      "id": "intro",
+      "title": "Introduction",
+      "file": "steps/01-intro.md",
+      "minutes": 3
+    },
+    {
+      "id": "create",
+      "title": "Créer le projet",
+      "file": "steps/02-create.md",
+      "minutes": 6
+    },
+    {
+      "id": "component",
+      "title": "Un composant compteur",
+      "file": "steps/03-component.md",
+      "minutes": 8
+    },
+    {
+      "id": "list",
+      "title": "Une liste filtrable",
+      "file": "steps/04-list.md",
+      "minutes": 10
+    },
+    {
+      "id": "fetch",
+      "title": "Charger des données",
+      "file": "steps/05-fetch.md",
+      "minutes": 10
+    },
+    {
+      "id": "build",
+      "title": "Construire et publier",
+      "file": "steps/06-build.md",
+      "minutes": 4
+    }
+  ],
+  "downloads": [
+    {
+      "id": "solution",
+      "label": "Solution finale",
+      "path": "files/solution",
+      "zip": true
+    }
+  ]
+}

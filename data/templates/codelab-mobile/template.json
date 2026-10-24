@@ -1,0 +1,33 @@
+{
+  "kind": "codelab",
+  "id": "codelab-mobile",
+  "title": {
+    "fr": "Tutoriel mobile",
+    "en": "Mobile tutorial"
+  },
+  "description": {
+    "fr": "Une application mobile de suivi d'habitudes avec Expo et React Native : écran, liste, interactions et stockage local, testée sur téléphone.",
+    "en": "A habit tracker mobile app with Expo and React Native: screen, list, interactions and local storage, tested on a phone."
+  },
+  "tags": [
+    "mobile",
+    "react-native",
+    "expo"
+  ],
+  "category": "mobile",
+  "bootHint": {
+    "fr": "Adapte codelab-mobile : idée d'application, écrans, plateforme.",
+    "en": "Adapt codelab-mobile: app idea, screens, platform."
+  },
+  "tone": "warm, hands-on",
+  "preview": "preview.html",
+  "accent": "#E4572E",
+  "bg": "#FFF9F5",
+  "fg": "#2A1A12",
+  "muted": "#5B6170",
+  "fonts": {
+    "display": "Poppins",
+    "body": "Inter",
+    "mono": "JetBrains Mono"
+  }
+}

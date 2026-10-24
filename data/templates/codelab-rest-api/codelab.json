@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "title": "Créer une API REST avec FastAPI",
+  "summary": "Vous construisez une petite API de gestion de tâches, de la première route aux tests automatisés. À la fin, elle valide ses données et répond proprement aux erreurs.",
+  "level": "beginner",
+  "durationMinutes": 53,
+  "prerequisites": [
+    "Python 3.12 installé",
+    "Un terminal",
+    "Des bases en Python"
+  ],
+  "learn": [
+    "Créer des routes GET et POST",
+    "Valider les données avec Pydantic",
+    "Renvoyer des erreurs HTTP claires",
+    "Tester une API avec pytest"
+  ],
+  "author": {
+    "name": "Forge par RodiumAi"
+  },
+  "theme": {
+    "designSystem": "local",
+    "tokens": "DESIGN.md"
+  },
+  "steps": [
+    {
+      "id": "intro",
+      "title": "Introduction",
+      "file": "steps/01-intro.md",
+      "minutes": 3
+    },
+    {
+      "id": "setup",
+      "title": "Préparer l'environnement",
+      "file": "steps/02-setup.md",
+      "minutes": 7
+    },
+    {
+      "id": "first-route",
+      "title": "Première route",
+      "file": "steps/03-first-route.md",
+      "minutes": 8
+    },
+    {
+      "id": "models",
+      "title": "Valider les données",
+      "file": "steps/04-models.md",
+      "minutes": 10
+    },
+    {
+      "id": "crud",
+      "title": "Lister, créer et lire",
+      "file": "steps/05-crud.md",
+      "minutes": 12
+    },
+    {
+      "id": "tests",
+      "title": "Tester l'API",
+      "file": "steps/06-tests.md",
+      "minutes": 10
+    },
+    {
+      "id": "next",
+      "title": "Pour aller plus loin",
+      "file": "steps/07-next.md",
+      "minutes": 3
+    }
+  ],
+  "downloads": [
+    {
+      "id": "starter",
+      "label": "Projet de départ",
+      "path": "files/starter",
+      "zip": true
+    },
+    {
+      "id": "solution",
+      "label": "Solution finale",
+      "path": "files/solution",
+      "zip": true
+    }
+  ]
+}
