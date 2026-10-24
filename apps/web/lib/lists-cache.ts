@@ -1,4 +1,5 @@
 import { api, getToken } from "@/lib/api";
+import type { ProjectKindId } from "@/lib/kinds";
 
 const PROJECTS_KEY = "forge_projects_v1";
 const TEMPLATES_KEY = "forge_templates_v1";
@@ -21,7 +22,7 @@ export type CachedProject = {
   updated_at?: string;
   status?: string;
   has_thumbnail?: boolean;
-  platform?: "web" | "mobile";
+  platform?: ProjectKindId;
   access_role?: string;
   collaborators?: { name: string | null; email: string; avatar_url: string | null }[];
 };
@@ -35,7 +36,7 @@ export type CachedTemplate = {
   accent?: string | null;
   bg?: string | null;
   preview_url?: string | null;
-  kind?: "web" | "mobile";
+  kind?: ProjectKindId;
 };
 
 export type CachedIntegration = {

@@ -108,6 +108,7 @@ import {
   type ChatStreamState,
 } from "@/lib/chat-stream";
 import { failedTasksFromPlan, isPlanStopped, isResumableRunStatus } from "@/lib/plan-resume";
+import type { ProjectKindId } from "@/lib/kinds";
 
 type Project = {
   id: string;
@@ -117,7 +118,7 @@ type Project = {
   preview_port: number | null;
   sites_url?: string | null;
   published_at?: string | null;
-  platform?: "web" | "mobile";
+  platform?: ProjectKindId;
   access_role?: string;
   collaborators?: { name: string | null; email: string; avatar_url: string | null }[];
 };

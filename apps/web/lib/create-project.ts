@@ -4,12 +4,13 @@ import { buildPromptWithAttachments, type PromptAttachment, type PromptLabels } 
 import { uploadPromptAttachments } from "@/lib/prompt-upload";
 import { clearPendingFiles, loadPendingFiles, savePendingFiles } from "@/lib/pending-files";
 import { PAYLOAD_MAX_CHARS, PromptTooLongError } from "@/lib/constants/prompt";
+import { normalizeKind, type ProjectKindId } from "@/lib/kinds";
 
 export const PENDING_PROMPT_KEY = "forge_pending_prompt";
 export const PENDING_TEMPLATE_KEY = "forge_pending_template";
 export const PENDING_PLATFORM_KEY = "forge_pending_platform";
 
-export type ProjectPlatform = "web" | "mobile";
+export type ProjectPlatform = ProjectKindId;
 
 export type CreatedProject = {
   id: string;
@@ -26,7 +27,7 @@ export type ForkableTemplate = {
 };
 
 function normalizePlatform(raw: unknown): ProjectPlatform {
-  return raw === "mobile" ? "mobile" : "web";
+  return normalizeKind(raw);
 }
 
 export function readPendingPlatform(): ProjectPlatform {

@@ -60,6 +60,7 @@ import {
   type PromptLabels,
 } from "@/lib/prompt-attachments";
 import { PROMPT_MAX_CHARS, PromptTooLongError } from "@/lib/constants/prompt";
+import type { ProjectKindId } from "@/lib/kinds";
 
 type Project = {
   id: string;
@@ -72,7 +73,7 @@ type Project = {
   preview_running?: boolean;
   public_url?: string | null;
   has_thumbnail?: boolean;
-  platform?: "web" | "mobile";
+  platform?: ProjectKindId;
   access_role?: string;
   collaborators?: { name: string | null; email: string; avatar_url: string | null }[];
 };

@@ -1,11 +1,20 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Monitor, Search, Smartphone } from "lucide-react";
+import { BookOpen, Monitor, Palette, Presentation, Search, Smartphone, type LucideIcon } from "lucide-react";
 import { SiteThumb } from "@/components/SiteThumb";
 import { TemplatePreviewModal } from "@/components/TemplatePreviewModal";
 import { Icon } from "@/components/ui/icon";
 import { useI18n } from "@/lib/i18n/I18nProvider";
+import { getKind, normalizeKind, useEnabledKinds, type ProjectKindId } from "@/lib/kinds";
+
+const KIND_ICONS: Record<ProjectKindId, LucideIcon> = {
+  web: Monitor,
+  mobile: Smartphone,
+  slides: Presentation,
+  codelab: BookOpen,
+  design_system: Palette,
+};
 
 export type GalleryTemplate = {
   id: string;
@@ -16,7 +25,7 @@ export type GalleryTemplate = {
   accent: string | null;
   bg: string | null;
   preview_url?: string | null;
-  kind?: "web" | "mobile";
+  kind?: ProjectKindId;
 };
 
 type Props = {
@@ -43,11 +52,21 @@ export function TemplateGallery({
   const { t } = useI18n();
   const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState(limit == null);
-  const [kind, setKind] = useState<"web" | "mobile">("web");
+  const [kind, setKind] = useState<ProjectKindId>("web");
+  const enabledKinds = useEnabledKinds();
+  // Web and mobile always show; another kind once it is on and has kits.
+  const kindTabs = useMemo(
+    () =>
+      enabledKinds.filter(
+        (id) =>
+          id === "web" || id === "mobile" || templates.some((tpl) => normalizeKind(tpl.kind) === id),
+      ),
+    [enabledKinds, templates],
+  );
   const [selected, setSelected] = useState<GalleryTemplate | null>(null);
 
   const byKind = useMemo(
-    () => templates.filter((tpl) => (tpl.kind || "web") === kind),
+    () => templates.filter((tpl) => normalizeKind(tpl.kind) === kind),
     [templates, kind],
   );
 
@@ -74,24 +93,18 @@ export function TemplateGallery({
     <section className={`tpl-gallery tpl-gallery-${variant}`} aria-labelledby="tpl-gallery-title">
       <div className="tpl-gallery-toolbar">
         <div className="tpl-kind-switch" role="group" aria-label={t("platformToggleAria")}>
-          <button
-            type="button"
-            className={kind === "web" ? "active" : undefined}
-            aria-pressed={kind === "web"}
-            onClick={() => setKind("web")}
-          >
-            <Icon icon={Monitor} className="ui-icon-sm" />
-            <span>{t("templatesKindWeb")}</span>
-          </button>
-          <button
-            type="button"
-            className={kind === "mobile" ? "active" : undefined}
-            aria-pressed={kind === "mobile"}
-            onClick={() => setKind("mobile")}
-          >
-            <Icon icon={Smartphone} className="ui-icon-sm" />
-            <span>{t("templatesKindApp")}</span>
-          </button>
+          {kindTabs.map((id) => (
+            <button
+              key={id}
+              type="button"
+              className={kind === id ? "active" : undefined}
+              aria-pressed={kind === id}
+              onClick={() => setKind(id)}
+            >
+              <Icon icon={KIND_ICONS[id]} className="ui-icon-sm" />
+              <span>{t(getKind(id).galleryLabelKey)}</span>
+            </button>
+          ))}
         </div>
         <label className="tpl-gallery-search">
           <Icon icon={Search} className="ui-icon-sm" />

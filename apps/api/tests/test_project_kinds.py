@@ -175,3 +175,13 @@ def test_web_and_mobile_creation_still_use_the_react_scaffold(monkeypatch, tmp_p
         assert r.status_code == 201
         assert r.json()["platform"] == platform
     assert calls == ["web", "mobile"]
+
+
+def test_web_mirror_lists_the_same_kinds():
+    import re
+    from pathlib import Path
+
+    source = (Path(__file__).resolve().parents[2] / "web" / "lib" / "kinds.ts").read_text(encoding="utf-8")
+    match = re.search(r"export const KIND_IDS = \[([^\]]*)\] as const;", source)
+    assert match, "KIND_IDS not found in apps/web/lib/kinds.ts"
+    assert tuple(re.findall(r'"([a-z_]+)"', match.group(1))) == KIND_IDS
