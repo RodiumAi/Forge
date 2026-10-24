@@ -54,6 +54,25 @@ def start_document_message(
 ):
     """The SSE response for a chat message on a document project."""
     kind_id = document_kind(project.platform) or ""
+    if kind_id == "codelab":
+        # Codelabs have their own flows (app/services/codelab), same arguments.
+        from app.services.codelab.chat_entry import start_codelab_message
+
+        return start_codelab_message(
+            db=db,
+            user=user,
+            project=project,
+            chat=chat,
+            body=body,
+            content=content,
+            mode=mode,
+            locale=locale,
+            route_for_request=route_for_request,
+            effort_label=effort_label,
+            resolve_gen_auth=resolve_gen_auth,
+            event_stream=event_stream,
+            anchor=anchor,
+        )
     if not ai_available(kind_id):
         return event_stream(unavailable_stream(kind_id, locale))
 
@@ -61,6 +80,8 @@ def start_document_message(
     target_slide = getattr(target, "slideId", None) if target else None
     target_element = getattr(target, "elementId", None) if target else None
     action = getattr(body, "action", None)
+    if action in ("check_code", "make_files"):  # codelab actions mean nothing on a deck
+        action = None
     targeted = bool(target_slide or target_element or action)
     pid = str(project.id)
 

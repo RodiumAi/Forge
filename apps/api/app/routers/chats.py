@@ -23,6 +23,7 @@ from app.schemas import (
 from app.services.apply_writes import apply_validated_writes_async, brand_change_requested
 from app.services.attachments import extract_image_urls
 from app.services.capabilities import require_rodi_for_paid_capability
+from app.services.codelab import chat_entry as codelab_chat
 from app.services.deck_ai import chat_entry as deck_chat
 from app.services.filesystem import delete_file
 from app.services.llm import (
@@ -1593,6 +1594,17 @@ async def confirm_plan(
 ) -> StreamingResponse:
     locale = resolve_locale(request)
     project, chat, run = _owned_run(db, user, project_id, chat_id, run_id, locale)
+    if codelab_chat.is_codelab_outline_run(run):
+        await resolve_generation_auth(db, user)
+        return codelab_chat.confirm_codelab_outline(
+            db=db,
+            run=run,
+            project=project,
+            plan=body.plan,
+            locale=locale,
+            resolve_gen_auth=_generation_auth_resolver(user.id, locale, project.id),
+            event_stream=_event_stream,
+        )
     if deck_chat.is_deck_outline_run(run):
         # Paid-capability checks stay real HTTP statuses, as below.
         await resolve_generation_auth(db, user)

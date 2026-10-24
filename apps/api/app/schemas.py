@@ -484,18 +484,23 @@ class MessageTarget(BaseModel):
     """What a chat message may change. Absent = the whole project.
 
     Document kinds (slides): ``slideId`` limits the AI to that slide,
-    ``elementId`` to that element. Other keys are ignored so site targets
-    (route, forgeId, filePath) can be added without breaking clients.
+    ``elementId`` to that element. Codelabs: ``stepId`` limits it to that
+    step. Other keys are ignored so site targets (route, forgeId, filePath)
+    can be added without breaking clients.
     """
 
     model_config = ConfigDict(extra="ignore")
 
     slideId: str | None = Field(default=None, max_length=64, pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
     elementId: str | None = Field(default=None, max_length=64, pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
+    stepId: str | None = Field(default=None, max_length=64, pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
 
 
-#: Quick actions of the deck editor (sent with a target).
-QuickAction = Literal["shorten", "punchier", "change_layout", "add_visual", "translate"]
+#: Quick actions of the deck editor (sent with a target) and of the codelab
+#: editor (``check_code`` and ``make_files`` need no target).
+QuickAction = Literal[
+    "shorten", "punchier", "change_layout", "add_visual", "translate", "check_code", "make_files"
+]
 
 
 class SendMessageRequest(BaseModel):
