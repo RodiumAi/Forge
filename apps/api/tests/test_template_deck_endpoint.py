@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
+from app.config import clear_settings_cache
 from app.contracts.forge_design import validate_deck, validate_slide
 from app.main import app
 from app.services.templates import list_templates, template_deck
@@ -33,17 +34,28 @@ def test_template_deck_is_none_for_other_kinds_and_unknown_ids():
     assert template_deck("../etc") is None
 
 
-def test_template_deck_endpoint():
+def _with_slides_flag(monkeypatch, enabled: bool):
+    monkeypatch.setenv("FORGE_KIND_SLIDES_ENABLED", "true" if enabled else "false")
+    clear_settings_cache()
+
+
+def test_template_deck_endpoint(monkeypatch):
+    _with_slides_flag(monkeypatch, True)
     client = TestClient(app)
     kit = _first("slides")
     res = client.get(f"/templates/{kit.id}/deck")
-    if res.status_code == 404:
-        # The slides kind is behind its flag on this instance: the kit stays hidden.
-        assert res.json()["detail"] == "Unknown template"
-        return
     assert res.status_code == 200
     body = res.json()
     assert body["deck"]["slides"] and len(body["slides"]) == len(body["deck"]["slides"])
     assert "max-age" in res.headers.get("cache-control", "")
     assert client.get(f"/templates/{_first('web').id}/deck").status_code == 404
     assert client.get("/templates/nope-nope/deck").status_code == 404
+    clear_settings_cache()
+
+
+def test_template_deck_endpoint_hides_kits_behind_their_flag(monkeypatch):
+    _with_slides_flag(monkeypatch, False)
+    client = TestClient(app)
+    res = client.get(f"/templates/{_first('slides').id}/deck")
+    assert res.status_code == 404
+    clear_settings_cache()
