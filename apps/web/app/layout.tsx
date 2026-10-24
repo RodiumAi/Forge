@@ -16,6 +16,7 @@ import "@/styles/forge/composer.css";
 import "@/styles/forge/cards.css";
 import "@/styles/forge/shell.css";
 import "@/styles/forge/builder.css";
+import "@/styles/forge/builder-panes.css";
 
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || "http://localhost:3100";
