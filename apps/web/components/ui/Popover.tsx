@@ -4,6 +4,7 @@ import {
   cloneElement,
   isValidElement,
   useCallback,
+  useEffect,
   useId,
   useRef,
   useState,
@@ -113,6 +114,12 @@ export function Popover({
     }
   }
 
+  // Opening a menu or listbox puts the focus on its chosen row (or the first one).
+  useEffect(() => {
+    if (open && role !== "dialog") focusItem("selected");
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run on open only
+  }, [open]);
+
   const triggerEl = isValidElement(trigger)
     ? cloneElement(trigger, {
         ref: (el: HTMLElement | null) => {
@@ -122,7 +129,6 @@ export function Popover({
           trigger.props.onClick?.(event);
           const next = !open;
           setOpen(next);
-          if (next && role !== "dialog") window.setTimeout(() => focusItem("selected"), 20);
         },
         "aria-expanded": open,
         "aria-haspopup": role === "dialog" ? "dialog" : role,

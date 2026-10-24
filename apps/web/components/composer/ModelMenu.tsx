@@ -6,7 +6,7 @@ import { CHAT_MODEL_KEY } from "@/components/home/ModelPicker";
 import { Badge } from "@/components/ui/Badge";
 import { Glyph } from "@/components/ui/glyph";
 import { MenuItem, MenuLabel, MenuNote, Popover } from "@/components/ui/Popover";
-import { api } from "@/lib/api";
+import { api, getToken } from "@/lib/api";
 import { useForgeStatus } from "@/lib/forge-status";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 
@@ -53,7 +53,8 @@ export function ModelMenu({ disabled, upgradeHref = "/dashboard/pricing" }: { di
   useEffect(() => setValue(readStoredModel()), []);
 
   useEffect(() => {
-    if (!canPick) return;
+    // Signed out (the landing): nothing to ask, and a 401 would sign the page out.
+    if (!canPick || !getToken()) return;
     let alive = true;
     void loadModels().then((list) => {
       if (!alive) return;

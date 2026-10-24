@@ -7,6 +7,7 @@ import { Dialog } from "@/components/ui/Dialog";
 import { Glyph, type GlyphName } from "@/components/ui/glyph";
 import { SearchInput } from "@/components/ui/Input";
 import { KindIcon } from "@/components/ui/KindBadge";
+import { getToken } from "@/lib/api";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { kindStyle } from "@/lib/kind-style";
 import { editorHref, normalizeKind, type ProjectKindId } from "@/lib/kinds";
@@ -39,6 +40,7 @@ export function CommandPalette({ open, onClose, showTeam }: { open: boolean; onC
     if (!open) return;
     setQuery("");
     setActive(0);
+    if (!getToken()) return;
     let alive = true;
     void ensureProjects(locale)
       .then((list) => alive && setProjects(list))

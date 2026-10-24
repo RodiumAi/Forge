@@ -461,11 +461,11 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
             <div>
               <div className="f-kind-grid">
                 {mainTiles.map((x) => (
-                  <KindTile key={x.id} id={x.id} pressed={tileId === x.id} disabled={busy} onPick={pickTile} />
+                  <KindTile key={x.id} id={x.id} pressed={tileId === x.id && x.id !== "blank"} disabled={busy} onPick={pickTile} />
                 ))}
                 {shortcutTiles.length ? <div className="f-kind-sep">{t("uiShortcuts")}</div> : null}
                 {shortcutTiles.map((x) => (
-                  <KindTile key={x.id} id={x.id} pressed={tileId === x.id} disabled={busy} onPick={pickTile} />
+                  <KindTile key={x.id} id={x.id} pressed={tileId === x.id && x.id !== "blank"} disabled={busy} onPick={pickTile} />
                 ))}
               </div>
             </div>

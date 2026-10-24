@@ -91,7 +91,8 @@
 
 /* Dark (reference) */
 :root,
-:root[data-theme="dark"] {
+:root[data-theme="dark"],
+.f-theme-dark {
   --f-bg: #1C1F26;
   --f-bg-deep: #16181E;
   --f-side: #16181E;
@@ -116,7 +117,8 @@
   --f-info-text: #93C5FD;
 }
 
-:root[data-theme="light"] {
+:root[data-theme="light"],
+.f-theme-light {
   --f-bg: #FBFAF8;
   --f-bg-deep: #F4F2EE;
   --f-side: #F6F4F0;
@@ -167,6 +169,8 @@
     --f-info-text: #1D5FC4;
   }
 }
+
+/* `.f-theme-dark` / `.f-theme-light` force a theme on a subtree (dev gallery, previews). */
 
 /* Paper scope: anything inside `.f-paper` reads the light paper palette. */
 .f-paper {

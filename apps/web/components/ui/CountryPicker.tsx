@@ -74,8 +74,14 @@ export function CountryPicker({ value, onChange, countries: given, align = "cent
     };
   }, [open]);
 
+  // Keeps the active row visible inside the list (never scrolls the page).
   useEffect(() => {
-    listRef.current?.querySelector(".is-active")?.scrollIntoView?.({ block: "nearest" });
+    const list = listRef.current;
+    const row = list?.querySelector<HTMLElement>(".is-active");
+    if (!list || !row) return;
+    if (row.offsetTop < list.scrollTop) list.scrollTop = row.offsetTop;
+    else if (row.offsetTop + row.offsetHeight > list.scrollTop + list.clientHeight)
+      list.scrollTop = row.offsetTop + row.offsetHeight - list.clientHeight;
   }, [active, open]);
 
   function choose(country: PaymentCountry) {

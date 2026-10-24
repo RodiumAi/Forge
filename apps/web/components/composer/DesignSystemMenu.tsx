@@ -35,7 +35,7 @@ export function DesignSystemSwatch({ ds }: { ds: ComposerDesignSystem | null }) 
       <span className="f-aa" style={aa}>
         Aa
       </span>
-      <span className="f-dots">
+      <span className="f-swatch-dots">
         {[accent, bg, fg].map((c, i) => (
           <i key={i} style={{ background: c }} />
         ))}
