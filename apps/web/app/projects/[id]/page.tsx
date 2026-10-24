@@ -783,11 +783,14 @@ export default function ProjectPage() {
     }
     setProject(p);
     if (p.platform === "mobile") {
-      setViewport((current) => {
-        const next = current === "desktop" ? "phone" : current;
-        if (next !== current) syncBuilderUrl({ viewport: next });
-        return next;
-      });
+      // The URL is the source of the viewport: an app opens on the phone
+      // frame unless the link asks for another one. (Calling the router from
+      // inside a state updater made React warn and the DOM go out of sync.)
+      const fromUrl = parseBuilderUrlState(new URLSearchParams(window.location.search)).viewport;
+      if (!fromUrl || fromUrl === "desktop") {
+        setViewport("phone");
+        syncBuilderUrl({ viewport: "phone" });
+      }
     }
     const chats = await api<Chat[]>(`/projects/${projectId}/chats`);
     if (streamAbortRef.current || streamingRunIdRef.current) return;
@@ -2676,7 +2679,7 @@ export default function ProjectPage() {
                         />
                       ) : null}
                       {!composerInputLocked && project?.access_role !== "viewer" ? (
-                        <FollowUps onPick={fillComposer} />
+                        <FollowUps onPick={fillComposer} kind={kind} />
                       ) : null}
                     </>
                   ) : null}

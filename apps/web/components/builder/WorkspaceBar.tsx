@@ -20,7 +20,7 @@ import { Segmented } from "@/components/ui/Tabs";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { kindStyle } from "@/lib/kind-style";
 import type { ProjectKindId } from "@/lib/kinds";
-import { useTheme } from "@/lib/theme/ThemeProvider";
+import { useOptionalTheme } from "@/lib/theme/ThemeProvider";
 
 export type WorkspaceState = "new" | "gen" | "draft" | "live" | "err";
 
@@ -62,7 +62,8 @@ export function WorkspaceBar({
   className,
 }: Props) {
   const { t, locale, setLocale } = useI18n();
-  const { resolvedTheme, setPreference } = useTheme();
+  const theme = useOptionalTheme();
+  const resolvedTheme = theme?.resolvedTheme;
   const k = kindStyle(kind);
 
   const pill: Record<WorkspaceState, string> = {
@@ -104,12 +105,14 @@ export function WorkspaceBar({
             { id: "en", label: "EN" },
           ]}
         />
-        <IconButton
-          className="f-bd-hide-mob"
-          icon={resolvedTheme === "dark" ? "sun" : "moon"}
-          label={resolvedTheme === "dark" ? t("uiThemeLight") : t("uiThemeDark")}
-          onClick={() => setPreference(resolvedTheme === "dark" ? "light" : "dark")}
-        />
+        {theme ? (
+          <IconButton
+            className="f-bd-hide-mob"
+            icon={resolvedTheme === "dark" ? "sun" : "moon"}
+            label={resolvedTheme === "dark" ? t("uiThemeLight") : t("uiThemeDark")}
+            onClick={() => theme.setPreference(resolvedTheme === "dark" ? "light" : "dark")}
+          />
+        ) : null}
         {people.length ? <People people={people} /> : null}
         {actions}
       </div>

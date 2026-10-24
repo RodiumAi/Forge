@@ -40,6 +40,10 @@ const SUGGESTIONS: Partial<Record<ProjectKindId, MessageKey[]>> = {
 
 const FOLLOW_UPS: MessageKey[] = ["bdFollowAddPage", "bdFollowColours", "bdFollowShorter"];
 
+function followUps(kind?: string): MessageKey[] {
+  return kind === "mobile" ? ["bdFollowAddScreen", ...FOLLOW_UPS.slice(1)] : FOLLOW_UPS;
+}
+
 /** Empty project: greeting and three ideas that fill the composer. */
 export function EmptyChat({
   kind,
@@ -54,7 +58,7 @@ export function EmptyChat({
   onPick: (text: string) => void;
 }) {
   const { t } = useI18n();
-  const keys = editing ? FOLLOW_UPS : (SUGGESTIONS[kind] ?? SUGGESTIONS.web!);
+  const keys = editing ? followUps(kind) : (SUGGESTIONS[kind] ?? SUGGESTIONS.web!);
   const name = firstName ? ` ${firstName}` : "";
   return (
     <div className="f-bd-msg f-bd-msg-ai">
@@ -110,11 +114,11 @@ export function DoneCard({
 }
 
 /** Follow-up chips under the last answer; a click fills the composer. */
-export function FollowUps({ onPick }: { onPick: (text: string) => void }) {
+export function FollowUps({ onPick, kind }: { onPick: (text: string) => void; kind?: string }) {
   const { t } = useI18n();
   return (
     <div className="f-bd-chips">
-      {FOLLOW_UPS.map((key) => (
+      {followUps(kind).map((key) => (
         <button key={key} type="button" onClick={() => onPick(t(key))}>
           {t(key)}
         </button>

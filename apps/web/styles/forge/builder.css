@@ -364,7 +364,7 @@ button.f-bd-op:focus-visible { outline: 2px solid var(--f-orange); outline-offse
   border: 1px solid var(--f-line);
 }
 .f-bd-frame[data-d="tablet"] { height: min(100%, 1024px); }
-.f-bd-frame[data-d="phone"] { height: min(100%, 844px); border-radius: 30px; border: 6px solid #0E0F12; }
+.f-bd-frame[data-d="phone"] { height: min(100%, 844px); width: auto !important; aspect-ratio: 390 / 844; border-radius: 34px; border: 8px solid #0E0F12; background: #0E0F12; }
 .f-bd-frame iframe { width: 100%; height: 100%; border: 0; display: block; background: #fff; }
 .f-bd-frame-recover {
   position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 12px; padding: 24px;
