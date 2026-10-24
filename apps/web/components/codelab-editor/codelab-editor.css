@@ -18,7 +18,7 @@
   z-index: 1;
 }
 
-.cle-root button {
+.cle-root button:not(.f-bd-top *) {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -31,12 +31,12 @@
   cursor: pointer;
 }
 
-.cle-root button:disabled {
+.cle-root button:not(.f-bd-top *):disabled {
   opacity: 0.5;
   cursor: default;
 }
 
-.cle-root input,
+.cle-root input:not(.f-bd-top *),
 .cle-root select,
 .cle-root textarea {
   border: 1px solid var(--cle-line);
@@ -70,27 +70,7 @@
 }
 
 .cle-top {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 14px;
-  border-bottom: 1px solid var(--cle-line);
-  background: var(--cle-panel);
-}
-
-.cle-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: inherit;
-  text-decoration: none;
-}
-
-.cle-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 40vw;
+  flex: none;
 }
 
 .cle-save {
@@ -100,11 +80,7 @@
 
 .cle-save[data-state="error"],
 .cle-save[data-state="conflict"] {
-  color: #dc2626;
-}
-
-.cle-spacer {
-  flex: 1;
+  color: var(--f-danger-text);
 }
 
 .cle-root .cle-active {
@@ -447,7 +423,7 @@
 }
 
 .cle-msg-error p {
-  color: #dc2626;
+  color: var(--f-danger-text);
 }
 
 .cle-outline,
@@ -487,7 +463,7 @@
 }
 
 .cle-check li[data-severity="error"] {
-  color: #dc2626;
+  color: var(--f-danger-text);
 }
 
 .cle-check ul {
@@ -553,3 +529,67 @@
     grid-auto-rows: minmax(240px, auto);
   }
 }
+
+/* ── redesign layer: Forge workspace look (tokens from styles/forge) ───────── */
+
+.cle-root {
+  --cle-radius: 12px;
+  font-size: 13.5px;
+}
+.cle-root button:not(.f-bd-top *):not(.fcl-root *) {
+  border-radius: var(--f-r-pill);
+  border-color: var(--f-line-strong);
+  background: transparent;
+  padding: 6px 12px;
+  font-weight: 600;
+  transition: background var(--f-dur-fast) var(--f-ease);
+}
+.cle-root button:not(.f-bd-top *):not(.fcl-root *):hover:not(:disabled) { background: var(--f-surface-2); }
+.cle-root button:not(.f-bd-top *):not(.fcl-root *):focus-visible,
+.cle-root a:focus-visible { outline: 2px solid var(--f-orange); outline-offset: 2px; }
+.cle-root input:not(.f-bd-top *),
+.cle-root select,
+.cle-root textarea {
+  border-radius: 12px;
+  border-color: var(--f-line);
+  background: var(--f-surface);
+}
+.cle-root input:not(.f-bd-top *):focus,
+.cle-root select:focus,
+.cle-root textarea:focus {
+  outline: 0;
+  border-color: var(--f-orange);
+  box-shadow: 0 0 0 3px var(--f-orange-soft);
+}
+
+/* step list: numbered pills, the current step in orange */
+.cle-steps { background: var(--f-bg); padding: 12px 10px; }
+.cle-steps-head strong, .cle-steps-head h2 { font-size: 11.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--f-faint); }
+.cle-steps li { border-radius: 14px; padding: 6px; }
+.cle-steps li[data-active] { border-color: var(--f-line); background: var(--f-surface); }
+.cle-root .cle-step-pick { border: 0 !important; background: transparent !important; padding: 2px !important; font-weight: 500 !important; gap: 10px; }
+.cle-step-n { width: 26px; height: 26px; font-size: 12px; font-weight: 600; background: var(--f-surface-2); border: 0; color: var(--f-muted); }
+.cle-steps li[data-active] .cle-step-n,
+.cle-steps li[data-streaming] .cle-step-n { background: var(--f-orange); color: var(--f-white); }
+.cle-step-min { font-size: 12px; color: var(--f-faint); font-variant-numeric: tabular-nums; }
+.cle-root .cle-add { border-style: dashed !important; justify-content: center; }
+
+/* editor area */
+.cle-main { background: var(--f-bg-deep, var(--f-bg)); }
+.cle-root .cle-toolbar button { border-color: transparent; color: var(--f-muted); }
+.cle-root .cle-toolbar button:hover:not(:disabled) { color: var(--f-text); }
+.cle-root .cle-markdown { font-family: var(--f-mono); border-radius: 16px; background: var(--f-surface); line-height: 1.7; }
+.cle-preview { border-radius: 16px; overflow: hidden; box-shadow: var(--f-shadow); }
+
+/* side panel: segmented tabs like the deck inspector */
+.cle-side { background: var(--f-bg); }
+.cle-root .cle-tabs { margin: 10px 12px 4px; padding: 3px; gap: 2px; border-radius: var(--f-r-pill); background: var(--f-surface-2); display: flex; }
+.cle-root .cle-tabs button { flex: 1; justify-content: center; border: 0 !important; color: var(--f-muted); background: transparent; }
+.cle-root .cle-tabs button.cle-active { background: var(--f-surface) !important; color: var(--f-text); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18); }
+.cle-root .cle-chat-form textarea { background: var(--f-composer); color: #f6f4f0; border-color: rgba(255, 255, 255, 0.07); border-radius: 18px; }
+.cle-root .cle-chat-form textarea::placeholder { color: #8c92a0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cle-root *, .cle-root *::before, .cle-root *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
+.cle-root input[type="checkbox"] { accent-color: var(--f-orange); }
