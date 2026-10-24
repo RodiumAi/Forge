@@ -118,7 +118,9 @@ export function tokensFromDesignSystem(tree: Json): ThemeTokens {
   return out;
 }
 
-const VAR_LINE_RE = /(--[A-Za-z0-9-]{1,48})\s*:\s*([^;\n]+)/g;
+// Accepts "--bg: #fff" and the charter form "- `--bg`: #0D1B2A (slide background)".
+const VAR_LINE_RE = /`?(--[A-Za-z0-9-]{1,48})`?\s*:\s*([^;\n]+)/g;
+const TRAILING_ROLE_RE = /\s+\([^()]*\)\s*$/;
 
 /** Font stacks named in a DESIGN.md: "Display font: X", "Font stack: X", "Mono: X". */
 function fontsFromMarkdown(md: string): ThemeTokens {
@@ -157,7 +159,7 @@ export function themeTokensFromDesign(md: string): ThemeTokens {
     found = fontsFromMarkdown(source);
     for (const match of source.matchAll(VAR_LINE_RE)) {
       const name = match[1];
-      const value = match[2].trim().replace(/[`,]+$/, "").trim();
+      const value = match[2].trim().replace(TRAILING_ROLE_RE, "").replace(/^`+|[`,]+$/g, "").trim();
       if (value && !(name in found)) found[name] = value;
     }
   }

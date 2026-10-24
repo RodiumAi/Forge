@@ -45,6 +45,19 @@ describe("themeTokensFromDesign", () => {
     expect(tokens["--font-mono"]).toBe("\"JetBrains Mono\", monospace");
   });
 
+  it("reads the charter token lines written by the kits and the brand charter", () => {
+    const md = [
+      "## Colors",
+      "- `--bg`: #0D1B2A (slide background)",
+      "- `--accent`: #48CAE4 (accent, links)",
+      "- `--shadow`: rgba(0, 0, 0, 0.4)",
+    ].join("\n");
+    const tokens = themeTokensFromDesign(md);
+    expect(tokens["--bg"]).toBe("#0D1B2A");
+    expect(tokens["--accent"]).toBe("#48CAE4");
+    expect(tokens["--shadow"]).toBe("rgba(0, 0, 0, 0.4)");
+  });
+
   it("falls back to defaults on empty or broken input", () => {
     expect(themeTokensFromDesign("")).toEqual(DEFAULT_TOKENS);
     expect(themeTokensFromDesign("{ not json")).toEqual(DEFAULT_TOKENS);
