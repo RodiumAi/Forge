@@ -19,6 +19,7 @@ from app.routers import (
     design,
     documents,
     domains,
+    exports,
     files,
     history,
     images,
@@ -126,8 +127,8 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    # Document editors read the ETag to send If-Match on their next write.
-    expose_headers=["ETag"],
+    # Document editors read the ETag; downloads read the file name and export warnings.
+    expose_headers=["ETag", "Content-Disposition", "X-Forge-Export-Warnings"],
 )
 
 
@@ -187,6 +188,7 @@ app.include_router(files.router)
 app.include_router(history.router)
 app.include_router(comments.router)
 app.include_router(publish.router)
+app.include_router(exports.router)
 app.include_router(domains.router)
 app.include_router(sites_v1.router)
 app.include_router(preview.router)

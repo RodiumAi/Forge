@@ -1,0 +1,49 @@
+{
+  "kind": "slides",
+  "id": "slides-minimal-dark",
+  "title": {
+    "fr": "Minimal sombre",
+    "en": "Minimal dark"
+  },
+  "description": {
+    "fr": "Thème minimal sombre et typographique pour conférences et keynotes : noir profond, serif fine, une seule couleur d'accent et des transitions morph.",
+    "en": "Minimal, typographic dark theme for talks and keynotes: deep black, a fine serif, a single accent color and morph transitions."
+  },
+  "tags": [
+    "minimal",
+    "dark",
+    "keynote",
+    "typography"
+  ],
+  "category": "minimal",
+  "preview": "preview.html",
+  "bootHint": {
+    "fr": "Adapte slides-minimal-dark : sujet de la conférence, intervenant, idées clés.",
+    "en": "Adapt slides-minimal-dark: talk topic, speaker, key ideas."
+  },
+  "accent": "#E8C468",
+  "bg": "#0A0A0A",
+  "fg": "#F2F2F2",
+  "muted": "#8F8F8F",
+  "tone": "quiet, thoughtful, essential",
+  "fonts": {
+    "display": "Instrument Serif",
+    "body": "Instrument Sans",
+    "mono": "JetBrains Mono"
+  },
+  "transitionPreset": "elegant",
+  "layouts": {
+    "title": "s1",
+    "section": "s2",
+    "text": "s3",
+    "two-columns": "s4",
+    "image-text": "s5",
+    "quote": "s6",
+    "key-figures": "s7",
+    "chart": "s8",
+    "table": "s9",
+    "team": "s10",
+    "timeline": "s11",
+    "thank-you": "s12"
+  }
+}

@@ -1,0 +1,227 @@
+{
+  "id": "s9",
+  "background": {
+    "type": "color",
+    "token": "--bg"
+  },
+  "elements": [
+    {
+      "id": "s9-bar",
+      "type": "shape",
+      "x": 140,
+      "y": 100,
+      "w": 80,
+      "h": 8,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 4,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s9-kicker",
+      "type": "text",
+      "role": "label",
+      "x": 140,
+      "y": 126,
+      "w": 1200,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Références"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 600,
+        "color": "--accent",
+        "align": "left",
+        "lineHeight": 1.4,
+        "letterSpacing": 3,
+        "uppercase": true
+      }
+    },
+    {
+      "id": "s9-heading",
+      "type": "text",
+      "role": "heading",
+      "x": 140,
+      "y": 176,
+      "w": 1640,
+      "h": 140,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Projets récents"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 64,
+        "weight": 600,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.1
+      },
+      "animation": {
+        "type": "mask-reveal",
+        "trigger": "on-enter",
+        "direction": "up",
+        "durationMs": 700
+      }
+    },
+    {
+      "id": "s9-table",
+      "type": "table",
+      "x": 140,
+      "y": 360,
+      "w": 1640,
+      "h": 530,
+      "z": 2,
+      "rows": [
+        [
+          {
+            "text": "Projet"
+          },
+          {
+            "text": "Lieu"
+          },
+          {
+            "text": "Surface"
+          },
+          {
+            "text": "Année"
+          }
+        ],
+        [
+          {
+            "text": "Appartement Croix-Rousse"
+          },
+          {
+            "text": "Lyon 4e"
+          },
+          {
+            "text": "120 m²"
+          },
+          {
+            "text": "2025"
+          }
+        ],
+        [
+          {
+            "text": "Maison des Monts d'Or"
+          },
+          {
+            "text": "Saint-Cyr"
+          },
+          {
+            "text": "210 m²"
+          },
+          {
+            "text": "2025"
+          }
+        ],
+        [
+          {
+            "text": "Café Lumière"
+          },
+          {
+            "text": "Lyon 7e"
+          },
+          {
+            "text": "85 m²"
+          },
+          {
+            "text": "2024"
+          }
+        ],
+        [
+          {
+            "text": "Bureaux Atelier Nord"
+          },
+          {
+            "text": "Villeurbanne"
+          },
+          {
+            "text": "340 m²"
+          },
+          {
+            "text": "2024"
+          }
+        ]
+      ],
+      "headerRow": true,
+      "style": {
+        "size": 28,
+        "color": "--fg",
+        "headerFill": "--surface",
+        "border": "--border"
+      },
+      "columnWidths": [
+        2,
+        1.2,
+        0.9,
+        0.7
+      ],
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "delayMs": 120,
+        "durationMs": 500
+      }
+    },
+    {
+      "id": "s9-footer",
+      "type": "text",
+      "role": "caption",
+      "x": 140,
+      "y": 1000,
+      "w": 1100,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Camille Roy · Architecture intérieure"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s9-page",
+      "type": "text",
+      "role": "caption",
+      "x": 1660,
+      "y": 1000,
+      "w": 120,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "09"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "right",
+        "lineHeight": 1.4
+      }
+    }
+  ]
+}

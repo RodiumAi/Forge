@@ -125,6 +125,9 @@ export function ImageEditPanel({ projectId, selection, onClose, onReplaced }: Pr
           // points at a private bucket: 403 in the preview, broken at
           // publish/export.
           object_id: objectId ?? null,
+          // Source location of the selected <img>: avoids the 409 when the
+          // same src appears twice.
+          forge_id: selection.forgeId ?? null,
         }),
       });
       onReplaced();

@@ -1,7 +1,10 @@
+import { homeEn, homeFr } from "@/lib/i18n/home-strings";
+
 export type Locale = "en" | "fr";
 
 export const dictionaries = {
   en: {
+    ...homeEn,
     brandAlt: "Forge by RodiumAi",
     openForge: "Open Forge",
     langEn: "EN",
@@ -716,6 +719,12 @@ export const dictionaries = {
     attachmentUploadFailed:
       "Image upload failed, check your connection and try again (max 8 MB per image).",
     selectionMarker: "Selection",
+    selectionOnly: "Only change the selection",
+    selectionOnlyHint: "Other files stay untouched. Untick to let the AI change the rest of the project.",
+    selectionOnRoute: "on {route}",
+    targetScopeRefused:
+      "This change was limited to the selection. Not changed: {files}.",
+    targetScopeWiden: "Allow changes to other files",
     commentsTitle: "Comments",
     commentsSearch: "Search comments…",
     commentsPlaceholder: "Add a comment…",
@@ -996,6 +1005,7 @@ export const dictionaries = {
     optionsDangerDeleting: "Deleting…",
   },
   fr: {
+    ...homeFr,
     brandAlt: "Forge by RodiumAi",
     openForge: "Ouvrir Forge",
     langEn: "EN",
@@ -1710,6 +1720,12 @@ export const dictionaries = {
     attachmentUploadFailed:
       "L'envoi de l'image a échoué, vérifiez votre connexion et réessayez (max 8 Mo par image).",
     selectionMarker: "Sélection",
+    selectionOnly: "Modifier seulement la sélection",
+    selectionOnlyHint: "Les autres fichiers ne sont pas touchés. Décochez pour laisser l’IA modifier le reste du projet.",
+    selectionOnRoute: "sur {route}",
+    targetScopeRefused:
+      "Cette modification était limitée à la sélection. Non modifié : {files}.",
+    targetScopeWiden: "Autoriser la modification d'autres fichiers",
     commentsTitle: "Commentaires",
     commentsSearch: "Rechercher des commentaires…",
     commentsPlaceholder: "Ajouter un commentaire…",

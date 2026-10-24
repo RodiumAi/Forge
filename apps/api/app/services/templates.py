@@ -13,6 +13,22 @@ from app.services.typography import TEXT_EXTS, strip_long_dashes
 _SKIP_NAMES = {"node_modules", ".git", "dist", ".vite", "__pycache__"}
 _ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{1,62}$")
 
+#: Layouts every slides kit provides, one example slide each (docs/templates/slides-style-guide.md).
+SLIDES_LAYOUTS: tuple[str, ...] = (
+    "title",
+    "section",
+    "text",
+    "two-columns",
+    "image-text",
+    "quote",
+    "key-figures",
+    "chart",
+    "table",
+    "team",
+    "timeline",
+    "thank-you",
+)
+
 
 @dataclass(frozen=True)
 class TemplateMeta:
@@ -74,7 +90,8 @@ def _load_meta(folder: Path) -> TemplateMeta | None:
     tid = str(data.get("id") or folder.name).strip()
     if not _ID_RE.match(tid):
         return None
-    if not (folder / "package.json").is_file() or not (folder / "src" / "App.tsx").is_file():
+    kind = _parse_kind(data.get("kind"))
+    if not _has_kit_files(folder, kind):
         return None
     tags = data.get("tags") or []
     if not isinstance(tags, list):
@@ -92,11 +109,19 @@ def _load_meta(folder: Path) -> TemplateMeta | None:
         bg=str(data["bg"]) if data.get("bg") else None,
         preview=str(data["preview"]) if data.get("preview") else None,
         path=folder,
-        kind=_parse_kind(data.get("kind")),
+        kind=kind,
         tone=str(data.get("tone") or "").strip(),
         fg=str(data["fg"]) if data.get("fg") else None,
         muted=str(data["muted"]) if data.get("muted") else None,
     )
+
+
+def _has_kit_files(folder: Path, kind: str) -> bool:
+    """Minimal files a kit of ``kind`` needs to be forkable."""
+    if kind == "slides":
+        # A document kit: the deck plus its slide bodies, rendered by the Forge player.
+        return (folder / "deck.json").is_file() and (folder / "slides").is_dir()
+    return (folder / "package.json").is_file() and (folder / "src" / "App.tsx").is_file()
 
 
 def list_templates(*, kind: str | None = None) -> list[TemplateMeta]:
@@ -192,6 +217,11 @@ def fork_template(template_id: str, project_id: str, app_name: str | None = None
         if cleaned != text:
             file.write_text(cleaned, encoding="utf-8")
 
+    if meta.kind == "slides":
+        _finish_slides_fork(dest, app_name)
+        _snapshot(project_id, meta.id)
+        return meta
+
     if app_name:
         pkg = dest / "package.json"
         if pkg.is_file():
@@ -224,12 +254,41 @@ def fork_template(template_id: str, project_id: str, app_name: str | None = None
         except OSError:
             pass
 
+    _snapshot(project_id, meta.id)
+    return meta
+
+
+def _snapshot(project_id: str, template_id: str) -> None:
     # Baseline checkpoint: the user can always roll back to the pristine fork.
     try:
         from app.services import history
 
-        history.snapshot(project_id, f"forked template: {meta.id}")
+        history.snapshot(project_id, f"forked template: {template_id}")
     except Exception:  # pragma: no cover - history is best effort
         pass
 
-    return meta
+
+def _finish_slides_fork(dest: Path, app_name: str | None) -> None:
+    """Validate the copied deck against the contract and title it after the project.
+
+    A slides kit has no package.json, index.html or favicon: the deck is data
+    rendered by the Forge player. Every document is checked so a broken kit
+    fails the fork instead of opening an editor on an invalid deck.
+    """
+    from app.contracts.forge_design import dump_document, validate_deck, validate_slide
+
+    deck_path = dest / "deck.json"
+    deck = validate_deck(json.loads(deck_path.read_text(encoding="utf-8")))
+    for ref in deck.slides:
+        slide_path = dest / "slides" / f"{ref.id}.json"
+        validate_slide(json.loads(slide_path.read_text(encoding="utf-8")))
+        notes = dest / "notes" / f"{ref.id}.md"
+        if not notes.is_file():
+            notes.parent.mkdir(parents=True, exist_ok=True)
+            notes.write_text("", encoding="utf-8")
+    name = (app_name or "").strip()
+    if name:
+        deck.title = name[:200]
+    deck_path.write_text(
+        json.dumps(dump_document(deck), ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )

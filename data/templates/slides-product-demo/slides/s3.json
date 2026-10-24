@@ -1,0 +1,202 @@
+{
+  "id": "s3",
+  "background": {
+    "type": "color",
+    "token": "--bg"
+  },
+  "elements": [
+    {
+      "id": "s3-bar",
+      "type": "shape",
+      "x": 140,
+      "y": 100,
+      "w": 80,
+      "h": 8,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 4,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s3-kicker",
+      "type": "text",
+      "role": "label",
+      "x": 140,
+      "y": 126,
+      "w": 1200,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Comment ça marche"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 600,
+        "color": "--accent",
+        "align": "left",
+        "lineHeight": 1.4,
+        "letterSpacing": 3,
+        "uppercase": true
+      }
+    },
+    {
+      "id": "s3-heading",
+      "type": "text",
+      "role": "heading",
+      "x": 140,
+      "y": 176,
+      "w": 1640,
+      "h": 140,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Déclarez, Relay s'occupe du reste"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 64,
+        "weight": 700,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.1
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "on-enter",
+        "durationMs": 500
+      }
+    },
+    {
+      "id": "s3-body",
+      "type": "text",
+      "role": "body",
+      "x": 140,
+      "y": 360,
+      "w": 1060,
+      "h": 560,
+      "z": 3,
+      "content": [
+        {
+          "type": "bullet-list",
+          "items": [
+            {
+              "text": "Un fichier relay.yaml décrit déclencheurs et étapes"
+            },
+            {
+              "text": "Reprises automatiques et file d'attente intégrée"
+            },
+            {
+              "text": "Journaux et traces consultables en direct"
+            },
+            {
+              "text": "Déploiement par git push, retour arrière en un clic"
+            }
+          ]
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 34,
+        "weight": 400,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.55
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 80,
+        "durationMs": 450
+      }
+    },
+    {
+      "id": "s3-panel",
+      "type": "shape",
+      "x": 1300,
+      "y": 360,
+      "w": 480,
+      "h": 560,
+      "z": 1,
+      "shape": "rect",
+      "fill": "--surface",
+      "stroke": "--border",
+      "strokeWidth": 1,
+      "radius": 14
+    },
+    {
+      "id": "s3-code",
+      "type": "code",
+      "x": 1330,
+      "y": 390,
+      "w": 420,
+      "h": 500,
+      "z": 3,
+      "language": "yaml",
+      "code": "trigger:\n  webhook: /orders\nsteps:\n  - enrich: crm.lookup(order.email)\n  - notify: slack(\"#ventes\")\n  - store: postgres.orders\nretry:\n  attempts: 5\n  backoff: exponential",
+      "lineNumbers": true,
+      "size": 22,
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 80,
+        "durationMs": 450
+      }
+    },
+    {
+      "id": "s3-footer",
+      "type": "text",
+      "role": "caption",
+      "x": 140,
+      "y": 1000,
+      "w": 1100,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Relay 3.0 · Démo produit"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s3-page",
+      "type": "text",
+      "role": "caption",
+      "x": 1660,
+      "y": 1000,
+      "w": 120,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "03"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "right",
+        "lineHeight": 1.4
+      }
+    }
+  ]
+}

@@ -33,6 +33,7 @@ from app.schemas import (
 )
 from app.services import preview_babel, rate_limit
 from app.services.capabilities import require_rodi_for_paid_capability
+from app.services.document_scaffold import apply_design_system
 from app.services.filesystem import list_files, project_dir, write_bytes
 from app.services.frodi_cycle import current_frodi_cycle_key
 from app.services.posthog_client import capture_for_user
@@ -387,6 +388,16 @@ async def create_project(
     # Forge Design kinds ship dark: refused until their flag is on.
     if not kind_enabled(platform):
         raise SitesError(400, "KIND_DISABLED", "This project type is not available yet.")
+    # The format only means something for a deck; other kinds ignore it.
+    deck_ratio = body.format if platform == "slides" else None
+    # A design system to dress the new project: it must be a design_system
+    # project the caller can open (owner or collaborator), else 404 / 400.
+    design_system_source: str | None = None
+    if body.design_system_id is not None:
+        source = accessible_project(db, user, body.design_system_id, locale)
+        if resolve_kind(source.platform) != "design_system":
+            raise SitesError(400, "NOT_A_DESIGN_SYSTEM", "This project is not a design system.")
+        design_system_source = str(source.id)
     # Templates apply ONLY when the user explicitly picks one. The old keyword
     # router silently forked a kit from prompt words ("portfolio", "shop"…),
     # hijacking the user's intent — a bespoke design request landed on a
@@ -455,7 +466,8 @@ async def create_project(
         else:
             kind = get_kind(platform)
             if kind is not None and kind.engine == "document":
-                await asyncio.to_thread(kind.scaffold, str(project.id), project.name)
+                options = {"ratio": deck_ratio} if deck_ratio else {}
+                await asyncio.to_thread(kind.scaffold, str(project.id), project.name, **options)
             else:
                 await asyncio.to_thread(
                     scaffold_vite_react,
@@ -471,6 +483,16 @@ async def create_project(
             detail=str(exc),
         ) from exc
 
+    if design_system_source:
+        # Best effort: a design system that cannot be read leaves the default
+        # charter in place rather than failing a project that already exists.
+        try:
+            await asyncio.to_thread(apply_design_system, str(project.id), design_system_source)
+        except Exception:
+            logger.warning(
+                "design system %s not applied to %s", design_system_source, project.id, exc_info=True
+            )
+
     chat = Chat(project_id=project.id, title=t("main_chat", locale))
     db.add(chat)
     db.commit()
@@ -482,6 +504,8 @@ async def create_project(
             "template_id": template_id,
             "platform": platform,
             "has_prompt": bool(prompt),
+            "format": deck_ratio,
+            "has_design_system": bool(design_system_source),
         },
     )
     return _project_out(project)

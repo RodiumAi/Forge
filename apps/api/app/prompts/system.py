@@ -81,7 +81,8 @@ replacement lines
     "redesign", "from scratch").
 17. Preserve existing layout, palette and copy outside the requested scope.
 18. When a [Selection: …] or [Sélection: …] marker is present, it is the sole edit target
-    unless the user clearly asks for broader changes.
+    unless the user clearly asks for broader changes. A "Targeted edit" message then gives
+    its exact file, line and source; when it limits the edit scope, never write other files.
 19. Prefer the smallest change that satisfies the request (forge-edit).
 
 ## Current file state (critical, never revert user edits)

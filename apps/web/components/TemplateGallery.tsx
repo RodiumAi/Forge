@@ -38,6 +38,11 @@ type Props = {
   limit?: number | null;
   variant?: "home" | "landing";
   onBrowseAll?: () => void;
+  /** Controlled kind filter (the home's type tiles drive it); internal state otherwise. */
+  kind?: ProjectKindId;
+  onKindChange?: (kind: ProjectKindId) => void;
+  /** Search the gallery opens with (remount with a new `key` to apply another). */
+  initialQuery?: string;
 };
 
 export function TemplateGallery({
@@ -48,20 +53,31 @@ export function TemplateGallery({
   limit = null,
   variant = "home",
   onBrowseAll,
+  kind: kindProp,
+  onKindChange,
+  initialQuery = "",
 }: Props) {
   const { t } = useI18n();
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const [expanded, setExpanded] = useState(limit == null);
-  const [kind, setKind] = useState<ProjectKindId>("web");
+  const [kindState, setKindState] = useState<ProjectKindId>(kindProp ?? "web");
+  const kind = kindProp ?? kindState;
+  const setKind = (next: ProjectKindId) => {
+    if (kindProp === undefined) setKindState(next);
+    onKindChange?.(next);
+  };
   const enabledKinds = useEnabledKinds();
   // Web and mobile always show; another kind once it is on and has kits.
   const kindTabs = useMemo(
     () =>
       enabledKinds.filter(
         (id) =>
-          id === "web" || id === "mobile" || templates.some((tpl) => normalizeKind(tpl.kind) === id),
+          id === "web" ||
+          id === "mobile" ||
+          id === kindProp ||
+          templates.some((tpl) => normalizeKind(tpl.kind) === id),
       ),
-    [enabledKinds, templates],
+    [enabledKinds, templates, kindProp],
   );
   const [selected, setSelected] = useState<GalleryTemplate | null>(null);
 
@@ -133,7 +149,9 @@ export function TemplateGallery({
       </div>
 
       {!byKind.length ? (
-        <p className="tpl-gallery-empty">{t("templatesKindEmptyApp")}</p>
+        <p className="tpl-gallery-empty">
+          {kind === "mobile" ? t("templatesKindEmptyApp") : t("noTemplates")}
+        </p>
       ) : (
         <div className="tpl-gallery-grid">
           {filtered.map((tpl) => (

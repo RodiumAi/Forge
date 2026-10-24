@@ -10,7 +10,16 @@ import re
 
 from app.services.templates import list_templates, templates_root
 
-EXPECTED_IDS = {
+EXPECTED_SLIDES_IDS = {
+    "slides-course-lesson",
+    "slides-minimal-dark",
+    "slides-pitch-startup",
+    "slides-portfolio",
+    "slides-product-demo",
+    "slides-quarterly-review",
+}
+
+EXPECTED_IDS = EXPECTED_SLIDES_IDS | {
     "astroship-startup",
     "atelier-mode",
     "aurora-ai",
@@ -64,7 +73,7 @@ EXPECTED_MOBILE_IDS = {
     "trove-market",
 }
 
-EXPECTED_WEB_IDS = EXPECTED_IDS - EXPECTED_MOBILE_IDS
+EXPECTED_WEB_IDS = EXPECTED_IDS - EXPECTED_MOBILE_IDS - EXPECTED_SLIDES_IDS
 
 
 class TestCatalog:
@@ -91,6 +100,8 @@ class TestCatalog:
             "src/index.css",
         ]
         for template in list_templates():
+            if template.kind == "slides":
+                continue  # document kits: see test_template_slides.py
             for rel in required:
                 assert (template.path / rel).is_file(), f"{template.id} misses {rel}"
 
@@ -104,13 +115,15 @@ class TestCatalog:
             assert meta["description"]["en"] and meta["description"]["fr"], meta["id"]
             for key in ("accent", "bg", "fg", "muted"):
                 assert re.fullmatch(r"#[0-9a-fA-F]{6}", meta[key]), f"{meta['id']}.{key}"
-            assert meta.get("kind") in ("web", "mobile"), f"{meta['id']}.kind"
+            assert meta.get("kind") in ("web", "mobile", "slides"), f"{meta['id']}.kind"
 
     def test_catalog_kind_filter(self):
         webs = list_templates(kind="web")
         mobiles = list_templates(kind="mobile")
+        decks = list_templates(kind="slides")
         assert {t.id for t in webs} == EXPECTED_WEB_IDS
         assert {t.id for t in mobiles} == EXPECTED_MOBILE_IDS
+        assert {t.id for t in decks} == EXPECTED_SLIDES_IDS
         assert all(t.kind == "web" for t in webs)
         assert all(t.kind == "mobile" for t in mobiles)
 
@@ -121,7 +134,9 @@ class TestCatalog:
         from app.services.template_contract import kit_violations
 
         problems = {
-            template.id: kit_violations(template.path, kind=template.kind) for template in list_templates()
+            template.id: kit_violations(template.path, kind=template.kind)
+            for template in list_templates()
+            if template.kind != "slides"
         }
         problems = {k: v for k, v in problems.items() if v}
         assert problems == {}, problems

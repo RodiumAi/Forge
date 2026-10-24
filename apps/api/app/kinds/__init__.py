@@ -30,8 +30,9 @@ class ProjectKind:
     id: KindId
     #: react = code written by the agent, document = data + a Forge player.
     engine: Engine
-    #: ``scaffold(project_id, app_name)`` writes the starting files.
-    scaffold: Callable[[str, str], None]
+    #: ``scaffold(project_id, app_name, **options)`` writes the starting files.
+    #: Options are kind specific (``ratio`` for slides) and ignored elsewhere.
+    scaffold: Callable[..., None]
     #: Appended to the system prompt for this kind (empty = none).
     prompt_rules: str
     #: Starter kit used as the quality reference when none was forked.
@@ -46,31 +47,31 @@ class ProjectKind:
     flag: str | None = None
 
 
-def _scaffold_web(project_id: str, app_name: str) -> None:
+def _scaffold_web(project_id: str, app_name: str, **_options: object) -> None:
     from app.services.scaffold import scaffold_vite_react
 
     scaffold_vite_react(project_id, app_name, "web")
 
 
-def _scaffold_mobile(project_id: str, app_name: str) -> None:
+def _scaffold_mobile(project_id: str, app_name: str, **_options: object) -> None:
     from app.services.scaffold import scaffold_vite_react
 
     scaffold_vite_react(project_id, app_name, "mobile")
 
 
-def _scaffold_slides(project_id: str, app_name: str) -> None:
+def _scaffold_slides(project_id: str, app_name: str, *, ratio: str | None = None, **_options: object) -> None:
     from app.services.document_scaffold import scaffold_slides
 
-    scaffold_slides(project_id, app_name)
+    scaffold_slides(project_id, app_name, ratio=ratio or "16:9")
 
 
-def _scaffold_codelab(project_id: str, app_name: str) -> None:
+def _scaffold_codelab(project_id: str, app_name: str, **_options: object) -> None:
     from app.services.document_scaffold import scaffold_codelab
 
     scaffold_codelab(project_id, app_name)
 
 
-def _scaffold_design_system(project_id: str, app_name: str) -> None:
+def _scaffold_design_system(project_id: str, app_name: str, **_options: object) -> None:
     from app.services.document_scaffold import scaffold_design_system
 
     scaffold_design_system(project_id, app_name)
