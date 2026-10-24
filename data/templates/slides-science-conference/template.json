@@ -1,0 +1,49 @@
+{
+  "kind": "slides",
+  "id": "slides-science-conference",
+  "title": {
+    "fr": "Conférence scientifique",
+    "en": "Scientific talk"
+  },
+  "description": {
+    "fr": "Présentation de recherche sombre et rigoureuse pour un congrès : question, méthodes, résultats chiffrés, graphique, tableau de données et perspectives, avec numérotation des sections.",
+    "en": "Dark, rigorous research talk for a conference: question, methods, quantified results, chart, data table and next steps, with numbered sections."
+  },
+  "tags": [
+    "science",
+    "research",
+    "conference",
+    "dark"
+  ],
+  "category": "education",
+  "preview": "preview.html",
+  "bootHint": {
+    "fr": "Adapte slides-science-conference : sujet de recherche, terrain, méthodes, résultats et coauteurs.",
+    "en": "Adapt slides-science-conference: research topic, field site, methods, results and co-authors."
+  },
+  "accent": "#48CAE4",
+  "bg": "#0D1B2A",
+  "fg": "#E8EEF5",
+  "muted": "#93A4B8",
+  "tone": "rigorous, clear, evidence-first",
+  "fonts": {
+    "display": "IBM Plex Sans",
+    "body": "IBM Plex Sans",
+    "mono": "IBM Plex Mono"
+  },
+  "transitionPreset": "sober",
+  "layouts": {
+    "title": "s1",
+    "section": "s2",
+    "text": "s3",
+    "two-columns": "s4",
+    "image-text": "s5",
+    "quote": "s6",
+    "key-figures": "s7",
+    "chart": "s8",
+    "table": "s9",
+    "team": "s10",
+    "timeline": "s11",
+    "thank-you": "s12"
+  }
+}

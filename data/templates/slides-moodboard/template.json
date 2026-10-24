@@ -1,0 +1,49 @@
+{
+  "kind": "slides",
+  "id": "slides-moodboard",
+  "title": {
+    "fr": "Moodboard",
+    "en": "Moodboard"
+  },
+  "description": {
+    "fr": "Planche d'ambiance éditoriale pour une marque ou une collection : mosaïques de photos, palette avec pastilles, matières, typographies et références.",
+    "en": "Editorial moodboard for a brand or a collection: photo mosaics, palette with swatches, materials, typefaces and references."
+  },
+  "tags": [
+    "moodboard",
+    "creative",
+    "brand",
+    "neutral"
+  ],
+  "category": "creative",
+  "preview": "preview.html",
+  "bootHint": {
+    "fr": "Adapte slides-moodboard : marque ou collection, inspirations, palette, matières et références.",
+    "en": "Adapt slides-moodboard: brand or collection, inspirations, palette, materials and references."
+  },
+  "accent": "#9C6644",
+  "bg": "#EFEDE8",
+  "fg": "#1D1C1A",
+  "muted": "#6C6862",
+  "tone": "sensory, refined, evocative",
+  "fonts": {
+    "display": "Bodoni Moda",
+    "body": "Albert Sans",
+    "mono": "Space Mono"
+  },
+  "transitionPreset": "elegant",
+  "layouts": {
+    "title": "s1",
+    "section": "s2",
+    "text": "s3",
+    "two-columns": "s4",
+    "image-text": "s5",
+    "quote": "s6",
+    "key-figures": "s7",
+    "chart": "s8",
+    "table": "s9",
+    "team": "s10",
+    "timeline": "s11",
+    "thank-you": "s12"
+  }
+}

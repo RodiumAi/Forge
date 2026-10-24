@@ -1,0 +1,103 @@
+{
+  "id": "s2",
+  "background": {
+    "type": "image",
+    "src": "public/images/dna.webp",
+    "fit": "cover",
+    "overlay": "--bg",
+    "overlayOpacity": 0.82,
+    "credit": {
+      "source": "pixabay",
+      "author": "AlexAntropov86",
+      "url": "https://pixabay.com/photos/gene-dna-study-science-biology-6527964/"
+    }
+  },
+  "elements": [
+    {
+      "id": "s2-number",
+      "type": "text",
+      "role": "label",
+      "x": 140,
+      "y": 250,
+      "w": 600,
+      "h": 240,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "01"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 200,
+        "weight": 600,
+        "color": "--accent",
+        "align": "left",
+        "lineHeight": 1.1
+      }
+    },
+    {
+      "id": "s2-bar",
+      "type": "shape",
+      "x": 140,
+      "y": 510,
+      "w": 120,
+      "h": 10,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 5,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s2-title",
+      "type": "text",
+      "role": "title",
+      "x": 140,
+      "y": 550,
+      "w": 1500,
+      "h": 200,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Contexte et question"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 88,
+        "weight": 600,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.1
+      }
+    },
+    {
+      "id": "s2-subtitle",
+      "type": "text",
+      "role": "subtitle",
+      "x": 140,
+      "y": 770,
+      "w": 1400,
+      "h": 100,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Le zooplancton de la lagune ingère-t-il des microplastiques ?"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 34,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.35
+      }
+    }
+  ]
+}

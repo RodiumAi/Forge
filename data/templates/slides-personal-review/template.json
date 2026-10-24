@@ -1,0 +1,49 @@
+{
+  "kind": "slides",
+  "id": "slides-personal-review",
+  "title": {
+    "fr": "Bilan personnel",
+    "en": "Year in review"
+  },
+  "description": {
+    "fr": "Bilan de l'année festif et sincère : temps forts, objectifs atteints ou non, chiffres de l'année, graphique mois par mois, personnes qui ont compté et intentions pour l'an prochain.",
+    "en": "Festive, honest year in review: highlights, goals met or missed, figures of the year, month by month chart, people who mattered and intentions for next year."
+  },
+  "tags": [
+    "personal",
+    "review",
+    "year",
+    "dark"
+  ],
+  "category": "creative",
+  "preview": "preview.html",
+  "bootHint": {
+    "fr": "Adapte slides-personal-review : année, temps forts, objectifs, chiffres et intentions.",
+    "en": "Adapt slides-personal-review: year, highlights, goals, figures and intentions."
+  },
+  "accent": "#F7A072",
+  "bg": "#1B1626",
+  "fg": "#F3EEFA",
+  "muted": "#A79CBB",
+  "tone": "warm, honest, celebratory",
+  "fonts": {
+    "display": "Bricolage Grotesque",
+    "body": "Figtree",
+    "mono": "Space Mono"
+  },
+  "transitionPreset": "dynamic",
+  "layouts": {
+    "title": "s1",
+    "section": "s2",
+    "text": "s3",
+    "two-columns": "s4",
+    "image-text": "s5",
+    "quote": "s6",
+    "key-figures": "s7",
+    "chart": "s8",
+    "table": "s9",
+    "team": "s10",
+    "timeline": "s11",
+    "thank-you": "s12"
+  }
+}

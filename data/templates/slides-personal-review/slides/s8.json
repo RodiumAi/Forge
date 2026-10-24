@@ -1,0 +1,364 @@
+{
+  "id": "s8",
+  "background": {
+    "type": "color",
+    "token": "--bg"
+  },
+  "elements": [
+    {
+      "id": "s8-ptc0",
+      "type": "shape",
+      "x": 1580,
+      "y": 110,
+      "w": 18,
+      "h": 18,
+      "z": 0,
+      "shape": "ellipse",
+      "fill": "--accent",
+      "opacity": 0.85
+    },
+    {
+      "id": "s8-ptc1",
+      "type": "shape",
+      "x": 1700,
+      "y": 210,
+      "w": 12,
+      "h": 12,
+      "z": 0,
+      "shape": "ellipse",
+      "fill": "--accent-2",
+      "opacity": 0.85
+    },
+    {
+      "id": "s8-ptc2",
+      "type": "shape",
+      "x": 1820,
+      "y": 90,
+      "w": 22,
+      "h": 22,
+      "z": 0,
+      "shape": "ellipse",
+      "fill": "--accent-2",
+      "opacity": 0.85
+    },
+    {
+      "id": "s8-ptc3",
+      "type": "shape",
+      "x": 1640,
+      "y": 300,
+      "w": 10,
+      "h": 10,
+      "z": 0,
+      "shape": "ellipse",
+      "fill": "--accent",
+      "opacity": 0.85
+    },
+    {
+      "id": "s8-ptc4",
+      "type": "shape",
+      "x": 1780,
+      "y": 380,
+      "w": 16,
+      "h": 16,
+      "z": 0,
+      "shape": "ellipse",
+      "fill": "--accent",
+      "opacity": 0.85
+    },
+    {
+      "id": "s8-ptc5",
+      "type": "shape",
+      "x": 1500,
+      "y": 230,
+      "w": 10,
+      "h": 10,
+      "z": 0,
+      "shape": "ellipse",
+      "fill": "--accent-2",
+      "opacity": 0.85
+    },
+    {
+      "id": "s8-ptc6",
+      "type": "shape",
+      "x": 1860,
+      "y": 300,
+      "w": 12,
+      "h": 12,
+      "z": 0,
+      "shape": "ellipse",
+      "fill": "--accent",
+      "opacity": 0.85
+    },
+    {
+      "id": "s8-ptc7",
+      "type": "shape",
+      "x": 1730,
+      "y": 60,
+      "w": 10,
+      "h": 10,
+      "z": 0,
+      "shape": "ellipse",
+      "fill": "--accent",
+      "opacity": 0.85
+    },
+    {
+      "id": "s8-pthalo",
+      "type": "shape",
+      "x": 1460,
+      "y": -320,
+      "w": 760,
+      "h": 760,
+      "z": 0,
+      "shape": "ellipse",
+      "fill": "--accent-2",
+      "opacity": 0.08
+    },
+    {
+      "id": "s8-bar",
+      "type": "shape",
+      "x": 140,
+      "y": 102,
+      "w": 307,
+      "h": 54,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 27,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s8-kicker",
+      "type": "text",
+      "role": "label",
+      "x": 168,
+      "y": 108,
+      "w": 600,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Course à pied"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 600,
+        "color": "--accent-contrast",
+        "align": "left",
+        "lineHeight": 1.4,
+        "letterSpacing": 3,
+        "uppercase": true
+      }
+    },
+    {
+      "id": "s8-heading",
+      "type": "text",
+      "role": "heading",
+      "x": 140,
+      "y": 184,
+      "w": 1640,
+      "h": 140,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Kilomètres courus par mois"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 64,
+        "weight": 800,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.1
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "on-enter",
+        "durationMs": 500
+      }
+    },
+    {
+      "id": "s8-chart",
+      "type": "chart",
+      "x": 140,
+      "y": 350,
+      "w": 1080,
+      "h": 600,
+      "z": 2,
+      "chart": "bar",
+      "data": {
+        "labels": [
+          "Jan",
+          "Fév",
+          "Mar",
+          "Avr",
+          "Mai",
+          "Juin",
+          "Juil",
+          "Août",
+          "Sep",
+          "Oct",
+          "Nov",
+          "Déc"
+        ],
+        "series": [
+          {
+            "name": "Kilomètres",
+            "values": [
+              42,
+              55,
+              70,
+              96,
+              118,
+              132,
+              88,
+              64,
+              140,
+              126,
+              104,
+              85
+            ],
+            "color": "--accent"
+          }
+        ]
+      },
+      "options": {
+        "legend": false,
+        "values": true
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 80,
+        "durationMs": 450
+      }
+    },
+    {
+      "id": "s8-icon",
+      "type": "icon",
+      "x": 1320,
+      "y": 380,
+      "w": 56,
+      "h": 56,
+      "z": 3,
+      "icon": "footprints",
+      "color": "--accent",
+      "strokeWidth": 1.75
+    },
+    {
+      "id": "s8-takeaway",
+      "type": "text",
+      "role": "heading",
+      "x": 1320,
+      "y": 460,
+      "w": 460,
+      "h": 130,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Septembre, le mois du semi"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 40,
+        "weight": 800,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.2
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 1
+      }
+    },
+    {
+      "id": "s8-comment",
+      "type": "text",
+      "role": "body",
+      "x": 1320,
+      "y": 610,
+      "w": 460,
+      "h": 300,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "140 km en septembre pour préparer le semi-marathon de Lyon, couru le 4 octobre."
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 26,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.5
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 2
+      }
+    },
+    {
+      "id": "s8-footer",
+      "type": "text",
+      "role": "caption",
+      "x": 140,
+      "y": 1000,
+      "w": 1100,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Yasmine Belaïd · Mon année 2026"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s8-page",
+      "type": "text",
+      "role": "caption",
+      "x": 1660,
+      "y": 1000,
+      "w": 120,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "08"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "right",
+        "lineHeight": 1.4
+      }
+    }
+  ]
+}
