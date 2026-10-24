@@ -19,6 +19,7 @@ from typing import Any
 from urllib.parse import quote_plus
 from uuid import uuid4
 
+from app.kinds import get_kind, resolve_kind
 from app.services.typography import NO_LONG_DASH_RULE, strip_long_dashes
 
 logger = logging.getLogger(__name__)
@@ -234,6 +235,11 @@ def finalize_charter(raw: str) -> str:
     return _finalize_typography(clean_charter_markdown(raw)).strip() + "\n"
 
 
+def _platform_label(platform: str) -> str:
+    kind = get_kind(platform)
+    return kind.label if kind is not None else "website"
+
+
 async def generate_charter_markdown(
     *,
     auth: Any,
@@ -248,9 +254,7 @@ async def generate_charter_markdown(
     """One charter from a brief (+ optional logo image). Raises on LLM failure."""
     from app.services.llm import complete_chat
 
-    prompt = (
-        f"Project name: {project_name}\nPlatform: {'mobile app' if platform == 'mobile' else 'website'}\n"
-    )
+    prompt = f"Project name: {project_name}\nPlatform: {_platform_label(platform)}\n"
     prompt += f"\nBrief:\n{(brief or '').strip()[:6000]}"
     if logo_path:
         prompt += f"\n\nProject logo path to reference in the Logo section: {logo_path}"
@@ -360,7 +364,7 @@ async def bootstrap_project_brand(
             row = db.get(Project, UUID(str(project_id)))
             if row is not None:
                 project_name = row.name or project_name
-                platform = row.platform if row.platform in ("web", "mobile") else "web"
+                platform = resolve_kind(row.platform)
     except Exception:
         pass
 

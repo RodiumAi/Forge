@@ -4,6 +4,7 @@ import base64
 from functools import lru_cache
 from pathlib import Path
 
+from app.kinds import react_kind
 from app.services.ai_rules import ensure_ai_rules_md
 from app.services.filesystem import project_dir, write_bytes, write_file
 
@@ -727,7 +728,7 @@ def _manifest_webmanifest(app_name: str) -> str:
 
 def scaffold_vite_react(project_id: str, app_name: str, platform: str = "web") -> None:
     """Scaffold a React/TS app for the Babel/ESM runtime (no Vite / node_modules)."""
-    platform = platform if platform in ("web", "mobile") else "web"
+    platform = react_kind(platform)
     project_dir(project_id)
     slug = app_name.lower().replace(" ", "-")[:40] or "forge-app"
     write_file(project_id, "package.json", PACKAGE_JSON.replace("forge-app", slug))

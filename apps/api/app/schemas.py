@@ -4,6 +4,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
+from app.kinds import KindId
+
 
 class RegisterRequest(BaseModel):
     email: EmailStr
@@ -335,7 +337,7 @@ class ProjectCreate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=200)
     prompt: str | None = Field(default=None, max_length=8000)
     template_id: str | None = Field(default=None, max_length=64)
-    platform: Literal["web", "mobile"] | None = Field(default="web")
+    platform: KindId | None = Field(default="web")
 
 
 class ProjectPersonOut(BaseModel):
@@ -356,7 +358,7 @@ class ProjectOut(BaseModel):
     custom_domain: str | None = None
     custom_domain_status: str | None = None
     template_id: str | None = None
-    platform: Literal["web", "mobile"] = "web"
+    platform: KindId = "web"
     published_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
@@ -403,7 +405,18 @@ class TemplateOut(BaseModel):
     accent: str | None = None
     bg: str | None = None
     preview_url: str | None = None
-    kind: Literal["web", "mobile"] = "web"
+    kind: KindId = "web"
+
+
+class KindOut(BaseModel):
+    """One project kind and whether this instance offers it (``GET /kinds``)."""
+
+    id: KindId
+    engine: str
+    editor: str
+    exports: list[str] = Field(default_factory=list)
+    publish: str
+    enabled: bool = False
 
 
 class IntegrationOut(BaseModel):

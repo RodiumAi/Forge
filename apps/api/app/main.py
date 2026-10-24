@@ -22,6 +22,7 @@ from app.routers import (
     history,
     integrations,
     internal_admin,
+    kinds,
     plugins,
     preview,
     projects,
@@ -170,6 +171,7 @@ app.include_router(team.router)
 app.include_router(settings_router.router)
 app.include_router(plugins.router)
 app.include_router(templates.router)
+app.include_router(kinds.router)
 app.include_router(integrations.router)
 app.include_router(projects.router)
 app.include_router(design.router)

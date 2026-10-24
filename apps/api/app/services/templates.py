@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from app.config import get_settings
+from app.kinds import get_kind, resolve_kind
 from app.services.typography import TEXT_EXTS, strip_long_dashes
 
 _SKIP_NAMES = {"node_modules", ".git", "dist", ".vite", "__pycache__"}
@@ -34,8 +35,7 @@ class TemplateMeta:
 
 
 def _parse_kind(raw: object) -> str:
-    kind = str(raw or "web").strip().lower()
-    return kind if kind in ("web", "mobile") else "web"
+    return resolve_kind(str(raw or "web"))
 
 
 def templates_root() -> Path:
@@ -125,7 +125,7 @@ def list_templates(*, kind: str | None = None) -> list[TemplateMeta]:
         _templates_cache = out
         _templates_cache_mtime = mtime
         rows = out
-    if kind in ("web", "mobile"):
+    if get_kind(kind) is not None:
         return [m for m in rows if m.kind == kind]
     return rows
 

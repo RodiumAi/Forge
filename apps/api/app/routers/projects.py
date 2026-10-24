@@ -17,7 +17,9 @@ from sqlalchemy.orm import Session
 from app.auth import get_current_user, get_media_user
 from app.config import get_settings
 from app.db import get_db
+from app.errors import SitesError
 from app.i18n import resolve_locale, t
+from app.kinds import get_kind, kind_enabled, resolve_kind
 from app.models import AgentRun, Chat, Message, PreviewComment, Project, SiteUsageDay, User
 from app.schemas import (
     ChatCreate,
@@ -112,7 +114,7 @@ def _project_out(
         custom_domain=domain.hostname if domain else None,
         custom_domain_status=domain.status if domain else None,
         template_id=project.template_id,
-        platform=getattr(project, "platform", None) or "web",
+        platform=resolve_kind(getattr(project, "platform", None)),
         published_at=getattr(project, "published_at", None),
         created_at=project.created_at,
         updated_at=project.updated_at,
@@ -377,13 +379,14 @@ async def create_project(
 
     template_id = (body.template_id or "").strip() or None
     prompt = (body.prompt or "").strip()
-    platform = (body.platform or "web").strip().lower()
-    if platform not in ("web", "mobile"):
-        platform = "web"
+    platform = resolve_kind(body.platform or "web")
     if template_id:
         meta_for_kind = get_template(template_id)
         if meta_for_kind is not None:
-            platform = meta_for_kind.kind if meta_for_kind.kind in ("web", "mobile") else "web"
+            platform = resolve_kind(meta_for_kind.kind)
+    # Forge Design kinds ship dark: refused until their flag is on.
+    if not kind_enabled(platform):
+        raise SitesError(400, "KIND_DISABLED", "This project type is not available yet.")
     # Templates apply ONLY when the user explicitly picks one. The old keyword
     # router silently forked a kit from prompt words ("portfolio", "shop"…),
     # hijacking the user's intent — a bespoke design request landed on a
@@ -450,12 +453,16 @@ async def create_project(
                     project.design_brief = desc
                     db.commit()
         else:
-            await asyncio.to_thread(
-                scaffold_vite_react,
-                str(project.id),
-                project.name,
-                platform,
-            )
+            kind = get_kind(platform)
+            if kind is not None and kind.engine == "document":
+                await asyncio.to_thread(kind.scaffold, str(project.id), project.name)
+            else:
+                await asyncio.to_thread(
+                    scaffold_vite_react,
+                    str(project.id),
+                    project.name,
+                    platform,
+                )
     except Exception as exc:
         db.delete(project)
         db.commit()

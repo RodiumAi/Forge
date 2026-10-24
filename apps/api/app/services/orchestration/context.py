@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from app.kinds import resolve_kind
 from app.prompts.system import THEME_QUALITY_HINT, system_prompt_with_design
 from app.services.ai_rules import ensure_ai_rules_md, load_ai_rules_md
 from app.services.attachments import (
@@ -446,8 +447,8 @@ async def build_llm_messages(
             from app.models import Project
 
             row = db.get(Project, UUID(str(project_id)))
-            if row is not None and getattr(row, "platform", None) in ("web", "mobile"):
-                platform = row.platform
+            if row is not None:
+                platform = resolve_kind(getattr(row, "platform", None))
         except Exception:
             platform = "web"
 

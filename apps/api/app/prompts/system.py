@@ -234,9 +234,12 @@ SYSTEM_PROMPT_WITH_DESIGN = SYSTEM_PROMPT  # same body; design rules cover chart
 
 
 def system_prompt_with_design(has_design: bool, platform: str = "web") -> str:
+    from app.kinds import get_kind
+
     base = SYSTEM_PROMPT
-    if platform == "mobile":
-        base = SYSTEM_PROMPT + "\n" + MOBILE_PLATFORM_RULES + "\n"
+    kind = get_kind(platform)
+    if kind is not None and kind.prompt_rules:
+        base = SYSTEM_PROMPT + "\n" + kind.prompt_rules + "\n"
     # Every visible string of the site (copy, headings, SEO, alt, labels).
     base = base + "\n" + NO_LONG_DASH_RULE + "\n"
     if has_design:

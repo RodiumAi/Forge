@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException, Request, status
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 
 from app.i18n import resolve_locale
+from app.kinds import get_kind, kind_enabled, resolve_kind
 from app.schemas import TemplateOut
 from app.services.templates import get_template, list_templates, preview_path
 
@@ -20,7 +21,7 @@ def _to_out(meta, locale: str) -> TemplateOut:
         accent=meta.accent,
         bg=meta.bg,
         preview_url=f"/templates/{meta.id}/preview",
-        kind=meta.kind if meta.kind in ("web", "mobile") else "web",
+        kind=resolve_kind(meta.kind),
     )
 
 
@@ -29,9 +30,14 @@ def get_templates(request: Request, kind: str | None = None) -> JSONResponse:
     """Public catalogue — used on landing + dashboard."""
     locale = resolve_locale(request)
     filter_kind = kind.strip().lower() if kind else None
-    if filter_kind and filter_kind not in ("web", "mobile"):
+    if filter_kind and get_kind(filter_kind) is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid kind")
-    payload = [_to_out(meta, locale).model_dump() for meta in list_templates(kind=filter_kind)]
+    # Kits of a kind still behind its flag stay out of the public catalogue.
+    payload = [
+        _to_out(meta, locale).model_dump()
+        for meta in list_templates(kind=filter_kind)
+        if kind_enabled(meta.kind)
+    ]
     return JSONResponse(
         content=payload,
         headers={
