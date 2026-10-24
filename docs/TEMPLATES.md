@@ -153,3 +153,11 @@ The `## Colors` section must list the same four variables as `template.json`.
 - **Relevant Unsplash photos.** Pick images that match the kit's universe; document each URL in `DESIGN.md § Images`.
 - **Responsive.** The kit must hold up from mobile to desktop.
 - **Pure CSS animations.** Subtle keyframe motion (drifting gradients, fades, tilts) — no JS animation libraries.
+
+## Slides kits (`kind: "slides"`)
+
+Presentation kits are documents rendered by the Forge deck player, not React code. Their folder is `data/templates/slides-<name>/` and holds `template.json` (`"kind": "slides"`, plus `category`, `fonts`, `transitionPreset` and a `layouts` map), `DESIGN.md`, `deck.json`, `slides/*.json`, `notes/*.md`, `public/images/*.webp` and a static `preview.html`. No `package.json` or `src/`.
+
+The loader lists a slides kit once `deck.json` and `slides/` exist; forking validates every document against `contracts/forge-design/`, titles the deck after the project and skips the React steps. `apps/api/tests/test_template_slides.py` checks the contract, the 12 required layouts, image credits, theme tokens, curated fonts, the 3 MB budget and the fork. Register new ids in `EXPECTED_SLIDES_IDS` (`apps/api/tests/test_templates.py`).
+
+Full format, layouts, presets and the 36 planned templates: [templates/slides-style-guide.md](./templates/slides-style-guide.md). Licensed sources: [templates/slides-sources.md](./templates/slides-sources.md).

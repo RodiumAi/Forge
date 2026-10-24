@@ -1,0 +1,49 @@
+{
+  "kind": "slides",
+  "id": "slides-quarterly-review",
+  "title": {
+    "fr": "Revue trimestrielle",
+    "en": "Quarterly review"
+  },
+  "description": {
+    "fr": "Revue trimestrielle claire et sobre pour un comité de direction : résultats, faits marquants, graphiques, tableau par canal et priorités du trimestre suivant.",
+    "en": "Clean, sober quarterly business review for a leadership team: results, highlights, charts, a per-channel table and next quarter priorities."
+  },
+  "tags": [
+    "business",
+    "report",
+    "corporate",
+    "light"
+  ],
+  "category": "business",
+  "preview": "preview.html",
+  "bootHint": {
+    "fr": "Adapte slides-quarterly-review : entreprise, trimestre, chiffres clés, priorités.",
+    "en": "Adapt slides-quarterly-review: company, quarter, key figures, priorities."
+  },
+  "accent": "#2457D6",
+  "bg": "#F7F8FA",
+  "fg": "#111827",
+  "muted": "#5B6474",
+  "tone": "factual, calm, executive",
+  "fonts": {
+    "display": "Plus Jakarta Sans",
+    "body": "Inter",
+    "mono": "IBM Plex Mono"
+  },
+  "transitionPreset": "sober",
+  "layouts": {
+    "title": "s1",
+    "section": "s2",
+    "text": "s3",
+    "two-columns": "s4",
+    "image-text": "s5",
+    "quote": "s6",
+    "key-figures": "s7",
+    "chart": "s8",
+    "table": "s9",
+    "team": "s10",
+    "timeline": "s11",
+    "thank-you": "s12"
+  }
+}

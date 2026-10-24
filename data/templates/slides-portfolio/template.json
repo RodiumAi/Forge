@@ -1,0 +1,49 @@
+{
+  "kind": "slides",
+  "id": "slides-portfolio",
+  "title": {
+    "fr": "Portfolio",
+    "en": "Portfolio"
+  },
+  "description": {
+    "fr": "Portfolio élégant aux tons crème et terre cuite pour un créatif ou un indépendant : démarche, projet phare, chiffres, projets récents et méthode de travail.",
+    "en": "Elegant cream and terracotta portfolio for a creative or freelancer: approach, flagship project, figures, recent projects and working method."
+  },
+  "tags": [
+    "portfolio",
+    "creative",
+    "personal",
+    "elegant"
+  ],
+  "category": "creative",
+  "preview": "preview.html",
+  "bootHint": {
+    "fr": "Adapte slides-portfolio : nom, métier, projets, photos de réalisations.",
+    "en": "Adapt slides-portfolio: name, craft, projects, photos of your work."
+  },
+  "accent": "#A84B25",
+  "bg": "#F4EFE8",
+  "fg": "#1C1A17",
+  "muted": "#675E55",
+  "tone": "refined, warm, understated",
+  "fonts": {
+    "display": "Playfair Display",
+    "body": "DM Sans",
+    "mono": "IBM Plex Mono"
+  },
+  "transitionPreset": "elegant",
+  "layouts": {
+    "title": "s1",
+    "section": "s2",
+    "text": "s3",
+    "two-columns": "s4",
+    "image-text": "s5",
+    "quote": "s6",
+    "key-figures": "s7",
+    "chart": "s8",
+    "table": "s9",
+    "team": "s10",
+    "timeline": "s11",
+    "thank-you": "s12"
+  }
+}
