@@ -1,0 +1,49 @@
+{
+  "kind": "slides",
+  "id": "slides-travel",
+  "title": {
+    "fr": "Voyage",
+    "en": "Travel journal"
+  },
+  "description": {
+    "fr": "Carnet de voyage chaleureux et vivant : itinéraire, étapes, photos façon polaroid, budget, kilomètres, coups de cœur et prochaine aventure.",
+    "en": "Warm, lively travel journal: itinerary, stops, polaroid-style photos, budget, distances, favourites and the next adventure."
+  },
+  "tags": [
+    "travel",
+    "personal",
+    "journal",
+    "warm"
+  ],
+  "category": "creative",
+  "preview": "preview.html",
+  "bootHint": {
+    "fr": "Adapte slides-travel : destination, étapes, dates, budget et coups de cœur.",
+    "en": "Adapt slides-travel: destination, stops, dates, budget and favourites."
+  },
+  "accent": "#D9822B",
+  "bg": "#F5F1E8",
+  "fg": "#23302A",
+  "muted": "#687466",
+  "tone": "warm, curious, playful",
+  "fonts": {
+    "display": "Young Serif",
+    "body": "Nunito Sans",
+    "mono": "Space Mono"
+  },
+  "transitionPreset": "dynamic",
+  "layouts": {
+    "title": "s1",
+    "section": "s2",
+    "text": "s3",
+    "two-columns": "s4",
+    "image-text": "s5",
+    "quote": "s6",
+    "key-figures": "s7",
+    "chart": "s8",
+    "table": "s9",
+    "team": "s10",
+    "timeline": "s11",
+    "thank-you": "s12"
+  }
+}

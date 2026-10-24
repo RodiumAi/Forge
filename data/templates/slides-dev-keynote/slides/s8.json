@@ -1,0 +1,326 @@
+{
+  "id": "s8",
+  "background": {
+    "type": "color",
+    "token": "--bg"
+  },
+  "elements": [
+    {
+      "id": "s8-ptchrome",
+      "type": "shape",
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 56,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--surface"
+    },
+    {
+      "id": "s8-ptlight0",
+      "type": "shape",
+      "x": 28,
+      "y": 18,
+      "w": 20,
+      "h": 20,
+      "z": 1,
+      "shape": "ellipse",
+      "fill": "--accent"
+    },
+    {
+      "id": "s8-ptlight1",
+      "type": "shape",
+      "x": 62,
+      "y": 18,
+      "w": 20,
+      "h": 20,
+      "z": 1,
+      "shape": "ellipse",
+      "fill": "--accent-2"
+    },
+    {
+      "id": "s8-ptlight2",
+      "type": "shape",
+      "x": 96,
+      "y": 18,
+      "w": 20,
+      "h": 20,
+      "z": 1,
+      "shape": "ellipse",
+      "fill": "--muted"
+    },
+    {
+      "id": "s8-ptpath",
+      "type": "text",
+      "role": "caption",
+      "x": 160,
+      "y": 12,
+      "w": 1200,
+      "h": 34,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "~/devdays-2026/keynote.nebula"
+        }
+      ],
+      "style": {
+        "font": "mono",
+        "size": 22,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s8-ptglow",
+      "type": "shape",
+      "x": 1380,
+      "y": 640,
+      "w": 900,
+      "h": 900,
+      "z": 0,
+      "shape": "ellipse",
+      "fill": "--accent",
+      "opacity": 0.07
+    },
+    {
+      "id": "s8-bar",
+      "type": "shape",
+      "x": 140,
+      "y": 100,
+      "w": 80,
+      "h": 8,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 4,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s8-kicker",
+      "type": "text",
+      "role": "label",
+      "x": 140,
+      "y": 126,
+      "w": 1200,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "// build"
+        }
+      ],
+      "style": {
+        "font": "mono",
+        "size": 26,
+        "weight": 600,
+        "color": "--accent",
+        "align": "left",
+        "lineHeight": 1.4,
+        "letterSpacing": 0
+      }
+    },
+    {
+      "id": "s8-heading",
+      "type": "text",
+      "role": "heading",
+      "x": 140,
+      "y": 176,
+      "w": 1640,
+      "h": 140,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Build d'une app de 400 pages (s)"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 64,
+        "weight": 700,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.1
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "on-enter",
+        "durationMs": 500
+      }
+    },
+    {
+      "id": "s8-chart",
+      "type": "chart",
+      "x": 140,
+      "y": 350,
+      "w": 1080,
+      "h": 600,
+      "z": 2,
+      "chart": "bar",
+      "data": {
+        "labels": [
+          "Nebula 2",
+          "Nebula 3",
+          "Nebula 4"
+        ],
+        "series": [
+          {
+            "name": "Build complet",
+            "values": [
+              184,
+              96,
+              31
+            ],
+            "color": "--accent"
+          },
+          {
+            "name": "Build incrémental",
+            "values": [
+              42,
+              18,
+              3
+            ],
+            "color": "--accent-2"
+          }
+        ]
+      },
+      "options": {
+        "legend": true,
+        "values": true
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 80,
+        "durationMs": 450
+      }
+    },
+    {
+      "id": "s8-icon",
+      "type": "icon",
+      "x": 1320,
+      "y": 380,
+      "w": 56,
+      "h": 56,
+      "z": 3,
+      "icon": "rocket",
+      "color": "--accent",
+      "strokeWidth": 1.75
+    },
+    {
+      "id": "s8-takeaway",
+      "type": "text",
+      "role": "heading",
+      "x": 1320,
+      "y": 460,
+      "w": 460,
+      "h": 130,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "6 fois plus rapide qu'en 2024"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 40,
+        "weight": 700,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.2
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 1
+      }
+    },
+    {
+      "id": "s8-comment",
+      "type": "text",
+      "role": "body",
+      "x": 1320,
+      "y": 610,
+      "w": 460,
+      "h": 300,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Le build incrémental passe sous 3 secondes grâce au cache de compilation persistant."
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 26,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.5
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 2
+      }
+    },
+    {
+      "id": "s8-footer",
+      "type": "text",
+      "role": "caption",
+      "x": 140,
+      "y": 1000,
+      "w": 1100,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Nebula 4.0 · DevDays Lyon 2026"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s8-page",
+      "type": "text",
+      "role": "caption",
+      "x": 1660,
+      "y": 1000,
+      "w": 120,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "08"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "right",
+        "lineHeight": 1.4
+      }
+    }
+  ]
+}

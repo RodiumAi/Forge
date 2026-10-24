@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
+from collections.abc import Collection
 from typing import Any
 
 from app.services import history
@@ -53,6 +54,63 @@ _NEGATION_BEFORE_RE = re.compile(
     re.IGNORECASE,
 )
 _NEGATION_AFTER_RE = re.compile(r"^\s*(?:pas|plus|jamais)\b", re.IGNORECASE)
+
+
+# Preview-only element ids (runtime/transform.mjs). A model that copies one from
+# the targeted-edit snippet must not persist it in the sources.
+_FORGE_ID_ATTR_RE = re.compile(
+    r"""\s+data-forge-id\s*=\s*(?:"[^"\n]*"|'[^'\n]*'|\{\s*(?:"[^"\n]*"|'[^'\n]*')\s*\})"""
+)
+_JSX_SOURCE_EXTS = (".tsx", ".jsx", ".ts", ".js", ".mjs")
+
+
+def strip_forge_ids(path: str, content: str) -> str:
+    """Remove `data-forge-id="..."` attributes from a JSX/TS source file."""
+    if not str(path or "").lower().endswith(_JSX_SOURCE_EXTS) or "data-forge-id" not in content:
+        return content
+    return _FORGE_ID_ATTR_RE.sub("", content)
+
+
+def _norm_rel(path: str) -> str:
+    return (path or "").strip().lstrip("/").replace("\\", "/")
+
+
+def scope_violation(path: str, allowed_paths: Collection[str], *, op: str = "write") -> dict:
+    """Warning payload for a write or delete outside the targeted-edit scope.
+
+    ``widen: true`` tells the builder it can offer to resend without the limit.
+    """
+    allowed = sorted(_norm_rel(p) for p in allowed_paths)
+    verb = "delete" if op == "delete" else "write to"
+    return {
+        "code": "TARGET_SCOPE",
+        "path": path,
+        "specifier": "",
+        "message": (
+            f"Skipped {verb} `{path}`: this edit is limited to the selection "
+            f"({', '.join(allowed)}). Allow changes to other files to apply it."
+        ),
+        "scope": allowed,
+        "widen": True,
+    }
+
+
+def split_deletes_in_scope(
+    deletes: list[Any], allowed_paths: Collection[str] | None
+) -> tuple[list[Any], list[dict]]:
+    """(deletes to apply, violations) under an optional targeted-edit scope."""
+    if allowed_paths is None:
+        return list(deletes), []
+    allowed = {_norm_rel(p) for p in allowed_paths}
+    keep: list[Any] = []
+    refused: list[dict] = []
+    for op in deletes:
+        path = str(getattr(op, "path", "") or "")
+        if _norm_rel(path) in allowed:
+            keep.append(op)
+        else:
+            refused.append(scope_violation(path, allowed_paths, op="delete"))
+    return keep, refused
 
 
 def brand_change_requested(text: str) -> bool:
@@ -200,6 +258,7 @@ def apply_validated_writes(
     *,
     allow_brand_writes: bool = False,
     snapshot_label: str | None = None,
+    allowed_paths: Collection[str] | None = None,
 ) -> tuple[list[dict], list[dict]]:
     """
     Write allowed files; return (applied, violations_as_dicts).
@@ -207,6 +266,10 @@ def apply_validated_writes(
 
     DESIGN.md and public/logo.* are locked by default so agent turns cannot
     silently reinvent the project brand after the user set a charter/logo.
+
+    ``allowed_paths``: targeted edit of a preview selection. Any op on another
+    path is refused with a ``TARGET_SCOPE`` violation (``widen: true``); None
+    means the whole project.
     """
     # --- Phase 1: validate everything, write nothing -------------------------
     accepted: list[tuple[str, str]] = []
@@ -215,10 +278,14 @@ def apply_validated_writes(
     # Latest accepted content per path in this batch: an edit may target a
     # file written (or edited) earlier in the same answer.
     batch_content: dict[str, str] = {}
+    scope = {_norm_rel(p) for p in allowed_paths} if allowed_paths is not None else None
 
     for op in writes:
         path = str(getattr(op, "path", "") or "")
         if not path:
+            continue
+        if scope is not None and _norm_rel(path) not in scope:
+            violations.append(scope_violation(path, allowed_paths or ()))
             continue
         is_edit = isinstance(op, EditOp)
         if is_edit:
@@ -247,6 +314,7 @@ def apply_validated_writes(
             continue
         # House typography: no long dashes on the generated site (text, SEO, alt…).
         content = strip_long_dashes_in_file(path, content)
+        content = strip_forge_ids(path, content)
         if not is_edit:
             content, merge_info = _css_preserving_content(project_id, path, content)
             if merge_info:
@@ -292,6 +360,7 @@ async def apply_validated_writes_async(
     *,
     allow_brand_writes: bool = False,
     snapshot_label: str | None = None,
+    allowed_paths: Collection[str] | None = None,
 ) -> tuple[list[dict], list[dict]]:
     """Off-loop variant for the SSE generators.
 
@@ -306,4 +375,5 @@ async def apply_validated_writes_async(
         writes,
         allow_brand_writes=allow_brand_writes,
         snapshot_label=snapshot_label,
+        allowed_paths=allowed_paths,
     )

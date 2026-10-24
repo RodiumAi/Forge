@@ -1,0 +1,106 @@
+{
+  "id": "s2",
+  "background": {
+    "type": "color",
+    "token": "--surface"
+  },
+  "elements": [
+    {
+      "id": "s2-number",
+      "type": "text",
+      "role": "label",
+      "x": 140,
+      "y": 380,
+      "w": 480,
+      "h": 240,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "42"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 200,
+        "weight": 800,
+        "color": "--accent-contrast",
+        "align": "left",
+        "lineHeight": 1.1
+      }
+    },
+    {
+      "id": "s2-bar",
+      "type": "shape",
+      "x": 840,
+      "y": 400,
+      "w": 120,
+      "h": 10,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 5,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s2-title",
+      "type": "text",
+      "role": "title",
+      "x": 840,
+      "y": 440,
+      "w": 940,
+      "h": 200,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Objectif du sprint"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 88,
+        "weight": 800,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.1
+      }
+    },
+    {
+      "id": "s2-subtitle",
+      "type": "text",
+      "role": "subtitle",
+      "x": 840,
+      "y": 660,
+      "w": 940,
+      "h": 100,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Réduire l'abandon de panier sur mobile."
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 34,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.35
+      }
+    },
+    {
+      "id": "s2-panel",
+      "type": "shape",
+      "x": 0,
+      "y": 0,
+      "w": 720,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent"
+    }
+  ]
+}

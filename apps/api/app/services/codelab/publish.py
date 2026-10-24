@@ -248,3 +248,30 @@ def build_codelab_site(
         encoding="utf-8",
     )
     return {"mode": "codelab_player", "steps": len(titles), "downloads": len(downloads)}
+
+
+async def publish_codelab_player(
+    project_id: str, slug: str, *, site_url: str, lang: str, badge: bool
+) -> dict:
+    """Publish mode ``codelab_player``: build the static site, upload it under ``{slug}/``."""
+    import asyncio
+    import tempfile
+
+    from app.services.publish_esm import upload_site_dir
+
+    with tempfile.TemporaryDirectory(prefix="forge-codelab-") as tmp:
+        out = Path(tmp) / "dist"
+        out.mkdir(parents=True, exist_ok=True)
+        build = await asyncio.to_thread(
+            build_codelab_site, project_id, out, site_url=site_url, lang=lang, badge=badge
+        )
+        uploaded, orphans = await upload_site_dir(out, slug)
+    return {
+        "public_url": site_url,
+        "files_uploaded": uploaded,
+        "orphans_deleted": orphans,
+        "build_mode": build.get("mode"),
+        "routes": ["/"],
+        "prerendered": False,
+        "lang": lang,
+    }

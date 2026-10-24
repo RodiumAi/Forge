@@ -20,6 +20,7 @@ from app.routers import (
     design,
     documents,
     domains,
+    exports,
     files,
     history,
     images,
@@ -127,6 +128,8 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    # Downloads read the file name and the export warnings from headers.
+    expose_headers=["Content-Disposition", "X-Forge-Export-Warnings"],
 )
 
 
@@ -187,6 +190,7 @@ app.include_router(files.router)
 app.include_router(history.router)
 app.include_router(comments.router)
 app.include_router(publish.router)
+app.include_router(exports.router)
 app.include_router(domains.router)
 app.include_router(sites_v1.router)
 app.include_router(preview.router)

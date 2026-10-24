@@ -1,0 +1,49 @@
+{
+  "kind": "slides",
+  "id": "slides-wedding-event",
+  "title": {
+    "fr": "Mariage ou événement",
+    "en": "Wedding or event"
+  },
+  "description": {
+    "fr": "Présentation romantique et raffinée pour un mariage ou une réception : programme, lieux, informations pratiques, hébergements, témoins et réponse attendue.",
+    "en": "Romantic, refined deck for a wedding or a reception: programme, venues, practical details, accommodation, witnesses and RSVP."
+  },
+  "tags": [
+    "wedding",
+    "event",
+    "personal",
+    "light"
+  ],
+  "category": "creative",
+  "preview": "preview.html",
+  "bootHint": {
+    "fr": "Adapte slides-wedding-event : prénoms, date, lieux, programme, hébergements et date de réponse.",
+    "en": "Adapt slides-wedding-event: names, date, venues, programme, accommodation and RSVP date."
+  },
+  "accent": "#B07D62",
+  "bg": "#FBF7F2",
+  "fg": "#3A2E2A",
+  "muted": "#8A7A70",
+  "tone": "warm, elegant, joyful",
+  "fonts": {
+    "display": "Cormorant Garamond",
+    "body": "Lora",
+    "mono": "IBM Plex Mono"
+  },
+  "transitionPreset": "elegant",
+  "layouts": {
+    "title": "s1",
+    "section": "s2",
+    "text": "s3",
+    "two-columns": "s4",
+    "image-text": "s5",
+    "quote": "s6",
+    "key-figures": "s7",
+    "chart": "s8",
+    "table": "s9",
+    "team": "s10",
+    "timeline": "s11",
+    "thank-you": "s12"
+  }
+}

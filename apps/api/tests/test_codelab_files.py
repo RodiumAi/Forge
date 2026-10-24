@@ -383,7 +383,7 @@ def test_fonts_of_the_charter_are_linked():
 
 
 @pytest.mark.asyncio
-async def test_publish_dispatches_the_codelab_mode(project, fake_bundle, monkeypatch):
+async def test_publish_uploads_the_codelab_site(project, fake_bundle, monkeypatch):
     from app.services import publish_esm
 
     stored: dict[str, bytes] = {}
@@ -401,8 +401,8 @@ async def test_publish_dispatches_the_codelab_mode(project, fake_bundle, monkeyp
             return len(keys)
 
     monkeypatch.setattr(publish_esm, "get_object_store", lambda: Store())
-    result = await publish_esm.publish_project_esm(
-        project, "mon-lab", site_url="https://mon-lab.example/", publish_mode="codelab_player", badge=False
+    result = await publish.publish_codelab_player(
+        project, "mon-lab", site_url="https://mon-lab.example/", lang="fr", badge=False
     )
     assert result["build_mode"] == "codelab_player"
     assert "mon-lab/index.html" in stored

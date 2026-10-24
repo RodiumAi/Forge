@@ -108,7 +108,8 @@ import {
   type ChatStreamState,
 } from "@/lib/chat-stream";
 import { failedTasksFromPlan, isPlanStopped, isResumableRunStatus } from "@/lib/plan-resume";
-import type { ProjectKindId } from "@/lib/kinds";
+import { isReactKind, type ProjectKindId } from "@/lib/kinds";
+import { buildChatTarget, forgeIdLabel, scopeRefusedPaths, type ChatTarget } from "@/lib/edit-target";
 
 type Project = {
   id: string;
@@ -154,6 +155,19 @@ type SendOpts = {
   branchFromId?: string | null;
   /** Explicit selection (resend/edit) — wins over composer state when set. */
   selection?: ElementSelection | null;
+  /**
+   * Limit the AI to the selection's files (React projects). Undefined uses the
+   * composer toggle; the "allow other files" action resends with false.
+   */
+  restrict?: boolean;
+};
+
+/** Writes the API refused because the edit was limited to the selection. */
+type ScopeNotice = {
+  files: string[];
+  content: string;
+  attachments: PromptAttachment[];
+  selection: ElementSelection | null;
 };
 
 type ChatRetryAction =
@@ -445,6 +459,9 @@ export default function ProjectPage() {
   const [viewport, setViewport] = useState<ViewportMode>(initialUrl.viewport ?? "desktop");
   const [previewTool, setPreviewTool] = useState<PreviewTool | null>(initialUrl.tool);
   const [elementSelection, setElementSelection] = useState<ElementSelection | null>(null);
+  // "Modifier seulement la sélection": on by default for every new selection.
+  const [restrictToSelection, setRestrictToSelection] = useState(true);
+  const [scopeNotice, setScopeNotice] = useState<ScopeNotice | null>(null);
   const [commentAnchor, setCommentAnchor] = useState<ElementSelection | null>(null);
   const [imageSelection, setImageSelection] = useState<ImageSelection | null>(null);
   const [previewPath, setPreviewPath] = useState(
@@ -1774,13 +1791,19 @@ export default function ProjectPage() {
         return;
       }
 
-      const withSelection = (() => {
-        const sel =
-          opts.selection !== undefined ? opts.selection : elementSelection;
-        return sel
-          ? `${formatElementSelectionMarker(sel, t("selectionMarker"))}\n\n${content}`.trim()
-          : content;
-      })();
+      const sel = opts.selection !== undefined ? opts.selection : elementSelection;
+      const withSelection = sel
+        ? `${formatElementSelectionMarker(sel, t("selectionMarker"))}\n\n${content}`.trim()
+        : content;
+      // React projects: the route the preview shows, plus the selected element
+      // (data-forge-id) and the "only the selection" scope.
+      const chatTarget: ChatTarget | undefined = isReactKind(project?.platform ?? "web")
+        ? buildChatTarget({
+            route: previewPath,
+            selection: sel,
+            restrict: opts.restrict !== undefined ? opts.restrict : restrictToSelection,
+          })
+        : undefined;
       const built = await buildPromptWithAttachments(withSelection, uploaded, {
         importFiles: t("importFiles"),
         imageAttached: t("promptImageAttached"),
@@ -1799,6 +1822,8 @@ export default function ProjectPage() {
         return;
       }
       setElementSelection(null);
+      setRestrictToSelection(true);
+      setScopeNotice(null);
       // Esc / auto-off: sending a prompt means we're done with Select/T overlay.
       if (previewTool) {
         setPreviewTool(null);
@@ -1923,6 +1948,7 @@ export default function ProjectPage() {
             ...(canPickModelRef.current && chatModelRef.current !== "auto"
               ? { model: chatModelRef.current }
               : {}),
+            ...(chatTarget ? { target: chatTarget } : {}),
           }),
         });
         if (!res.ok || !res.body) {
@@ -1976,6 +2002,12 @@ export default function ProjectPage() {
         // run executing server-side with nothing watching it. The reconnect
         // path has always treated it as a failure; now both do.
         if (!sawTerminal) throw new StreamFailure("stream ended early", "network");
+        if (chatTarget?.restrict) {
+          const refused = scopeRefusedPaths(stateRef.current.warnings);
+          if (refused.length) {
+            setScopeNotice({ files: refused, content, attachments: uploaded, selection: sel ?? null });
+          }
+        }
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") {
           return;
@@ -2027,7 +2059,7 @@ export default function ProjectPage() {
         void refreshForgeStatus({ fresh: true });
       }
     },
-    [busy, chatId, editingMessageId, elementSelection, handleStreamEvent, locale, planMode, previewTool, projectId, pushChatError, pushStreamError, seedStreamState, subscribeRunEvents, syncBuilderUrl, t],
+    [busy, chatId, editingMessageId, elementSelection, handleStreamEvent, locale, planMode, previewPath, previewTool, project?.platform, projectId, pushChatError, pushStreamError, restrictToSelection, seedStreamState, subscribeRunEvents, syncBuilderUrl, t],
   );
 
   /** Re-run a user prompt as a branch without opening the editor. */
@@ -2058,6 +2090,17 @@ export default function ProjectPage() {
     },
     [busy, restorePromptAttachments, sendMessage],
   );
+
+  /** "Autoriser la modification d'autres fichiers": same request, no scope. */
+  const widenScope = useCallback(() => {
+    const notice = scopeNotice;
+    if (!notice || busy) return;
+    setScopeNotice(null);
+    void sendMessage(notice.content, notice.attachments, {
+      selection: notice.selection,
+      restrict: false,
+    });
+  }, [busy, scopeNotice, sendMessage]);
 
   /** Ambiguous visual edit → clear the notice and send a chat prompt instead. */
   const applyVisualEditViaChat = useCallback(
@@ -2798,21 +2841,54 @@ export default function ProjectPage() {
                   setMentionQuery("");
                 }}
               />
+              {scopeNotice ? (
+                <div className="builder-msg-error builder-msg-error-inline is-warning" role="status">
+                  <div className="builder-msg-error-body">
+                    <p className="builder-msg-error-text">
+                      {t("targetScopeRefused").replace("{files}", scopeNotice.files.join(", "))}
+                    </p>
+                    <div className="builder-msg-error-actions">
+                      <button
+                        type="button"
+                        className="builder-msg-error-action"
+                        disabled={busy}
+                        onClick={widenScope}
+                      >
+                        {t("targetScopeWiden")}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
               {elementSelection ? (
                 <div className="landing-files">
                   <button
                     type="button"
                     className="landing-file-chip selection-chip"
                     onClick={() => setElementSelection(null)}
-                    title={`${t("selectionClear")}${elementSelection.selector ? ` — ${elementSelection.selector}` : ""}`}
+                    title={`${t("selectionClear")}${elementSelection.selector ? ` · ${elementSelection.selector}` : ""}${elementSelection.forgeId ? ` · ${elementSelection.forgeId}` : ""}`}
                   >
                     <span className="selection-chip-count">1</span>
                     <span>
                       {t("selectionMarker")}
                       {` · ${selectionChipLabel(elementSelection)}`}
+                      {forgeIdLabel(elementSelection.forgeId) ? ` · ${forgeIdLabel(elementSelection.forgeId)}` : ""}
+                      {isReactKind(project?.platform ?? "web") && previewPath
+                        ? ` ${t("selectionOnRoute").replace("{route}", previewPath)}`
+                        : ""}
                     </span>
                     <span aria-hidden>×</span>
                   </button>
+                  {isReactKind(project?.platform ?? "web") ? (
+                    <label className="selection-scope-toggle" title={t("selectionOnlyHint")}>
+                      <input
+                        type="checkbox"
+                        checked={restrictToSelection}
+                        onChange={(e) => setRestrictToSelection(e.target.checked)}
+                      />
+                      <span>{t("selectionOnly")}</span>
+                    </label>
+                  ) : null}
                 </div>
               ) : null}
               {fileNotice && <p className="landing-file-notice">{fileNotice}</p>}
@@ -2977,6 +3053,7 @@ export default function ProjectPage() {
             }}
             onElementSelect={(sel) => {
               setElementSelection(sel);
+              setRestrictToSelection(true);
               setMobilePane("chat");
             }}
             onCommentAnchor={(sel) => setCommentAnchor(sel)}
@@ -2986,13 +3063,15 @@ export default function ProjectPage() {
               setPages((prev) => (prev.includes(path) ? prev : [...prev, path].sort((a, b) => (a === "/" ? -1 : b === "/" ? 1 : a.localeCompare(b)))));
               syncBuilderUrl({ previewPath: path });
             }}
-            onVisualEdit={async (oldText, newText) => {
+            onVisualEdit={async (oldText, newText, forgeId) => {
               try {
                 await api<{ path: string }>(
                   `/projects/${projectId}/visual-edit`,
                   {
                     method: "POST",
-                    body: JSON.stringify({ old_text: oldText, new_text: newText }),
+                    // forge_id pins the edit to the element the user typed in
+                    // (no 409 when the same text appears elsewhere).
+                    body: JSON.stringify({ old_text: oldText, new_text: newText, forge_id: forgeId ?? null }),
                   },
                 );
                 setError(null);
