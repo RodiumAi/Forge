@@ -25,10 +25,12 @@ import {
 
 export default function IntegrationsPage() {
   const { t, locale } = useI18n();
-  const [items, setItems] = useState<CachedIntegration[]>(() => getCachedIntegrations(locale) || []);
+  // Starts empty on both server and client (the cache lives in sessionStorage),
+  // then fills from the cache right after hydration.
+  const [items, setItems] = useState<CachedIntegration[]>([]);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string>("all");
-  const [loading, setLoading] = useState(items.length === 0);
+  const [loading, setLoading] = useState(true);
 
   // `?cat=` deep links (read once, kept in sync without a navigation).
   useEffect(() => {
@@ -46,6 +48,8 @@ export default function IntegrationsPage() {
 
   useEffect(() => {
     let cancelled = false;
+    const cached = getCachedIntegrations(locale);
+    if (cached?.length) setItems(cached);
     setLoading(true);
     void ensureIntegrations(locale)
       .then((list) => {

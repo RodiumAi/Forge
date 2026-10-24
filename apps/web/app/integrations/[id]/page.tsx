@@ -42,7 +42,7 @@ export default function IntegrationDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params?.id || "";
   const [detail, setDetail] = useState<Detail | null>(null);
-  const [all, setAll] = useState<CachedIntegration[]>(() => getCachedIntegrations(locale) || []);
+  const [all, setAll] = useState<CachedIntegration[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -71,6 +71,8 @@ export default function IntegrationDetailPage() {
 
   useEffect(() => {
     let cancelled = false;
+    const cached = getCachedIntegrations(locale);
+    if (cached?.length) setAll(cached);
     void ensureIntegrations(locale)
       .then((list) => {
         if (!cancelled) setAll(list);

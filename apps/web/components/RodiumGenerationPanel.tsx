@@ -384,7 +384,7 @@ export function RodiumGenerationPanel() {
 
       {linked && activeKeys.length ? (
         <form className="f-row-line" onSubmit={(e) => void onSelectAccountKey(e)}>
-          <div className="l" style={{ flex: "1 1 260px" }}>
+          <div className="l" style={{ flex: 1, minWidth: 0 }}>
             <Field label={t("apSelectKey")}>
               <Select value={selectedKeyId} onChange={(e) => setSelectedKeyId(e.target.value)}>
                 {activeKeys.map((key) => (
@@ -422,7 +422,7 @@ export function RodiumGenerationPanel() {
 
       {showManualPaste ? (
         <form className="f-row-line" onSubmit={(e) => void onPasteSubmit(e)}>
-          <div className="l" style={{ flex: "1 1 260px" }}>
+          <div className="l" style={{ flex: 1, minWidth: 0 }}>
             <Field label={t("apPasteKey")} hint={t("apPasteKeyHint")}>
               <Input
                 type="password"
