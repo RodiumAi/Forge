@@ -144,7 +144,7 @@ export const CODELAB_CSS = String.raw`
 .fcl-code-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 6px 4px 12px; background: var(--fcl-code-head); border-bottom: 1px solid var(--fcl-border); font-size: 13px; min-height: 36px; }
 .fcl-code-file { display: inline-flex; align-items: center; gap: 7px; min-width: 0; color: var(--fcl-muted); }
 .fcl-code-name { font-family: var(--fcl-font-mono); color: var(--fcl-fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.fcl-code-lang { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; border: 1px solid var(--fcl-border); border-radius: 5px; padding: 0 6px; }
+.fcl-code-lang { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; border: 1px solid var(--fcl-border); border-radius: 5px; padding: 0 6px; white-space: nowrap; flex-shrink: 0; }
 .fcl-code-actions { display: inline-flex; gap: 2px; flex-shrink: 0; }
 .fcl-code-body { position: relative; }
 .fcl-code-body[data-collapsed]::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 48px; background: linear-gradient(transparent, var(--fcl-code-bg)); pointer-events: none; }
@@ -210,6 +210,8 @@ export const CODELAB_CSS = String.raw`
   .fcl-topbar { display: flex; }
   .fcl-content { padding: 24px 16px 32px; }
   .fcl-nav { padding: 16px 16px 32px; }
+  .fcl-code-lang { display: none; }
+  .fcl-code-actions .fcl-btn span { display: none; }
 }
 
 /* Print: every step, one after the other, no chrome. */

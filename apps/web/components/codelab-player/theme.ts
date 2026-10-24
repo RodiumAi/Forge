@@ -3,7 +3,8 @@
  * plus the light or dark syntax palette that matches the background.
  */
 
-import { themeTokensFromDesign, type ThemeTokens } from "../deck-player";
+import { themeTokensFromDesign } from "../deck-player/theme";
+import type { ThemeTokens } from "../deck-player/types";
 
 export type ColorScheme = "light" | "dark";
 
@@ -52,7 +53,23 @@ export function normalizeDesignMarkdown(md: string): string {
     });
 }
 
+const FONT_FALLBACKS: Record<string, string> = {
+  "--font-display": 'system-ui, -apple-system, "Segoe UI", sans-serif',
+  "--font-body": 'system-ui, -apple-system, "Segoe UI", sans-serif',
+  "--font-mono": 'ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace',
+};
+
+/** A charter naming one family ("Inter") still falls back to a font of the right kind. */
+export function withFontFallbacks(tokens: ThemeTokens): ThemeTokens {
+  const out = { ...tokens };
+  for (const [name, fallback] of Object.entries(FONT_FALLBACKS)) {
+    const value = (out[name] ?? "").trim();
+    if (value && !/(serif|monospace|system-ui)\s*$/i.test(value)) out[name] = `${value}, ${fallback}`;
+  }
+  return out;
+}
+
 export function codelabTokens(design: string): { tokens: ThemeTokens; scheme: ColorScheme } {
-  const tokens = themeTokensFromDesign(normalizeDesignMarkdown(design));
+  const tokens = withFontFallbacks(themeTokensFromDesign(normalizeDesignMarkdown(design)));
   return { tokens, scheme: schemeOf(tokens) };
 }

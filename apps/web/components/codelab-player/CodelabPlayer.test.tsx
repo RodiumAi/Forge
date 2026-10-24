@@ -174,3 +174,11 @@ describe("design charter reading", () => {
     expect(scheme).toBe("light");
   });
 });
+
+describe("font fallbacks", () => {
+  it("adds a generic family after a single named font", () => {
+    const { tokens } = codelabTokens("- Body font: Inter\n- Mono font: JetBrains Mono");
+    expect(tokens["--font-body"]).toMatch(/^Inter, .*sans-serif$/);
+    expect(tokens["--font-mono"]).toMatch(/monospace$/);
+  });
+});

@@ -106,7 +106,7 @@ def fonts_link(families: list[str]) -> str:
 CSP = (
     "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
     "font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https:; connect-src 'self'; "
-    "frame-ancestors *; base-uri 'self'; form-action 'none'"
+    "base-uri 'self'; form-action 'none'"
 )
 
 

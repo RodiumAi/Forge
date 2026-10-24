@@ -20,7 +20,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
 
 import type { Codelab } from "@/lib/contracts/forge-design";
 
-import type { ThemeTokens } from "../deck-player";
+import type { ThemeTokens } from "../deck-player/types";
 import { downloadsOf, RenderEnvProvider, type DownloadInfo, type RenderEnv } from "./context";
 import { firstHeading } from "./markdown/blocks";
 import { CodelabMarkdown, DownloadCards } from "./markdown/Markdown";

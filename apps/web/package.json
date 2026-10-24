@@ -12,6 +12,7 @@
     "dev": "next dev -p 3100",
     "prebuild": "npm run copy:monaco",
     "build": "next build",
+    "build:codelab-player": "node ../api/runtime/codelab/build.mjs",
     "start": "next start -p 3100",
     "lint": "eslint . --max-warnings=10",
     "lint:fix": "eslint . --fix",
