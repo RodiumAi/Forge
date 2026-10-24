@@ -68,7 +68,7 @@
 .f-bd-msg { display: grid; gap: 10px; min-width: 0; animation: f-rise .35s var(--f-ease-out) both; }
 .f-bd-msg-user { justify-items: end; }
 .f-bd-bubble {
-  max-width: 88%; padding: 12px 14px; border-radius: 18px 18px 6px 18px; background: var(--f-surface-2);
+  max-width: 88%; padding: 12px 14px; border-radius: 18px 18px 6px 18px; background: color-mix(in srgb, var(--f-text) 8%, var(--f-bg-deep));
   font-size: 14.5px; line-height: 1.5; position: relative; min-width: 0; overflow-wrap: anywhere;
 }
 .f-bd-msg-user .f-bd-msg-actions {
@@ -701,4 +701,13 @@ button.f-bd-pub-row:focus-visible { outline: 2px solid var(--f-orange); outline-
 }
 @media (max-width: 480px) {
   .f-bd-top .f-bd-kind { display: none; }
+}
+@media (max-width: 600px) {
+  .f-bd-stagebar { flex-wrap: nowrap; gap: 6px; padding: 8px 10px; }
+  .f-bd-stagebar .f-bd-url { flex: 1 1 auto; min-width: 0; }
+  .f-bd-stagebar .f-bd-select { flex: 0 1 96px; min-width: 64px; }
+  .f-bd-stagebar .f-bd-select select { width: 100%; min-width: 0; }
+  .f-bd-stagebar .f-bd-devices { display: none; }
+  .f-bd-stagebar .f-btn-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .f-bd-stagebar .f-btn-sm { padding: 0 10px; }
 }
