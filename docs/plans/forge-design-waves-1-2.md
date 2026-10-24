@@ -63,3 +63,13 @@ export function themeTokensFromDesign(md: string): ThemeTokens;  // DESIGN.md ou
 - Nouvelles dépendances seulement si nécessaires, licence MIT, Apache ou BSD, et listées dans le rapport.
 - Commits petits et logiques, chacun se terminant par `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 - Rapport final : commits, fichiers, choix et écarts, tests, questions.
+
+## Décisions après la vague 1 A (lecteur)
+
+- **Groupes** : les coordonnées des enfants d'un `group` sont relatives au coin haut gauche du groupe. Valable pour l'éditeur, l'IA et les exports.
+- **Lignes et flèches** : tracées horizontalement au milieu de leur boîte, l'angle vient de `rotation`, la pointe est à droite.
+- **ThemeTokens** : `Record<string, string>` de `--nom` vers une valeur CSS ; `color.x` devient `--x`, les autres groupes `--groupe-x`, alias W3C `{a.b}` vers `var(...)`.
+- **Icônes** : le bundle publié n'embarque que les icônes lucide utilisées par le deck (tree-shaking par liste générée), pas tout le jeu.
+- **Vidéos** : la CSP du web autorise `https://www.youtube-nocookie.com` et `https://player.vimeo.com` en `frame-src` ; les pages publiées ont leur propre CSP avec les mêmes origines.
+- **Crochets DOM pour les exports** : `data-deck-player`, `data-slide-id`, `data-element-id`, `data-element-type`, `data-step`.
+- **API du lecteur** : voir `apps/web/components/deck-player/index.ts` (exports `SlideView`, `DeckPlayer`, `SlideCanvas`, `FittedSlide`, `PresenterView`, `themeTokensFromDesign`, `fitCanvas`, `stepCount`...). Page de démo : `/dev/deck-player` (hors production).
