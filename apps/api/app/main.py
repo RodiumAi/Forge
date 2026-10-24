@@ -17,6 +17,7 @@ from app.routers import (
     chats,
     comments,
     design,
+    documents,
     domains,
     files,
     history,
@@ -174,6 +175,7 @@ app.include_router(templates.router)
 app.include_router(kinds.router)
 app.include_router(integrations.router)
 app.include_router(projects.router)
+app.include_router(documents.router)
 app.include_router(design.router)
 app.include_router(seo.router)
 app.include_router(chats.router)
