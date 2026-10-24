@@ -9,7 +9,6 @@ contract change that breaks a scaffold fails at once.
 
 from __future__ import annotations
 
-import copy
 import json
 from typing import Any
 
@@ -69,44 +68,41 @@ def _write_json(project_id: str, relative: str, document: dict[str, Any]) -> Non
     write_file(project_id, relative, json.dumps(document, ensure_ascii=False, indent=2) + "\n")
 
 
-def _font_stack(value: Any) -> str:
-    if isinstance(value, list):
-        return ", ".join(str(item) for item in value)
-    return str(value)
+def design_md_from_design_system(design_system: dict[str, Any], *, placeholder: bool = False) -> str:
+    """The DESIGN.md charter generated from a design-system document.
+
+    ``placeholder`` marks the charter of a scaffold that nobody chose yet, so the
+    site builder may still replace it with a generated one.
+    """
+    from app.services.design_system.render import design_md
+
+    return design_md(design_system, placeholder=placeholder)
 
 
-def design_md_from_design_system(design_system: dict[str, Any]) -> str:
-    """The DESIGN.md charter generated from a design-system document."""
-    tokens = design_system.get("tokens") or {}
-    lines = [
-        "<!-- forge:default-charter -->",
-        f"# Design charter: {design_system.get('name') or 'Design system'}",
-        "",
-        "Generated from design-system.json. Forge injects it into every AI call.",
-        "",
-        "## Colors",
-    ]
-    for name, token in (tokens.get("color") or {}).items():
-        if isinstance(token, dict) and "$value" in token:
-            lines.append(f"- `--{name}`: {token['$value']}")
-    lines += ["", "## Typography"]
-    for name, token in (tokens.get("font") or {}).items():
-        if isinstance(token, dict) and "$value" in token:
-            lines.append(f"- {name}: {_font_stack(token['$value'])}")
-    description = (design_system.get("description") or "").strip()
-    if description:
-        lines += ["", "## Notes", description]
-    return "\n".join(lines) + "\n"
+def default_design_system(name: str, *, with_logo: bool = False) -> dict[str, Any]:
+    """The starting design system: the Forge palette, Inter, a calm scale.
 
+    ``with_logo`` points the logo at the generated wordmark (written by
+    ``scaffold_design_system``); decks and codelabs only need the tokens.
+    """
+    from app.services.design_system.tokens import LOGO_PATH, Spec, build_document
 
-def default_design_system(name: str) -> dict[str, Any]:
-    document = {
-        "version": 1,
-        "name": (name or "Design system").strip()[:120] or "Design system",
-        "tokens": copy.deepcopy(DEFAULT_TOKENS),
-        "components": ["button", "input", "card", "badge", "alert", "table"],
-    }
-    return dump_document(validate_design_system(document))
+    spec = Spec.model_validate(
+        {
+            "name": (name or "Design system").strip()[:120] or "Design system",
+            "colors": {
+                "bg": DEFAULT_TOKENS["color"]["bg"]["$value"],
+                "surface": DEFAULT_TOKENS["color"]["surface"]["$value"],
+                "fg": DEFAULT_TOKENS["color"]["fg"]["$value"],
+                "muted": DEFAULT_TOKENS["color"]["muted"]["$value"],
+                "accent": DEFAULT_TOKENS["color"]["accent"]["$value"],
+                "border": DEFAULT_TOKENS["color"]["border"]["$value"],
+            },
+            "fonts": {"display": "Inter", "body": "Inter", "mono": "JetBrains Mono"},
+        }
+    )
+    document, _fixes = build_document(spec, logo_src=LOGO_PATH if with_logo else None)
+    return document
 
 
 def default_deck(title: str, ratio: str = "16:9") -> tuple[dict[str, Any], dict[str, Any]]:
@@ -205,7 +201,11 @@ def scaffold_slides(project_id: str, app_name: str, *, ratio: str = "16:9") -> N
     _write_json(project_id, DECK_PATH, deck)
     _write_json(project_id, "slides/s1.json", slide)
     write_file(project_id, "notes/s1.md", "")
-    write_file(project_id, DESIGN_MD_PATH, design_md_from_design_system(default_design_system(app_name)))
+    write_file(
+        project_id,
+        DESIGN_MD_PATH,
+        design_md_from_design_system(default_design_system(app_name), placeholder=True),
+    )
     _snapshot(project_id)
 
 
@@ -218,42 +218,55 @@ def scaffold_codelab(project_id: str, app_name: str) -> None:
         "steps/01-intro.md",
         f"# Introduction\n\nWelcome to {codelab['title']}.\n\n## What you will build\n\n## What you will learn\n",
     )
-    write_file(project_id, DESIGN_MD_PATH, design_md_from_design_system(default_design_system(app_name)))
+    write_file(
+        project_id,
+        DESIGN_MD_PATH,
+        design_md_from_design_system(default_design_system(app_name), placeholder=True),
+    )
     _snapshot(project_id)
 
 
 def scaffold_design_system(project_id: str, app_name: str) -> None:
+    from app.services.design_system.logo import wordmark_svg
+    from app.services.design_system.tokens import LOGO_PATH
+
     project_dir(project_id)
-    design_system = default_design_system(app_name)
+    design_system = default_design_system(app_name, with_logo=True)
     _write_json(project_id, DESIGN_SYSTEM_PATH, design_system)
+    colors = DEFAULT_TOKENS["color"]
+    write_file(
+        project_id,
+        LOGO_PATH,
+        wordmark_svg(design_system["name"], colors["accent"]["$value"], colors["fg"]["$value"]),
+    )
     write_file(project_id, DESIGN_MD_PATH, design_md_from_design_system(design_system))
     _snapshot(project_id)
 
 
-def apply_design_system(project_id: str, source_project_id: str) -> bool:
-    """Dress a new project with the tokens of a design_system project.
+def apply_design_system(project_id: str, source_project_id: str, kind_id: str | None = None) -> bool:
+    """Dress a project with the tokens of a design_system project.
 
-    Writes DESIGN.md from the source ``design-system.json`` and, for a deck or a
-    codelab, points ``theme.designSystem`` at the source project id. Returns
-    False (nothing written) when the source has no valid design system. The
-    dedicated design system table arrives with wave 2; until then the link is
-    this id in the document theme.
+    Writes DESIGN.md from the source ``design-system.json``; a deck or a codelab
+    gets ``theme.designSystem`` pointing at the source, a site gets the values
+    in ``src/index.css`` (see ``services/design_system/sync.py``). Returns False
+    (nothing written) when the source has no valid design system. The link and
+    the applied version are recorded on the project by the caller.
     """
+    from app.services.design_system import sync
+
     try:
         source = json.loads(read_file(source_project_id, DESIGN_SYSTEM_PATH))
         design_system = dump_document(validate_design_system(source))
     except Exception:
         return False
-    write_file(project_id, DESIGN_MD_PATH, design_md_from_design_system(design_system))
-    for relative, validate in ((DECK_PATH, validate_deck), (CODELAB_PATH, validate_codelab)):
-        try:
-            document = json.loads(read_file(project_id, relative))
-        except Exception:
-            continue
-        theme = document.get("theme")
-        if not isinstance(theme, dict):
-            continue
-        theme["designSystem"] = source_project_id
-        _write_json(project_id, relative, dump_document(validate(document)))
+    if kind_id is None:
+        root = project_dir(project_id)
+        if (root / DECK_PATH).is_file():
+            kind_id = "slides"
+        elif (root / CODELAB_PATH).is_file():
+            kind_id = "codelab"
+        else:
+            kind_id = "web"
+    sync.apply(project_id, kind_id, design_system, source_project_id)
     _snapshot(project_id, "apply design system")
     return True

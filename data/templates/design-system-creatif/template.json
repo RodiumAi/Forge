@@ -1,0 +1,33 @@
+{
+  "kind": "design_system",
+  "id": "design-system-creatif",
+  "title": {
+    "fr": "Créatif",
+    "en": "Creative"
+  },
+  "description": {
+    "fr": "Design system audacieux pour un studio créatif : fond papier, rose vif, ombres dures, Syne et DM Sans.",
+    "en": "Bold design system for a creative studio: paper background, hot pink, hard shadows, Syne and DM Sans."
+  },
+  "tags": [
+    "creative",
+    "studio",
+    "bold",
+    "brutalist"
+  ],
+  "preview": "preview.html",
+  "bootHint": {
+    "fr": "Adapte design-system-creatif : nom de la marque, public, ton, couleurs à garder.",
+    "en": "Adapt design-system-creatif: brand name, audience, tone, colours to keep."
+  },
+  "accent": "#d6246e",
+  "bg": "#fff7ec",
+  "fg": "#141414",
+  "muted": "#545454",
+  "tone": "bold, playful, confident",
+  "fonts": {
+    "display": "Syne",
+    "body": "DM Sans",
+    "mono": "Space Mono"
+  }
+}

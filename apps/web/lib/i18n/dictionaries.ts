@@ -1,10 +1,12 @@
 import { homeEn, homeFr } from "@/lib/i18n/home-strings";
+import { designSystemEn, designSystemFr } from "@/lib/i18n/design-system-strings";
 
 export type Locale = "en" | "fr";
 
 export const dictionaries = {
   en: {
     ...homeEn,
+    ...designSystemEn,
     brandAlt: "Forge by RodiumAi",
     openForge: "Open Forge",
     langEn: "EN",
@@ -1006,6 +1008,7 @@ export const dictionaries = {
   },
   fr: {
     ...homeFr,
+    ...designSystemFr,
     brandAlt: "Forge by RodiumAi",
     openForge: "Ouvrir Forge",
     langEn: "EN",

@@ -50,44 +50,57 @@ EXPECTED_SLIDES_IDS = {
     "slides-monochrome",
 }
 
-EXPECTED_IDS = EXPECTED_SLIDES_IDS | {
-    "astroship-startup",
-    "atelier-mode",
-    "aurora-ai",
-    "ava-assistant",
-    "bloom-wellness",
-    "brutalist-studio",
-    "calm-space",
-    "echo-music",
-    "fern-plants",
-    "forge-devtools",
-    "frame-social",
-    "gallery-photos",
-    "glacier-travel",
-    "holo-portfolio",
-    "kinetic-conf",
-    "kobo-budget",
-    "logsfolio-portfolio",
-    "loop-habit",
-    "lumen-architecture",
-    "mono-journal",
-    "nexora-agency",
-    "nova-bank",
-    "orbit-dashboard",
-    "origami-3d",
-    "podux-podcast",
-    "pulse-fitness",
-    "quantum-consult",
-    "rida-ride",
-    "sabor-recipes",
-    "synthwave-music",
-    "tailnext-saas",
-    "tailstore-shop",
-    "tempo-run",
-    "terra-eco",
-    "trove-market",
-    "vertex-crypto",
+EXPECTED_DESIGN_SYSTEM_IDS = {
+    "design-system-creatif",
+    "design-system-education",
+    "design-system-fintech",
+    "design-system-luxe",
+    "design-system-saas",
+    "design-system-sante",
 }
+
+EXPECTED_IDS = (
+    EXPECTED_SLIDES_IDS
+    | EXPECTED_DESIGN_SYSTEM_IDS
+    | {
+        "astroship-startup",
+        "atelier-mode",
+        "aurora-ai",
+        "ava-assistant",
+        "bloom-wellness",
+        "brutalist-studio",
+        "calm-space",
+        "echo-music",
+        "fern-plants",
+        "forge-devtools",
+        "frame-social",
+        "gallery-photos",
+        "glacier-travel",
+        "holo-portfolio",
+        "kinetic-conf",
+        "kobo-budget",
+        "logsfolio-portfolio",
+        "loop-habit",
+        "lumen-architecture",
+        "mono-journal",
+        "nexora-agency",
+        "nova-bank",
+        "orbit-dashboard",
+        "origami-3d",
+        "podux-podcast",
+        "pulse-fitness",
+        "quantum-consult",
+        "rida-ride",
+        "sabor-recipes",
+        "synthwave-music",
+        "tailnext-saas",
+        "tailstore-shop",
+        "tempo-run",
+        "terra-eco",
+        "trove-market",
+        "vertex-crypto",
+    }
+)
 
 EXPECTED_MOBILE_IDS = {
     "ava-assistant",
@@ -104,7 +117,8 @@ EXPECTED_MOBILE_IDS = {
     "trove-market",
 }
 
-EXPECTED_WEB_IDS = EXPECTED_IDS - EXPECTED_MOBILE_IDS - EXPECTED_SLIDES_IDS
+EXPECTED_WEB_IDS = EXPECTED_IDS - EXPECTED_MOBILE_IDS - EXPECTED_SLIDES_IDS - EXPECTED_DESIGN_SYSTEM_IDS
+DOCUMENT_KINDS = ("slides", "design_system")
 
 
 class TestCatalog:
@@ -131,8 +145,8 @@ class TestCatalog:
             "src/index.css",
         ]
         for template in list_templates():
-            if template.kind == "slides":
-                continue  # document kits: see test_template_slides.py
+            if template.kind in DOCUMENT_KINDS:
+                continue  # document kits: test_template_slides.py, test_template_design_systems.py
             for rel in required:
                 assert (template.path / rel).is_file(), f"{template.id} misses {rel}"
 
@@ -146,7 +160,7 @@ class TestCatalog:
             assert meta["description"]["en"] and meta["description"]["fr"], meta["id"]
             for key in ("accent", "bg", "fg", "muted"):
                 assert re.fullmatch(r"#[0-9a-fA-F]{6}", meta[key]), f"{meta['id']}.{key}"
-            assert meta.get("kind") in ("web", "mobile", "slides"), f"{meta['id']}.kind"
+            assert meta.get("kind") in ("web", "mobile", *DOCUMENT_KINDS), f"{meta['id']}.kind"
 
     def test_catalog_kind_filter(self):
         webs = list_templates(kind="web")
@@ -155,6 +169,7 @@ class TestCatalog:
         assert {t.id for t in webs} == EXPECTED_WEB_IDS
         assert {t.id for t in mobiles} == EXPECTED_MOBILE_IDS
         assert {t.id for t in decks} == EXPECTED_SLIDES_IDS
+        assert {t.id for t in list_templates(kind="design_system")} == EXPECTED_DESIGN_SYSTEM_IDS
         assert all(t.kind == "web" for t in webs)
         assert all(t.kind == "mobile" for t in mobiles)
 
@@ -167,7 +182,7 @@ class TestCatalog:
         problems = {
             template.id: kit_violations(template.path, kind=template.kind)
             for template in list_templates()
-            if template.kind != "slides"
+            if template.kind not in DOCUMENT_KINDS
         }
         problems = {k: v for k, v in problems.items() if v}
         assert problems == {}, problems

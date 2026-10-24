@@ -226,16 +226,13 @@ def _slug_from_url(url: str) -> str:
     return host[:48]
 
 
-def _capture_sync(url: str) -> list[tuple[str, bytes]]:
-    """Blocking Playwright capture — run via asyncio.to_thread."""
-    try:
-        from playwright.sync_api import sync_playwright
-    except ImportError as exc:
-        raise RodiumError(
-            "URL capture requires Playwright on the Forge API. Install playwright and Chromium, then retry.",
-            None,
-            "upstream",
-        ) from exc
+def _install_guards(context, fetch_client: httpx.Client) -> None:
+    """Route every request of a Playwright context through the SSRF guard.
+
+    Installed before any page exists, so popups and workers inherit the same
+    network policy. Shared by the screenshot capture and the design system
+    extraction (``services/design_system/site_extract.py``).
+    """
 
     def _guard_route(route) -> None:
         # Resolve once, fetch through the pinned transport (which preserves
@@ -277,18 +274,39 @@ def _capture_sync(url: str) -> list[tuple[str, bytes]]:
         with contextlib.suppress(Exception):
             websocket_route.close(code=1008, reason="WebSockets are disabled during URL capture")
 
+    context.route("**/*", _guard_route)
+    route_web_socket = getattr(context, "route_web_socket", None)
+    if callable(route_web_socket):
+        route_web_socket("**/*", _block_websocket)
+    context.on("page", _close_popup)
+
+
+@contextlib.contextmanager
+def guarded_browser_context(url: str):
+    """A Chromium context whose every request passes the SSRF guard.
+
+    Raises ``RodiumError`` when Playwright is missing or ``url`` is blocked.
+    """
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError as exc:
+        raise RodiumError(
+            "URL capture requires Playwright on the Forge API. Install playwright and Chromium, then retry.",
+            None,
+            "upstream",
+        ) from exc
+
     # Reject an invalid initial URL before starting Chromium. The context route
-    # below performs the authoritative validation and pinning for every request.
+    # performs the authoritative validation and pinning for every request.
     try:
         resolve_and_validate(url)
     except BlockedURLError as exc:
         raise RodiumError(f"Could not capture screenshots for {url}", None, "upstream") from exc
 
-    shots: list[tuple[str, bytes]] = []
     # verify=False is intentional with IP pinning: after net_guard resolves and
     # blocks private/link-local targets, httpx_get_pinned_sync dials the pinned
     # IP while keeping the original Host/SNI. Hostname cert checks cannot pass
-    # against a raw IP, so TLS verify is off here — SSRF mitigation is the
+    # against a raw IP, so TLS verify is off here: SSRF mitigation is the
     # resolver allowlist, not the browser's default trust store. Same reason
     # Playwright ignores HTTPS errors on the (fully routed) context.
     with httpx.Client(
@@ -306,36 +324,36 @@ def _capture_sync(url: str) -> list[tuple[str, bytes]]:
                     accept_downloads=False,
                 )
                 try:
-                    # Install all context-wide controls before any page exists,
-                    # so popups and workers inherit the same network policy.
-                    context.route("**/*", _guard_route)
-                    route_web_socket = getattr(context, "route_web_socket", None)
-                    if callable(route_web_socket):
-                        route_web_socket("**/*", _block_websocket)
-                    context.on("page", _close_popup)
-
-                    for label, width, height in _VIEWPORTS:
-                        page = context.new_page()
-                        page.set_viewport_size({"width": width, "height": height})
-                        try:
-                            page.goto(
-                                url,
-                                wait_until="domcontentloaded",
-                                timeout=_NAV_TIMEOUT_MS,
-                            )
-                            with contextlib.suppress(Exception):
-                                page.wait_for_load_state("networkidle", timeout=12_000)
-                            # Prefer full page when short enough; otherwise viewport.
-                            png = page.screenshot(full_page=True, type="png")
-                            if len(png) > 4_500_000:
-                                png = page.screenshot(full_page=False, type="png")
-                            shots.append((label, png))
-                        finally:
-                            page.close()
+                    _install_guards(context, fetch_client)
+                    yield context
                 finally:
                     context.close()
             finally:
                 browser.close()
+
+
+def _capture_sync(url: str) -> list[tuple[str, bytes]]:
+    """Blocking Playwright capture, run via asyncio.to_thread."""
+    shots: list[tuple[str, bytes]] = []
+    with guarded_browser_context(url) as context:
+        for label, width, height in _VIEWPORTS:
+            page = context.new_page()
+            page.set_viewport_size({"width": width, "height": height})
+            try:
+                page.goto(
+                    url,
+                    wait_until="domcontentloaded",
+                    timeout=_NAV_TIMEOUT_MS,
+                )
+                with contextlib.suppress(Exception):
+                    page.wait_for_load_state("networkidle", timeout=12_000)
+                # Prefer full page when short enough; otherwise viewport.
+                png = page.screenshot(full_page=True, type="png")
+                if len(png) > 4_500_000:
+                    png = page.screenshot(full_page=False, type="png")
+                shots.append((label, png))
+            finally:
+                page.close()
     if not shots:
         raise RodiumError(f"Could not capture screenshots for {url}", None, "upstream")
     return shots

@@ -1,0 +1,33 @@
+{
+  "kind": "design_system",
+  "id": "design-system-luxe",
+  "title": {
+    "fr": "Luxe",
+    "en": "Luxury"
+  },
+  "description": {
+    "fr": "Design system raffiné pour une marque de luxe : noir profond, or sobre, Cormorant Garamond et Hanken Grotesk.",
+    "en": "Refined design system for a luxury brand: deep black, understated gold, Cormorant Garamond and Hanken Grotesk."
+  },
+  "tags": [
+    "luxury",
+    "fashion",
+    "elegant",
+    "dark"
+  ],
+  "preview": "preview.html",
+  "bootHint": {
+    "fr": "Adapte design-system-luxe : nom de la marque, public, ton, couleurs à garder.",
+    "en": "Adapt design-system-luxe: brand name, audience, tone, colours to keep."
+  },
+  "accent": "#c8a96a",
+  "bg": "#0c0a09",
+  "fg": "#f2ece4",
+  "muted": "#a8a097",
+  "tone": "refined, quiet, timeless",
+  "fonts": {
+    "display": "Cormorant Garamond",
+    "body": "Hanken Grotesk",
+    "mono": "IBM Plex Mono"
+  }
+}

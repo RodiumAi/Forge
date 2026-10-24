@@ -121,6 +121,8 @@ def _has_kit_files(folder: Path, kind: str) -> bool:
     if kind == "slides":
         # A document kit: the deck plus its slide bodies, rendered by the Forge player.
         return (folder / "deck.json").is_file() and (folder / "slides").is_dir()
+    if kind == "design_system":
+        return (folder / "design-system.json").is_file()
     return (folder / "package.json").is_file() and (folder / "src" / "App.tsx").is_file()
 
 
@@ -222,6 +224,11 @@ def fork_template(template_id: str, project_id: str, app_name: str | None = None
         _snapshot(project_id, meta.id)
         return meta
 
+    if meta.kind == "design_system":
+        _finish_design_system_fork(dest, app_name)
+        _snapshot(project_id, meta.id)
+        return meta
+
     if app_name:
         pkg = dest / "package.json"
         if pkg.is_file():
@@ -304,3 +311,41 @@ def _finish_slides_fork(dest: Path, app_name: str | None) -> None:
     deck_path.write_text(
         json.dumps(dump_document(deck), ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
+
+
+def _finish_design_system_fork(dest: Path, app_name: str | None) -> None:
+    """Validate the copied design system, name it after the project, regenerate DESIGN.md.
+
+    A kit whose logo is the generated wordmark gets a wordmark with the new
+    name; an uploaded logo is kept as it is. The kit's preview is authoring
+    material and is not part of the project.
+    """
+    from app.contracts.forge_design import dump_document, validate_design_system
+    from app.services.design_system.logo import wordmark_svg
+    from app.services.design_system.render import design_md
+    from app.services.design_system.tokens import LOGO_PATH, colors_of, font_families
+
+    path = dest / "design-system.json"
+    document = dump_document(validate_design_system(json.loads(path.read_text(encoding="utf-8"))))
+    name = (app_name or "").strip()
+    if name:
+        document["name"] = name[:120]
+    if (document.get("logo") or {}).get("src") == LOGO_PATH:
+        colors = colors_of(document)
+        families = font_families(document)
+        logo = dest / LOGO_PATH
+        logo.parent.mkdir(parents=True, exist_ok=True)
+        logo.write_text(
+            wordmark_svg(
+                document["name"],
+                colors.get("accent", "#f2620a"),
+                colors.get("fg", "#111111"),
+                families[0] if families else "Inter",
+            ),
+            encoding="utf-8",
+        )
+    path.write_text(json.dumps(document, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    (dest / "DESIGN.md").write_text(design_md(document), encoding="utf-8")
+    preview = dest / "preview.html"
+    if preview.is_file():
+        preview.unlink()

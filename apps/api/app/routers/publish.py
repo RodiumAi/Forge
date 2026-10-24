@@ -19,7 +19,7 @@ from app.services.export_project import build_export_zip
 from app.services.exports.deck_publish import publish_deck
 from app.services.exports.gating import show_badge
 from app.services.project_access import accessible_project
-from app.services.publish_esm import publish_project_esm
+from app.services.publish_esm import publish_design_system_site, publish_project_esm
 
 router = APIRouter(prefix="/projects", tags=["publish"])
 PUBLISH_LIMIT_PER_HOUR = 20
@@ -110,6 +110,16 @@ async def publish_now(
                 badge=show_badge(db, user, opts.badge),
                 notes=opts.notes,
                 site_url=site_url,
+            )
+        elif kind is not None and kind.publish == "design_system_site":
+            # Design system: the brand guidelines page built from the tokens.
+            opts = options or PublishOptions()
+            result = await publish_design_system_site(
+                str(project.id),
+                project.slug,
+                site_url=site_url,
+                lang=locale,
+                badge=show_badge(db, user, opts.badge),
             )
         elif kind is not None and kind.engine == "document":
             raise SitesError(
