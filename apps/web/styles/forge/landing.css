@@ -73,7 +73,7 @@
   mask-image: radial-gradient(ellipse 70% 55% at 50% 30%, #000 20%, transparent 75%);
   -webkit-mask-image: radial-gradient(ellipse 70% 55% at 50% 30%, #000 20%, transparent 75%);
 }
-.f-lp-hero-top { text-align: center; display: grid; justify-items: center; gap: 22px; }
+.f-lp-hero-top { text-align: center; display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; gap: 22px; }
 .f-lp-news {
   display: inline-flex; align-items: center; gap: 10px; padding: 6px 14px 6px 6px; border-radius: 999px; max-width: 100%;
   background: var(--f-surface); border: 1px solid var(--f-line); font-size: 14px; color: var(--f-muted);
