@@ -1,0 +1,103 @@
+{
+  "id": "s5",
+  "background": {
+    "type": "image",
+    "src": "public/images/street.webp",
+    "fit": "cover",
+    "overlay": "--bg",
+    "overlayOpacity": 0.8,
+    "credit": {
+      "source": "pixabay",
+      "author": "wal_172619",
+      "url": "https://pixabay.com/photos/shopping-street-pedestrian-zone-7924559/"
+    }
+  },
+  "elements": [
+    {
+      "id": "s5-number",
+      "type": "text",
+      "role": "label",
+      "x": 140,
+      "y": 250,
+      "w": 600,
+      "h": 240,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "02"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 200,
+        "weight": 700,
+        "color": "--accent",
+        "align": "left",
+        "lineHeight": 1.1
+      }
+    },
+    {
+      "id": "s5-bar",
+      "type": "shape",
+      "x": 140,
+      "y": 510,
+      "w": 120,
+      "h": 10,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 5,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s5-title",
+      "type": "text",
+      "role": "title",
+      "x": 140,
+      "y": 550,
+      "w": 1500,
+      "h": 200,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Les clients"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 88,
+        "weight": 700,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.1
+      }
+    },
+    {
+      "id": "s5-subtitle",
+      "type": "text",
+      "role": "subtitle",
+      "x": 140,
+      "y": 770,
+      "w": 1400,
+      "h": 100,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Qui achète en vrac, et pourquoi certains renoncent."
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 34,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.35
+      }
+    }
+  ]
+}

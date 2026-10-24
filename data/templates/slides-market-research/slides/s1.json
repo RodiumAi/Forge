@@ -1,0 +1,140 @@
+{
+  "id": "s1",
+  "background": {
+    "type": "color",
+    "token": "--bg"
+  },
+  "elements": [
+    {
+      "id": "s1-image",
+      "type": "image",
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 540,
+      "z": 1,
+      "src": "public/images/stall.webp",
+      "alt": "Échange de fruits sur un étal de marché",
+      "fit": "cover",
+      "matchKey": "hero-image",
+      "credit": {
+        "source": "pixabay",
+        "author": "Pexels",
+        "url": "https://pixabay.com/photos/apples-farmers-market-buy-buying-1841132/"
+      }
+    },
+    {
+      "id": "s1-bar",
+      "type": "shape",
+      "x": 140,
+      "y": 600,
+      "w": 120,
+      "h": 10,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 5,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s1-label",
+      "type": "text",
+      "role": "label",
+      "x": 140,
+      "y": 636,
+      "w": 1100,
+      "h": 48,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Étude de marché"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 26,
+        "weight": 600,
+        "color": "--accent",
+        "align": "left",
+        "lineHeight": 1.4,
+        "letterSpacing": 3,
+        "uppercase": true
+      }
+    },
+    {
+      "id": "s1-meta",
+      "type": "text",
+      "role": "caption",
+      "x": 1180,
+      "y": 636,
+      "w": 600,
+      "h": 48,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Octobre 2026 · Panier Vrac"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 500,
+        "color": "--muted",
+        "align": "right",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s1-title",
+      "type": "text",
+      "role": "title",
+      "x": 140,
+      "y": 694,
+      "w": 1640,
+      "h": 190,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Le vrac alimentaire en France"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 96,
+        "weight": 700,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.05,
+        "letterSpacing": -1
+      }
+    },
+    {
+      "id": "s1-subtitle",
+      "type": "text",
+      "role": "subtitle",
+      "x": 140,
+      "y": 900,
+      "w": 1500,
+      "h": 100,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Taille, clients, freins et opportunités pour un réseau de 40 magasins en 2027."
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 30,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      }
+    }
+  ]
+}
