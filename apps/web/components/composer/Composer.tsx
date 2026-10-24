@@ -31,6 +31,9 @@ import { DesignSystemMenu, type ComposerDesignSystem } from "./DesignSystemMenu"
 import { KindPict } from "./KindPict";
 import { ModelMenu } from "./ModelMenu";
 
+/** A suggestion chip: short label, the full prompt it inserts, optional kind icon. */
+export type ComposerSuggestion = { label: string; prompt: string; kind?: ProjectKindId };
+
 export type { ComposerDesignSystem } from "./DesignSystemMenu";
 
 export type ComposerHandle = {
@@ -157,8 +160,11 @@ export type ComposerProps = {
   busy?: boolean;
   /** Errors and gates shown above the text (file errors, credit gates). */
   alerts?: ReactNode;
-  /** Example prompts under the box (one click fills the field). */
-  suggestions?: readonly string[];
+  /**
+   * Example prompts under the box: short chips (label and kind icon) whose
+   * click fills the field with the full prompt. A plain string is both.
+   */
+  suggestions?: readonly (string | ComposerSuggestion)[];
 
   /** Starting type panel under the box (default on). */
   showKinds?: boolean;
@@ -428,20 +434,26 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
 
       {suggestions.length ? (
         <div className="f-composer-suggest" aria-label={t("uiSuggestions")}>
-          {suggestions.map((full) => (
-            <button
-              key={full}
-              type="button"
-              title={full}
-              disabled={busy}
-              onClick={() => {
-                onChange(full);
-                textareaRef.current?.focus();
-              }}
-            >
-              {full}
-            </button>
-          ))}
+          {suggestions.map((item) => {
+            const chip = typeof item === "string" ? { label: item, prompt: item } : item;
+            return (
+              <button
+                key={chip.label}
+                type="button"
+                title={chip.prompt}
+                disabled={busy}
+                onClick={() => {
+                  onChange(chip.prompt);
+                  textareaRef.current?.focus();
+                }}
+              >
+                {chip.kind ? (
+                  <Glyph name={kindStyle(chip.kind).glyph} size="sm" style={{ color: kindStyle(chip.kind).color }} />
+                ) : null}
+                {chip.label}
+              </button>
+            );
+          })}
         </div>
       ) : null}
 

@@ -36,6 +36,7 @@ from app.routers import (
     sites_v1,
     team,
     templates,
+    workspace,
 )
 from app.routers import settings as settings_router
 from app.services.preview_babel import render_runner_shell, runtime_public_dir
@@ -181,6 +182,7 @@ app.include_router(templates.router)
 app.include_router(kinds.router)
 app.include_router(integrations.router)
 app.include_router(projects.router)
+app.include_router(workspace.router)
 app.include_router(documents.router)
 app.include_router(codelab.router)
 app.include_router(design_systems.router)

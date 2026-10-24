@@ -420,3 +420,13 @@ export function removeProject(locale: string, projectId: string) {
     prev.filter((p) => p.id !== projectId),
   );
 }
+
+/** Merge fields into one cached project (after a rename). */
+export function patchProject(locale: string, projectId: string, patch: Partial<CachedProject>) {
+  const prev = getCachedProjects(locale);
+  if (!prev) return;
+  commitProjects(
+    locale,
+    prev.map((p) => (p.id === projectId ? { ...p, ...patch } : p)),
+  );
+}

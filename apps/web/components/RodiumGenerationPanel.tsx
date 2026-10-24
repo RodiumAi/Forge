@@ -3,10 +3,11 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { api, getToken } from "@/lib/api";
 import { planDisplayName } from "@/components/RodiumWalletBadge";
-import { SettingsBlock, SettingsRow } from "@/components/SettingsShell";
-import { rodiumRechargeUrl } from "@/lib/constants/rodium-links";
+import { Avatar } from "@/components/ui/Avatar";
+import { Tag } from "@/components/ui/Badge";
+import { Button, IconButton } from "@/components/ui/Button";
+import { Field, Input, Select } from "@/components/ui/Input";
 import { refreshForgeStatus, useForgeStatus } from "@/lib/forge-status";
-import { frodiUsage } from "@/lib/frodi-usage";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { startRodiumOAuth } from "@/lib/rodium-oauth";
 import { patchSessionCache, getSessionSnapshot } from "@/lib/session-cache";
@@ -48,33 +49,9 @@ type RodiumKeyStatus = {
   credentials_hint: string | null;
 };
 
-function formatAmount(value: number | string | null | undefined, locale: string): string {
-  if (value == null || value === "") return "—";
-  const n = typeof value === "number" ? value : Number(String(value).replace(",", "."));
-  if (!Number.isFinite(n)) return String(value);
-  try {
-    return new Intl.NumberFormat(locale === "fr" ? "fr-FR" : "en-US", {
-      maximumFractionDigits: 2,
-    }).format(n);
-  } catch {
-    return String(value);
-  }
-}
-
-function frodiResetLabel(
-  resetsAt: string | null,
-  t: (key: "frodiUsageResetsToday" | "frodiUsageResetsOne" | "frodiUsageResetsDays") => string,
-): string {
-  if (!resetsAt) return "";
-  const ms = new Date(resetsAt).getTime() - Date.now();
-  if (!Number.isFinite(ms) || ms <= 0) return t("frodiUsageResetsToday");
-  const days = Math.ceil(ms / 86_400_000);
-  if (days <= 1) return t("frodiUsageResetsOne");
-  return t("frodiUsageResetsDays").replace("{n}", String(days));
-}
-
 /**
- * RodiumAi generation key / wallet controls — Settings → Génération.
+ * RodiumAi connection and generation key for the settings page. The RODI
+ * balance is shown on the billing page only.
  */
 export function RodiumGenerationPanel() {
   const { t, locale } = useI18n();
@@ -168,7 +145,7 @@ export function RodiumGenerationPanel() {
 
   async function refreshAccountAndKey(fresh = false) {
     // `fresh=1` widens the server-side timeout so the platform is actually
-    // queried rather than served from cache — that is the whole point of the
+    // queried rather than served from cache: that is the whole point of the
     // refresh button, which exists so adding a key on RodiumAi does not
     // require signing out and back in.
     const [rodium, item] = await Promise.all([
@@ -337,364 +314,166 @@ export function RodiumGenerationPanel() {
 
   if (loading) {
     return (
-      <>
-        <SettingsBlock title={t("rodiumAccountTitle")}>
-          <div
-            className="rodium-gen-card rodium-gen-skel"
-            aria-busy="true"
-            aria-label={t("rodiumAccountSyncing")}
-          >
-            <div className="rodium-gen-card-head">
-              <span className="home-skel rodium-gen-skel-badge" />
-            </div>
-            <div className="rodium-gen-identity">
-              <span className="home-skel rodium-gen-skel-avatar" />
-              <div className="rodium-gen-skel-copy">
-                <span className="home-skel rodium-gen-skel-line is-name" />
-                <span className="home-skel rodium-gen-skel-line is-email" />
-              </div>
-            </div>
-            <div className="rodium-gen-wallet-strip rodium-gen-skel-wallet">
-              <span className="home-skel rodium-gen-skel-metric" />
-              <span className="home-skel rodium-gen-skel-metric" />
-              <span className="home-skel rodium-gen-skel-btn" />
-            </div>
-            <div className="home-settings-actions">
-              <span className="home-skel rodium-gen-skel-btn is-wide" />
-            </div>
-          </div>
-        </SettingsBlock>
-        <SettingsBlock title={t("rodiumManualKeyTitle")}>
-          <div
-            className="rodium-gen-skel-key"
-            aria-busy="true"
-            aria-label={t("rodiumAccountSyncing")}
-          >
-            <span className="home-skel rodium-gen-skel-line is-row" />
-            <span className="home-skel rodium-gen-skel-line is-field" />
-            <span className="home-skel rodium-gen-skel-btn is-wide" />
-          </div>
-        </SettingsBlock>
-      </>
+      <div aria-busy="true" style={{ display: "grid", gap: 12 }}>
+        <span className="f-skel" style={{ height: 52 }} />
+        <span className="f-skel" style={{ height: 52 }} />
+      </div>
     );
   }
 
   // Cloud account is enough: email signup binds rodium_sub without live OIDC.
-  const cloudLinked = Boolean(account?.rodium_sub || forge?.plan || forge?.frodi != null);
+  const cloudLinked = Boolean(account?.rodium_sub || forge?.plan);
   const linked = Boolean(account?.linked) || cloudLinked;
-  const balanceRaw = account?.wallet?.balance_rodi ?? (forge?.rodi != null ? String(forge.rodi) : null);
-  const providedRaw = account?.wallet?.provided_total_rodi ?? null;
-  const balance = formatAmount(balanceRaw, locale);
-  const provided = providedRaw == null || providedRaw === "" ? null : formatAmount(providedRaw, locale);
-  const providedNum = Number(String(providedRaw ?? "").replace(",", "."));
-  const showProvided = Number.isFinite(providedNum) && providedNum > 0;
-
-  const usage = frodiUsage(forge);
-  const hasFrodi = usage != null;
-  const planSlug = forge?.plan ?? forge?.entitlements?.plan_slug ?? null;
-  const planName = planDisplayName(planSlug);
-  const monthly = planSlug === "free";
-  const cycleLabel = monthly ? t("frodiUsageMonth") : t("frodiUsageWeek");
-  const frodiReset = usage ? frodiResetLabel(usage.resetsAt, t) : "";
+  const planName = planDisplayName(forge?.plan ?? null);
+  const who = [account?.name, account?.email || getSessionSnapshot()?.profile?.email, planName]
+    .filter(Boolean)
+    .join(" · ");
+  const testButton = keyStatus?.supports_test ? (
+    <Button variant="ghost" size="sm" loading={testing} disabled={!canTest} onClick={() => void onTest()}>
+      {testing ? t("rodiumTesting") : t("rodiumTest")}
+    </Button>
+  ) : null;
 
   return (
     <>
-      <SettingsBlock
-        title={t("rodiumAccountTitle")}
-        subtitle={linked ? t("rodiumAccountLinkedHelp") : t("connectRodiumAiHint")}
-      >
-        <div className={`rodium-gen-card${linked ? " is-linked" : ""}`}>
-          <div className="rodium-gen-card-head">
-            <div className="rodium-gen-card-titles">
-              {!linked ? (
-                <span className="rodium-gen-pill">{t("rodiumRecommended")}</span>
-              ) : null}
-              <span className={`home-settings-badge ${linked ? "ok" : "warn"}`}>
-                {linked ? t("rodiumConnected") : t("rodiumNotConfigured")}
-              </span>
-            </div>
+      <div className="f-row-line">
+        <div className="l" style={{ display: "flex", gap: 12, alignItems: "center", minWidth: 0 }}>
+          {linked ? <Avatar name={account?.name || account?.email || "RodiumAi"} src={account?.avatar_url} /> : null}
+          <div style={{ minWidth: 0 }}>
+            <b>{t("apConnection")}</b>
+            <small>{linked ? who || t("rodiumConnected") : t("apConnectionLead")}</small>
           </div>
-
+        </div>
+        <div className="r">
           {linked ? (
             <>
-              <div className="rodium-gen-identity">
-                {account?.avatar_url ? (
-                  <img className="home-connector-avatar" src={account.avatar_url} alt="" />
-                ) : (
-                  <div className="rodium-gen-avatar-fallback" aria-hidden>
-                    {(account?.name || account?.email || planName || "R").slice(0, 1).toUpperCase()}
-                  </div>
-                )}
-                <div>
-                  <p className="rodium-gen-name">
-                    <strong>{account?.name || account?.email || planName || "—"}</strong>
-                  </p>
-                  {account?.email && account?.name ? (
-                    <p className="muted rodium-gen-email">{account.email}</p>
-                  ) : planName ? (
-                    <p className="muted rodium-gen-email">{planName}</p>
-                  ) : null}
-                </div>
-              </div>
-
-              {hasFrodi && usage ? (
-                <div className="rodium-gen-wallet-strip rodium-gen-wallet-strip-frodi">
-                  <div className="rodium-gen-frodi-primary">
-                    <span className="rodium-gen-wallet-label">
-                      {monthly ? t("frodiUsageTitleMonth") : t("frodiUsageTitle")}
-                      {planName ? ` · ${planName}` : ""}
-                    </span>
-                    <strong className="rodium-gen-wallet-value">
-                      {formatAmount(usage.remaining, locale)}
-                    </strong>
-                    <span className="rodium-gen-wallet-unit">FRODI</span>
-                    <span className="rodium-wallet-meter rodium-gen-frodi-meter" aria-hidden>
-                      <span style={{ width: `${usage.usedPct}%` }} />
-                    </span>
-                    <p className="rodium-gen-frodi-meta muted">
-                      {t("frodiUsageRemaining").replace("{n}", formatAmount(usage.remaining, locale))}
-                      {" · "}
-                      {cycleLabel}
-                      {frodiReset ? ` · ${frodiReset}` : ""}
-                      {" · "}
-                      {usage.usedPct}%
-                    </p>
-                  </div>
-                  <div>
-                    <span className="rodium-gen-wallet-label">{t("balanceRodi")}</span>
-                    <strong className="rodium-gen-wallet-value soft">{balance}</strong>
-                    <span className="rodium-gen-wallet-unit">RODI</span>
-                  </div>
-                  {showProvided ? (
-                    <div>
-                      <span className="rodium-gen-wallet-label">{t("providedRodi")}</span>
-                      <span className="rodium-gen-wallet-value soft">{provided}</span>
-                    </div>
-                  ) : null}
-                  <a
-                    className="home-settings-test"
-                    href={rodiumRechargeUrl(account?.rodium_sub)}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    {t("rechargeRodi")}
-                  </a>
-                </div>
-              ) : (
-                <div className="rodium-gen-wallet-strip">
-                  <div>
-                    <span className="rodium-gen-wallet-label">{t("balanceRodi")}</span>
-                    <strong className="rodium-gen-wallet-value">{balance}</strong>
-                    <span className="rodium-gen-wallet-unit">RODI</span>
-                  </div>
-                  {showProvided ? (
-                    <div>
-                      <span className="rodium-gen-wallet-label">{t("providedRodi")}</span>
-                      <span className="rodium-gen-wallet-value soft">{provided}</span>
-                    </div>
-                  ) : null}
-                  <a
-                    className="home-settings-test"
-                    href={rodiumRechargeUrl(account?.rodium_sub)}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    {t("rechargeRodi")}
-                  </a>
-                </div>
-              )}
-
-              <div className="home-settings-actions">
-                <button
-                  type="button"
-                  className="home-settings-test"
-                  onClick={() => void onRefresh()}
-                  disabled={refreshing}
-                >
-                  {refreshing ? t("rodiumRefreshing") : t("rodiumRefreshKeys")}
-                </button>
-              </div>
+              <Tag tone="ok" icon="check">
+                {t("rodiumConnected")}
+              </Tag>
+              <IconButton
+                icon="refresh"
+                size="sm"
+                label={refreshing ? t("rodiumRefreshing") : t("rodiumRefreshKeys")}
+                disabled={refreshing}
+                className={refreshing ? "f-spin" : undefined}
+                onClick={() => void onRefresh()}
+              />
             </>
           ) : (
-            <div className="rodium-gen-empty">
-              <p className="rodium-gen-empty-copy">{t("connectRodiumAiHint")}</p>
-              <button
-                type="button"
-                className="landing-create home-settings-save"
-                onClick={() => void onConnect()}
-                disabled={connecting}
-              >
-                {connecting ? t("rodiumConnectWorking") : t("connectRodiumAi")}
-              </button>
-            </div>
+            <Button size="sm" loading={connecting} onClick={() => void onConnect()}>
+              {t("apConnectRodium")}
+            </Button>
           )}
         </div>
-      </SettingsBlock>
+      </div>
 
-      <SettingsBlock title={t("rodiumManualKeyTitle")} subtitle={t("rodiumManualKeyHelp")}>
-        <SettingsRow
-          title={t("settingsRodiumStatus")}
-          hint={
-            account?.has_generation_key && account.generation_key_hint
-              ? account.generation_key_hint
-              : undefined
-          }
-        >
-          <span className={`home-settings-badge ${account?.has_generation_key ? "ok" : "warn"}`}>
-            {account?.has_generation_key ? t("rodiumConfigured") : t("rodiumNotConfigured")}
-          </span>
-        </SettingsRow>
+      <div className="f-row-line">
+        <div className="l">
+          <b>{t("apApiKey")}</b>
+          <small>{t("apApiKeyLead")}</small>
+        </div>
+        <div className="r">
+          {account?.has_generation_key && account.generation_key_hint ? (
+            <code className="f-code-chip">{account.generation_key_hint}</code>
+          ) : null}
+          <Tag tone={account?.has_generation_key ? "ok" : "warn"}>
+            {account?.has_generation_key ? t("apKeyConfigured") : t("apKeyMissing")}
+          </Tag>
+        </div>
+      </div>
 
-        {linked && activeKeys.length ? (
-          <form className="settings-inline-form" onSubmit={(e) => void onSelectAccountKey(e)}>
-            <label className="home-settings-field">
-              <span>{t("rodiumSelectKey")}</span>
-              <select
-                className="home-settings-input"
-                value={selectedKeyId}
-                onChange={(e) => setSelectedKeyId(e.target.value)}
-              >
-                <option value="">{t("rodiumSelectKeyPlaceholder")}</option>
+      {linked && activeKeys.length ? (
+        <form className="f-row-line" onSubmit={(e) => void onSelectAccountKey(e)}>
+          <div className="l" style={{ flex: 1, minWidth: 0 }}>
+            <Field label={t("apSelectKey")}>
+              <Select value={selectedKeyId} onChange={(e) => setSelectedKeyId(e.target.value)}>
                 {activeKeys.map((key) => (
                   <option key={key.id} value={key.id}>
                     {key.name}
-                    {key.last4 ? ` (…${key.last4})` : ""}
-                    {key.billing_source ? ` · ${key.billing_source}` : ""}
-                    {account?.selected_api_key_id === key.id ? ` · ${t("rodiumKeyActive")}` : ""}
+                    {key.last4 ? ` (...${key.last4})` : ""}
+                    {account?.selected_api_key_id === key.id ? ` · ${t("apKeyInUse")}` : ""}
                   </option>
                 ))}
-              </select>
-            </label>
-            <p className="home-settings-hint">{t("rodiumSelectKeyRotateHint")}</p>
-            {error && <p className="error home-settings-feedback">{error}</p>}
-            {message && <p className="home-settings-success">{message}</p>}
-            {testMessage && (
-              <p className={testOk ? "home-settings-success" : "error home-settings-feedback"}>
-                {testMessage}
-              </p>
-            )}
-            <div className="home-settings-actions">
-              <button
-                className="landing-create home-settings-save"
-                type="submit"
-                disabled={!canSelectKey}
-              >
-                {selectingKey ? t("settingsSaving") : t("rodiumUseSelectedKey")}
-              </button>
-              {keyStatus?.supports_test && (
-                <button
-                  type="button"
-                  className="home-settings-test"
-                  onClick={() => void onTest()}
-                  disabled={testing || !canTest}
-                >
-                  {testing ? t("rodiumTesting") : t("rodiumTest")}
-                </button>
-              )}
-              <button
-                type="button"
-                className="home-settings-test"
-                onClick={() => void onRefresh()}
-                disabled={refreshing}
-              >
-                {refreshing ? t("rodiumRefreshing") : t("rodiumRefreshKeys")}
-              </button>
-              <button
-                type="button"
-                className="home-settings-test"
-                onClick={() => setShowManualPaste((v) => !v)}
-              >
-                {showManualPaste ? t("rodiumHidePaste") : t("rodiumShowPaste")}
-              </button>
-            </div>
-          </form>
-        ) : (
-          <div className="settings-inline-form">
-            {linked && !activeKeys.length ? (
-              <>
-                <p className="muted">{t("rodiumNoKeys")}</p>
-                {account?.can_generate_key ? (
-                  <>
-                    <p className="home-settings-hint">{t("rodiumGenerateKeyHint")}</p>
-                    <div className="home-settings-actions">
-                      <button
-                        type="button"
-                        className="landing-create home-settings-save"
-                        onClick={() => void onGenerateKey()}
-                        disabled={generatingKey}
-                      >
-                        {generatingKey ? t("rodiumGeneratingKey") : t("rodiumGenerateKey")}
-                      </button>
-                    </div>
-                  </>
-                ) : null}
-              </>
-            ) : null}
-            {error && <p className="error home-settings-feedback">{error}</p>}
-            {message && <p className="home-settings-success">{message}</p>}
-            {testMessage && (
-              <p className={testOk ? "home-settings-success" : "error home-settings-feedback"}>
-                {testMessage}
-              </p>
-            )}
-            {linked ? (
-              <div className="home-settings-actions">
-                <button
-                  type="button"
-                  className="home-settings-test"
-                  onClick={() => void onRefresh()}
-                  disabled={refreshing}
-                >
-                  {refreshing ? t("rodiumRefreshing") : t("rodiumRefreshKeys")}
-                </button>
-                <button
-                  type="button"
-                  className="home-settings-test"
-                  onClick={() => setShowManualPaste((v) => !v)}
-                >
-                  {showManualPaste ? t("rodiumHidePaste") : t("rodiumShowPaste")}
-                </button>
-              </div>
+              </Select>
+            </Field>
+          </div>
+          <div className="r">
+            <Button type="submit" size="sm" loading={selectingKey} disabled={!canSelectKey}>
+              {t("apUseKey")}
+            </Button>
+            {testButton}
+          </div>
+        </form>
+      ) : linked ? (
+        <div className="f-row-line">
+          <div className="l">
+            <b>{t("apNoKeys")}</b>
+            {account?.can_generate_key ? <small>{t("apGenerateKeyLead")}</small> : null}
+          </div>
+          <div className="r">
+            {account?.can_generate_key ? (
+              <Button size="sm" icon="key" loading={generatingKey} onClick={() => void onGenerateKey()}>
+                {t("apGenerateKey")}
+              </Button>
             ) : null}
           </div>
-        )}
+        </div>
+      ) : null}
 
-        {(showManualPaste || !linked) && (
-          <form className="settings-inline-form" onSubmit={(e) => void onPasteSubmit(e)}>
-            <label className="home-settings-field">
-              <span>{t("rodiumPasteKeyFallback")}</span>
-              <input
-                className="home-settings-input"
+      {showManualPaste ? (
+        <form className="f-row-line" onSubmit={(e) => void onPasteSubmit(e)}>
+          <div className="l" style={{ flex: 1, minWidth: 0 }}>
+            <Field label={t("apPasteKey")} hint={t("apPasteKeyHint")}>
+              <Input
                 type="password"
-                placeholder="rd_sk_prod_…"
+                placeholder="rd_sk_..."
                 value={apiKeyPaste}
                 onChange={(e) => setApiKeyPaste(e.target.value)}
                 autoComplete="off"
               />
-            </label>
-            <p className="home-settings-hint">{t("rodiumPasteKeyHelp")}</p>
-            <div className="home-settings-actions">
-              <button
-                className="landing-create home-settings-save"
-                type="submit"
-                disabled={!canSavePaste}
-              >
-                {saving ? t("settingsSaving") : t("rodiumSaveKey")}
-              </button>
-              {keyStatus?.supports_test && (
-                <button
-                  type="button"
-                  className="home-settings-test"
-                  onClick={() => void onTest()}
-                  disabled={testing || !canTest}
-                >
-                  {testing ? t("rodiumTesting") : t("rodiumTest")}
-                </button>
-              )}
-            </div>
-          </form>
-        )}
-      </SettingsBlock>
+            </Field>
+          </div>
+          <div className="r">
+            <Button type="submit" size="sm" loading={saving} disabled={!canSavePaste}>
+              {t("apSaveKey")}
+            </Button>
+            {linked && activeKeys.length ? null : testButton}
+          </div>
+        </form>
+      ) : null}
+
+      <div className="f-row-line">
+        <div className="l">
+          <b>{t("apRodiLine")}</b>
+          <small>{t("apRodiLineLead")}</small>
+        </div>
+        <div className="r">
+          {linked ? (
+            <Button variant="subtle" size="sm" onClick={() => setShowManualPaste((v) => !v)}>
+              {showManualPaste ? t("apHidePaste") : t("apShowPaste")}
+            </Button>
+          ) : null}
+          <Button variant="ghost" size="sm" href="/billing#rodi" iconEnd="arrow-right">
+            {t("apSeeBalance")}
+          </Button>
+        </div>
+      </div>
+
+      {error ? (
+        <p className="f-error" role="alert">
+          {error}
+        </p>
+      ) : null}
+      {message ? (
+        <p className="f-success" role="status">
+          {message}
+        </p>
+      ) : null}
+      {testMessage ? (
+        <p className={testOk ? "f-success" : "f-error"} role="status">
+          {testMessage}
+        </p>
+      ) : null}
     </>
   );
 }

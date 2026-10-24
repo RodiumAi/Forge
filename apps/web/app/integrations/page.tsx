@@ -2,77 +2,54 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { Search } from "lucide-react";
-import { HomeLayout } from "@/components/HomeLayout";
+
+import "@/styles/forge/pages.css";
+
+import {
+  INTEGRATION_CATEGORIES,
+  integrationCategoryKey,
+  integrationLogoSrc,
+} from "@/components/app/integrations";
 import { IntegrationLogo } from "@/components/IntegrationLogo";
-import { Icon } from "@/components/ui/icon";
-import { apiBase } from "@/lib/api";
+import { AppShell } from "@/components/shell/AppShell";
+import { FilterChip, Tag } from "@/components/ui/Badge";
+import { Glyph } from "@/components/ui/glyph";
+import { SearchInput } from "@/components/ui/Input";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import {
-  CachedIntegration,
+  type CachedIntegration,
   ensureIntegrations,
   getCachedIntegrations,
   subscribeIntegrations,
 } from "@/lib/lists-cache";
 
-const CATEGORY_ORDER = [
-  "forms",
-  "booking",
-  "chat",
-  "payments",
-  "data",
-  "email",
-  "maps",
-  "media",
-  "comments",
-  "analytics",
-  "widgets",
-] as const;
-
-function categoryLabel(cat: string, t: (key: string) => string): string {
-  const known = {
-    forms: "integCat_forms",
-    booking: "integCat_booking",
-    chat: "integCat_chat",
-    payments: "integCat_payments",
-    data: "integCat_data",
-    email: "integCat_email",
-    maps: "integCat_maps",
-    media: "integCat_media",
-    comments: "integCat_comments",
-    analytics: "integCat_analytics",
-    widgets: "integCat_widgets",
-  } as const;
-  const key = known[cat as keyof typeof known];
-  if (!key) return cat;
-  return t(key);
-}
-
-function logoSrc(item: CachedIntegration): string {
-  const path = item.logo_url || `/integrations/${item.id}/logo`;
-  // Bust long-lived browser caches when logos are replaced on disk.
-  const withV = path.includes("?") ? `${path}&v=4` : `${path}?v=4`;
-  if (withV.startsWith("http")) return withV;
-  return `${apiBase()}${withV}`;
-}
-
 export default function IntegrationsPage() {
   const { t, locale } = useI18n();
-  const [items, setItems] = useState<CachedIntegration[]>(
-    () => getCachedIntegrations(locale) || [],
-  );
+  // Starts empty on both server and client (the cache lives in sessionStorage),
+  // then fills from the cache right after hydration.
+  const [items, setItems] = useState<CachedIntegration[]>([]);
   const [query, setQuery] = useState("");
-  const [category, setCategory] = useState<string | "all">("all");
-  const [loading, setLoading] = useState(items.length === 0);
+  const [category, setCategory] = useState<string>("all");
+  const [loading, setLoading] = useState(true);
 
+  // `?cat=` deep links (read once, kept in sync without a navigation).
   useEffect(() => {
-    return subscribeIntegrations(() => {
-      setItems(getCachedIntegrations(locale) || []);
-    });
-  }, [locale]);
+    const cat = new URLSearchParams(window.location.search).get("cat");
+    if (cat) setCategory(cat);
+  }, []);
+
+  function chooseCategory(next: string) {
+    setCategory(next);
+    const url = next === "all" ? "/integrations" : `/integrations?cat=${encodeURIComponent(next)}`;
+    window.history.replaceState(null, "", url);
+  }
+
+  useEffect(() => subscribeIntegrations(() => setItems(getCachedIntegrations(locale) || [])), [locale]);
 
   useEffect(() => {
     let cancelled = false;
+    const cached = getCachedIntegrations(locale);
+    if (cached?.length) setItems(cached);
     setLoading(true);
     void ensureIntegrations(locale)
       .then((list) => {
@@ -91,19 +68,14 @@ export default function IntegrationsPage() {
 
   const counts = useMemo(() => {
     const map = new Map<string, number>();
-    for (const item of items) {
-      for (const c of item.categories) {
-        map.set(c, (map.get(c) || 0) + 1);
-      }
-    }
+    for (const item of items) for (const c of item.categories) map.set(c, (map.get(c) || 0) + 1);
     return map;
   }, [items]);
 
   const categories = useMemo(() => {
-    const known = CATEGORY_ORDER.filter((c) => counts.has(c));
-    const extra = [...counts.keys()]
-      .filter((c) => !CATEGORY_ORDER.includes(c as (typeof CATEGORY_ORDER)[number]))
-      .sort();
+    const order = INTEGRATION_CATEGORIES as readonly string[];
+    const known = order.filter((c) => counts.has(c));
+    const extra = [...counts.keys()].filter((c) => !order.includes(c)).sort();
     return [...known, ...extra];
   }, [counts]);
 
@@ -112,102 +84,88 @@ export default function IntegrationsPage() {
     return items.filter((item) => {
       if (category !== "all" && !item.categories.includes(category)) return false;
       if (!needle) return true;
-      return (
-        item.id.includes(needle) ||
-        item.name.toLowerCase().includes(needle) ||
-        item.title.toLowerCase().includes(needle) ||
-        item.blurb.toLowerCase().includes(needle) ||
-        item.categories.some((c) => c.includes(needle))
-      );
+      return `${item.id} ${item.name} ${item.title} ${item.blurb} ${item.categories.join(" ")}`
+        .toLowerCase()
+        .includes(needle);
     });
   }, [items, query, category]);
 
+  const catLabel = (c: string) => {
+    const key = integrationCategoryKey(c);
+    return key ? t(key) : c;
+  };
+
   return (
-    <HomeLayout activeNav="integrations">
-      <div className="integ-page">
-        <header className="integ-hero">
+    <AppShell active="integrations" title={t("uiNavIntegrations")}>
+      <div className="f-page-head">
+        <div>
           <h1>{t("integTitle")}</h1>
-          <p>{t("integSubtitle")}</p>
-        </header>
-
-        <div className="integ-layout">
-          <aside className="integ-filters" aria-label={t("integFilters")}>
-            <label className="integ-search">
-              <Icon icon={Search} />
-              <input
-                type="search"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder={t("integSearch")}
-              />
-            </label>
-
-            <div className="integ-filter-group">
-              <p className="integ-filter-label">{t("integCategories")}</p>
-              <button
-                type="button"
-                className={`integ-filter-btn ${category === "all" ? "active" : ""}`}
-                onClick={() => setCategory("all")}
-              >
-                <span>{t("integAll")}</span>
-                <span className="integ-filter-count">{items.length}</span>
-              </button>
-              {categories.map((cat) => (
-                <button
-                  key={cat}
-                  type="button"
-                  className={`integ-filter-btn ${category === cat ? "active" : ""}`}
-                  onClick={() => setCategory(cat)}
-                >
-                  <span>{categoryLabel(cat, t as (key: string) => string)}</span>
-                  <span className="integ-filter-count">{counts.get(cat) || 0}</span>
-                </button>
-              ))}
-            </div>
-          </aside>
-
-          <section className="integ-grid-wrap">
-            {loading && items.length === 0 ? (
-              <p className="integ-empty">{t("loading")}</p>
-            ) : filtered.length === 0 ? (
-              <p className="integ-empty">{t("integEmpty")}</p>
-            ) : (
-              <div className="integ-grid">
-                {filtered.map((item) => (
-                  <Link
-                    key={item.id}
-                    href={`/integrations/${item.id}`}
-                    className="integ-card"
-                  >
-                    <span className="integ-card-logo" aria-hidden>
-                      <IntegrationLogo
-                        src={logoSrc(item)}
-                        label={item.title || item.name}
-                        width={24}
-                        height={24}
-                      />
-                    </span>
-                    <span className="integ-card-body">
-                      <span className="integ-card-title-row">
-                        <strong>{item.title}</strong>
-                        {item.badge ? (
-                          <span className="integ-badge">{item.badge}</span>
-                        ) : null}
-                        {item.access === "partial" ? (
-                          <span className="integ-badge integ-badge-partial">
-                            {t("integPartial")}
-                          </span>
-                        ) : null}
-                      </span>
-                      <span className="integ-card-blurb">{item.blurb}</span>
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </section>
+          <p>{t("apIntegLead")}</p>
         </div>
       </div>
-    </HomeLayout>
+      <div className="f-toolbar">
+        <div className="f-chip-row" role="group" aria-label={t("integCategories")}>
+          <FilterChip pressed={category === "all"} count={items.length} onClick={() => chooseCategory("all")}>
+            {t("integAll")}
+          </FilterChip>
+          {categories.map((c) => (
+            <FilterChip key={c} pressed={category === c} count={counts.get(c) || 0} onClick={() => chooseCategory(c)}>
+              {catLabel(c)}
+            </FilterChip>
+          ))}
+        </div>
+        <span className="f-toolbar-spacer" />
+        <SearchInput
+          label={t("apSearchIntegrations")}
+          placeholder={t("apSearchIntegrations")}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+      </div>
+
+      {loading && items.length === 0 ? (
+        <div className="f-integ-grid" aria-busy="true" aria-label={t("loading")}>
+          {Array.from({ length: 8 }, (_, i) => (
+            <span key={i} className="f-skel" style={{ height: 176, borderRadius: 20 }} />
+          ))}
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="f-empty">
+          <Glyph name="puzzle" size="lg" />
+          <p>{t("integEmpty")}</p>
+        </div>
+      ) : (
+        <div className="f-integ-grid">
+          {filtered.map((item) => (
+            <article key={item.id} className="f-integ">
+              <Link
+                href={`/integrations/${encodeURIComponent(item.id)}`}
+                className="f-integ-link"
+                aria-label={`${t("apIntegView")}: ${item.title || item.name}`}
+              />
+              <span className="lg" aria-hidden="true">
+                <IntegrationLogo
+                  src={integrationLogoSrc(item.id, item.logo_url)}
+                  label={item.title || item.name}
+                  width={28}
+                  height={28}
+                />
+              </span>
+              <b>{item.title || item.name}</b>
+              <p>{item.blurb}</p>
+              <div className="foot">
+                <span style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {item.categories.slice(0, 2).map((c) => (
+                    <Tag key={c}>{catLabel(c)}</Tag>
+                  ))}
+                </span>
+                {item.access === "partial" ? <Tag tone="warn">{t("integPartial")}</Tag> : null}
+                {item.badge ? <Tag tone="orange">{item.badge}</Tag> : null}
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+    </AppShell>
   );
 }

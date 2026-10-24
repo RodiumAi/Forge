@@ -1,14 +1,6 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { LandingPricing } from "@/components/landing/LandingPricing";
-import { HomeLayout } from "@/components/HomeLayout";
-
+/** The upgrade page moved to the billing page's plan cards. */
 export default function DashboardPricingPage() {
-  return (
-    <HomeLayout activeNav={null}>
-      <div className="home-pricing">
-        <LandingPricing hideFree />
-      </div>
-    </HomeLayout>
-  );
+  redirect("/billing#plans");
 }
