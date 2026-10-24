@@ -17,6 +17,7 @@ import { HomeTabs, type HomeTab } from "@/components/home/HomeTabs";
 import { buildCreateRequest, getTile, type HomeTile, type HomeTileId } from "@/components/home/home-kinds";
 import { KindGrid } from "@/components/home/KindGrid";
 import type { ProjectActions } from "@/components/home/ProjectCard";
+import { listDesignSystems, type DesignSystemList } from "@/components/design-system/api";
 import { kindOf, type HomeProject } from "@/components/home/projects";
 import { useFavorites, useLastOpened } from "@/components/home/use-home-prefs";
 import { HomeLayout } from "@/components/HomeLayout";
@@ -169,11 +170,57 @@ function DashboardInner() {
     return () => window.clearTimeout(timer);
   }, [notice]);
 
-  const designSystems: DesignSystemOption[] = useMemo(
-    () => projects.filter((p) => kindOf(p) === "design_system").map((p) => ({ id: p.id, name: p.name })),
-    [projects],
-  );
   const showDesignSystems = enabledKinds.includes("design_system");
+  // Mine, shared with me and my teams', default first (GET /design-systems).
+  // Until it answers (or if it fails) the design_system projects of the list stand in.
+  const [dsList, setDsList] = useState<DesignSystemList | null>(null);
+  const dsProjectCount = projects.filter((p) => kindOf(p) === "design_system").length;
+  useEffect(() => {
+    if (!showDesignSystems) return;
+    let alive = true;
+    void listDesignSystems()
+      .then((list) => alive && setDsList(list))
+      .catch(() => alive && setDsList(null));
+    return () => {
+      alive = false;
+    };
+  }, [showDesignSystems, dsProjectCount]);
+  const designSystems: DesignSystemOption[] = useMemo(
+    () =>
+      dsList
+        ? dsList.items.map((item) => ({ id: item.id, name: item.name }))
+        : projects.filter((p) => kindOf(p) === "design_system").map((p) => ({ id: p.id, name: p.name })),
+    [dsList, projects],
+  );
+  const designSystemRows: HomeProject[] | undefined = useMemo(
+    () =>
+      dsList?.items.map((item) => {
+        const known = projects.find((p) => p.id === item.id);
+        return (
+          known ?? {
+            id: item.id,
+            name: item.name,
+            slug: "",
+            status: "ready",
+            created_at: item.updated_at ?? "",
+            updated_at: item.updated_at ?? undefined,
+            platform: "design_system",
+            access_role: item.can_edit ? "editor" : "viewer",
+          }
+        );
+      }),
+    [dsList, projects],
+  );
+  // With nothing remembered, the default design system is preselected.
+  useEffect(() => {
+    if (!dsList?.default_id) return;
+    try {
+      if (localStorage.getItem(DESIGN_SYSTEM_KEY)) return;
+    } catch {
+      /* storage denied: still preselect */
+    }
+    setDesignSystemId((current) => current ?? dsList.default_id);
+  }, [dsList]);
   // A remembered design system that was deleted, or that the kind flag hides,
   // is not sent: the create would fail on it.
   const effectiveDesignSystemId =
@@ -453,7 +500,8 @@ function DashboardInner() {
   const actions: ProjectActions = {
     open: (project) => {
       lastOpened.record(project.id);
-      router.push(`/projects/${project.id}`);
+      // Design systems (team ones included) open straight in their editor.
+      router.push(kindOf(project) === "design_system" ? `/projects/${project.id}/design-system` : `/projects/${project.id}`);
     },
     rename: (project) => setRenaming(project),
     share: (project) => setSharing(project),
@@ -541,6 +589,7 @@ function DashboardInner() {
             onTabChange={selectTab}
             enabledKinds={enabledKinds}
             projects={projects}
+            designSystems={designSystemRows}
             loading={loading}
             error={gateError ? null : error}
             actions={actions}

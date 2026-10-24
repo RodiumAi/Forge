@@ -43,6 +43,8 @@ type Props = {
   onTabChange: (tab: HomeTab) => void;
   enabledKinds: readonly ProjectKindId[];
   projects: readonly HomeProject[];
+  /** Rows of the Design systems tab (GET /design-systems, team ones included); falls back to `projects`. */
+  designSystems?: readonly HomeProject[];
   loading: boolean;
   error?: string | null;
   actions: ProjectActions;
@@ -90,7 +92,7 @@ export function HomeTabs(props: Props) {
   const rows = useMemo(() => {
     const pool =
       tab === "design_systems"
-        ? projects.filter((p) => kindOf(p) === "design_system")
+        ? (props.designSystems ?? projects.filter((p) => kindOf(p) === "design_system"))
         : projects;
     return filterProjects(pool, {
       scope,
@@ -99,7 +101,7 @@ export function HomeTabs(props: Props) {
       favoritesOnly,
       favorites,
     });
-  }, [tab, projects, scope, kindFilter, query, favoritesOnly, favorites]);
+  }, [tab, projects, props.designSystems, scope, kindFilter, query, favoritesOnly, favorites]);
 
   function onTabKey(event: React.KeyboardEvent, current: HomeTab) {
     const index = tabs.indexOf(current);
