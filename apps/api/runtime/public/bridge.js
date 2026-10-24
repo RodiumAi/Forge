@@ -166,6 +166,17 @@
     return structuralSelector(el) || '[data-forge-ref="' + ensureRef(el) + '"]';
   }
 
+  /** Source location of the element (`<file>:<line>:<col>`), set by the
+   *  preview transform on host elements. Falls back to the nearest tagged
+   *  ancestor for nodes rendered by a library (icons, third-party widgets). */
+  function forgeIdOf(el) {
+    if (!el || el.nodeType !== 1) return null;
+    var own = el.getAttribute("data-forge-id");
+    if (own) return own;
+    var host = el.closest ? el.closest("[data-forge-id]") : null;
+    return host ? host.getAttribute("data-forge-id") : null;
+  }
+
   function describe(el) {
     var tag = (el.tagName || "").toLowerCase();
     var className = (typeof el.className === "string" ? el.className : "").trim() || null;
@@ -175,7 +186,8 @@
       id: el.id || null,
       className: className,
       selector: buildSelector(el),
-      text: text
+      text: text,
+      forgeId: forgeIdOf(el)
     };
   }
 
@@ -367,7 +379,7 @@
     if (save && next && next !== ORIG) {
       // Keep markup so a failed API write can restore without flattening.
       PENDING_EDIT = { el: el, html: ORIG_HTML, oldText: ORIG, newText: next };
-      post({ type: "forge-visual-edit", oldText: ORIG, newText: next });
+      post({ type: "forge-visual-edit", oldText: ORIG, newText: next, forgeId: forgeIdOf(el) });
     } else if (!save) {
       // Restore markup, not flattened text: `innerText = ORIG` destroyed nested
       // links, <strong> and icons on every cancel.
@@ -496,13 +508,13 @@
       post({
         type: "forge-element-select",
         tag: info.tag, id: info.id, className: info.className,
-        selector: info.selector, text: info.text
+        selector: info.selector, text: info.text, forgeId: info.forgeId
       });
     } else if (TOOL === "comment") {
       post({
         type: "forge-comment-anchor",
         tag: info.tag, id: info.id, className: info.className,
-        selector: info.selector, text: info.text
+        selector: info.selector, text: info.text, forgeId: info.forgeId
       });
     } else if (TOOL === "image") {
       post({
@@ -512,7 +524,8 @@
         // data-forge-src, and that's what the replace endpoint must match.
         src: target.getAttribute("data-forge-src") || target.getAttribute("src") || "",
         alt: target.getAttribute("alt") || "",
-        selector: info.selector
+        selector: info.selector,
+        forgeId: info.forgeId
       });
     }
   }, true);
