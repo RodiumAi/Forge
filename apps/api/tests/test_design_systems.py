@@ -389,3 +389,62 @@ def test_put_refreshes_the_contrast_notes(env):
     checks = doc["tokens"]["color"]["accent-contrast"]["$extensions"]["forge"]["contrast"]
     assert checks[0]["on"] == "accent"
     assert checks[0]["ratio"] < 4.5  # the note tells the truth about the saved colours
+
+
+# ── logo ───────────────────────────────────────────────────────────────────
+
+
+def _png() -> bytes:
+    import io
+
+    from PIL import Image
+
+    buf = io.BytesIO()
+    Image.new("RGB", (40, 20), (200, 80, 10)).save(buf, format="PNG")
+    return buf.getvalue()
+
+
+def test_logo_upload_and_read_back(env):
+    alice, bob = env.user("alice"), env.user("bob")
+    ds = env.project(alice, "design_system", "Acme")
+    client = env.act(alice)
+    r = client.post(
+        f"/projects/{ds.id}/design-system/logo", files={"file": ("logo.png", _png(), "image/png")}
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["logo"]["src"] == "public/brand/logo-light.png"
+    asset = client.get(
+        f"/projects/{ds.id}/design-system/asset", params={"path": "public/brand/logo-light.png"}
+    )
+    assert asset.status_code == 200 and asset.headers["content-type"] == "image/png"
+    assert (
+        client.get(
+            f"/projects/{ds.id}/design-system/asset", params={"path": "design-system.json"}
+        ).status_code
+        == 400
+    )
+    assert (
+        env.act(bob)
+        .get(f"/projects/{ds.id}/design-system/asset", params={"path": "public/brand/logo-light.png"})
+        .status_code
+        == 404
+    )
+
+
+def test_logo_upload_refuses_svg_and_non_images(env):
+    alice = env.user("alice")
+    ds = env.project(alice, "design_system")
+    client = env.act(alice)
+    svg = b'<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>'
+    assert (
+        client.post(
+            f"/projects/{ds.id}/design-system/logo", files={"file": ("l.svg", svg, "image/svg+xml")}
+        ).status_code
+        == 400
+    )
+    assert (
+        client.post(
+            f"/projects/{ds.id}/design-system/logo", files={"file": ("l.png", b"<html>", "image/png")}
+        ).status_code
+        == 400
+    )

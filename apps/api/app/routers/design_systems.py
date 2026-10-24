@@ -14,7 +14,7 @@ import contextlib
 from typing import Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, File, Request, UploadFile
 from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
@@ -299,5 +299,94 @@ async def export(
             "Content-Disposition": f'attachment; filename="{file.filename}"',
             "Cache-Control": "no-store",
             "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
+# ── logo and brand assets ──────────────────────────────────────────────────
+
+MAX_LOGO_BYTES = 4 * 1024 * 1024
+_BRAND_DIR = "public/brand/"
+_ASSET_TYPES = {
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".webp": "image/webp",
+    ".svg": "image/svg+xml",
+}
+
+
+@router.post("/projects/{project_id}/design-system/logo")
+async def upload_logo(
+    project_id: UUID,
+    variant: Literal["light", "dark"] = "light",
+    file: UploadFile = File(...),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    """Store a raster logo under public/brand/ and point the design system at it.
+
+    The bytes are sniffed (never the name or the declared type); SVG uploads
+    are refused because an SVG can carry script.
+    """
+    from app.services.asset_storage import sniff_raster
+    from app.services.design_system.flow import write_document
+    from app.services.filesystem import write_bytes
+
+    _require_enabled()
+    project = registry.design_system_project(db, user, project_id, require_edit=True)
+    body = await file.read(MAX_LOGO_BYTES + 1)
+    if len(body) > MAX_LOGO_BYTES:
+        raise SitesError(400, "LOGO_TOO_LARGE", "The logo must be 4 MB at most.")
+    verified = sniff_raster(body)
+    if verified is None or verified[1] not in (".png", ".jpg", ".jpeg", ".webp"):
+        raise SitesError(400, "LOGO_TYPE", "The logo must be a PNG, JPEG or WebP image.")
+    pid = str(project.id)
+    relative = f"{_BRAND_DIR}logo-{variant}{verified[1]}"
+    document = _document(project)
+    write_bytes(pid, relative, body)
+    logo = dict(document.get("logo") or {})
+    if variant == "dark":
+        if not logo.get("src"):
+            raise SitesError(409, "LOGO_MISSING", "Upload the main logo first.")
+        logo["darkSrc"] = relative
+    else:
+        logo["src"] = relative
+    document["logo"] = logo
+    document = dump_document(validate_design_system(document))
+    with contextlib.suppress(Exception):
+        history.snapshot(pid, "before logo upload")
+    write_document(pid, document)
+    return JSONResponse(document)
+
+
+@router.get("/projects/{project_id}/design-system/asset")
+def brand_asset(
+    project_id: UUID,
+    path: str,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Response:
+    """A file under public/brand/ (the logo), for the editor."""
+    from app.services.filesystem import safe_resolve
+
+    _require_enabled()
+    project = registry.design_system_project(db, user, project_id)
+    if not path.startswith(_BRAND_DIR) or ".." in path:
+        raise SitesError(400, "INVALID_PATH", "Only brand assets can be read here.")
+    try:
+        file_path = safe_resolve(str(project.id), path)
+    except ValueError as exc:
+        raise SitesError(400, "INVALID_PATH", "Only brand assets can be read here.") from exc
+    ctype = _ASSET_TYPES.get(file_path.suffix.lower())
+    if ctype is None or not file_path.is_file():
+        raise SitesError(404, "ASSET_NOT_FOUND", "Asset not found.")
+    return Response(
+        content=file_path.read_bytes(),
+        media_type=ctype,
+        headers={
+            "Cache-Control": "private, no-store",
+            "X-Content-Type-Options": "nosniff",
+            "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
         },
     )
