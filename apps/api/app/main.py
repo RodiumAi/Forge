@@ -126,6 +126,8 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    # Document editors read the ETag to send If-Match on their next write.
+    expose_headers=["ETag"],
 )
 
 

@@ -204,6 +204,62 @@ async def import_image(
     )
 
 
+class UploadedImageRequest(BaseModel):
+    #: Id of a file uploaded with ``POST /projects/{id}/files/upload``.
+    object_id: UUID
+
+
+def _stored_asset_bytes(db: Session, project_id: UUID, object_id: UUID) -> bytes:
+    """Bytes of one upload of this project (the uploads bucket is private)."""
+    from app.providers.objects import get_object_store
+    from app.services.asset_storage import get_project_asset
+
+    row = get_project_asset(db, project_id, object_id)
+    if row is None:
+        raise SitesError(404, "ASSET_NOT_FOUND", "This upload does not exist in the project.")
+    store = get_object_store()
+    bucket = store.bucket_uploads or get_settings().aws_s3_bucket
+    if not bucket:
+        raise SitesError(503, "STORAGE_UNAVAILABLE", "File storage is not configured.")
+    return store.internal.get_object(Bucket=bucket, Key=row.object_key)["Body"].read()
+
+
+@router.post("/projects/{project_id}/images/from-upload", response_model=ProjectImageOut)
+async def import_uploaded_image(
+    project_id: UUID,
+    body: UploadedImageRequest,
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ProjectImageOut:
+    """Copy an uploaded image into ``public/images/`` as WebP (document editors).
+
+    A slide stores a project path, never an object-store URL: the uploads
+    bucket is private, and the published deck only carries the project files.
+    """
+    project = accessible_project(db, user, project_id, resolve_locale(request), require_edit=True)
+    rate_limit.enforce(request, "image_import", IMPORTS_PER_USER_PER_MINUTE, 60, subject=str(user.id))
+    raw = await asyncio.to_thread(_stored_asset_bytes, db, project.id, body.object_id)
+    pid = str(project.id)
+    try:
+        entry = await asyncio.to_thread(
+            save_webp_with_variants, pid, raw, stem=f"upload-{str(body.object_id)[:8]}", folder=STOCK_FOLDER
+        )
+    except Exception as exc:
+        raise SitesError(422, "IMAGE_UNREADABLE", "The uploaded file is not a readable image.") from exc
+    entry.kind = "upload"
+    credit = ImageCredit(source="upload")
+    record_media(pid, entry, extra={"credit": credit.model_dump()})
+    return ProjectImageOut(
+        path="public" + entry.path,
+        public_path=entry.path,
+        width=entry.width,
+        height=entry.height,
+        srcset=entry.srcset,
+        credit=credit,
+    )
+
+
 @router.post("/projects/{project_id}/images/generate", response_model=ProjectImageOut)
 async def generate_image(
     project_id: UUID,
