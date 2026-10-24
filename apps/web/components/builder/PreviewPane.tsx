@@ -5,6 +5,8 @@ import { api, apiBase } from "@/lib/api";
 import { getMediaToken } from "@/lib/media-token";
 import { uploadProjectThumbnail } from "@/lib/project-thumbnail";
 import { useI18n } from "@/lib/i18n/I18nProvider";
+import { Button } from "@/components/ui/Button";
+import { Glyph } from "@/components/ui/glyph";
 import { PreviewToolbar } from "./PreviewToolbar";
 import type {
   ElementSelection,
@@ -543,104 +545,100 @@ export function PreviewPane({
   const showBridgeWarning = Boolean(previewTool && previewSrc && bridgeWarning && !bridgeSynced);
 
   return (
-    <section
-      className={`builder-preview builder-main-pane${toolActive ? " builder-preview-tool-active" : ""}`}
-    >
-      <div className="builder-preview-layout">
-        <div className={`builder-preview-stage viewport-${viewport}`}>
-          {editMissHint ? (
-            <div className="builder-preview-edit-badge builder-preview-edit-miss" aria-live="polite">
-              {editMissHint}
-            </div>
-          ) : null}
-          {showBridgeWarning ? (
-            <div className="builder-preview-edit-badge builder-preview-bridge-warn" aria-live="polite">
-              {t("previewBridgeWarn")}
-            </div>
-          ) : null}
-          {previewTool === "text" && showToolHint ? (
-            <div className="builder-preview-edit-badge" aria-live="polite">
-              {t("previewTextEditHint")}
-            </div>
-          ) : null}
-          {previewTool === "select" && showToolHint ? (
-            <div className="builder-preview-edit-badge" aria-live="polite">
-              {t("previewSelectHint")}
-            </div>
-          ) : null}
-          {previewSrc ? (
-            <div className="builder-viewport-frame" style={{ width: WIDTH[viewport] }}>
-              <iframe
-                ref={frameRef}
-                title="preview"
-                src={previewSrc}
-                className="builder-preview-frame"
-                // `allow-same-origin` is required: the runner needs a real origin so
-                // both sides can pin postMessage to it (a sandboxed opaque origin
-                // reports "null" and forces a wildcard, which is worse). The iframe
-                // is served from the API origin, which holds no browser credentials —
-                // the session token lives in the builder origin only.
-                sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups"
-                onLoad={() => {
-                  setLoadError(false);
-                  runnerReadyRef.current = true;
-                }}
-              />
-              {loadError && (
-                <div className="builder-preview-recover">
-                  <p>{babelError || t("previewBlankHint")}</p>
-                  <button
-                    type="button"
-                    className="btn builder-preview-recover-btn"
-                    onClick={() => {
-                      setLoadError(false);
-                      setBabelError(null);
-                      onRefreshPreview?.();
-                      onStartPreview();
-                    }}
-                  >
-                    {t("restartPreview")}
-                  </button>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="builder-preview-placeholder">
-              <p>
-                {previewBusy || previewLiveStatus === "starting"
-                  ? t("builderStarting")
-                  : previewLiveStatus === "dead"
-                    ? t("previewBlankHint")
-                    : t("previewEmpty")}
-              </p>
-              {!previewBusy && previewLiveStatus !== "starting" && (
-                <button
-                  type="button"
-                  className="btn"
+    <section className={`f-bd-preview${toolActive ? " is-tool" : ""}`} data-viewport={viewport}>
+      <div className="f-bd-preview-stage">
+        {editMissHint ? (
+          <div className="f-bd-hint warn" aria-live="polite">
+            {editMissHint}
+          </div>
+        ) : null}
+        {showBridgeWarning ? (
+          <div className="f-bd-hint warn" aria-live="polite">
+            {t("previewBridgeWarn")}
+          </div>
+        ) : null}
+        {previewTool === "text" && showToolHint ? (
+          <div className="f-bd-hint" aria-live="polite">
+            {t("previewTextEditHint")}
+          </div>
+        ) : null}
+        {previewTool === "select" && showToolHint ? (
+          <div className="f-bd-hint" aria-live="polite">
+            {t("previewSelectHint")}
+          </div>
+        ) : null}
+        {previewSrc ? (
+          <div className="f-bd-frame" data-d={viewport} style={{ width: WIDTH[viewport] }}>
+            <iframe
+              ref={frameRef}
+              title="preview"
+              src={previewSrc}
+              // `allow-same-origin` is required: the runner needs a real origin so
+              // both sides can pin postMessage to it (a sandboxed opaque origin
+              // reports "null" and forces a wildcard, which is worse). The iframe
+              // is served from the API origin, which holds no browser credentials:
+              // the session token lives in the builder origin only.
+              sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups"
+              onLoad={() => {
+                setLoadError(false);
+                runnerReadyRef.current = true;
+              }}
+            />
+            {loadError && (
+              <div className="f-bd-frame-recover">
+                <p>{babelError || t("previewBlankHint")}</p>
+                <Button
+                  size="sm"
+                  icon="refresh"
                   onClick={() => {
-                    if (previewLiveStatus === "dead") {
-                      onRefreshPreview?.();
-                    } else {
-                      onStartPreview();
-                    }
+                    setLoadError(false);
+                    setBabelError(null);
+                    onRefreshPreview?.();
+                    onStartPreview();
                   }}
                 >
-                  {previewLiveStatus === "dead" ? t("restartPreview") : t("startPreview")}
-                </button>
-              )}
-            </div>
-          )}
-          {previewSrc ? (
-            <PreviewToolbar
-              key={viewport}
-              tool={previewTool}
-              onToolChange={onPreviewToolChange}
-              defaultCollapsed={viewport === "phone"}
-            />
-          ) : null}
-        </div>
-        {sidePanel}
+                  {t("restartPreview")}
+                </Button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="f-bd-placeholder">
+            {previewBusy || previewLiveStatus === "starting" ? <Glyph name="refresh" className="f-spin" /> : null}
+            <p style={{ margin: 0 }}>
+              {previewBusy || previewLiveStatus === "starting"
+                ? t("builderStarting")
+                : previewLiveStatus === "dead"
+                  ? t("previewBlankHint")
+                  : t("previewEmpty")}
+            </p>
+            {!previewBusy && previewLiveStatus !== "starting" && (
+              <Button
+                size="sm"
+                icon={previewLiveStatus === "dead" ? "refresh" : "play"}
+                onClick={() => {
+                  if (previewLiveStatus === "dead") {
+                    onRefreshPreview?.();
+                  } else {
+                    onStartPreview();
+                  }
+                }}
+              >
+                {previewLiveStatus === "dead" ? t("restartPreview") : t("startPreview")}
+              </Button>
+            )}
+          </div>
+        )}
+        {previewSrc ? (
+          <PreviewToolbar
+            key={viewport}
+            tool={previewTool}
+            onToolChange={onPreviewToolChange}
+            defaultCollapsed={viewport === "phone"}
+          />
+        ) : null}
       </div>
+      {sidePanel ? <aside className="f-bd-side">{sidePanel}</aside> : null}
     </section>
   );
 }

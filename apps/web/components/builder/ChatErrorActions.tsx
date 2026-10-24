@@ -19,6 +19,8 @@ import { useEffect, useState } from "react";
 
 import type { ChatErrorAction } from "@/lib/chat-errors";
 import { rodiumRechargeUrl, rodiumUpgradeUrl } from "@/lib/constants/rodium-links";
+import { nextPlanName } from "@/components/RodiumWalletBadge";
+import { useForgeStatus } from "@/lib/forge-status";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { startRodiumOAuth } from "@/lib/rodium-oauth";
 import { getSessionSnapshot, subscribeSession } from "@/lib/session-cache";
@@ -52,6 +54,7 @@ export function ChatErrorActions({ action, busy, onRetry, onResume, onEditInChat
     () => getSessionSnapshot()?.profile?.rodium_sub ?? null,
   );
   const [reconnecting, setReconnecting] = useState(false);
+  const nextPlan = nextPlanName(useForgeStatus()?.plan);
 
   useEffect(
     () => subscribeSession((snap) => setRodiumSub(snap?.profile?.rodium_sub ?? null)),
@@ -73,15 +76,12 @@ export function ChatErrorActions({ action, busy, onRetry, onResume, onEditInChat
     // Plan upgrade is primary (FRODI is plan-gated); RODI top-up stays as the
     // quiet secondary link, mirroring the server's ["upgrade", "recharge"] order.
     return (
-      <div className="builder-msg-error-actions">
-        <a
-          className="builder-msg-error-retry"
-          href={rodiumUpgradeUrl()}
-        >
-          {t("chatActionUpgrade")}
+      <div className="f-bd-err-actions">
+        <a className="f-btn f-btn-primary f-btn-sm" href={rodiumUpgradeUrl()}>
+          {nextPlan ? t("bdUpgradeTo").replace("{plan}", nextPlan) : t("chatActionUpgrade")}
         </a>
         <a
-          className="builder-msg-error-link"
+          className="f-btn f-btn-ghost f-btn-sm"
           href={rodiumRechargeUrl(rodiumSub, returnHereAbsolute())}
           target="_blank"
           rel="noreferrer"
@@ -94,9 +94,9 @@ export function ChatErrorActions({ action, busy, onRetry, onResume, onEditInChat
 
   if (action.kind === "recharge") {
     return (
-      <div className="builder-msg-error-actions">
+      <div className="f-bd-err-actions">
         <a
-          className="builder-msg-error-retry"
+          className="f-btn f-btn-primary f-btn-sm"
           href={rodiumRechargeUrl(rodiumSub, returnHereAbsolute())}
           target="_blank"
           rel="noreferrer"
@@ -106,7 +106,7 @@ export function ChatErrorActions({ action, busy, onRetry, onResume, onEditInChat
         {onRetry ? (
           <button
             type="button"
-            className="builder-msg-error-link"
+            className="f-btn f-btn-ghost f-btn-sm"
             disabled={busy}
             onClick={onRetry}
           >
@@ -119,16 +119,16 @@ export function ChatErrorActions({ action, busy, onRetry, onResume, onEditInChat
 
   if (action.kind === "reconnect-rodium") {
     return (
-      <div className="builder-msg-error-actions">
+      <div className="f-bd-err-actions">
         <button
           type="button"
-          className="builder-msg-error-retry"
+          className="f-btn f-btn-primary f-btn-sm"
           disabled={reconnecting}
           onClick={() => void reconnectRodium()}
         >
           {reconnecting ? t("authWorking") : t("chatActionReconnect")}
         </button>
-        <Link href="/settings?tab=generation" className="builder-msg-error-link">
+        <Link href="/settings?tab=generation" className="f-btn f-btn-ghost f-btn-sm">
           {t("chatActionSettings")}
         </Link>
       </div>
@@ -137,14 +137,14 @@ export function ChatErrorActions({ action, busy, onRetry, onResume, onEditInChat
 
   if (action.kind === "open-settings") {
     return (
-      <div className="builder-msg-error-actions">
-        <Link href="/settings?tab=generation" className="builder-msg-error-retry">
+      <div className="f-bd-err-actions">
+        <Link href="/settings?tab=generation" className="f-btn f-btn-primary f-btn-sm">
           {t("chatActionSettings")}
         </Link>
         {onRetry ? (
           <button
             type="button"
-            className="builder-msg-error-link"
+            className="f-btn f-btn-ghost f-btn-sm"
             disabled={busy}
             onClick={onRetry}
           >
@@ -158,10 +158,10 @@ export function ChatErrorActions({ action, busy, onRetry, onResume, onEditInChat
   if (action.kind === "edit-in-chat") {
     if (!onEditInChat) return null;
     return (
-      <div className="builder-msg-error-actions">
+      <div className="f-bd-err-actions">
         <button
           type="button"
-          className="builder-msg-error-action"
+          className="f-btn f-btn-primary f-btn-sm"
           disabled={busy}
           onClick={() => onEditInChat(action.prompt)}
         >
@@ -177,10 +177,10 @@ export function ChatErrorActions({ action, busy, onRetry, onResume, onEditInChat
     const handler = onResume ?? onRetry;
     if (!handler) return null;
     return (
-      <div className="builder-msg-error-actions">
+      <div className="f-bd-err-actions">
         <button
           type="button"
-          className="builder-msg-error-retry"
+          className="f-btn f-btn-primary f-btn-sm"
           disabled={busy}
           onClick={handler}
         >
@@ -192,10 +192,10 @@ export function ChatErrorActions({ action, busy, onRetry, onResume, onEditInChat
 
   if (!onRetry) return null;
   return (
-    <div className="builder-msg-error-actions">
+    <div className="f-bd-err-actions">
       <button
         type="button"
-        className="builder-msg-error-retry"
+        className="f-btn f-btn-primary f-btn-sm"
         disabled={busy}
         onClick={onRetry}
       >

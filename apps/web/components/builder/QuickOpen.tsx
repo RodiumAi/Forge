@@ -105,10 +105,10 @@ export function QuickOpen({
   }
 
   return (
-    <div className="quick-open-root" role="presentation">
-      <div className="quick-open-backdrop" onClick={onClose} />
+    <div className="f-bd-qo-root" role="presentation">
+      <div className="f-bd-qo-scrim" onClick={onClose} />
       <div
-        className="quick-open"
+        className="f-bd-qo"
         role="dialog"
         aria-modal="true"
         aria-label={t("codeQuickOpen")}
@@ -116,7 +116,7 @@ export function QuickOpen({
       >
         <input
           ref={inputRef}
-          className="quick-open-input"
+          className="f-bd-qo-input"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={t("codeQuickOpenPlaceholder")}
@@ -127,9 +127,9 @@ export function QuickOpen({
           autoComplete="off"
         />
         {results.length === 0 ? (
-          <p className="quick-open-empty">{t("codeQuickOpenEmpty")}</p>
+          <p className="f-bd-qo-empty">{t("codeQuickOpenEmpty")}</p>
         ) : (
-          <ul id="quick-open-list" className="quick-open-list" role="listbox" ref={listRef}>
+          <ul id="quick-open-list" className="f-bd-qo-list" role="listbox" ref={listRef}>
             {results.map((path, i) => {
               const name = path.split("/").pop() || path;
               const dir = path.slice(0, path.length - name.length).replace(/\/$/, "");
@@ -139,7 +139,7 @@ export function QuickOpen({
                   role="option"
                   aria-selected={i === active}
                   data-active={i === active}
-                  className={`quick-open-item${i === active ? " active" : ""}`}
+                  className={`f-bd-qo-item${i === active ? " active" : ""}`}
                   onMouseDown={(e) => {
                     e.preventDefault();
                     onPick(path);
@@ -147,8 +147,8 @@ export function QuickOpen({
                   onMouseEnter={() => setActive(i)}
                 >
                   <FileTypeIcon path={path} />
-                  <span className="quick-open-name">{name}</span>
-                  {dir ? <span className="quick-open-dir">{dir}</span> : null}
+                  <span className="f-bd-qo-name">{name}</span>
+                  {dir ? <span className="f-bd-qo-dir">{dir}</span> : null}
                 </li>
               );
             })}

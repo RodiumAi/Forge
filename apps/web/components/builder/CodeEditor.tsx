@@ -23,7 +23,7 @@ const Monaco = dynamic(
   },
   {
     ssr: false,
-    loading: () => <div className="code-editor-loading">…</div>,
+    loading: () => <div className="f-bd-code-loading">…</div>,
   },
 );
 
@@ -184,7 +184,7 @@ export function CodeEditor({ path, value, onChange, onSave }: Props) {
   };
 
   return (
-    <div className="code-monaco-wrap">
+    <div className="f-bd-code-monaco">
       <Monaco
         key={modelPath}
         path={modelPath}

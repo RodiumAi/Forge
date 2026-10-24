@@ -1,18 +1,10 @@
 "use client";
 
-import {
-  Check,
-  ChevronDown,
-  Circle,
-  CircleAlert,
-  ListTodo,
-  Loader2,
-  Play,
-  Square,
-  StepForward,
-} from "lucide-react";
 import { memo, useState } from "react";
-import { Icon } from "@/components/ui/icon";
+
+import { Button } from "@/components/ui/Button";
+import { cx } from "@/components/ui/cx";
+import { Glyph } from "@/components/ui/glyph";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import type { FileOp } from "@/components/AgentActivityPanel";
 
@@ -30,7 +22,7 @@ export type PlanMeta = {
 
 type Props = {
   tasks: PlanTask[];
-  /** Plan title/summary from the planner (Cursor-style header card). */
+  /** Plan title/summary from the planner. */
   meta?: PlanMeta | null;
   needsConfirm?: boolean;
   busy?: boolean;
@@ -46,35 +38,22 @@ type Props = {
   onOpenFile?: (path: string) => void;
 };
 
-function TaskIcon({ status }: { status?: string }) {
-  if (status === "running") {
-    return <Icon icon={Loader2} className="ui-icon-sm agent-spin plan-task-icon-running" />;
-  }
-  if (status === "done") {
-    return <Icon icon={Check} className="ui-icon-sm plan-task-icon-done" />;
-  }
-  if (status === "error") {
-    return <Icon icon={CircleAlert} className="ui-icon-sm plan-task-icon-error" />;
-  }
-  return <Icon icon={Circle} className="ui-icon-sm plan-task-icon-pending" />;
-}
-
+/**
+ * The "Plan" card: numbered steps (done, running, waiting), the done count on
+ * the right, and the controls to run, step through, dismiss or stop it.
+ */
 function PlanPanelInner({
   tasks,
   meta = null,
   needsConfirm = false,
   busy = false,
   executing = false,
-  ops: _ops = [],
   onExecute,
   onExecuteStep,
   onDismiss,
   onStop,
-  onOpenFile: _onOpenFile,
 }: Props) {
   const { t } = useI18n();
-  // Open on first paint. "View plan" then hides only the checklist. Execute
-  // stays outside that block, so collapsing the plan never hides it.
   const [expanded, setExpanded] = useState(true);
   if (!tasks.length) return null;
 
@@ -85,7 +64,6 @@ function PlanPanelInner({
   const partialProgress = doneCount > 0 && doneCount < total;
   const canResume = Boolean(onExecute && partialProgress && !executing && !busy);
   const showExecute = (needsConfirm || canResume) && onExecute;
-  const progress = total ? Math.round((doneCount / total) * 100) : 0;
   const isExecuting = executing || Boolean(runningTask) || (busy && !needsConfirm);
   const isAwaiting = needsConfirm && !isExecuting && !partialProgress;
   const isDone = doneCount === total && total > 0;
@@ -100,155 +78,87 @@ function PlanPanelInner({
   else if (isAwaiting) statusLabel = t("planStatusAwaiting");
   else if (isDone) statusLabel = t("planStatusDone");
 
-  const hasHeaderCard = Boolean(meta?.title || meta?.summary);
-  const checklistOpen = !hasHeaderCard || isExecuting || expanded;
-
-  let statusChipClass = "plan-status-chip";
-  if (isExecuting) statusChipClass += " is-building";
-  else if (errorTask) statusChipClass += " is-error";
-  else if (isDone) statusChipClass += " is-done";
-  else if (isAwaiting) statusChipClass += " is-awaiting";
+  // While the plan runs the list always shows; otherwise it folds on demand.
+  const listOpen = expanded || isExecuting;
 
   return (
-    <div
-      className={`plan-panel${isExecuting ? " plan-panel-executing" : ""}${isAwaiting ? " plan-panel-awaiting" : ""}`}
+    <section
+      className={cx("f-bd-card", "f-bd-plan", errorTask && "f-bd-card-warn")}
+      aria-busy={isExecuting || undefined}
     >
-      {hasHeaderCard ? (
-        <div className="plan-created-card">
-          <p className="plan-created-eyebrow">{t("planCreatedEyebrow")}</p>
-          <h4 className="plan-created-title">{meta?.title || t("planTitle")}</h4>
-          {meta?.summary ? <p className="plan-created-summary">{meta.summary}</p> : null}
-          <div className="plan-created-actions">
-            <button
-              type="button"
-              className="plan-view-btn"
-              aria-expanded={checklistOpen}
-              onClick={() => setExpanded((v) => !v)}
-            >
-              {t("planViewPlan")}
-              <Icon
-                icon={ChevronDown}
-                className={`ui-icon-sm plan-view-chevron${checklistOpen ? " is-open" : ""}`}
-              />
-            </button>
-            <span className={statusChipClass}>
-              {isExecuting ? <Icon icon={Loader2} className="ui-icon-sm agent-spin" /> : null}
-              {isExecuting ? t("planStatusBuilding") : statusLabel}
-            </span>
-          </div>
-        </div>
-      ) : null}
-
-      {checklistOpen ? (
-        <div className="plan-build-card">
-          <div className="plan-panel-head">
-            <p className="plan-panel-title">
-              <Icon icon={ListTodo} className="ui-icon-sm" />
-              {hasHeaderCard ? t("planBuildTitle") : t("planTitle")}
-            </p>
-            <span className={`plan-panel-badge${isExecuting ? " live" : ""}${isAwaiting ? " await" : ""}`}>
-              {isExecuting ? <Icon icon={Loader2} className="ui-icon-sm agent-spin" /> : null}
-              {statusLabel}
-            </span>
-          </div>
-
-          <div className="plan-progress">
-            <div
-              className="plan-progress-track"
-              role="progressbar"
-              aria-valuemin={0}
-              aria-valuemax={total}
-              aria-valuenow={doneCount}
-              aria-valuetext={`${doneCount}/${total}`}
-            >
-              <div
-                className={`plan-progress-fill${isExecuting ? " pulse" : ""}`}
-                style={{ width: `${isExecuting && progress === 0 ? 8 : progress}%` }}
-              />
-            </div>
-            <span className="plan-progress-label">
-              {doneCount}/{total}
-            </span>
-          </div>
-
-          {isExecuting && runningTask ? (
-            <p className="plan-current" aria-live="polite">
-              <Icon icon={Loader2} className="ui-icon-sm agent-spin" />
-              {runningTask.title}
-            </p>
-          ) : null}
-
-          {isAwaiting ? (
-            <p className="plan-await-hint">{t("planAwaitHint")}</p>
-          ) : null}
-
-          {partialProgress && !isExecuting && canResume ? (
-            <p className="plan-await-hint">{t("planResumeHint")}</p>
-          ) : null}
-
-          <ol className="plan-tasks">
-            {tasks.map((task, index) => (
-              <li
-                key={task.id}
-                className={`plan-task plan-task-${task.status || "pending"}${
-                  task.status === "running" ? " plan-task-active" : ""
-                }`}
-              >
-                <span className="plan-task-index">{index + 1}</span>
-                <TaskIcon status={task.status} />
-                <span className="plan-task-title">{task.title}</span>
-              </li>
-            ))}
-          </ol>
-
-        </div>
-      ) : null}
-
-      {showExecute ? (
-        <div className="plan-created-actions plan-stay-actions">
-          <button type="button" className="btn plan-execute" disabled={busy} onClick={onExecute}>
-            {busy ? (
-              <>
-                <Icon icon={Loader2} className="ui-icon-sm agent-spin" />
-                {t("planExecuting")}
-              </>
-            ) : (
-              <>
-                <Icon icon={Play} className="ui-icon-sm" />
-                {canResume ? t("planResume") : t("planExecute")}
-              </>
-            )}
-          </button>
-          {onExecuteStep ? (
-            <button
-              type="button"
-              className="btn plan-execute plan-execute-step"
-              disabled={busy}
-              onClick={onExecuteStep}
-            >
-              <Icon icon={StepForward} className="ui-icon-sm" />
-              {partialProgress ? t("planNextStep") : t("planExecuteStep")}
-            </button>
-          ) : null}
-          {needsConfirm && onDismiss ? (
-            <button type="button" className="btn plan-dismiss" disabled={busy} onClick={onDismiss}>
-              {t("planDismiss")}
-            </button>
-          ) : null}
-        </div>
-      ) : null}
-
-      {isExecuting && onStop ? (
-        <div className="plan-footer">
-          <span className="plan-footer-actions">
-            <button type="button" className="plan-footer-btn plan-footer-stop" onClick={onStop}>
-              <Icon icon={Square} className="ui-icon-sm" />
-              {t("planStop")}
-            </button>
+      <button type="button" className="f-bd-card-head" aria-expanded={listOpen} onClick={() => setExpanded((v) => !v)}>
+        <Glyph name="list" size="sm" />
+        {meta?.title || t("bdPlan")}
+        <span className="r">
+          {isExecuting ? <Glyph name="refresh" size="sm" className="f-spin" /> : null}
+          <span
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={total}
+            aria-valuenow={doneCount}
+            aria-valuetext={`${doneCount}/${total}`}
+            aria-label={statusLabel}
+          >
+            {doneCount} / {total}
           </span>
+          <Glyph name="chevron-down" size="sm" style={{ transform: listOpen ? "rotate(180deg)" : undefined }} />
+        </span>
+      </button>
+      <div className="f-bd-card-body">
+        {meta?.summary ? (
+          <div className="f-bd-plan-meta">
+            <p>{meta.summary}</p>
+          </div>
+        ) : null}
+        {isAwaiting ? <p className="f-bd-plan-hint">{t("planAwaitHint")}</p> : null}
+        {partialProgress && !isExecuting && canResume ? <p className="f-bd-plan-hint">{t("planResumeHint")}</p> : null}
+        {!listOpen ? <p className="f-bd-plan-hint">{statusLabel}</p> : null}
+        {listOpen ? (
+          <ol className="f-bd-tasks">
+            {tasks.map((task, index) => {
+              const st = task.status || "pending";
+              return (
+                <li
+                  key={task.id}
+                  className={cx("f-bd-task", st)}
+                  aria-current={st === "running" ? "step" : undefined}
+                >
+                  <span className="ix" aria-hidden>
+                    {st === "done" ? <Glyph name="check" size="xs" /> : st === "error" ? "!" : index + 1}
+                  </span>
+                  <span className="tt">{task.title}</span>
+                </li>
+              );
+            })}
+          </ol>
+        ) : null}
+      </div>
+
+      {showExecute || (isExecuting && onStop) ? (
+        <div className="f-bd-card-actions">
+          {showExecute ? (
+            <Button size="sm" icon="play" loading={busy} onClick={onExecute}>
+              {busy ? t("planExecuting") : canResume ? t("planResume") : t("planExecute")}
+            </Button>
+          ) : null}
+          {showExecute && onExecuteStep ? (
+            <Button size="sm" variant="ghost" icon="arrow-right" disabled={busy} onClick={onExecuteStep}>
+              {partialProgress ? t("planNextStep") : t("planExecuteStep")}
+            </Button>
+          ) : null}
+          {showExecute && needsConfirm && onDismiss ? (
+            <Button size="sm" variant="subtle" disabled={busy} onClick={onDismiss}>
+              {t("planDismiss")}
+            </Button>
+          ) : null}
+          {isExecuting && onStop ? (
+            <Button size="sm" variant="ghost" icon="square" onClick={onStop}>
+              {t("planStop")}
+            </Button>
+          ) : null}
         </div>
       ) : null}
-    </div>
+    </section>
   );
 }
 

@@ -24,7 +24,7 @@ describe("steps collapse", () => {
   it("is expanded for the live turn", () => {
     renderWithProviders(<AgentActivityPanel steps={STEPS} live />);
     expect(screen.getByText("Analyse")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /étapes/i })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: /activité/i })).toHaveAttribute(
       "aria-expanded",
       "true",
     );
@@ -34,7 +34,7 @@ describe("steps collapse", () => {
     // Everything used to stay expanded forever, which made the thread unreadable.
     renderWithProviders(<AgentActivityPanel steps={STEPS} />);
     expect(screen.queryByText("Analyse")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /étapes/i })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: /activité/i })).toHaveAttribute(
       "aria-expanded",
       "false",
     );
@@ -42,7 +42,7 @@ describe("steps collapse", () => {
 
   it("summarises the collapsed steps", () => {
     renderWithProviders(<AgentActivityPanel steps={STEPS} />);
-    expect(screen.getByText(/1 étapes/)).toBeInTheDocument();
+    expect(screen.getByText("1 / 2")).toBeInTheDocument();
   });
 
   it("reports failures in the summary instead of a count", () => {
@@ -54,7 +54,7 @@ describe("steps collapse", () => {
 
   it("can be toggled open", async () => {
     const { user } = renderWithProviders(<AgentActivityPanel steps={STEPS} />);
-    await user.click(screen.getByRole("button", { name: /étapes/i }));
+    await user.click(screen.getByRole("button", { name: /activité/i }));
     expect(screen.getByText("Analyse")).toBeInTheDocument();
   });
 });
@@ -66,7 +66,7 @@ describe("thinking collapse", () => {
   });
 
   it("reveals the reasoning on demand", async () => {
-    const { user } = renderWithProviders(<AgentActivityPanel thinking="secret reasoning" />);
+    const { user } = renderWithProviders(<AgentActivityPanel thinking="secret reasoning" live />);
     await user.click(screen.getByRole("button", { name: /raisonnement/i }));
     expect(screen.getByText("secret reasoning")).toBeInTheDocument();
   });
@@ -78,27 +78,33 @@ describe("file operations", () => {
     { op: "delete", path: "src/Old.tsx" },
   ];
 
-  // File paths stay in props/state for applied/preview refresh, but the panel
-  // no longer lists them (Replit/Lovable-style: progress, not paths).
-  it("does not render file paths (kept under the hood)", () => {
-    const { container } = renderWithProviders(<AgentActivityPanel fileOps={OPS} />);
-    expect(container).toBeEmptyDOMElement();
+  // The redesigned activity card lists the files Forge writes, one by one.
+  it("lists the files written in the live turn", () => {
+    renderWithProviders(<AgentActivityPanel fileOps={OPS} live />);
+    expect(screen.getByText("src/App.tsx")).toBeInTheDocument();
+    expect(screen.getByText("src/Old.tsx")).toBeInTheDocument();
+  });
+
+  it("summarises the file count when collapsed", () => {
+    renderWithProviders(<AgentActivityPanel fileOps={OPS} />);
+    expect(screen.getByText("2 fichiers mis à jour")).toBeInTheDocument();
     expect(screen.queryByText("src/App.tsx")).not.toBeInTheDocument();
-    expect(screen.queryByText("src/Old.tsx")).not.toBeInTheDocument();
   });
 
-  it("still accepts a legacy array of plain paths without rendering them", () => {
-    const { container } = renderWithProviders(
-      <AgentActivityPanel fileOps={["src/Legacy.tsx"]} />,
-    );
-    expect(container).toBeEmptyDOMElement();
-    expect(screen.queryByText("src/Legacy.tsx")).not.toBeInTheDocument();
+  it("still accepts a legacy array of plain paths", () => {
+    renderWithProviders(<AgentActivityPanel fileOps={["src/Legacy.tsx"]} live />);
+    expect(screen.getByText("src/Legacy.tsx")).toBeInTheDocument();
   });
 
-  it("does not call onOpenFile when only fileOps are present", () => {
+  it("opens a written file, never a deleted one", async () => {
     const onOpenFile = vi.fn();
-    renderWithProviders(<AgentActivityPanel fileOps={OPS} onOpenFile={onOpenFile} />);
+    const { user } = renderWithProviders(
+      <AgentActivityPanel fileOps={OPS} onOpenFile={onOpenFile} live />,
+    );
     expect(onOpenFile).not.toHaveBeenCalled();
+    await user.click(screen.getByText("src/App.tsx"));
+    expect(onOpenFile).toHaveBeenCalledWith("src/App.tsx");
+    expect(screen.getByText("src/Old.tsx").closest("button")).toBeNull();
   });
 });
 
@@ -109,6 +115,7 @@ describe("warnings", () => {
         warnings={[
           { code: "BACKEND_SDK_FORBIDDEN", path: "src/App.tsx", message: "backend SDK" },
         ]}
+        live
       />,
     );
     const warning = screen.getByText(/backend SDK/).closest("li")!;
@@ -116,7 +123,7 @@ describe("warnings", () => {
   });
 
   it("renders a warning without a path", () => {
-    renderWithProviders(<AgentActivityPanel warnings={[{ message: "preview may stay black" }]} />);
+    renderWithProviders(<AgentActivityPanel warnings={[{ message: "preview may stay black" }]} live />);
     expect(screen.getByText(/preview may stay black/)).toBeInTheDocument();
   });
 });

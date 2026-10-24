@@ -81,23 +81,23 @@ function TreeItem({
   if (node.type === "dir") {
     return (
       <li role="none">
-        <div className="code-tree-row">
+        <div className="f-bd-code-row">
         <button
           type="button"
           role="treeitem"
           aria-expanded={open}
           aria-selected={false}
           aria-level={depth + 1}
-          className="code-tree-dir"
+          className="f-bd-code-item is-dir"
             style={{ paddingLeft: 8 + depth * 12 }}
             onClick={() => setOpen((v) => !v)}
           >
             <Icon
               icon={open ? ChevronDown : ChevronRight}
-              className="ui-icon-sm code-tree-chevron"
+              className="ui-icon-sm f-bd-code-chev"
             />
             <FileTypeIcon path={node.path} isDir open={open} />
-            <span className="code-tree-label">{name}</span>
+            <span className="f-bd-code-label">{name}</span>
           </button>
           <TreeActions path={node.path} onRename={onRename} onDelete={onDelete} />
         </div>
@@ -122,19 +122,19 @@ function TreeItem({
 
   return (
     <li role="none">
-      <div className="code-tree-row">
+      <div className="f-bd-code-row">
         <button
           type="button"
           role="treeitem"
           aria-level={depth + 1}
           aria-selected={selected === node.path}
-          className={`code-tree-file${selected === node.path ? " active" : ""}`}
+          className={`f-bd-code-item${selected === node.path ? " active" : ""}`}
           style={{ paddingLeft: 8 + depth * 12 }}
           onClick={() => onSelect(node.path)}
         >
-          <span className="code-tree-chevron-spacer" />
+          <span className="f-bd-code-chev-sp" />
           <FileTypeIcon path={node.path} />
-          <span className="code-tree-label">{name}</span>
+          <span className="f-bd-code-label">{name}</span>
         </button>
         <TreeActions path={node.path} onRename={onRename} onDelete={onDelete} />
       </div>
@@ -153,7 +153,7 @@ function TreeActions({
 }) {
   const { t } = useI18n();
   return (
-    <span className="code-tree-actions">
+    <span className="f-bd-code-acts">
       <button type="button" title={t("codeRename")} aria-label={t("codeRename")} onClick={() => onRename(path)}>
         <Icon icon={Pencil} size={12} />
       </button>
@@ -440,11 +440,11 @@ export function CodePane({
   }, []);
 
   return (
-    <section className="builder-code-pane builder-main-pane">
-      <aside className="code-tree">
-        <header className="builder-pane-head">
+    <section className="f-bd-code">
+      <aside className="f-bd-code-tree">
+        <header className="f-bd-code-head">
           <h2>{t("builderModeCode")}</h2>
-          <span className="code-tree-tools">
+          <span className="f-bd-code-tools">
             <button
               type="button"
               title={t("codeQuickOpen")}
@@ -465,15 +465,15 @@ export function CodePane({
         </header>
 
         {treeLoading ? (
-          <ul className="code-tree-skeleton" aria-hidden="true">
+          <ul className="f-bd-code-skel" aria-hidden="true">
             {[0, 1, 2, 3, 4, 5].map((i) => (
               <li key={i} />
             ))}
           </ul>
         ) : tree.length === 0 ? (
-          <p className="builder-empty">{t("codeTreeEmpty")}</p>
+          <p className="f-bd-code-empty">{t("codeTreeEmpty")}</p>
         ) : (
-          <ul className="code-tree-list" role="tree" aria-label={t("builderModeCode")}>
+          <ul className="f-bd-code-list" role="tree" aria-label={t("builderModeCode")}>
             {tree.map((n) => (
               <TreeItem
                 key={n.path}
@@ -489,16 +489,16 @@ export function CodePane({
         )}
       </aside>
 
-      <div className="code-editor">
+      <div className="f-bd-code-editor">
         {tabs.length > 0 && (
-          <div className="code-tabs" role="tablist" aria-label={t("builderModeCode")}>
+          <div className="f-bd-code-tabs" role="tablist" aria-label={t("builderModeCode")}>
             {tabs.map((tab) => {
               const tabDirty = tab.content !== tab.baseline;
               const name = tab.path.split("/").pop() || tab.path;
               return (
                 <div
                   key={tab.path}
-                  className={`code-tab${tab.path === active ? " active" : ""}`}
+                  className={`f-bd-code-tab${tab.path === active ? " active" : ""}`}
                 >
                   <button
                     type="button"
@@ -509,11 +509,11 @@ export function CodePane({
                   >
                     <FileTypeIcon path={tab.path} />
                     <span>{name}</span>
-                    {tabDirty ? <span className="code-tab-dot" aria-hidden="true" /> : null}
+                    {tabDirty ? <span className="f-bd-code-tabdot" aria-hidden="true" /> : null}
                   </button>
                   <button
                     type="button"
-                    className="code-tab-close"
+                    className="f-bd-code-tabx"
                     aria-label={t("close")}
                     onClick={() => closeTab(tab.path)}
                   >
@@ -525,8 +525,8 @@ export function CodePane({
           </div>
         )}
 
-        <header className="builder-pane-head">
-          <div className="code-editor-path">
+        <header className="f-bd-code-head">
+          <div className="f-bd-code-path">
             {imageView ? (
               <>
                 <FileTypeIcon path={imageView} size="md" />
@@ -537,7 +537,7 @@ export function CodePane({
                 <FileTypeIcon path={active} size="md" />
                 <code>{active}</code>
                 {dirty && (
-                  <span className="code-dirty-dot" role="status" aria-label={t("codeDirty")} />
+                  <span className="f-bd-code-dirty" role="status" aria-label={t("codeDirty")} />
                 )}
               </>
             ) : (
@@ -546,7 +546,7 @@ export function CodePane({
           </div>
           <button
             type="button"
-            className="btn"
+            className="f-btn f-btn-primary f-btn-xs"
             disabled={!dirty || busy || !active || fileLoading}
             onClick={() => void save()}
           >
@@ -556,9 +556,9 @@ export function CodePane({
         </header>
 
         {conflict && active ? (
-          <div className="code-conflict" role="alert">
+          <div className="f-bd-code-conflict" role="alert">
             <p>{error}</p>
-            <div className="code-conflict-actions">
+            <div className="f-bd-code-conflict-acts">
               <button type="button" onClick={() => void openFile(active, { reload: true })}>
                 <Icon icon={RotateCcw} className="ui-icon-sm" />
                 {t("codeConflictReload")}
@@ -569,21 +569,21 @@ export function CodePane({
             </div>
           </div>
         ) : error ? (
-          <p className="builder-pane-error" role="alert">
+          <p className="f-bd-code-error" role="alert">
             {error}
           </p>
         ) : null}
 
         {fileLoading ? (
-          <p className="builder-empty">{t("loading")}</p>
+          <p className="f-bd-code-empty">{t("loading")}</p>
         ) : imageView ? (
-          <div className="code-image-view">
+          <div className="f-bd-code-image">
             { }
             <img
               src={projectPublicUrl(projectId, imageView, filesRevision) ?? undefined}
               alt={imageView}
             />
-            <span className="code-image-name">{imageView.split("/").pop()}</span>
+            <span className="f-bd-code-image-name">{imageView.split("/").pop()}</span>
           </div>
         ) : activeTab ? (
           <CodeEditor
@@ -593,7 +593,7 @@ export function CodePane({
             onSave={() => void save()}
           />
         ) : (
-          <p className="builder-empty">{t("codeSelectFile")}</p>
+          <p className="f-bd-code-empty">{t("codeSelectFile")}</p>
         )}
       </div>
 

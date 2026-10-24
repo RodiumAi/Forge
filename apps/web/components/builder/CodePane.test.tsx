@@ -88,9 +88,9 @@ describe("file tree", () => {
     api.mockImplementation(() => new Promise((r) => (resolveTree = r)));
     const { container } = renderWithProviders(<CodePane projectId="p1" />);
 
-    expect(container.querySelector(".code-tree-skeleton")).toBeInTheDocument();
+    expect(container.querySelector(".f-bd-code-skel")).toBeInTheDocument();
     resolveTree(TREE);
-    await waitFor(() => expect(container.querySelector(".code-tree-skeleton")).toBeNull());
+    await waitFor(() => expect(container.querySelector(".f-bd-code-skel")).toBeNull());
   });
 
   it("distinguishes an empty project from a loading one", async () => {
@@ -211,7 +211,7 @@ describe("tabs", () => {
 
     await user.type(editor, "X");
 
-    expect(container.querySelector(".code-tab-dot")).toBeInTheDocument();
+    expect(container.querySelector(".f-bd-code-tabdot")).toBeInTheDocument();
     await waitFor(() => expect(onDirtyChange).toHaveBeenLastCalledWith(true));
   });
 });
@@ -298,7 +298,7 @@ describe("tree actions", () => {
     const { user } = renderWithProviders(<CodePane projectId="p1" />);
     await openApp(user);
 
-    const row = screen.getByRole("treeitem", { name: /App\.tsx/ }).closest(".code-tree-row")!;
+    const row = screen.getByRole("treeitem", { name: /App\.tsx/ }).closest(".f-bd-code-row")!;
     await user.click(within(row as HTMLElement).getByRole("button", { name: /renommer/i }));
 
     await waitFor(() => {
@@ -316,7 +316,7 @@ describe("tree actions", () => {
     const { user } = renderWithProviders(<CodePane projectId="p1" />);
     await screen.findByRole("tree");
 
-    const row = screen.getByRole("treeitem", { name: /App\.tsx/ }).closest(".code-tree-row")!;
+    const row = screen.getByRole("treeitem", { name: /App\.tsx/ }).closest(".f-bd-code-row")!;
     await user.click(within(row as HTMLElement).getByRole("button", { name: /renommer/i }));
 
     expect(api.mock.calls.some((c) => String(c[0]).includes("/rename"))).toBe(false);
@@ -328,7 +328,7 @@ describe("tree actions", () => {
     const { user } = renderWithProviders(<CodePane projectId="p1" />);
     await screen.findByRole("tree");
 
-    const row = screen.getByRole("treeitem", { name: /App\.tsx/ }).closest(".code-tree-row")!;
+    const row = screen.getByRole("treeitem", { name: /App\.tsx/ }).closest(".f-bd-code-row")!;
     await user.click(within(row as HTMLElement).getByRole("button", { name: /supprimer/i }));
 
     expect(confirm).toHaveBeenCalled();

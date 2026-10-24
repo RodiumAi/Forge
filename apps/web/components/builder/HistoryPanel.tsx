@@ -1,9 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { History, RotateCcw, X } from "lucide-react";
 import { api } from "@/lib/api";
-import { Icon } from "@/components/ui/icon";
+import { Avatar } from "@/components/ui/Avatar";
+import { Tag } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Sheet } from "@/components/ui/Dialog";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 
 type Actor = {
@@ -88,15 +90,6 @@ export function HistoryPanel({
     if (open) void load();
   }, [open, load]);
 
-  useEffect(() => {
-    if (!open) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
-
   async function restore(snapshot: Snapshot) {
     if (restoringId) return;
     if (!window.confirm(t("historyRestoreConfirm").replace("{label}", snapshot.label))) {
@@ -122,104 +115,75 @@ export function HistoryPanel({
   const body = (
     <>
       {!available ? (
-        <p className="history-panel-empty">{t("historyUnavailable")}</p>
+        <p className="f-bd-hist-empty">{t("historyUnavailable")}</p>
       ) : loading && !snapshots.length ? (
-        <ul className="history-skeleton" aria-hidden="true">
+        <ul className="f-bd-hist-skel" aria-hidden="true">
           {[0, 1, 2].map((i) => (
-            <li key={i} />
+            <li key={i} className="f-skel" />
           ))}
         </ul>
       ) : !snapshots.length ? (
-        <p className="history-panel-empty">{t("historyEmpty")}</p>
+        <p className="f-bd-hist-empty">{t("historyEmpty")}</p>
       ) : (
-        <ol className="history-list">
-          {snapshots.map((snap, idx) => (
-            <li key={snap.id} className="history-item">
-              <div className="history-item-main">
-                <span className="history-item-label">{snap.label}</span>
-                <span className="history-item-meta">
-                  {relativeTime(snap.created_at, locale)}
-                  {idx === 0 ? ` · ${t("historyCurrent")}` : ""}
-                </span>
-                {snap.actor?.name || snap.actor?.email ? (
-                  <span className="history-actor">
-                    <span className="history-actor-avatar" aria-hidden>
-                      {snap.actor.avatar_url ? (
-                        <img src={snap.actor.avatar_url} alt="" />
-                      ) : (
-                        initials(snap.actor.name || snap.actor.email || "")
-                      )}
-                    </span>
-                    {snap.actor.name || snap.actor.email}
-                  </span>
-                ) : null}
-              </div>
-              {idx > 0 ? (
-                <button
-                  type="button"
-                  className="history-restore"
-                  onClick={() => void restore(snap)}
-                  disabled={Boolean(restoringId)}
-                >
-                  <Icon icon={RotateCcw} className="ui-icon-sm" />
-                  {restoringId === snap.id ? t("historyRestoring") : t("historyRestore")}
-                </button>
-              ) : null}
-            </li>
-          ))}
+        <ol className="f-bd-hist">
+          {snapshots.map((snap, idx) => {
+            const who = snap.actor?.name || snap.actor?.email || "";
+            return (
+              <li key={snap.id} className="f-bd-hist-row">
+                <Avatar name={who || "Forge"} src={snap.actor?.avatar_url} size="xs" tone={idx === 0 ? "self" : "other"} />
+                <div className="l">
+                  <b>{snap.label}</b>
+                  <small>
+                    {relativeTime(snap.created_at, locale)}
+                    {who ? ` · ${who}` : ""}
+                    {snap.files_changed ? ` · ${t("bdDoneFiles").replace("{n}", String(snap.files_changed))}` : ""}
+                  </small>
+                </div>
+                {idx === 0 ? (
+                  <Tag tone="ok">{t("historyCurrent")}</Tag>
+                ) : (
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    icon="undo"
+                    onClick={() => void restore(snap)}
+                    disabled={Boolean(restoringId)}
+                  >
+                    {restoringId === snap.id ? t("historyRestoring") : t("historyRestore")}
+                  </Button>
+                )}
+              </li>
+            );
+          })}
         </ol>
       )}
 
       {limited ? (
-        <div className="history-upgrade">
+        <div className="f-bd-hist-upgrade">
           <p>{t("historyLimited").replace("{n}", String(snapshots.length || 5))}</p>
           {onUpgrade ? (
-            <button type="button" className="btn" onClick={onUpgrade}>
+            <Button size="sm" variant="ghost" icon="zap" onClick={onUpgrade}>
               {t("historyUpgrade")}
-            </button>
+            </Button>
           ) : null}
         </div>
       ) : null}
 
-      {error ? <p className="history-panel-error">{error}</p> : null}
+      {error ? (
+        <p className="f-bd-hist-error" role="alert">
+          {error}
+        </p>
+      ) : null}
     </>
   );
 
   if (embedded) {
-    return <div className="history-embedded">{body}</div>;
+    return <div className="f-bd-hist-panel">{body}</div>;
   }
 
   return (
-    <div className="design-slideover-root">
-      <button
-        type="button"
-        className="design-slideover-backdrop"
-        aria-label={t("close")}
-        onClick={onClose}
-      />
-      <aside
-        className="design-slideover history-slideover"
-        role="dialog"
-        aria-modal="true"
-        aria-label={t("historyTitle")}
-      >
-        <header className="history-panel-head">
-          <span className="history-panel-title">
-            <Icon icon={History} className="ui-icon-sm" />
-            {t("historyTitle")}
-          </span>
-          <button type="button" className="history-panel-close" onClick={onClose} aria-label={t("close")}>
-            <Icon icon={X} className="ui-icon-sm" />
-          </button>
-        </header>
-        {body}
-      </aside>
-    </div>
+    <Sheet open={open} onClose={onClose} side="right" title={t("historyTitle")} closeLabel={t("close")} className="f-bd-hist-sheet">
+      {body}
+    </Sheet>
   );
-}
-
-function initials(label: string): string {
-  const parts = label.trim().split(/\s+/).filter(Boolean);
-  if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-  return (parts[0]?.slice(0, 2) || "?").toUpperCase();
 }
