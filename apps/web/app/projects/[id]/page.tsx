@@ -829,6 +829,11 @@ export default function ProjectPage() {
 
     const p = await api<Project>(`/projects/${projectId}`);
     if (streamAbortRef.current || streamingRunIdRef.current) return;
+    // A design system has its own editor (kind registry: editor "design_system").
+    if (p.platform === "design_system") {
+      router.replace(`/projects/${projectId}/design-system`);
+      return;
+    }
     setProject(p);
     if (p.platform === "mobile") {
       setViewport((current) => {
@@ -953,7 +958,7 @@ export default function ProjectPage() {
     if (streamAbortRef.current || streamingRunIdRef.current) return;
     if (status.running && status.url) setPreviewUrl(status.url);
     void refreshRoutes();
-  }, [projectId, t, refreshRoutes, setPreviewUrl, syncBuilderUrl]);
+  }, [projectId, router, t, refreshRoutes, setPreviewUrl, syncBuilderUrl]);
 
   const pushChatError = useCallback(
     (
