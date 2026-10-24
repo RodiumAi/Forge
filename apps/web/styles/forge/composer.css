@@ -80,7 +80,7 @@
 .f-composer-suggest button {
   max-width: 100%; height: 34px; padding: 0 14px; border-radius: var(--f-r-pill); background: var(--f-surface); border: 1px solid var(--f-line);
   color: var(--f-muted); font: inherit; font-size: 13.5px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  transition: color .2s, border-color .2s;
+  transition: color .2s, border-color .2s; display: inline-flex; align-items: center; gap: 7px;
 }
 .f-composer-suggest button:hover { color: var(--f-text); border-color: var(--f-line-strong); }
 

@@ -80,14 +80,52 @@ import { refreshWorkspaceActivity, useWorkspaceActivity, type ActiveRun } from "
 
 const DESIGN_SYSTEM_KEY = "forge_home_design_system";
 
-const WEB_SUGGESTIONS = ["promptSuggest1", "promptSuggest2", "promptSuggest3", "promptSuggest4", "promptSuggest5"] as const;
-const MOBILE_SUGGESTIONS = [
-  "promptSuggestMobile1",
-  "promptSuggestMobile2",
-  "promptSuggestMobile3",
-  "promptSuggestMobile4",
-  "promptSuggestMobile5",
-] as const;
+type Suggestion = { label: MessageKey; prompt: MessageKey; kind: ProjectKindId };
+
+/** Suggestion chips per kind: a short label, the full prompt it inserts. */
+const SUGGESTIONS: Record<ProjectKindId, Suggestion[]> = {
+  web: [
+    { label: "apSugWeb1", prompt: "promptSuggest1", kind: "web" },
+    { label: "apSugWeb2", prompt: "promptSuggest2", kind: "web" },
+    { label: "apSugWeb3", prompt: "promptSuggest3", kind: "web" },
+    { label: "apSugWeb4", prompt: "promptSuggest4", kind: "web" },
+    { label: "apSugWeb5", prompt: "promptSuggest5", kind: "web" },
+  ],
+  mobile: [
+    { label: "apSugMobile1", prompt: "promptSuggestMobile1", kind: "mobile" },
+    { label: "apSugMobile2", prompt: "promptSuggestMobile2", kind: "mobile" },
+    { label: "apSugMobile3", prompt: "promptSuggestMobile3", kind: "mobile" },
+    { label: "apSugMobile4", prompt: "promptSuggestMobile4", kind: "mobile" },
+    { label: "apSugMobile5", prompt: "promptSuggestMobile5", kind: "mobile" },
+  ],
+  slides: [
+    { label: "apSugSlides1", prompt: "apSugSlides1Prompt", kind: "slides" },
+    { label: "apSugSlides2", prompt: "apSugSlides2Prompt", kind: "slides" },
+    { label: "apSugSlides3", prompt: "apSugSlides3Prompt", kind: "slides" },
+  ],
+  codelab: [
+    { label: "apSugCodelab1", prompt: "apSugCodelab1Prompt", kind: "codelab" },
+    { label: "apSugCodelab2", prompt: "apSugCodelab2Prompt", kind: "codelab" },
+  ],
+  design_system: [
+    { label: "apSugDs1", prompt: "apSugDs1Prompt", kind: "design_system" },
+    { label: "apSugDs2", prompt: "apSugDs2Prompt", kind: "design_system" },
+  ],
+};
+
+/** The chips for the chosen starting kind, else a mix across the enabled kinds (5 at most). */
+function suggestionsFor(kind: ProjectKindId | null, enabled: readonly ProjectKindId[]): Suggestion[] {
+  if (kind && enabled.includes(kind)) return SUGGESTIONS[kind].slice(0, 5);
+  const mix: Suggestion[] = [];
+  const pools = (["web", "slides", "mobile", "codelab", "design_system"] as ProjectKindId[]).filter((k) => enabled.includes(k));
+  for (let round = 0; mix.length < 5 && round < 5; round += 1) {
+    for (const k of pools) {
+      const next = SUGGESTIONS[k][round];
+      if (next && mix.length < 5) mix.push(next);
+    }
+  }
+  return mix;
+}
 
 const KIND_HINTS: Record<ProjectKindId, MessageKey> = {
   web: "apKindHintWeb",
@@ -598,11 +636,11 @@ function DashboardInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- boot once on mount/locale
   }, [locale, router, t]);
 
-  const suggestionKind = tile.kind ?? "web";
-  const suggestions =
-    suggestionKind === "web" || suggestionKind === "mobile"
-      ? (suggestionKind === "mobile" ? MOBILE_SUGGESTIONS : WEB_SUGGESTIONS).map((key) => t(key))
-      : [];
+  const suggestions = suggestionsFor(tile.kind, enabledKinds).map((item) => ({
+    label: t(item.label),
+    prompt: t(item.prompt),
+    kind: item.kind,
+  }));
   const gateError = error === t("createNeedsKey") || error === t("createNeedsRodi") ? error : null;
 
   const sorted = useMemo(
