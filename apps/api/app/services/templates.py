@@ -178,6 +178,51 @@ def preview_path(template_id: str) -> Path | None:
     return path if path.is_file() else None
 
 
+#: Upper bound on the deck documents a gallery card reads (DESIGN.md included).
+_DECK_PREVIEW_MAX_SLIDES = 40
+_DECK_PREVIEW_MAX_DESIGN = 200_000
+
+
+def template_deck(template_id: str) -> dict | None:
+    """The deck of a slides kit as the gallery cards play it.
+
+    ``{"deck", "slides": [...], "design"}``: deck.json, the slide bodies in deck
+    order (a missing body becomes an empty slide), and the DESIGN.md text the
+    player derives its theme tokens from. Image paths stay as written
+    (``public/...``); the client maps them onto ``/templates/{id}/media/``.
+    None when the template is unknown or not a slides kit.
+    """
+    meta = get_template(template_id)
+    if meta is None or meta.kind != "slides":
+        return None
+    try:
+        deck = json.loads((meta.path / "deck.json").read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(deck, dict):
+        return None
+    slides: list[dict] = []
+    for ref in (deck.get("slides") or [])[:_DECK_PREVIEW_MAX_SLIDES]:
+        sid = str((ref or {}).get("id") or "") if isinstance(ref, dict) else ""
+        if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", sid):
+            continue
+        body: dict = {"id": sid, "elements": []}
+        path = meta.path / "slides" / f"{sid}.json"
+        if path.is_file():
+            try:
+                loaded = json.loads(path.read_text(encoding="utf-8"))
+                if isinstance(loaded, dict):
+                    body = {**loaded, "id": sid}
+            except (OSError, json.JSONDecodeError):
+                pass
+        slides.append(body)
+    design = ""
+    design_path = meta.path / "DESIGN.md"
+    if design_path.is_file():
+        design = design_path.read_text(encoding="utf-8", errors="replace")[:_DECK_PREVIEW_MAX_DESIGN]
+    return {"deck": deck, "slides": slides, "design": design}
+
+
 def fork_template(template_id: str, project_id: str, app_name: str | None = None) -> TemplateMeta:
     meta = get_template(template_id)
     if meta is None:

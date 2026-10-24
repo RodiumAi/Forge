@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from app.i18n import resolve_locale
 from app.kinds import get_kind, kind_enabled, resolve_kind
 from app.schemas import TemplateOut
-from app.services.templates import get_template, list_templates, preview_path
+from app.services.templates import get_template, list_templates, preview_path, template_deck
 
 router = APIRouter(prefix="/templates", tags=["templates"])
 
@@ -60,6 +60,19 @@ def template_preview(template_id: str) -> FileResponse:
         media_type="text/html; charset=utf-8",
         headers={"Cache-Control": "public, max-age=300"},
     )
+
+
+@router.get("/{template_id}/deck")
+def template_deck_documents(template_id: str) -> JSONResponse:
+    """Deck, slide bodies and DESIGN.md of a slides kit, for the gallery cards
+    that play the deck on hover. Public like the rest of the catalogue."""
+    meta = get_template(template_id)
+    if meta is None or not kind_enabled(meta.kind):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Unknown template")
+    payload = template_deck(template_id)
+    if payload is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not a slides template")
+    return JSONResponse(content=payload, headers={"Cache-Control": "public, max-age=300"})
 
 
 @router.get("/{template_id}/media/{asset_path:path}")
