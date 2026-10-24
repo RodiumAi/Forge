@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from app.kinds import KindId
 
@@ -475,10 +475,32 @@ class ChatCreate(BaseModel):
     title: str | None = None
 
 
+class MessageTarget(BaseModel):
+    """What a chat message may change. Absent = the whole project.
+
+    Document kinds (slides): ``slideId`` limits the AI to that slide,
+    ``elementId`` to that element. Other keys are ignored so site targets
+    (route, forgeId, filePath) can be added without breaking clients.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    slideId: str | None = Field(default=None, max_length=64, pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
+    elementId: str | None = Field(default=None, max_length=64, pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
+
+
+#: Quick actions of the deck editor (sent with a target).
+QuickAction = Literal["shorten", "punchier", "change_layout", "add_visual", "translate"]
+
+
 class SendMessageRequest(BaseModel):
     content: str = Field(min_length=1, max_length=50000)
     mode: str = Field(default="agent", pattern="^(agent|plan)$")
     model: str | None = Field(default=None, max_length=120)
+    target: MessageTarget | None = None
+    action: QuickAction | None = None
+    #: Argument of the action: a layout name for change_layout, a language for translate.
+    action_input: str | None = Field(default=None, max_length=64)
 
 
 class ClarifyAnswersRequest(BaseModel):
@@ -525,6 +547,9 @@ class BranchMessagesRequest(BaseModel):
     content: str = Field(min_length=1, max_length=50000)
     mode: str = Field(default="agent", pattern="^(agent|plan)$")
     model: str | None = Field(default=None, max_length=120)
+    target: MessageTarget | None = None
+    action: QuickAction | None = None
+    action_input: str | None = Field(default=None, max_length=64)
 
 
 class AgentRunOut(BaseModel):
