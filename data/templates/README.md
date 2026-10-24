@@ -26,6 +26,10 @@ data/templates/<id>/
     └── index.css      # self-contained CSS, no @import
 ```
 
+## Slides kits
+
+Presentation kits (`kind: "slides"`, folders `slides-<name>/`) are documents, not Vite apps: `template.json`, `DESIGN.md`, `deck.json`, `slides/*.json`, `notes/*.md`, `public/images/*.webp`, `preview.html`. See [docs/templates/slides-style-guide.md](../../docs/templates/slides-style-guide.md); register ids in `EXPECTED_SLIDES_IDS` and run `pytest tests/test_templates.py tests/test_template_slides.py -q`.
+
 ## Adding a kit (checklist)
 
 1. Copy an existing kit folder and rename to a new `<id>` (regex: `^[a-z0-9][a-z0-9-]{1,62}$`).
