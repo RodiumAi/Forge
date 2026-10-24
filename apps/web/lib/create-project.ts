@@ -9,8 +9,74 @@ import { normalizeKind, type ProjectKindId } from "@/lib/kinds";
 export const PENDING_PROMPT_KEY = "forge_pending_prompt";
 export const PENDING_TEMPLATE_KEY = "forge_pending_template";
 export const PENDING_PLATFORM_KEY = "forge_pending_platform";
+export const PENDING_CREATE_OPTIONS_KEY = "forge_pending_create_options";
 
 export type ProjectPlatform = ProjectKindId;
+
+/** Canvas ratio of a new deck (slides only). The API defaults to 16:9. */
+export type DeckRatio = "16:9" | "4:3" | "1:1";
+export const DECK_RATIOS: readonly DeckRatio[] = ["16:9", "4:3", "1:1"];
+
+/**
+ * Optional extras of a create, added by the Forge Design home. Both are left
+ * out of the request when unset, so an older API sees the same body as before.
+ */
+export type CreateOptions = {
+  /** Slides only; ignored for the other kinds. */
+  format?: DeckRatio | null;
+  /** A design_system project whose tokens dress the new project. */
+  designSystemId?: string | null;
+};
+
+function isDeckRatio(raw: unknown): raw is DeckRatio {
+  return typeof raw === "string" && (DECK_RATIOS as readonly string[]).includes(raw);
+}
+
+/** The extra body fields of POST /projects for these options (empty when none apply). */
+export function createOptionsBody(
+  platform: ProjectPlatform,
+  options?: CreateOptions | null,
+): { format?: DeckRatio; design_system_id?: string } {
+  const body: { format?: DeckRatio; design_system_id?: string } = {};
+  const format = options?.format;
+  if (platform === "slides" && isDeckRatio(format)) body.format = format;
+  const ds = options?.designSystemId?.trim();
+  if (ds) body.design_system_id = ds;
+  return body;
+}
+
+/** Keep the options across the landing to login to dashboard hop, like the platform. */
+export function stashPendingCreateOptions(options: CreateOptions | null | undefined) {
+  if (typeof window === "undefined") return;
+  if (!options || (!options.format && !options.designSystemId)) {
+    sessionStorage.removeItem(PENDING_CREATE_OPTIONS_KEY);
+    return;
+  }
+  sessionStorage.setItem(
+    PENDING_CREATE_OPTIONS_KEY,
+    JSON.stringify({ format: options.format ?? null, designSystemId: options.designSystemId ?? null }),
+  );
+}
+
+export function readPendingCreateOptions(): CreateOptions {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = JSON.parse(sessionStorage.getItem(PENDING_CREATE_OPTIONS_KEY) || "null") as unknown;
+    if (!raw || typeof raw !== "object") return {};
+    const row = raw as { format?: unknown; designSystemId?: unknown };
+    return {
+      format: isDeckRatio(row.format) ? row.format : null,
+      designSystemId: typeof row.designSystemId === "string" ? row.designSystemId : null,
+    };
+  } catch {
+    return {};
+  }
+}
+
+export function clearPendingCreateOptions() {
+  if (typeof window === "undefined") return;
+  sessionStorage.removeItem(PENDING_CREATE_OPTIONS_KEY);
+}
 
 export type CreatedProject = {
   id: string;
@@ -153,6 +219,7 @@ export async function createProjectWithAttachments(
   labels: PromptLabels,
   locale: string,
   platform: ProjectPlatform = "web",
+  options?: CreateOptions | null,
 ): Promise<CreatedProject> {
   const trimmed = text.trim();
   // Preflight the assembled size BEFORE creating the project. Inlined doc text
@@ -169,6 +236,7 @@ export async function createProjectWithAttachments(
       prompt: trimmed || nameFallback,
       name: nameFallback,
       platform: normalizePlatform(platform),
+      ...createOptionsBody(normalizePlatform(platform), options),
     }),
   });
   const uploaded = attachments.length
@@ -178,6 +246,7 @@ export async function createProjectWithAttachments(
   if (payload) setBootPrompt(project.id, payload);
   await clearPendingFiles();
   clearPendingPlatform();
+  clearPendingCreateOptions();
   return project;
 }
 
@@ -192,6 +261,7 @@ export async function stashPendingFiles(files: File[]): Promise<void> {
 
 export async function forkProjectFromTemplate(
   tpl: ForkableTemplate,
+  options?: Pick<CreateOptions, "designSystemId"> | null,
 ): Promise<CreatedProject> {
   // No boot prompt on purpose: the kit is a complete, working site. The boot
   // mechanism exists for prompt-created projects (it carries the USER's own
@@ -199,6 +269,26 @@ export async function forkProjectFromTemplate(
   // nobody asked for the moment the project opened.
   return api<CreatedProject>("/projects", {
     method: "POST",
-    body: JSON.stringify({ name: tpl.title, template_id: tpl.id }),
+    body: JSON.stringify({
+      name: tpl.title,
+      template_id: tpl.id,
+      ...createOptionsBody(normalizePlatform(tpl.kind), { designSystemId: options?.designSystemId }),
+    }),
+  });
+}
+
+/**
+ * An empty project of a kind, no prompt and no kit: "Commencer sans modèle".
+ * Sends no prompt on purpose, so no name suggestion call and no boot run.
+ */
+export async function createBlankProject(
+  name: string,
+  platform: ProjectPlatform,
+  options?: CreateOptions | null,
+): Promise<CreatedProject> {
+  const kind = normalizePlatform(platform);
+  return api<CreatedProject>("/projects", {
+    method: "POST",
+    body: JSON.stringify({ name, platform: kind, ...createOptionsBody(kind, options) }),
   });
 }
