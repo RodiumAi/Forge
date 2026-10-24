@@ -305,9 +305,13 @@ async def publish_project_esm(
     title: str = "Forge app",
     site_url: str | None = None,
     lang: str = "en",
+    publish_mode: str = "site",
+    badge: bool = False,
 ) -> dict:
     settings = get_settings()
     public_url = site_url or settings.sites_url_for_slug(slug)
+    if publish_mode == "codelab_player":
+        return await publish_codelab_player(project_id, slug, site_url=public_url, lang=lang, badge=badge)
 
     with tempfile.TemporaryDirectory(prefix="forge-esm-") as tmp:
         out = Path(tmp) / "dist"
@@ -364,4 +368,68 @@ async def publish_project_esm(
         "routes": site.get("routes"),
         "prerendered": site.get("prerendered"),
         "lang": site.get("lang", lang),
+    }
+
+
+# ── codelab_player mode ────────────────────────────────────────────────────
+# Kept in its own functions (the deck_player mode lands beside it): a codelab
+# is data plus the prebuilt Forge player, no transform and no pre-render.
+
+
+async def _upload_static_dir(out: Path, slug: str) -> tuple[int, int]:
+    """Upload ``out`` under ``<slug>/`` (pages last), then purge older keys."""
+    settings = get_settings()
+    store = get_object_store()
+    bucket = store.bucket_site_assets or settings.bucket_site_assets
+    if not bucket:
+        raise RuntimeError("Site assets bucket is not configured")
+    prefix = f"{slug}/"
+    sem = asyncio.Semaphore(_UPLOAD_CONCURRENCY)
+    paths = [p for p in out.rglob("*") if p.is_file()]
+    new_keys = {prefix + p.relative_to(out).as_posix() for p in paths}
+    uploaded = 0
+
+    async def upload_one(path: Path) -> None:
+        nonlocal uploaded
+        rel = path.relative_to(out).as_posix()
+        body = await asyncio.to_thread(path.read_bytes)
+        async with sem:
+            await asyncio.to_thread(
+                _put, store, bucket, prefix + rel, body, _guess_content_type(path), cache_control_for(rel)
+            )
+        uploaded += 1
+
+    await asyncio.gather(*(upload_one(p) for p in paths if p.suffix.lower() != ".html"))
+    await asyncio.gather(*(upload_one(p) for p in paths if p.suffix.lower() == ".html"))
+    orphans = 0
+    try:
+        existing = await asyncio.to_thread(store.list_prefix, bucket, prefix)
+        stale = [k for k in existing if k not in new_keys]
+        if stale:
+            orphans = await asyncio.to_thread(store.delete_keys, bucket, stale, under_prefix=prefix)
+    except Exception:
+        logger.exception("Failed to purge orphan published keys prefix=%s", prefix)
+    return uploaded, orphans
+
+
+async def publish_codelab_player(
+    project_id: str, slug: str, *, site_url: str, lang: str, badge: bool
+) -> dict:
+    from app.services.codelab.publish import build_codelab_site
+
+    with tempfile.TemporaryDirectory(prefix="forge-codelab-") as tmp:
+        out = Path(tmp) / "dist"
+        out.mkdir(parents=True, exist_ok=True)
+        build = await asyncio.to_thread(
+            build_codelab_site, project_id, out, site_url=site_url, lang=lang, badge=badge
+        )
+        uploaded, orphans = await _upload_static_dir(out, slug)
+    return {
+        "public_url": site_url,
+        "files_uploaded": uploaded,
+        "orphans_deleted": orphans,
+        "build_mode": build.get("mode"),
+        "routes": ["/"],
+        "prerendered": False,
+        "lang": lang,
     }

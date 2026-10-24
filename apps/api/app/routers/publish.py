@@ -10,8 +10,10 @@ from app.auth import get_current_user
 from app.config import get_settings
 from app.db import get_db
 from app.i18n import resolve_locale, t
+from app.kinds import get_kind
 from app.models import Project, User
 from app.services import rate_limit
+from app.services.codelab.badge import show_forge_badge
 from app.services.domains import get_project_domain, sites_url_for_project
 from app.services.export_project import build_export_zip
 from app.services.project_access import accessible_project
@@ -83,6 +85,7 @@ async def publish_now(
     # Canonical URLs, sitemap and og:url point at the address visitors use: the
     # validated custom domain when there is one, else the slug subdomain.
     site_url = sites_url_for_project(get_settings(), project, get_project_domain(db, project.id))
+    kind = get_kind(project.platform)
     try:
         result = await publish_project_esm(
             str(project.id),
@@ -93,6 +96,8 @@ async def publish_now(
             site_url=site_url,
             # Starting guess only: the published language is detected from the page text.
             lang=locale,
+            publish_mode=kind.publish if kind is not None else "site",
+            badge=show_forge_badge(db, user),
         )
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)[:2000]) from exc
