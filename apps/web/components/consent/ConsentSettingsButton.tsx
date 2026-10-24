@@ -13,7 +13,7 @@ export function ConsentSettingsButton() {
     <button
       type="button"
       onClick={reset}
-      className="lp-footer-link-button"
+      className="f-lp-link-btn"
       data-testid="consent-manage"
     >
       {t("consentManage")}
