@@ -489,6 +489,7 @@
   padding: 0.45rem 0.75rem;
   border-radius: 8px;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .fdh-tablist button:hover {
@@ -806,7 +807,27 @@
 .fdh-list {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
   font-size: 0.85rem;
+}
+
+.fdh-list .fdh-col-opened {
+  width: 11rem;
+}
+
+.fdh-list .fdh-col-owner {
+  width: 10rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fdh-list .fdh-col-access {
+  width: 4.5rem;
+}
+
+.fdh-list .fdh-col-tools {
+  width: 5.5rem;
 }
 
 .fdh-list th {
@@ -864,7 +885,6 @@
 }
 
 .fdh-col-tools {
-  width: 1%;
   white-space: nowrap;
 }
 
@@ -994,6 +1014,15 @@
 
   .fdh-hero {
     padding-top: 0.75rem;
+  }
+
+  .fdh-announce {
+    font-size: 0.78rem;
+  }
+
+  .fdh-tablist button {
+    padding: 0.4rem 0.55rem;
+    font-size: 0.85rem;
   }
 
   .fdh-tiles {
