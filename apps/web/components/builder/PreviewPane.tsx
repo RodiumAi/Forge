@@ -35,7 +35,7 @@ type Props = {
   onPreviewToolChange: (tool: PreviewTool | null) => void;
   onStartPreview: () => void;
   onRefreshPreview?: () => void;
-  onVisualEdit?: (oldText: string, newText: string) => void | Promise<void>;
+  onVisualEdit?: (oldText: string, newText: string, forgeId?: string | null) => void | Promise<void>;
 
   onElementSelect?: (sel: ElementSelection) => void;
   onCommentAnchor?: (sel: ElementSelection) => void;
@@ -485,12 +485,13 @@ export function PreviewPane({
       if (type === "forge-visual-edit") {
         const oldText = typeof data.oldText === "string" ? data.oldText : "";
         const newText = typeof data.newText === "string" ? data.newText : "";
+        const forgeId = typeof data.forgeId === "string" ? data.forgeId : null;
         if (!oldText || newText === oldText) return;
         const win = frameRef.current?.contentWindow;
         const target = trustedOrigin;
         void (async () => {
           try {
-            await onVisualEditRef.current?.(oldText, newText);
+            await onVisualEditRef.current?.(oldText, newText, forgeId);
             if (win && target) win.postMessage({ type: "forge-visual-edit-ok" }, target);
           } catch {
             if (win && target) win.postMessage({ type: "forge-visual-edit-failed" }, target);
@@ -506,6 +507,7 @@ export function PreviewPane({
           className: typeof data.className === "string" ? data.className : null,
           selector: typeof data.selector === "string" ? data.selector : "",
           text: typeof data.text === "string" ? data.text : "",
+          forgeId: typeof data.forgeId === "string" ? data.forgeId : null,
         };
         if (type === "forge-element-select") onElementSelectRef.current?.(sel);
         else onCommentAnchorRef.current?.(sel);
@@ -517,6 +519,7 @@ export function PreviewPane({
           src: typeof data.src === "string" ? data.src : "",
           alt: typeof data.alt === "string" ? data.alt : "",
           selector: typeof data.selector === "string" ? data.selector : "",
+          forgeId: typeof data.forgeId === "string" ? data.forgeId : null,
         });
         return;
       }
