@@ -1,41 +1,51 @@
 "use client";
 
-import {
-  ChangeEvent,
-  FormEvent,
-  Suspense,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createPortal } from "react-dom";
-import { ArrowUp, Plus, Search, Monitor, Smartphone, TriangleAlert, X, FolderOpen } from "lucide-react";
-import { apiBase, getToken, ApiError } from "@/lib/api";
-import { useMediaToken } from "@/lib/media-token";
-import { projectThumbnailUrl } from "@/lib/project-thumbnail";
+import { TriangleAlert, X } from "lucide-react";
+
+import "@/components/home/home.css";
+
 import { VerifyEmailBanner } from "@/components/auth/VerifyEmailBanner";
-import { TeamInviteNotice } from "@/components/TeamInviteNotice";
+import { ShareProjectModal } from "@/components/builder/ShareProjectModal";
+import { CreatePrompt, type CreatePromptHandle } from "@/components/home/CreatePrompt";
+import type { DesignSystemOption } from "@/components/home/DesignSystemPicker";
+import { AnnouncementBanner, DeleteDialog, RenameDialog } from "@/components/home/HomeDialogs";
+import { HomeTabs, type HomeTab } from "@/components/home/HomeTabs";
+import { buildCreateRequest, getTile, type HomeTile, type HomeTileId } from "@/components/home/home-kinds";
+import { KindGrid } from "@/components/home/KindGrid";
+import type { ProjectActions } from "@/components/home/ProjectCard";
+import { kindOf, type HomeProject } from "@/components/home/projects";
+import { useFavorites, useLastOpened } from "@/components/home/use-home-prefs";
 import { HomeLayout } from "@/components/HomeLayout";
-import { PlatformToggle, type ProjectPlatform } from "@/components/PlatformToggle";
-import { PromptFileChips } from "@/components/PromptFileChips";
-import { SiteThumb, invalidateThumbCache } from "@/components/SiteThumb";
-import { GalleryTemplate, TemplateGallery } from "@/components/TemplateGallery";
-import { Icon } from "@/components/ui/icon";
+import { invalidateThumbCache } from "@/components/SiteThumb";
+import type { GalleryTemplate } from "@/components/TemplateGallery";
+import { TeamInviteNotice } from "@/components/TeamInviteNotice";
+import { api, ApiError, getToken } from "@/lib/api";
+import { PromptTooLongError } from "@/lib/constants/prompt";
 import { rodiumRechargeUrl } from "@/lib/constants/rodium-links";
 import {
   PENDING_PROMPT_KEY,
   PENDING_TEMPLATE_KEY,
+  clearPendingCreateOptions,
+  clearPendingPlatform,
+  createBlankProject,
   createProjectWithAttachments,
   ensureCanGenerate,
   fetchProjectQuota,
   forkProjectFromTemplate,
+  readPendingCreateOptions,
   readPendingPlatform,
   restorePendingFilesAsAttachments,
-  clearPendingPlatform,
+  type CreateOptions,
+  type CreatedProject,
+  type ProjectQuota,
 } from "@/lib/create-project";
+import { shareSeatLimit, useForgeStatus } from "@/lib/forge-status";
+import { useI18n } from "@/lib/i18n/I18nProvider";
+import { useEnabledKinds, type ProjectKindId } from "@/lib/kinds";
 import {
   ensureProjects,
   ensureTemplates,
@@ -43,108 +53,84 @@ import {
   getCachedTemplates,
   prependProject,
   refreshTemplatesIfStale,
+  removeProject,
 } from "@/lib/lists-cache";
-import { topProgressDone, topProgressStart } from "@/lib/top-progress";
-import { useI18n } from "@/lib/i18n/I18nProvider";
+import { useMediaToken } from "@/lib/media-token";
 import {
-  getSessionSnapshot,
-  subscribeSession,
-  type SessionProfile,
-} from "@/lib/session-cache";
-import {
-  PROMPT_FILE_ACCEPT,
   PromptAttachment,
   createPromptAttachment,
   mergePromptAttachments,
   revokePromptAttachment,
   type PromptLabels,
 } from "@/lib/prompt-attachments";
-import { PROMPT_MAX_CHARS, PromptTooLongError } from "@/lib/constants/prompt";
-import type { ProjectKindId } from "@/lib/kinds";
+import { getSessionSnapshot, subscribeSession, type SessionProfile } from "@/lib/session-cache";
+import { topProgressDone, topProgressStart } from "@/lib/top-progress";
 
-type Project = {
-  id: string;
-  name: string;
-  slug: string;
-  status: string;
-  created_at: string;
-  updated_at?: string;
-  template_id?: string | null;
-  preview_running?: boolean;
-  public_url?: string | null;
-  has_thumbnail?: boolean;
-  platform?: ProjectKindId;
-  access_role?: string;
-  collaborators?: { name: string | null; email: string; avatar_url: string | null }[];
-};
+const DESIGN_SYSTEM_KEY = "forge_home_design_system";
 
-type Tab = "mine" | "recent" | "templates";
-
-function formatProjectMeta(iso: string, locale: string): string {
-  const date = new Date(iso);
-  if (!Number.isFinite(date.getTime())) return "";
-  try {
-    const rtf = new Intl.RelativeTimeFormat(locale === "fr" ? "fr" : "en", { numeric: "auto" });
-    const diffSec = Math.round((date.getTime() - Date.now()) / 1000);
-    const abs = Math.abs(diffSec);
-    if (abs < 60) return rtf.format(diffSec, "second");
-    if (abs < 3600) return rtf.format(Math.round(diffSec / 60), "minute");
-    if (abs < 86400) return rtf.format(Math.round(diffSec / 3600), "hour");
-    if (abs < 86400 * 30) return rtf.format(Math.round(diffSec / 86400), "day");
-    return date.toLocaleDateString(locale === "fr" ? "fr-FR" : "en-US");
-  } catch {
-    return date.toLocaleDateString(locale);
-  }
+/** `?tab=` values, old ones included (mine, recent) so existing links keep working. */
+function tabFromParam(raw: string | null): HomeTab | null {
+  if (raw === "templates") return "templates";
+  if (raw === "design-systems" || raw === "design_systems") return "design_systems";
+  if (raw === "projects" || raw === "mine" || raw === "recent") return "projects";
+  return null;
 }
 
-function projectInitials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (!parts.length) return "F";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return `${parts[0][0] || ""}${parts[1][0] || ""}`.toUpperCase();
+function paramFromTab(tab: HomeTab): string {
+  if (tab === "templates") return "/dashboard?tab=templates";
+  if (tab === "design_systems") return "/dashboard?tab=design-systems";
+  return "/dashboard";
 }
 
-type ProjectFace = { name: string | null; email: string; avatar_url: string | null };
-
-function collaboratorFaces(people: ProjectFace[]) {
-  if (people.length <= 4) return { shown: people, extra: 0 };
-  return { shown: people.slice(0, 3), extra: people.length - 3 };
-}
+const WEB_SUGGESTIONS = ["promptSuggest1", "promptSuggest2", "promptSuggest3", "promptSuggest4", "promptSuggest5"] as const;
+const MOBILE_SUGGESTIONS = [
+  "promptSuggestMobile1",
+  "promptSuggestMobile2",
+  "promptSuggestMobile3",
+  "promptSuggestMobile4",
+  "promptSuggestMobile5",
+] as const;
 
 function DashboardInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t, locale } = useI18n();
-  const [projects, setProjects] = useState<Project[]>([]);
+  const enabledKinds = useEnabledKinds();
+  const forge = useForgeStatus();
+  const mediaToken = useMediaToken();
+
+  const [projects, setProjects] = useState<HomeProject[]>([]);
   const [templates, setTemplates] = useState<GalleryTemplate[]>([]);
   const [prompt, setPrompt] = useState("");
-  const [platform, setPlatform] = useState<ProjectPlatform>("web");
   const [files, setFiles] = useState<PromptAttachment[]>([]);
   const [fileError, setFileError] = useState<string | null>(null);
-  const [query, setQuery] = useState("");
-  const [tab, setTab] = useState<Tab>("mine");
-  // Render the grid in windows: mounting every card at once instantiates a
-  // ResizeObserver + IntersectionObserver per SiteThumb and a large DOM, which
-  // is heavy for accounts with many projects. "Load more" reveals the rest.
-  const PAGE_SIZE = 24;
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [tileId, setTileId] = useState<HomeTileId>("blank");
+  const [designSystemId, setDesignSystemId] = useState<string | null>(null);
+  const [tab, setTab] = useState<HomeTab>(() => tabFromParam(searchParams.get("tab")) ?? "projects");
+  const [galleryKind, setGalleryKind] = useState<ProjectKindId>("web");
+  const [galleryQuery, setGalleryQuery] = useState<string | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ text: string; id: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [forkingId, setForkingId] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [renaming, setRenaming] = useState<HomeProject | null>(null);
+  const [deleting, setDeleting] = useState<HomeProject | null>(null);
+  const [sharing, setSharing] = useState<HomeProject | null>(null);
   const [profile, setProfile] = useState<SessionProfile | null>(() =>
-    typeof window !== "undefined" ? getSessionSnapshot()?.profile ?? null : null,
+    typeof window !== "undefined" ? (getSessionSnapshot()?.profile ?? null) : null,
   );
 
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const searchRef = useRef<HTMLInputElement>(null);
+  const promptRef = useRef<CreatePromptHandle>(null);
+  const tabsRef = useRef<HTMLDivElement>(null);
+  const account = profile?.email ?? null;
+  const favorites = useFavorites(account);
+  const lastOpened = useLastOpened(account);
+  const tile = getTile(tileId);
+  const busy = creating || Boolean(forkingId);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     setProfile(getSessionSnapshot()?.profile ?? null);
@@ -152,29 +138,23 @@ function DashboardInner() {
   }, []);
 
   useEffect(() => {
-    const raw = searchParams.get("tab");
-    if (raw === "templates") setTab("templates");
-    else if (raw === "recent") setTab("recent");
-    else if (raw === "mine" || raw === "projects") setTab("mine");
+    const next = tabFromParam(searchParams.get("tab"));
+    if (next) setTab(next);
   }, [searchParams]);
 
   useEffect(() => {
-    const el = textareaRef.current;
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = `${Math.min(Math.max(el.scrollHeight, 72), 140)}px`;
-  }, [prompt]);
-
-  useEffect(() => {
-    if (creating || forkingId) topProgressStart("dashboard-create");
+    if (busy) topProgressStart("dashboard-create");
     else topProgressDone("dashboard-create");
-  }, [creating, forkingId]);
+  }, [busy]);
 
-  // Filtering/switching tabs changes which projects show — reset the window so
-  // we never keep a large render (and its thumbnails) mounted after a filter.
   useEffect(() => {
-    setVisibleCount(PAGE_SIZE);
-  }, [query, tab]);
+    try {
+      const stored = localStorage.getItem(DESIGN_SYSTEM_KEY);
+      if (stored) setDesignSystemId(stored);
+    } catch {
+      /* storage denied: start on "Aucun" */
+    }
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -182,6 +162,214 @@ function DashboardInner() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- revoke only on unmount
   }, []);
+
+  useEffect(() => {
+    if (!notice) return;
+    const timer = window.setTimeout(() => setNotice(null), 10000);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
+
+  const designSystems: DesignSystemOption[] = useMemo(
+    () => projects.filter((p) => kindOf(p) === "design_system").map((p) => ({ id: p.id, name: p.name })),
+    [projects],
+  );
+  const showDesignSystems = enabledKinds.includes("design_system");
+  // A remembered design system that was deleted, or that the kind flag hides,
+  // is not sent: the create would fail on it.
+  const effectiveDesignSystemId =
+    showDesignSystems && designSystemId && designSystems.some((ds) => ds.id === designSystemId)
+      ? designSystemId
+      : null;
+
+  function chooseDesignSystem(id: string | null) {
+    setDesignSystemId(id);
+    try {
+      if (id) localStorage.setItem(DESIGN_SYSTEM_KEY, id);
+      else localStorage.removeItem(DESIGN_SYSTEM_KEY);
+    } catch {
+      /* the choice still applies to this page */
+    }
+  }
+
+  function selectTab(next: HomeTab) {
+    setTab(next);
+    router.replace(paramFromTab(next));
+  }
+
+  function pushNotice(text: string) {
+    setNotice({ text, id: Date.now() });
+  }
+
+  function quotaNotice(quota: Pick<ProjectQuota, "plan" | "limit">) {
+    const limit = String(quota.limit ?? "");
+    const plan = quota.plan ? quota.plan.charAt(0).toUpperCase() + quota.plan.slice(1) : "";
+    if (plan) return t("projectQuota").replace("{plan}", plan).replace("{limit}", limit);
+    return t("projectQuotaPlain").replace("{limit}", limit);
+  }
+
+  function promptLabels(): PromptLabels {
+    return {
+      importFiles: t("importFiles"),
+      imageAttached: t("promptImageAttached"),
+      assetAttached: t("promptSiteAsset"),
+      mdSection: t("promptMdSection"),
+      txtSection: t("promptTxtSection"),
+      pdfSection: t("promptPdfSection"),
+      pdfEmpty: t("promptPdfEmpty"),
+    };
+  }
+
+  /** Credit and plan gates shared by every create path; false when blocked. */
+  async function passGates(): Promise<boolean> {
+    const gate = await ensureCanGenerate();
+    if (gate === "no_rodi") {
+      setError(t("createNeedsRodi"));
+      return false;
+    }
+    if (gate === "no_key") {
+      setError(t("createNeedsKey"));
+      return false;
+    }
+    // Plan project cap: warn BEFORE the prompt runs (a Free user at 1 project
+    // sees the upgrade prompt here instead of a failed create).
+    const quota = await fetchProjectQuota();
+    if (!quota.can_create) {
+      pushNotice(quotaNotice(quota));
+      return false;
+    }
+    return true;
+  }
+
+  function createFailed(err: unknown) {
+    if (err instanceof PromptTooLongError) setError(t("promptTooLong"));
+    else if (err instanceof ApiError && err.code === "project_quota_exceeded") pushNotice(t("projectQuotaReached"));
+    else if (err instanceof ApiError && err.code === "INSUFFICIENT_RODI") setError(t("createNeedsRodi"));
+    else setError(err instanceof Error ? err.message : t("errorGeneric"));
+  }
+
+  function opened(project: CreatedProject) {
+    prependProject(locale, project);
+    invalidateThumbCache(project.id);
+    lastOpened.record(project.id);
+    router.replace(`/projects/${project.id}`);
+  }
+
+  async function createFromPrompt(
+    raw: string,
+    attachmentList: PromptAttachment[],
+    platform: ProjectKindId,
+    options: CreateOptions,
+  ) {
+    const trimmed = raw.trim();
+    if (!trimmed && !attachmentList.length) return;
+    setCreating(true);
+    setError(null);
+    try {
+      if (!(await passGates())) {
+        setCreating(false);
+        return;
+      }
+      const project = await createProjectWithAttachments(
+        trimmed,
+        attachmentList,
+        t("newProject"),
+        promptLabels(),
+        locale,
+        platform,
+        options,
+      );
+      attachmentList.forEach(revokePromptAttachment);
+      setFiles([]);
+      opened(project);
+    } catch (err) {
+      createFailed(err);
+      setCreating(false);
+    }
+  }
+
+  async function createWithTile(chosen: HomeTile, text: string) {
+    const request = buildCreateRequest({
+      tile: chosen,
+      text,
+      enabled: enabledKinds,
+      designSystemId: effectiveDesignSystemId,
+      shortcutLabel: t(chosen.labelKey),
+      shortcutTemplate: t("homeShortcutPrompt"),
+    });
+    await createFromPrompt(request.prompt, files, request.platform, request.options);
+  }
+
+  async function forkTemplate(tpl: GalleryTemplate) {
+    if (busy) return;
+    setForkingId(tpl.id);
+    setError(null);
+    try {
+      if (!(await passGates())) {
+        setForkingId(null);
+        return;
+      }
+      opened(await forkProjectFromTemplate(tpl, { designSystemId: effectiveDesignSystemId }));
+    } catch (err) {
+      createFailed(err);
+      setForkingId(null);
+    }
+  }
+
+  async function startBlank(kind: ProjectKindId) {
+    if (busy) return;
+    setCreating(true);
+    setError(null);
+    try {
+      if (!(await passGates())) {
+        setCreating(false);
+        return;
+      }
+      const chosen = tile.kind === kind ? tile : getTile(kind);
+      const format = kind === "slides" ? (chosen.format ?? "16:9") : null;
+      opened(
+        await createBlankProject(t("newProject"), kind, { format, designSystemId: effectiveDesignSystemId }),
+      );
+    } catch (err) {
+      createFailed(err);
+      setCreating(false);
+    }
+  }
+
+  function onSelectTile(next: HomeTile) {
+    if (busy) return;
+    setTileId(next.id);
+    if (prompt.trim() || files.length) {
+      // With a request typed, a tile launches it right away.
+      void createWithTile(next, prompt);
+      return;
+    }
+    if (!next.kind) {
+      promptRef.current?.focus();
+      return;
+    }
+    // Without text: the gallery of that kind (shortcuts seed its search).
+    setGalleryKind(next.kind);
+    setGalleryQuery(next.galleryQuery);
+    selectTab("templates");
+    window.requestAnimationFrame(() => tabsRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" }));
+  }
+
+  function addFiles(list: FileList) {
+    setFiles((prev) => {
+      const { next, rejected } = mergePromptAttachments(prev, list);
+      setFileError(rejected.length ? t("promptFileTypeError") : null);
+      return next;
+    });
+  }
+
+  function removeFile(id: string) {
+    setFiles((prev) => {
+      const target = prev.find((item) => item.id === id);
+      if (target) revokePromptAttachment(target);
+      return prev.filter((item) => item.id !== id);
+    });
+    setFileError(null);
+  }
 
   useEffect(() => {
     if (!getToken()) {
@@ -207,50 +395,46 @@ function DashboardInner() {
         if (pending?.trim()) {
           sessionStorage.removeItem(PENDING_PROMPT_KEY);
           const pendingPlatform = readPendingPlatform();
+          const pendingOptions = readPendingCreateOptions();
           clearPendingPlatform();
+          clearPendingCreateOptions();
           const restored = await restorePendingFilesAsAttachments();
           const restoredAttachments = restored
             .map((file) => createPromptAttachment(file))
             .filter((item): item is NonNullable<ReturnType<typeof createPromptAttachment>> => item !== null);
-          await createFromPrompt(pending.trim(), restoredAttachments, pendingPlatform);
+          await createFromPrompt(pending.trim(), restoredAttachments, pendingPlatform, pendingOptions);
           return;
         }
 
-        // Paint from session cache immediately (no spinner when warm).
+        // Paint from the session cache at once (no spinner when warm).
         const warmTpl = getCachedTemplates(locale);
         const warmProj = getCachedProjects(locale);
         if (warmTpl) setTemplates(warmTpl as GalleryTemplate[]);
         if (warmProj) {
-          setProjects(warmProj as Project[]);
+          setProjects(warmProj as HomeProject[]);
           setLoading(false);
         }
 
-        const [tpls, list] = await Promise.all([
-          ensureTemplates(locale),
-          ensureProjects(locale),
-        ]);
+        const [tpls, list] = await Promise.all([ensureTemplates(locale), ensureProjects(locale)]);
         setTemplates(tpls as GalleryTemplate[]);
-        setProjects(list as Project[]);
+        setProjects(list as HomeProject[]);
 
-        if ((list as Project[]).length === 0 && searchParams.get("tab") !== "templates") {
+        // Onboarding: a new account lands on the templates.
+        if ((list as HomeProject[]).length === 0 && !searchParams.get("tab")) {
           setTab("templates");
           router.replace("/dashboard?tab=templates");
         }
 
-        // Always re-read projects from the server. A create used to replace
-        // the cached list with the new project alone and mark it fresh, so a
-        // reload kept showing that one card until the next login.
-        void Promise.all([
-          ensureProjects(locale, { force: true }),
-          refreshTemplatesIfStale(locale),
-        ]).then(([freshProjects, freshTemplates]) => {
-          setProjects(freshProjects as Project[]);
-          setTemplates(freshTemplates as GalleryTemplate[]);
-        });
+        // Always re-read projects from the server: a create used to replace the
+        // cached list with the new project alone and mark it fresh.
+        void Promise.all([ensureProjects(locale, { force: true }), refreshTemplatesIfStale(locale)]).then(
+          ([freshProjects, freshTemplates]) => {
+            setProjects(freshProjects as HomeProject[]);
+            setTemplates(freshTemplates as GalleryTemplate[]);
+          },
+        );
       } catch (err) {
-        if (err instanceof Error && /invalid token|not authenticated|unauthorized/i.test(err.message)) {
-          return;
-        }
+        if (err instanceof Error && /invalid token|not authenticated|unauthorized/i.test(err.message)) return;
         setError(err instanceof Error ? err.message : t("errorGeneric"));
       } finally {
         setLoading(false);
@@ -262,293 +446,35 @@ function DashboardInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- boot once on mount/locale
   }, [locale, router, t]);
 
-  function selectTab(next: Tab) {
-    setTab(next);
-    setQuery("");
-    if (next === "templates") {
-      router.replace("/dashboard?tab=templates");
-    } else if (next === "recent") {
-      router.replace("/dashboard?tab=recent");
-    } else {
-      router.replace("/dashboard");
-    }
-  }
+  const patchProject = useCallback((id: string, patch: Partial<HomeProject>) => {
+    setProjects((prev) => prev.map((row) => (row.id === id ? { ...row, ...patch } : row)));
+  }, []);
 
-  useEffect(() => {
-    if (!notice) return;
-    const timer = window.setTimeout(() => setNotice(null), 10000);
-    return () => window.clearTimeout(timer);
-  }, [notice]);
+  const actions: ProjectActions = {
+    open: (project) => {
+      lastOpened.record(project.id);
+      router.push(`/projects/${project.id}`);
+    },
+    rename: (project) => setRenaming(project),
+    share: (project) => setSharing(project),
+    remove: (project) => setDeleting(project),
+    isFavorite: favorites.isFavorite,
+    toggleFavorite: favorites.toggle,
+    lastOpened: lastOpened.get,
+    onThumbPersisted: (id, info) =>
+      patchProject(id, { has_thumbnail: true, ...(info?.updated_at ? { updated_at: info.updated_at } : {}) }),
+  };
 
-  function pushNotice(text: string) {
-    setNotice({ text, id: Date.now() });
-  }
-
-  function quotaNotice(quota: { plan?: string | null; limit: number | null }) {
-    const limit = String(quota.limit ?? "");
-    const plan = quota.plan
-      ? quota.plan.charAt(0).toUpperCase() + quota.plan.slice(1)
-      : "";
-    if (plan) {
-      return t("projectQuota").replace("{plan}", plan).replace("{limit}", limit);
-    }
-    return t("projectQuotaPlain").replace("{limit}", limit);
-  }
-
-  function promptLabels(): PromptLabels {
-    return {
-      importFiles: t("importFiles"),
-      imageAttached: t("promptImageAttached"),
-      assetAttached: t("promptSiteAsset"),
-      mdSection: t("promptMdSection"),
-      txtSection: t("promptTxtSection"),
-      pdfSection: t("promptPdfSection"),
-      pdfEmpty: t("promptPdfEmpty"),
-    };
-  }
-
-  async function createFromPrompt(
-    raw: string,
-    attachmentList: PromptAttachment[] = files,
-    projectPlatform: ProjectPlatform = platform,
-  ) {
-    const trimmed = raw.trim();
-    if (!trimmed && !attachmentList.length) return;
-    setCreating(true);
-    setError(null);
-    try {
-      const gate = await ensureCanGenerate();
-      if (gate === "no_rodi") {
-        setError(t("createNeedsRodi"));
-        setCreating(false);
-        return;
-      }
-      if (gate === "no_key") {
-        setError(t("createNeedsKey"));
-        setCreating(false);
-        return;
-      }
-      // Plan project cap: warn BEFORE the prompt runs (number from the plan's
-      // max_projects). A Free user at 1 project sees the upgrade prompt here.
-      const quota = await fetchProjectQuota();
-      if (!quota.can_create) {
-        pushNotice(quotaNotice(quota));
-        setCreating(false);
-        return;
-      }
-      const project = await createProjectWithAttachments(
-        trimmed,
-        attachmentList,
-        t("newProject"),
-        promptLabels(),
-        locale,
-        projectPlatform,
-      );
-      prependProject(locale, project);
-      invalidateThumbCache(project.id);
-      attachmentList.forEach(revokePromptAttachment);
-      setFiles([]);
-      router.replace(`/projects/${project.id}`);
-    } catch (err) {
-      if (err instanceof PromptTooLongError) {
-        setError(t("promptTooLong"));
-      } else if (err instanceof ApiError && err.code === "project_quota_exceeded") {
-        pushNotice(t("projectQuotaReached"));
-      } else if (err instanceof ApiError && err.code === "INSUFFICIENT_RODI") {
-        setError(t("createNeedsRodi"));
-      } else {
-        setError(err instanceof Error ? err.message : t("errorGeneric"));
-      }
-      setCreating(false);
-    }
-  }
-
-  async function forkTemplate(tpl: GalleryTemplate) {
-    if (creating || forkingId) return;
-    setForkingId(tpl.id);
-    setError(null);
-    try {
-      const gate = await ensureCanGenerate();
-      if (gate === "no_rodi") {
-        setError(t("createNeedsRodi"));
-        setForkingId(null);
-        return;
-      }
-      if (gate === "no_key") {
-        setError(t("createNeedsKey"));
-        setForkingId(null);
-        return;
-      }
-      // Plan project cap: warn before forking a template (a Free user with a
-      // project already gets the upgrade prompt instead of a failed create).
-      const quota = await fetchProjectQuota();
-      if (!quota.can_create) {
-        pushNotice(quotaNotice(quota));
-        setForkingId(null);
-        return;
-      }
-      const project = await forkProjectFromTemplate(tpl);
-      prependProject(locale, project);
-      invalidateThumbCache(project.id);
-      router.replace(`/projects/${project.id}`);
-    } catch (err) {
-      if (err instanceof ApiError && err.code === "project_quota_exceeded") {
-        pushNotice(t("projectQuotaReached"));
-      } else if (err instanceof ApiError && err.code === "INSUFFICIENT_RODI") {
-        setError(t("createNeedsRodi"));
-      } else {
-        setError(err instanceof Error ? err.message : t("errorGeneric"));
-      }
-      setForkingId(null);
-    }
-  }
-
-  async function submitPrompt() {
-    if (creating) return;
-    if (!prompt.trim() && !files.length) return;
-    await createFromPrompt(prompt);
-  }
-
-  async function onPromptSubmit(e: FormEvent) {
-    e.preventDefault();
-    await submitPrompt();
-  }
-
-  function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      void submitPrompt();
-    }
-  }
-
-  function onFilesSelected(e: ChangeEvent<HTMLInputElement>) {
-    const list = e.target.files;
-    if (!list?.length) return;
-    setFiles((prev) => {
-      const { next, rejected } = mergePromptAttachments(prev, list);
-      setFileError(rejected.length ? t("promptFileTypeError") : null);
-      return next;
-    });
-    e.target.value = "";
-  }
-
-  function onPromptDrop(e: React.DragEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (creating) return;
-    if (e.dataTransfer.files?.length) {
-      setFiles((prev) => {
-        const { next, rejected } = mergePromptAttachments(prev, e.dataTransfer.files);
-        setFileError(rejected.length ? t("promptFileTypeError") : null);
-        return next;
-      });
-    }
-  }
-
-  function removeFile(id: string) {
-    setFiles((prev) => {
-      const target = prev.find((item) => item.id === id);
-      if (target) revokePromptAttachment(target);
-      return prev.filter((item) => item.id !== id);
-    });
-    setFileError(null);
-  }
-
-  const filteredProjects = useMemo(() => {
-    const list = [...projects];
-    if (tab === "recent") {
-      list.sort(
-        (a, b) =>
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-      );
-    }
-    const q = query.trim().toLowerCase();
-    if (!q) return list;
-    return list.filter(
-      (p) =>
-        p.name.toLowerCase().includes(q) || p.slug.toLowerCase().includes(q),
-    );
-  }, [projects, query, tab]);
-
-  const canSubmit = Boolean(prompt.trim() || files.length) && !creating;
-  const showTemplates = tab === "templates";
-  // Subscribed rather than read once: the token is fetched asynchronously, and
-  // without a re-render every thumbnail would stay on its placeholder until
-  // something unrelated happened to re-render the page.
-  const mediaToken = useMediaToken();
-
-  function projectThumb(p: Project) {
-    // Prefer the persisted JPEG from the API. Always keep a live draft URL as
-    // fallback — empty/solid mobile captures used to stick forever once
-    // has_thumbnail flipped true (no frameSrc → no re-capture).
-    const token = mediaToken;
-    const base = apiBase().replace(/\/$/, "");
-    const parent =
-      typeof window !== "undefined" ? encodeURIComponent(window.location.origin) : "";
-    const draftFrame =
-      token && parent
-        ? `${base}/projects/${p.id}/draft?access_token=${encodeURIComponent(token)}&parent_origin=${parent}&thumb=1`
-        : null;
-    const templateSrc = p.template_id ? `/templates/${p.template_id}/preview` : null;
-
-    // Mobile apps forked from a kit: the 480×300 preview.html already looks
-    // like a phone card. Prefer it over live draft capture (slow/flaky in a
-    // landscape thumbnail). Custom mobile apps still use live draft.
-    if (p.platform === "mobile" && templateSrc) {
-      return {
-        imageSrc: null as string | null,
-        frameSrc: null as string | null,
-        src: templateSrc,
-        authPath: null as string | null,
-        persistProjectId: null as string | null,
-        thumbViewport: { w: 480, h: 300 } as { w: number; h: number } | null,
-      };
-    }
-
-    if (p.has_thumbnail) {
-      const imageSrc = projectThumbnailUrl(p.id, p.updated_at);
-      if (imageSrc) {
-        return {
-          imageSrc,
-          frameSrc: draftFrame,
-          src: templateSrc,
-          authPath: null as string | null,
-          persistProjectId: p.id,
-          thumbViewport: null as { w: number; h: number } | null,
-        };
-      }
-    }
-    if (draftFrame) {
-      return {
-        imageSrc: null as string | null,
-        frameSrc: draftFrame,
-        src: null as string | null,
-        authPath: null as string | null,
-        persistProjectId: p.id,
-        thumbViewport: null as { w: number; h: number } | null,
-      };
-    }
-    if (templateSrc) {
-      return {
-        imageSrc: null,
-        frameSrc: null,
-        src: templateSrc,
-        authPath: null as string | null,
-        persistProjectId: null,
-        thumbViewport: p.platform === "mobile" ? { w: 480, h: 300 } : null,
-      };
-    }
-    return {
-      imageSrc: null,
-      frameSrc: null,
-      src: null,
-      authPath: `/projects/${p.id}/card-preview`,
-      persistProjectId: null,
-      thumbViewport: null,
-    };
-  }
+  const suggestionKind = tile.kind ?? "web";
+  const suggestions =
+    suggestionKind === "web" || suggestionKind === "mobile"
+      ? (suggestionKind === "mobile" ? MOBILE_SUGGESTIONS : WEB_SUGGESTIONS).map((key) => t(key))
+      : [];
+  const gateError = error === t("createNeedsKey") || error === t("createNeedsRodi") ? error : null;
+  const showAnnouncement = enabledKinds.some((kind) => kind !== "web" && kind !== "mobile");
 
   return (
-    <HomeLayout activeNav={showTemplates ? "templates" : "projects"}>
+    <HomeLayout activeNav={tab === "templates" ? "templates" : "projects"}>
       {notice && typeof document !== "undefined"
         ? createPortal(
             <div key={notice.id} className="home-push-toast" role="alert">
@@ -566,364 +492,115 @@ function DashboardInner() {
             document.body,
           )
         : null}
-      <section className={`home-hero${showTemplates ? " is-compact" : ""}`}>
-        <h1 className="home-greeting">{t("dashboardGreeting")}</h1>
-        <TeamInviteNotice />
 
-        <form
-          className="landing-prompt home-prompt"
-          onSubmit={onPromptSubmit}
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={onPromptDrop}
-        >
-          <PromptFileChips items={files} onRemove={removeFile} />
-          {fileError && <p className="landing-file-error">{fileError}</p>}
-          {error && (error === t("createNeedsKey") || error === t("createNeedsRodi")) && (
-            <p className="landing-file-error" role="alert">
-              {error}{" "}
-              {error === t("createNeedsKey") ? (
-                <Link href="/settings?tab=generation">{t("openSettings")}</Link>
-              ) : (
-                <a
-                  href={rodiumRechargeUrl(getSessionSnapshot()?.profile?.rodium_sub)}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  {t("rechargeRodi")}
-                </a>
-              )}
-            </p>
-          )}
-          {prompt.length > PROMPT_MAX_CHARS - 1000 ? (
-            <p
-              className={`prompt-char-count${prompt.length >= PROMPT_MAX_CHARS ? " at-limit" : ""}`}
-              aria-live="polite"
-            >
-              {prompt.length.toLocaleString()} / {PROMPT_MAX_CHARS.toLocaleString()}
-            </p>
-          ) : null}
-          <textarea
-            ref={textareaRef}
+      <div className="fdh">
+        {showAnnouncement ? <AnnouncementBanner /> : null}
+        <section className="fdh-hero">
+          <h1 className="fdh-title">{t("homeTitle")}</h1>
+          <TeamInviteNotice />
+          <CreatePrompt
+            ref={promptRef}
             value={prompt}
-            maxLength={PROMPT_MAX_CHARS}
-            onChange={(e) => setPrompt(e.target.value)}
-            onKeyDown={onKeyDown}
-            placeholder={
-              platform === "mobile" ? t("promptPlaceholderMobile") : t("promptPlaceholder")
+            onChange={setPrompt}
+            onSubmit={() => void createWithTile(tile, prompt)}
+            files={files}
+            onAddFiles={addFiles}
+            onRemoveFile={removeFile}
+            tile={tile.kind ? tile : null}
+            onClearTile={() => setTileId("blank")}
+            designSystems={designSystems}
+            designSystemId={effectiveDesignSystemId}
+            onDesignSystemChange={chooseDesignSystem}
+            showDesignSystems={showDesignSystems}
+            busy={busy}
+            suggestions={suggestions}
+            alerts={
+              <>
+                {fileError ? <p className="landing-file-error">{fileError}</p> : null}
+                {gateError ? (
+                  <p className="landing-file-error" role="alert">
+                    {gateError}{" "}
+                    {gateError === t("createNeedsKey") ? (
+                      <Link href="/settings?tab=generation">{t("openSettings")}</Link>
+                    ) : (
+                      <a href={rodiumRechargeUrl(profile?.rodium_sub)} target="_blank" rel="noreferrer">
+                        {t("rechargeRodi")}
+                      </a>
+                    )}
+                  </p>
+                ) : null}
+              </>
             }
-            aria-label={t("promptAria")}
-            rows={3}
-            disabled={creating}
           />
-          <div className="landing-prompt-actions">
-            <input
-              ref={fileInputRef}
-              type="file"
-              className="landing-import-input"
-              multiple
-              accept={PROMPT_FILE_ACCEPT}
-              onChange={onFilesSelected}
-            />
-            <button
-              type="button"
-              className="landing-plus"
-              aria-label={t("importAria")}
-              onClick={() => fileInputRef.current?.click()}
-              disabled={creating}
-            >
-              <Icon icon={Plus} />
-            </button>
-            <PlatformToggle
-              value={platform}
-              onChange={setPlatform}
-              disabled={creating}
-              className="lp-platform-toggle"
-            />
-            <button
-              type="submit"
-              className="lp-send"
-              disabled={!canSubmit}
-              aria-label={t("create")}
-              title={!canSubmit ? t("createNeedPrompt") : undefined}
-            >
-              {creating ? (
-                t("loading")
-              ) : (
-                <>
-                  <span className="lp-send-label">{t("create")}</span>
-                  <Icon icon={ArrowUp} />
-                </>
-              )}
-            </button>
-          </div>
-        </form>
-        <div className="home-prompt-suggestions" aria-label={t("promptSuggestLabel")}>
-          {(platform === "mobile"
-            ? (["promptSuggestMobile1", "promptSuggestMobile2", "promptSuggestMobile3", "promptSuggestMobile4", "promptSuggestMobile5"] as const)
-            : (["promptSuggest1", "promptSuggest2", "promptSuggest3", "promptSuggest4", "promptSuggest5"] as const)
-          ).map((key) => {
-              const full = t(key);
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  className="home-prompt-suggest"
-                  title={full}
-                  disabled={creating}
-                  onClick={() => {
-                    setPrompt(full);
-                    textareaRef.current?.focus();
-                  }}
-                >
-                  <span>{full}</span>
-                </button>
-              );
-            })}
+          <KindGrid enabledKinds={enabledKinds} selected={tileId} onSelect={onSelectTile} disabled={busy} />
+        </section>
+
+        <div ref={tabsRef}>
+          <HomeTabs
+            tab={tab}
+            onTabChange={selectTab}
+            enabledKinds={enabledKinds}
+            projects={projects}
+            loading={loading}
+            error={gateError ? null : error}
+            actions={actions}
+            favorites={favorites.ids}
+            mediaToken={mediaToken}
+            mounted={mounted}
+            templates={templates}
+            galleryKind={galleryKind}
+            onGalleryKindChange={(kind) => {
+              setGalleryKind(kind);
+              setGalleryQuery(undefined);
+            }}
+            galleryQuery={galleryQuery}
+            forkingId={forkingId}
+            onFork={(tpl) => void forkTemplate(tpl)}
+            onStartBlank={(kind) => void startBlank(kind)}
+            onNewDesignSystem={() => {
+              setTileId("design_system");
+              promptRef.current?.focus();
+            }}
+            busy={busy}
+          />
         </div>
-      </section>
+      </div>
 
-      <section className="home-panel">
-        <div className="home-panel-toolbar">
-          {!showTemplates ? (
-            <label className="home-search">
-              <Icon icon={Search} className="ui-icon-sm" />
-              <input
-                ref={searchRef}
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder={t("searchProjects")}
-              />
-            </label>
-          ) : null}
-
-          <div className="home-tabs" role="tablist">
-            <button
-              type="button"
-              role="tab"
-              className={tab === "mine" ? "active" : ""}
-              aria-selected={tab === "mine"}
-              onClick={() => selectTab("mine")}
-            >
-              {t("tabMyProjects")}
-            </button>
-            <button
-              type="button"
-              role="tab"
-              className={tab === "recent" ? "active" : ""}
-              aria-selected={tab === "recent"}
-              onClick={() => selectTab("recent")}
-            >
-              {t("tabRecent")}
-            </button>
-            <button
-              type="button"
-              role="tab"
-              className={tab === "templates" ? "active" : ""}
-              aria-selected={tab === "templates"}
-              onClick={() => selectTab("templates")}
-            >
-              {t("tabTemplates")}
-            </button>
-          </div>
-        </div>
-
-        {error && error !== t("createNeedsKey") && error !== t("createNeedsRodi") && (
-          <p className="error home-panel-error">{error}</p>
-        )}
-
-        {loading ? (
-          <div className="home-grid home-grid-3" aria-busy="true" aria-label={t("loading")}>
-            {Array.from({ length: 6 }, (_, i) => (
-              <div key={i} className="home-card home-card-skel" aria-hidden>
-                <div className="home-skel home-card-skel-thumb" />
-                <div className="home-card-body">
-                  <div className="home-skel home-card-skel-title" />
-                  <div className="home-skel home-card-skel-meta" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : showTemplates ? (
-          templates.length > 0 ? (
-            <TemplateGallery
-              templates={templates}
-              onSelect={(tpl) => void forkTemplate(tpl)}
-              busyId={forkingId}
-              useError={error}
-              variant="home"
-            />
-          ) : (
-            <p className="home-panel-empty">{t("noTemplates")}</p>
-          )
-        ) : (
-          <>
-            <div className="home-grid home-grid-3">
-              {filteredProjects.slice(0, visibleCount).map((p) => {
-                const thumb = projectThumb(p);
-                const isPublished = Boolean(p.public_url);
-                const relative = mounted
-                  ? formatProjectMeta(p.updated_at || p.created_at, locale)
-                  : "…";
-                const avatarUrl = profile?.avatar_url?.trim() || "";
-                const thumbVw =
-                  thumb.thumbViewport?.w ??
-                  (p.platform === "mobile" ? 390 : 1280);
-                // Live mobile drafts: capture a 16:10 band (matches the card).
-                // Full 844px phone viewports often timed out / produced empty JPEGs.
-                const thumbVh =
-                  thumb.thumbViewport?.h ??
-                  (p.platform === "mobile" ? 244 : 800);
-                const ownerLabel = profile?.name?.trim() || profile?.email || p.name;
-                const shared = p.access_role === "viewer" || p.access_role === "editor";
-                const collabs = p.collaborators || [];
-                const pile =
-                  collabs.length > 0
-                    ? collabs
-                    : [
-                        {
-                          name: ownerLabel,
-                          email: profile?.email || ownerLabel,
-                          avatar_url: avatarUrl || null,
-                        },
-                      ];
-                const faces = collaboratorFaces(pile);
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    className="home-card"
-                    onClick={() => router.push(`/projects/${p.id}`)}
-                  >
-                    <div
-                      className={`home-card-media${p.platform === "mobile" ? " home-card-media--mobile" : ""}`}
-                    >
-                      <SiteThumb
-                        imageSrc={thumb.imageSrc}
-                        frameSrc={thumb.frameSrc}
-                        src={thumb.src}
-                        authPath={thumb.authPath}
-                        persistProjectId={thumb.persistProjectId}
-                        onThumbPersisted={(info) => {
-                          setProjects((prev) =>
-                            prev.map((row) =>
-                              row.id === p.id
-                                ? {
-                                    ...row,
-                                    has_thumbnail: true,
-                                    updated_at: info?.updated_at || row.updated_at,
-                                  }
-                                : row,
-                            ),
-                          );
-                        }}
-                        cacheKey={`${p.id}:${p.updated_at || p.created_at}:${p.platform || "web"}:tm2`}
-                        title={p.name}
-                        className={`home-card-thumb${p.platform === "mobile" ? " home-card-thumb--mobile" : ""}`}
-                        viewportWidth={thumbVw}
-                        viewportHeight={thumbVh}
-                      />
-                      {shared ? (
-                        <span className="home-card-badge home-card-badge-shared">
-                          {t("projectShared")}
-                        </span>
-                      ) : null}
-                      {isPublished ? (
-                        <span className="home-card-badge">{t("projectPublishedBadge")}</span>
-                      ) : null}
-                    </div>
-                    <div className="home-card-body">
-                      {faces.shown.length > 0 ? (
-                        <div className="home-card-faces" aria-hidden>
-                          {faces.shown.map((person, index) => {
-                            const label = person.name?.trim() || person.email;
-                            return (
-                              <span
-                                key={person.email}
-                                className="home-card-avatar"
-                                title={label}
-                                style={{ zIndex: index + 1 }}
-                              >
-                                {person.avatar_url ? (
-                                  <img src={person.avatar_url} alt="" />
-                                ) : (
-                                  <span>{projectInitials(label)}</span>
-                                )}
-                              </span>
-                            );
-                          })}
-                          {faces.extra > 0 ? (
-                            <span
-                              className="home-card-avatar is-more"
-                              style={{ zIndex: faces.shown.length + 1 }}
-                              title={t("projectCollabMore").replace("{n}", String(faces.extra))}
-                            >
-                              {t("projectCollabMore").replace("{n}", String(faces.extra))}
-                            </span>
-                          ) : null}
-                        </div>
-                      ) : (
-                        <span className="home-card-avatar" aria-hidden>
-                          {avatarUrl ? (
-                            <img src={avatarUrl} alt="" />
-                          ) : (
-                            <span>{projectInitials(ownerLabel)}</span>
-                          )}
-                        </span>
-                      )}
-                      <div className="home-card-meta">
-                        <strong className="home-card-title-row" title={p.name}>
-                          <span className="home-card-title-text">{p.name}</span>
-                          <span
-                            className="home-card-platform"
-                            title={
-                              p.platform === "mobile"
-                                ? t("templatesKindApp")
-                                : t("templatesKindWeb")
-                            }
-                            aria-label={
-                              p.platform === "mobile"
-                                ? t("templatesKindApp")
-                                : t("templatesKindWeb")
-                            }
-                          >
-                            <Icon
-                              icon={p.platform === "mobile" ? Smartphone : Monitor}
-                              className="ui-icon-sm"
-                            />
-                          </span>
-                        </strong>
-                        <span title={p.slug}>
-                          {t("projectModifiedPrefix")} {relative}
-                        </span>
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-            {filteredProjects.length === 0 && (
-              <div className="home-empty">
-                <span className="home-empty-mark" aria-hidden>
-                  <Icon icon={FolderOpen} />
-                </span>
-                <strong>{t("noProjects")}</strong>
-                <p>{query.trim() ? t("noProjectsSearch") : t("noProjectsHint")}</p>
-              </div>
-            )}
-            {filteredProjects.length > visibleCount && (
-              <div className="home-panel-more">
-                <button
-                  type="button"
-                  className="home-load-more"
-                  onClick={() => setVisibleCount((n) => n + PAGE_SIZE)}
-                >
-                  {t("loadMore")}
-                </button>
-              </div>
-            )}
-          </>
-        )}
-      </section>
+      {renaming ? (
+        <RenameDialog
+          name={renaming.name}
+          onCancel={() => setRenaming(null)}
+          onSave={async (name) => {
+            const updated = await api<HomeProject>(`/projects/${renaming.id}`, {
+              method: "PATCH",
+              body: JSON.stringify({ name }),
+            });
+            patchProject(renaming.id, { name: updated?.name ?? name, slug: updated?.slug ?? renaming.slug });
+            setRenaming(null);
+          }}
+        />
+      ) : null}
+      {deleting ? (
+        <DeleteDialog
+          name={deleting.name}
+          onCancel={() => setDeleting(null)}
+          onDelete={async () => {
+            await api(`/projects/${deleting.id}`, { method: "DELETE" });
+            removeProject(locale, deleting.id);
+            setProjects((prev) => prev.filter((row) => row.id !== deleting.id));
+            if (designSystemId === deleting.id) chooseDesignSystem(null);
+            setDeleting(null);
+          }}
+        />
+      ) : null}
+      {sharing ? (
+        <ShareProjectModal
+          projectId={sharing.id}
+          projectName={sharing.name}
+          seatLimit={shareSeatLimit(forge)}
+          onClose={() => setSharing(null)}
+        />
+      ) : null}
     </HomeLayout>
   );
 }
