@@ -1,0 +1,49 @@
+{
+  "kind": "slides",
+  "id": "slides-monochrome",
+  "title": {
+    "fr": "Monochrome",
+    "en": "Monochrome"
+  },
+  "description": {
+    "fr": "Présentation entièrement en camaïeu de bleu, sobre et affirmée : photos teintées, bande diagonale, étiquettes en bloc blanc. Pour une stratégie, une fondation ou un rapport d'impact.",
+    "en": "Deck entirely in shades of blue, sober and assertive: tinted photos, a diagonal band, white block labels. For a strategy, a foundation or an impact report."
+  },
+  "tags": [
+    "minimal",
+    "monochrome",
+    "blue",
+    "strategy"
+  ],
+  "category": "minimal",
+  "preview": "preview.html",
+  "bootHint": {
+    "fr": "Adapte slides-monochrome : organisation, mission, objectifs chiffrés, programmes et partenaires.",
+    "en": "Adapt slides-monochrome: organisation, mission, quantified goals, programmes and partners."
+  },
+  "accent": "#FFFFFF",
+  "bg": "#1E2A44",
+  "fg": "#F1F4FA",
+  "muted": "#A9B6D1",
+  "tone": "assertive, calm, mission-driven",
+  "fonts": {
+    "display": "Archivo",
+    "body": "Archivo",
+    "mono": "IBM Plex Mono"
+  },
+  "transitionPreset": "sober",
+  "layouts": {
+    "title": "s1",
+    "section": "s2",
+    "text": "s3",
+    "two-columns": "s4",
+    "image-text": "s5",
+    "quote": "s6",
+    "key-figures": "s7",
+    "chart": "s8",
+    "table": "s9",
+    "team": "s10",
+    "timeline": "s11",
+    "thank-you": "s12"
+  }
+}

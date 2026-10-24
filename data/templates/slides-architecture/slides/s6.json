@@ -1,0 +1,432 @@
+{
+  "id": "s6",
+  "background": {
+    "type": "color",
+    "token": "--surface"
+  },
+  "elements": [
+    {
+      "id": "s6-ptv0",
+      "type": "shape",
+      "x": 120,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s6-ptv1",
+      "type": "shape",
+      "x": 240,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s6-ptv2",
+      "type": "shape",
+      "x": 360,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s6-ptv3",
+      "type": "shape",
+      "x": 480,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s6-ptv4",
+      "type": "shape",
+      "x": 600,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s6-ptv5",
+      "type": "shape",
+      "x": 720,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s6-ptv6",
+      "type": "shape",
+      "x": 840,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s6-ptv7",
+      "type": "shape",
+      "x": 960,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s6-ptv8",
+      "type": "shape",
+      "x": 1080,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s6-ptv9",
+      "type": "shape",
+      "x": 1200,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s6-ptv10",
+      "type": "shape",
+      "x": 1320,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s6-ptv11",
+      "type": "shape",
+      "x": 1440,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s6-ptv12",
+      "type": "shape",
+      "x": 1560,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s6-ptv13",
+      "type": "shape",
+      "x": 1680,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s6-ptv14",
+      "type": "shape",
+      "x": 1800,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s6-pth0",
+      "type": "shape",
+      "x": 0,
+      "y": 120,
+      "w": 1920,
+      "h": 1,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s6-pth1",
+      "type": "shape",
+      "x": 0,
+      "y": 240,
+      "w": 1920,
+      "h": 1,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s6-pth2",
+      "type": "shape",
+      "x": 0,
+      "y": 360,
+      "w": 1920,
+      "h": 1,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s6-pth3",
+      "type": "shape",
+      "x": 0,
+      "y": 480,
+      "w": 1920,
+      "h": 1,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s6-pth4",
+      "type": "shape",
+      "x": 0,
+      "y": 600,
+      "w": 1920,
+      "h": 1,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s6-pth5",
+      "type": "shape",
+      "x": 0,
+      "y": 720,
+      "w": 1920,
+      "h": 1,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s6-pth6",
+      "type": "shape",
+      "x": 0,
+      "y": 840,
+      "w": 1920,
+      "h": 1,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s6-pth7",
+      "type": "shape",
+      "x": 0,
+      "y": 960,
+      "w": 1920,
+      "h": 1,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s6-quote",
+      "type": "text",
+      "role": "quote",
+      "x": 200,
+      "y": 300,
+      "w": 1520,
+      "h": 380,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Le bon découpage est celui qui laisse une équipe livrer sans attendre les cinq autres. »"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 56,
+        "weight": 400,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.3,
+        "italic": true
+      }
+    },
+    {
+      "id": "s6-bar",
+      "type": "shape",
+      "x": 200,
+      "y": 800,
+      "w": 80,
+      "h": 8,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 4,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s6-author",
+      "type": "text",
+      "role": "caption",
+      "x": 200,
+      "y": 830,
+      "w": 1200,
+      "h": 50,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Nadia Belkacem"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 30,
+        "weight": 700,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.3
+      }
+    },
+    {
+      "id": "s6-role",
+      "type": "text",
+      "role": "caption",
+      "x": 200,
+      "y": 884,
+      "w": 1200,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Staff engineer, rédactrice de la RFC 112"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s6-footer",
+      "type": "text",
+      "role": "caption",
+      "x": 140,
+      "y": 1000,
+      "w": 1100,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Lumio Pay · Revue d'architecture, paiements v3"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s6-page",
+      "type": "text",
+      "role": "caption",
+      "x": 1660,
+      "y": 1000,
+      "w": 120,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "06"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "right",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s6-rule",
+      "type": "shape",
+      "x": 140,
+      "y": 300,
+      "w": 10,
+      "h": 480,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 5
+    }
+  ]
+}

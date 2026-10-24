@@ -1,0 +1,288 @@
+{
+  "id": "s9",
+  "background": {
+    "type": "color",
+    "token": "--bg"
+  },
+  "elements": [
+    {
+      "id": "s9-ptm0a",
+      "type": "shape",
+      "x": 48,
+      "y": 48,
+      "w": 56,
+      "h": 2,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--fg"
+    },
+    {
+      "id": "s9-ptm0b",
+      "type": "shape",
+      "x": 48,
+      "y": 48,
+      "w": 2,
+      "h": 56,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--fg"
+    },
+    {
+      "id": "s9-ptm1a",
+      "type": "shape",
+      "x": 1816,
+      "y": 48,
+      "w": 56,
+      "h": 2,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--fg"
+    },
+    {
+      "id": "s9-ptm1b",
+      "type": "shape",
+      "x": 1870,
+      "y": 48,
+      "w": 2,
+      "h": 56,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--fg"
+    },
+    {
+      "id": "s9-ptm2a",
+      "type": "shape",
+      "x": 48,
+      "y": 1030,
+      "w": 56,
+      "h": 2,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--fg"
+    },
+    {
+      "id": "s9-ptm2b",
+      "type": "shape",
+      "x": 48,
+      "y": 976,
+      "w": 2,
+      "h": 56,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--fg"
+    },
+    {
+      "id": "s9-ptm3a",
+      "type": "shape",
+      "x": 1816,
+      "y": 1030,
+      "w": 56,
+      "h": 2,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--fg"
+    },
+    {
+      "id": "s9-ptm3b",
+      "type": "shape",
+      "x": 1870,
+      "y": 976,
+      "w": 2,
+      "h": 56,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--fg"
+    },
+    {
+      "id": "s9-bar",
+      "type": "shape",
+      "x": 140,
+      "y": 100,
+      "w": 80,
+      "h": 8,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 4,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s9-kicker",
+      "type": "text",
+      "role": "label",
+      "x": 140,
+      "y": 126,
+      "w": 1200,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "N°09  ·  Typographies"
+        }
+      ],
+      "style": {
+        "font": "mono",
+        "size": 24,
+        "weight": 600,
+        "color": "--accent",
+        "align": "left",
+        "lineHeight": 1.4,
+        "letterSpacing": 3,
+        "uppercase": true
+      }
+    },
+    {
+      "id": "s9-heading",
+      "type": "text",
+      "role": "heading",
+      "x": 140,
+      "y": 176,
+      "w": 1640,
+      "h": 140,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Les lettres de la collection"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 64,
+        "weight": 500,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.1
+      },
+      "animation": {
+        "type": "mask-reveal",
+        "trigger": "on-enter",
+        "direction": "up",
+        "durationMs": 700
+      }
+    },
+    {
+      "id": "s9-table",
+      "type": "table",
+      "x": 140,
+      "y": 360,
+      "w": 1640,
+      "h": 420,
+      "z": 2,
+      "rows": [
+        [
+          {
+            "text": "Usage"
+          },
+          {
+            "text": "Police"
+          },
+          {
+            "text": "Style"
+          }
+        ],
+        [
+          {
+            "text": "Titres et logo"
+          },
+          {
+            "text": "Bodoni Moda"
+          },
+          {
+            "text": "Contrasté, élégant"
+          }
+        ],
+        [
+          {
+            "text": "Textes et étiquettes"
+          },
+          {
+            "text": "Albert Sans"
+          },
+          {
+            "text": "Simple, lisible"
+          }
+        ],
+        [
+          {
+            "text": "Références et prix"
+          },
+          {
+            "text": "Space Mono"
+          },
+          {
+            "text": "Technique, discret"
+          }
+        ]
+      ],
+      "headerRow": true,
+      "style": {
+        "size": 28,
+        "color": "--fg",
+        "headerFill": "--surface",
+        "border": "--border"
+      },
+      "columnWidths": [
+        1.2,
+        1,
+        1.2
+      ],
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "delayMs": 120,
+        "durationMs": 500
+      }
+    },
+    {
+      "id": "s9-footer",
+      "type": "text",
+      "role": "caption",
+      "x": 140,
+      "y": 1000,
+      "w": 1100,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Maison Alba · Moodboard automne 2027"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s9-page",
+      "type": "text",
+      "role": "caption",
+      "x": 1660,
+      "y": 1000,
+      "w": 120,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "09"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "right",
+        "lineHeight": 1.4
+      }
+    }
+  ]
+}

@@ -1,0 +1,221 @@
+{
+  "id": "s9",
+  "background": {
+    "type": "color",
+    "token": "--bg"
+  },
+  "elements": [
+    {
+      "id": "s9-pttop",
+      "type": "shape",
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 14,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent"
+    },
+    {
+      "id": "s9-pttop2",
+      "type": "shape",
+      "x": 0,
+      "y": 14,
+      "w": 480,
+      "h": 14,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent-2"
+    },
+    {
+      "id": "s9-bar",
+      "type": "shape",
+      "x": 140,
+      "y": 102,
+      "w": 307,
+      "h": 54,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 27,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s9-kicker",
+      "type": "text",
+      "role": "label",
+      "x": 168,
+      "y": 108,
+      "w": 600,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Qui contacter"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 600,
+        "color": "--accent-contrast",
+        "align": "left",
+        "lineHeight": 1.4,
+        "letterSpacing": 3,
+        "uppercase": true
+      }
+    },
+    {
+      "id": "s9-heading",
+      "type": "text",
+      "role": "heading",
+      "x": 140,
+      "y": 184,
+      "w": 1640,
+      "h": 140,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "En cas de doute, un seul réflexe : appeler"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 64,
+        "weight": 700,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.1
+      }
+    },
+    {
+      "id": "s9-table",
+      "type": "table",
+      "x": 140,
+      "y": 360,
+      "w": 1640,
+      "h": 530,
+      "z": 2,
+      "rows": [
+        [
+          {
+            "text": "Situation"
+          },
+          {
+            "text": "Contact"
+          },
+          {
+            "text": "Délai de réponse"
+          }
+        ],
+        [
+          {
+            "text": "Mail suspect reçu"
+          },
+          {
+            "text": "alerte@helia.example"
+          },
+          {
+            "text": "Sous 30 minutes"
+          }
+        ],
+        [
+          {
+            "text": "Clic ou pièce jointe ouverte"
+          },
+          {
+            "text": "4242, 24 h sur 24"
+          },
+          {
+            "text": "Immédiat"
+          }
+        ],
+        [
+          {
+            "text": "Ordinateur ou téléphone perdu"
+          },
+          {
+            "text": "4242, puis votre manager"
+          },
+          {
+            "text": "Immédiat"
+          }
+        ],
+        [
+          {
+            "text": "Question générale"
+          },
+          {
+            "text": "Portail sécurité"
+          },
+          {
+            "text": "Sous 48 heures"
+          }
+        ]
+      ],
+      "headerRow": true,
+      "style": {
+        "size": 28,
+        "color": "--fg",
+        "headerFill": "--surface",
+        "border": "--border"
+      },
+      "columnWidths": [
+        1.5,
+        1.4,
+        1
+      ]
+    },
+    {
+      "id": "s9-footer",
+      "type": "text",
+      "role": "caption",
+      "x": 140,
+      "y": 1000,
+      "w": 1100,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Hélia Assurances · Formation cybersécurité, module 2"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s9-page",
+      "type": "text",
+      "role": "caption",
+      "x": 1660,
+      "y": 1000,
+      "w": 120,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "09"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "right",
+        "lineHeight": 1.4
+      }
+    }
+  ]
+}

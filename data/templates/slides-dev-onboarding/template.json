@@ -1,0 +1,49 @@
+{
+  "kind": "slides",
+  "id": "slides-dev-onboarding",
+  "title": {
+    "fr": "Onboarding développeur",
+    "en": "Developer onboarding"
+  },
+  "description": {
+    "fr": "Accueil calme et structuré pour une nouvelle recrue tech : installation de l'environnement en ligne de commande, façons de travailler, stack, rituels, interlocuteurs et 30 premiers jours.",
+    "en": "Calm, structured welcome deck for a new engineer: environment setup on the command line, ways of working, stack, rituals, contacts and first 30 days."
+  },
+  "tags": [
+    "tech",
+    "onboarding",
+    "team",
+    "light"
+  ],
+  "category": "tech",
+  "preview": "preview.html",
+  "bootHint": {
+    "fr": "Adapte slides-dev-onboarding : équipe, commandes d'installation, rituels, interlocuteurs et objectifs du premier mois.",
+    "en": "Adapt slides-dev-onboarding: team, setup commands, rituals, contacts and first month goals."
+  },
+  "accent": "#5E81AC",
+  "bg": "#ECEFF4",
+  "fg": "#2E3440",
+  "muted": "#5E6779",
+  "tone": "welcoming, clear, reassuring",
+  "fonts": {
+    "display": "Manrope",
+    "body": "Manrope",
+    "mono": "JetBrains Mono"
+  },
+  "transitionPreset": "sober",
+  "layouts": {
+    "title": "s1",
+    "section": "s2",
+    "text": "s3",
+    "two-columns": "s4",
+    "image-text": "s5",
+    "quote": "s6",
+    "key-figures": "s7",
+    "chart": "s8",
+    "table": "s9",
+    "team": "s10",
+    "timeline": "s11",
+    "thank-you": "s12"
+  }
+}

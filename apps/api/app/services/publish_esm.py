@@ -297,6 +297,51 @@ def _put(store, bucket: str, key: str, body: bytes, content_type: str, cache_con
         store.put(bucket, key, body, content_type)
 
 
+async def upload_site_dir(out: Path, slug: str) -> tuple[int, int]:
+    """Upload a built site under ``{slug}/`` and drop keys of older builds.
+
+    Shared by web/mobile sites and the Forge Design players. Returns
+    ``(files_uploaded, orphans_deleted)``.
+    """
+    settings = get_settings()
+    store = get_object_store()
+    bucket = store.bucket_site_assets or settings.bucket_site_assets
+    if not bucket:
+        raise RuntimeError("Site assets bucket is not configured")
+    prefix = f"{slug}/"
+    uploaded = 0
+    sem = asyncio.Semaphore(_UPLOAD_CONCURRENCY)
+    paths = [p for p in out.rglob("*") if p.is_file()]
+    new_keys = {prefix + p.relative_to(out).as_posix() for p in paths}
+
+    async def upload_one(path: Path) -> None:
+        nonlocal uploaded
+        rel = path.relative_to(out).as_posix()
+        key = prefix + rel
+        body = await asyncio.to_thread(path.read_bytes)
+        async with sem:
+            await asyncio.to_thread(
+                _put, store, bucket, key, body, _guess_content_type(path), cache_control_for(rel)
+            )
+        uploaded += 1
+
+    # Upload first so the live site never goes empty mid-publish, then drop
+    # keys that are no longer in this build (stale files / cross-tenant leftovers).
+    # Pages last: an HTML file never points at an asset not uploaded yet.
+    await asyncio.gather(*(upload_one(p) for p in paths if p.suffix.lower() != ".html"))
+    await asyncio.gather(*(upload_one(p) for p in paths if p.suffix.lower() == ".html"))
+    orphans = 0
+    try:
+        existing = await asyncio.to_thread(store.list_prefix, bucket, prefix)
+        stale = [k for k in existing if k not in new_keys]
+        if stale:
+            orphans = await asyncio.to_thread(store.delete_keys, bucket, stale, under_prefix=prefix)
+            logger.info("publish purged %s orphan key(s) under %s", orphans, prefix)
+    except Exception:
+        logger.exception("Failed to purge orphan published keys prefix=%s", prefix)
+    return uploaded, orphans
+
+
 async def publish_project_esm(
     project_id: str,
     slug: str,
@@ -320,41 +365,7 @@ async def publish_project_esm(
             except Exception:
                 logger.exception("site finalization failed for %s; publishing the plain build", slug)
 
-        store = get_object_store()
-        bucket = store.bucket_site_assets or settings.bucket_site_assets
-        if not bucket:
-            raise RuntimeError("Site assets bucket is not configured")
-        prefix = f"{slug}/"
-        uploaded = 0
-        sem = asyncio.Semaphore(_UPLOAD_CONCURRENCY)
-        paths = [p for p in out.rglob("*") if p.is_file()]
-        new_keys = {prefix + p.relative_to(out).as_posix() for p in paths}
-
-        async def upload_one(path: Path) -> None:
-            nonlocal uploaded
-            rel = path.relative_to(out).as_posix()
-            key = prefix + rel
-            body = await asyncio.to_thread(path.read_bytes)
-            async with sem:
-                await asyncio.to_thread(
-                    _put, store, bucket, key, body, _guess_content_type(path), cache_control_for(rel)
-                )
-            uploaded += 1
-
-        # Upload first so the live site never goes empty mid-publish, then drop
-        # keys that are no longer in this build (stale files / cross-tenant leftovers).
-        # Pages last: an HTML file never points at an asset not uploaded yet.
-        await asyncio.gather(*(upload_one(p) for p in paths if p.suffix.lower() != ".html"))
-        await asyncio.gather(*(upload_one(p) for p in paths if p.suffix.lower() == ".html"))
-        orphans = 0
-        try:
-            existing = await asyncio.to_thread(store.list_prefix, bucket, prefix)
-            stale = [k for k in existing if k not in new_keys]
-            if stale:
-                orphans = await asyncio.to_thread(store.delete_keys, bucket, stale, under_prefix=prefix)
-                logger.info("publish purged %s orphan key(s) under %s", orphans, prefix)
-        except Exception:
-            logger.exception("Failed to purge orphan published keys prefix=%s", prefix)
+        uploaded, orphans = await upload_site_dir(out, slug)
 
     return {
         "public_url": public_url,

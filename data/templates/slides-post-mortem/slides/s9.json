@@ -1,0 +1,566 @@
+{
+  "id": "s9",
+  "background": {
+    "type": "color",
+    "token": "--bg"
+  },
+  "elements": [
+    {
+      "id": "s9-pthz0",
+      "type": "shape",
+      "x": -40,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s9-pthz1",
+      "type": "shape",
+      "x": 40,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent-2",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s9-pthz2",
+      "type": "shape",
+      "x": 120,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s9-pthz3",
+      "type": "shape",
+      "x": 200,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent-2",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s9-pthz4",
+      "type": "shape",
+      "x": 280,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s9-pthz5",
+      "type": "shape",
+      "x": 360,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent-2",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s9-pthz6",
+      "type": "shape",
+      "x": 440,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s9-pthz7",
+      "type": "shape",
+      "x": 520,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent-2",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s9-pthz8",
+      "type": "shape",
+      "x": 600,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s9-pthz9",
+      "type": "shape",
+      "x": 680,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent-2",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s9-pthz10",
+      "type": "shape",
+      "x": 760,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s9-pthz11",
+      "type": "shape",
+      "x": 840,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent-2",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s9-pthz12",
+      "type": "shape",
+      "x": 920,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s9-pthz13",
+      "type": "shape",
+      "x": 1000,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent-2",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s9-pthz14",
+      "type": "shape",
+      "x": 1080,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s9-pthz15",
+      "type": "shape",
+      "x": 1160,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent-2",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s9-pthz16",
+      "type": "shape",
+      "x": 1240,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s9-pthz17",
+      "type": "shape",
+      "x": 1320,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent-2",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s9-pthz18",
+      "type": "shape",
+      "x": 1400,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s9-pthz19",
+      "type": "shape",
+      "x": 1480,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent-2",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s9-pthz20",
+      "type": "shape",
+      "x": 1560,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s9-pthz21",
+      "type": "shape",
+      "x": 1640,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent-2",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s9-pthz22",
+      "type": "shape",
+      "x": 1720,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s9-pthz23",
+      "type": "shape",
+      "x": 1800,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent-2",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s9-pthz24",
+      "type": "shape",
+      "x": 1880,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s9-pthz25",
+      "type": "shape",
+      "x": 1960,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent-2",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s9-pthzline",
+      "type": "shape",
+      "x": 0,
+      "y": 26,
+      "w": 1920,
+      "h": 2,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border"
+    },
+    {
+      "id": "s9-bar",
+      "type": "shape",
+      "x": 140,
+      "y": 102,
+      "w": 326,
+      "h": 54,
+      "z": 2,
+      "shape": "rect",
+      "fill": "#0000",
+      "radius": 6,
+      "matchKey": "accent-bar",
+      "stroke": "--accent",
+      "strokeWidth": 2
+    },
+    {
+      "id": "s9-kicker",
+      "type": "text",
+      "role": "label",
+      "x": 168,
+      "y": 108,
+      "w": 600,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Plan d'actions"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 600,
+        "color": "--accent",
+        "align": "left",
+        "lineHeight": 1.4,
+        "letterSpacing": 3,
+        "uppercase": true
+      }
+    },
+    {
+      "id": "s9-heading",
+      "type": "text",
+      "role": "heading",
+      "x": 140,
+      "y": 184,
+      "w": 1640,
+      "h": 140,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Ce que nous changeons"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 64,
+        "weight": 600,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.1
+      }
+    },
+    {
+      "id": "s9-table",
+      "type": "table",
+      "x": 140,
+      "y": 360,
+      "w": 1640,
+      "h": 530,
+      "z": 2,
+      "rows": [
+        [
+          {
+            "text": "Action"
+          },
+          {
+            "text": "Responsable"
+          },
+          {
+            "text": "Échéance"
+          },
+          {
+            "text": "Statut"
+          }
+        ],
+        [
+          {
+            "text": "Alerte de saturation des pools"
+          },
+          {
+            "text": "Romain"
+          },
+          {
+            "text": "14 oct."
+          },
+          {
+            "text": "Fait"
+          }
+        ],
+        [
+          {
+            "text": "Migrations bloquantes hors des pics"
+          },
+          {
+            "text": "Élodie"
+          },
+          {
+            "text": "31 oct."
+          },
+          {
+            "text": "En cours"
+          }
+        ],
+        [
+          {
+            "text": "Bascule automatique du mode dégradé"
+          },
+          {
+            "text": "Karim"
+          },
+          {
+            "text": "15 nov."
+          },
+          {
+            "text": "En cours"
+          }
+        ],
+        [
+          {
+            "text": "Exercice de panne trimestriel"
+          },
+          {
+            "text": "Équipe SRE"
+          },
+          {
+            "text": "Janv. 2027"
+          },
+          {
+            "text": "Planifié"
+          }
+        ]
+      ],
+      "headerRow": true,
+      "style": {
+        "size": 28,
+        "color": "--fg",
+        "headerFill": "--surface",
+        "border": "--border"
+      },
+      "columnWidths": [
+        2,
+        1,
+        0.9,
+        0.9
+      ]
+    },
+    {
+      "id": "s9-footer",
+      "type": "text",
+      "role": "caption",
+      "x": 140,
+      "y": 1000,
+      "w": 1100,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Payvia · Post-mortem INC-2026-1003 · Sans blâme"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s9-page",
+      "type": "text",
+      "role": "caption",
+      "x": 1660,
+      "y": 1000,
+      "w": 120,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "09"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "right",
+        "lineHeight": 1.4
+      }
+    }
+  ]
+}

@@ -1,0 +1,250 @@
+{
+  "id": "s9",
+  "background": {
+    "type": "color",
+    "token": "--bg"
+  },
+  "elements": [
+    {
+      "id": "s9-ptside",
+      "type": "shape",
+      "x": 0,
+      "y": 0,
+      "w": 72,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--surface"
+    },
+    {
+      "id": "s9-ptsidebar",
+      "type": "shape",
+      "x": 70,
+      "y": 0,
+      "w": 2,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border"
+    },
+    {
+      "id": "s9-ptsidelabel",
+      "type": "text",
+      "role": "caption",
+      "x": -444,
+      "y": 520,
+      "w": 960,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Sprint 42 · Équipe Checkout"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 600,
+        "color": "--muted",
+        "align": "center",
+        "lineHeight": 1.4,
+        "letterSpacing": 4,
+        "uppercase": true
+      },
+      "rotation": -90
+    },
+    {
+      "id": "s9-bar",
+      "type": "shape",
+      "x": 140,
+      "y": 133,
+      "w": 20,
+      "h": 20,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 10,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s9-kicker",
+      "type": "text",
+      "role": "label",
+      "x": 176,
+      "y": 126,
+      "w": 1200,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Risques"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 600,
+        "color": "--accent",
+        "align": "left",
+        "lineHeight": 1.4,
+        "letterSpacing": 3,
+        "uppercase": true
+      }
+    },
+    {
+      "id": "s9-heading",
+      "type": "text",
+      "role": "heading",
+      "x": 140,
+      "y": 176,
+      "w": 1640,
+      "h": 140,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Ce qui reste ouvert"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 64,
+        "weight": 800,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.1
+      }
+    },
+    {
+      "id": "s9-table",
+      "type": "table",
+      "x": 140,
+      "y": 360,
+      "w": 1640,
+      "h": 420,
+      "z": 2,
+      "rows": [
+        [
+          {
+            "text": "Sujet"
+          },
+          {
+            "text": "Impact"
+          },
+          {
+            "text": "Responsable"
+          },
+          {
+            "text": "Échéance"
+          }
+        ],
+        [
+          {
+            "text": "API carte de l'équipe Paiement"
+          },
+          {
+            "text": "Bloque 2 stories"
+          },
+          {
+            "text": "Malik"
+          },
+          {
+            "text": "13 nov."
+          }
+        ],
+        [
+          {
+            "text": "Validation 3-D Secure 2.2"
+          },
+          {
+            "text": "Conformité"
+          },
+          {
+            "text": "Sarah"
+          },
+          {
+            "text": "20 nov."
+          }
+        ],
+        [
+          {
+            "text": "Lenteur de staging"
+          },
+          {
+            "text": "Tests retardés"
+          },
+          {
+            "text": "Ops"
+          },
+          {
+            "text": "15 nov."
+          }
+        ]
+      ],
+      "headerRow": true,
+      "style": {
+        "size": 28,
+        "color": "--fg",
+        "headerFill": "--surface",
+        "border": "--border"
+      },
+      "columnWidths": [
+        1.6,
+        1.1,
+        0.9,
+        0.8
+      ]
+    },
+    {
+      "id": "s9-footer",
+      "type": "text",
+      "role": "caption",
+      "x": 140,
+      "y": 1000,
+      "w": 1100,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Marché Vert · Sprint 42 · Équipe Checkout"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s9-page",
+      "type": "text",
+      "role": "caption",
+      "x": 1660,
+      "y": 1000,
+      "w": 120,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "09"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "right",
+        "lineHeight": 1.4
+      }
+    }
+  ]
+}

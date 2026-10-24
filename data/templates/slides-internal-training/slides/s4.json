@@ -1,0 +1,298 @@
+{
+  "id": "s4",
+  "background": {
+    "type": "color",
+    "token": "--bg"
+  },
+  "elements": [
+    {
+      "id": "s4-pttop",
+      "type": "shape",
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 14,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent"
+    },
+    {
+      "id": "s4-pttop2",
+      "type": "shape",
+      "x": 0,
+      "y": 14,
+      "w": 480,
+      "h": 14,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent-2"
+    },
+    {
+      "id": "s4-bar",
+      "type": "shape",
+      "x": 140,
+      "y": 102,
+      "w": 269,
+      "h": 54,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 27,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s4-kicker",
+      "type": "text",
+      "role": "label",
+      "x": 168,
+      "y": 108,
+      "w": 600,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Hameçonnage"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 600,
+        "color": "--accent-contrast",
+        "align": "left",
+        "lineHeight": 1.4,
+        "letterSpacing": 3,
+        "uppercase": true
+      }
+    },
+    {
+      "id": "s4-heading",
+      "type": "text",
+      "role": "heading",
+      "x": 140,
+      "y": 184,
+      "w": 1640,
+      "h": 140,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Reconnaître, puis réagir"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 64,
+        "weight": 700,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.1
+      }
+    },
+    {
+      "id": "s4-icon1",
+      "type": "icon",
+      "x": 140,
+      "y": 380,
+      "w": 64,
+      "h": 64,
+      "z": 3,
+      "icon": "mail-warning",
+      "color": "--accent",
+      "strokeWidth": 1.75,
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 0
+      }
+    },
+    {
+      "id": "s4-col1-title",
+      "type": "text",
+      "role": "heading",
+      "x": 140,
+      "y": 470,
+      "w": 780,
+      "h": 64,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Les signes qui alertent"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 40,
+        "weight": 700,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.2
+      }
+    },
+    {
+      "id": "s4-col1-body",
+      "type": "text",
+      "role": "body",
+      "x": 140,
+      "y": 548,
+      "w": 760,
+      "h": 320,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Urgence inhabituelle, pièce jointe inattendue, faute dans le nom de domaine, demande de mot de passe."
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 30,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.5
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 1
+      }
+    },
+    {
+      "id": "s4-icon2",
+      "type": "icon",
+      "x": 1000,
+      "y": 380,
+      "w": 64,
+      "h": 64,
+      "z": 3,
+      "icon": "phone-call",
+      "color": "--accent",
+      "strokeWidth": 1.75,
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 2
+      }
+    },
+    {
+      "id": "s4-col2-title",
+      "type": "text",
+      "role": "heading",
+      "x": 1000,
+      "y": 470,
+      "w": 780,
+      "h": 64,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Les bons gestes"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 40,
+        "weight": 700,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.2
+      }
+    },
+    {
+      "id": "s4-col2-body",
+      "type": "text",
+      "role": "body",
+      "x": 1000,
+      "y": 548,
+      "w": 760,
+      "h": 320,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Ne rien ouvrir, transférer le mail à alerte@helia.example puis le supprimer. En cas de clic, appeler le 4242."
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 30,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.5
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 3
+      }
+    },
+    {
+      "id": "s4-divider",
+      "type": "shape",
+      "x": 950,
+      "y": 380,
+      "w": 2,
+      "h": 460,
+      "z": 1,
+      "shape": "rect",
+      "fill": "--border"
+    },
+    {
+      "id": "s4-footer",
+      "type": "text",
+      "role": "caption",
+      "x": 140,
+      "y": 1000,
+      "w": 1100,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Hélia Assurances · Formation cybersécurité, module 2"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s4-page",
+      "type": "text",
+      "role": "caption",
+      "x": 1660,
+      "y": 1000,
+      "w": 120,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "04"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "right",
+        "lineHeight": 1.4
+      }
+    }
+  ]
+}

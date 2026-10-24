@@ -1,10 +1,12 @@
 """Build slides kits into data/templates/slides-<id>/.
 
-usage: python build_kits.py <repo root> <converted images root> [content module] [kit ids, comma separated]
+usage: python build_kits.py <repo root> <converted images root> [content module] [kit id ...]
 
-The content module defaults to kits_content (the six reference kits). A content
-module may also export LAYOUTS (layout builders), layout_notes(theme),
-style_lines(theme) and preview_html(...) to override the kitlib defaults.
+The content module defaults to kits_content (the six reference kits); wave 2
+modules (kits_content_f1, kits_content_f2...) can be passed instead, optionally
+with kit ids to rebuild only some kits. A content module may also export LAYOUTS
+(layout builders), layout_notes(theme), style_lines(theme) and preview_html(...)
+to override the kitlib defaults.
 """
 from __future__ import annotations
 
@@ -20,11 +22,11 @@ from pathlib import Path
 from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).parent))
-import kitlib  # noqa: E402
+import kitlib
 
 CONTENT = importlib.import_module(sys.argv[3] if len(sys.argv) > 3 else "kits_content")
 KITS = CONTENT.KITS
-ONLY = set(sys.argv[4].split(",")) if len(sys.argv) > 4 and sys.argv[4] else None
+ONLY = set(sys.argv[4:])
 LAYOUT_BUILDERS = getattr(CONTENT, "LAYOUTS", kitlib.LAYOUTS)
 
 REPO = Path(sys.argv[1])
@@ -124,6 +126,8 @@ def design_md(kit, theme, layouts_map):
     for key, alt in kit["images"].items():
         cr = CREDITS[kit["id"]][key]
         lines.append(f"- `public/images/{key}.webp`: {alt}, by {cr['author']} ({cr['url']})")
+    if theme.get("signature"):
+        lines += ["", "## Signature"] + [f"- {line}" for line in theme["signature"]]
     lines += [
         "",
         "## Tone",
@@ -150,7 +154,7 @@ def preview_html(kit, theme, hero_path, slide1):
     title = next(e for e in slide1["elements"] if e["id"].endswith("-title"))["content"][0]["text"]
     label = next(e for e in slide1["elements"] if e["id"].endswith("-label"))["content"][0]["text"]
     sub = next(e for e in slide1["elements"] if e["id"].endswith("-subtitle"))["content"][0]["text"]
-    serif = theme["fonts"]["display"] in ("Fraunces", "Playfair Display", "Instrument Serif")
+    serif = theme.get("serif", theme["fonts"]["display"] in ("Fraunces", "Playfair Display", "Instrument Serif"))
     display_stack = 'Georgia, "Times New Roman", serif' if serif else 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif'
     if theme["hero"] == "full":
         hero_css = (f".hero {{ position: absolute; inset: 0; background: url(data:image/webp;base64,{data}) center/cover; }}\n"
@@ -219,6 +223,9 @@ def build(kit):
         sid = f"s{i}"
         layout = content["layout"]
         bg, els = LAYOUT_BUILDERS[layout](theme, content, sid, i)
+        if kit.get("post"):
+            # Optional per-kit restyling hook (wave 2 kits): header, patterns, image treatments.
+            bg, els = kit["post"](theme, content, sid, i, layout, bg, els)
         for name in walk_icons(els):
             assert name in LUCIDE_KEBAB, f"{kit['id']}: unknown lucide icon {name}"
         slide = {"id": sid, "background": bg, "elements": els}
@@ -263,7 +270,7 @@ def build(kit):
 
 
 for kit in KITS:
-    if ONLY is None or kit["id"] in ONLY:
+    if not ONLY or kit["id"] in ONLY:
         build(kit)
 for w in kitlib.FIT_WARNINGS:
     print("FIT", w)

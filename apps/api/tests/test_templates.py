@@ -32,6 +32,22 @@ EXPECTED_SLIDES_IDS = {
     "slides-strategic-plan",
     "slides-thesis-defense",
     "slides-workshop",
+    # wave 2, agent F2
+    "slides-science-conference",
+    "slides-internal-training",
+    "slides-architecture",
+    "slides-sprint-review",
+    "slides-dev-keynote",
+    "slides-dev-onboarding",
+    "slides-post-mortem",
+    "slides-visual-resume",
+    "slides-wedding-event",
+    "slides-travel",
+    "slides-moodboard",
+    "slides-personal-review",
+    "slides-minimal-light",
+    "slides-editorial",
+    "slides-monochrome",
 }
 
 EXPECTED_IDS = EXPECTED_SLIDES_IDS | {

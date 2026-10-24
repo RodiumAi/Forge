@@ -135,6 +135,8 @@ class ProjectAssetOut(BaseModel):
 class VisualEditRequest(BaseModel):
     old_text: str = Field(min_length=1, max_length=4000)
     new_text: str = Field(default="", max_length=4000)
+    # data-forge-id of the edited element (`<file>:<line>:<col>`): pins the edit.
+    forge_id: str | None = Field(default=None, max_length=320)
 
 
 class VisualEditResponse(BaseModel):
@@ -149,6 +151,8 @@ class VisualImageRequest(BaseModel):
     # Stored-upload id: the API copies the bytes into the project's public/
     # and writes a relative /images/... src instead of an object-store URL.
     object_id: UUID | None = None
+    # data-forge-id of the selected <img>: pins the replacement to it.
+    forge_id: str | None = Field(default=None, max_length=320)
 
 
 class VisualImageResponse(BaseModel):
@@ -552,7 +556,7 @@ def visual_edit_text(
     # checkpoint they were the only irreversible mutation in the product.
     history.snapshot(str(project_id), "before visual text edit")
     try:
-        result = apply_visual_text_edit(str(project_id), body.old_text, body.new_text)
+        result = apply_visual_text_edit(str(project_id), body.old_text, body.new_text, forge_id=body.forge_id)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=t("visual_edit_invalid", locale)) from exc
     except FileNotFoundError as exc:
@@ -604,6 +608,7 @@ def visual_edit_image(
             str(project_id),
             body.old_src,
             new_path,
+            forge_id=body.forge_id,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)[:200]) from exc

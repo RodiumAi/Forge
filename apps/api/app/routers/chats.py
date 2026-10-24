@@ -20,11 +20,16 @@ from app.schemas import (
     MessageOut,
     SendMessageRequest,
 )
-from app.services.apply_writes import apply_validated_writes_async, brand_change_requested
+from app.services.apply_writes import (
+    apply_validated_writes_async,
+    brand_change_requested,
+    split_deletes_in_scope,
+)
 from app.services.attachments import extract_image_urls
 from app.services.capabilities import require_rodi_for_paid_capability
 from app.services.deck_ai import chat_entry as deck_chat
-from app.services.filesystem import delete_file
+from app.services.edit_target import ResolvedTarget, resolve_target, target_instruction
+from app.services.filesystem import delete_file, list_files
 from app.services.llm import (
     RodiumError,
     error_code_for,
@@ -293,6 +298,39 @@ def _should_single_pass(task_class: str, user_content: str, mode: str) -> bool:
     return bool(task_class == "code.edit.medium" and len(clean) < 180)
 
 
+def _resolve_site_target(project_id: str, body) -> ResolvedTarget | None:
+    """Preview target of a React project message (route, selected element)."""
+    target = getattr(body, "target", None)
+    if target is None:
+        return None
+    try:
+        return resolve_target(target, list_files(project_id))
+    except Exception:
+        logger.warning("could not resolve message target", exc_info=True)
+        return None
+
+
+def _target_event(resolved: ResolvedTarget | None) -> dict | None:
+    """SSE frame telling the builder how the target was understood."""
+    if resolved is None:
+        return None
+    return {
+        "type": "target",
+        "route": resolved.route,
+        "page_file": resolved.page_file,
+        "forge_id": resolved.element.forge_id if resolved.element else None,
+        "file": resolved.element.path if resolved.element else resolved.file_path,
+        "restrict": resolved.scoped,
+        "scope": list(resolved.allowed_paths) if resolved.scoped else [],
+    }
+
+
+def _forces_single_pass(resolved: ResolvedTarget | None, mode: str) -> bool:
+    """A restricted selection edit is one small direct pass: no clarify, no plan
+    (the plan worker cannot enforce the write scope)."""
+    return bool(resolved is not None and resolved.scoped and mode == "agent")
+
+
 def _plan_requires_confirm(mode: str, task_class: str, plan: list) -> bool:
     """Big builds pause after planning so the user can pick run-all vs
     step-by-step; small agent-mode edits (1-3 task plans) run immediately."""
@@ -555,11 +593,16 @@ async def _iter_single_pass(
     user_id: UUID | None = None,
     surgical_edit: bool = False,
     carry_references: bool = True,
+    target: ResolvedTarget | None = None,
 ):
     """Yield SSE for a direct code edit (no plan panel).
 
     ``carry_references``: a follow-up about a design reproduced from a
     screenshot is answered WITH that screenshot (off for text-only lite models).
+
+    ``target``: preview selection / route. Its files lead the context, the
+    model gets the element's location and source, and when it is scoped every
+    write or delete outside ``target.allowed_paths`` is refused (TARGET_SCOPE).
     """
     steps: list[dict] = []
     thinking_parts: list[str] = []
@@ -576,6 +619,13 @@ async def _iter_single_pass(
             steps.append({"id": step_id, "label": label, "status": st})
         return _sse({"type": "step", "id": step_id, "label": label, "status": st})
 
+    target_focus = list(target.focus_paths) if target is not None else None
+    target_hint = target_instruction(target)
+    allowed_paths = list(target.allowed_paths) if target is not None and target.scoped else None
+    target_frame = _target_event(target)
+    if target_frame:
+        yield _sse(target_frame)
+
     yield push_step("select_files", t("step_select_files", locale), "running")
     history = _history(db, chat_id_pk)
     llm_messages = await build_llm_messages(
@@ -588,7 +638,9 @@ async def _iter_single_pass(
         auth=auth,
         model=model,
         surgical_edit=surgical_edit,
+        focus_paths=target_focus,
         carry_references=carry_references,
+        target_hint=target_hint,
     )
     # End the read transaction: the LLM stream below can run for minutes and
     # must not pin a pooled DB connection the whole time.
@@ -694,7 +746,9 @@ async def _iter_single_pass(
             auth=auth,
             model=model,
             surgical_edit=surgical_edit,
+            focus_paths=target_focus,
             carry_references=carry_references,
+            target_hint=target_hint,
         )
         db.commit()
         empty_retry_full: list[str] = []
@@ -756,7 +810,9 @@ async def _iter_single_pass(
             auth=auth,
             model=model,
             surgical_edit=surgical_edit,
+            focus_paths=target_focus,
             carry_references=carry_references,
+            target_hint=target_hint,
         )
         db.commit()
         retry_full: list[str] = []
@@ -793,8 +849,14 @@ async def _iter_single_pass(
 
     allow_brand = brand_change_requested(user_content)
     written, violations = await apply_validated_writes_async(
-        project_id_str, writes, snapshot_label="before edit", allow_brand_writes=allow_brand
+        project_id_str,
+        writes,
+        snapshot_label="before edit",
+        allow_brand_writes=allow_brand,
+        allowed_paths=allowed_paths,
     )
+    deletes, scope_refused = split_deletes_in_scope(deletes, allowed_paths)
+    violations = [*violations, *scope_refused]
     applied.extend(written)
     for item in written:
         yield _sse({"type": "file_write", "path": item["path"]})
@@ -836,6 +898,7 @@ async def _iter_single_pass(
             surgical_edit=surgical_edit,
             focus_paths=[f.path for f in failed_edits],
             carry_references=carry_references,
+            target_hint=target_hint,
         )
         db.commit()
         fix_buf: list[str] = []
@@ -859,7 +922,11 @@ async def _iter_single_pass(
                     yield _sse({"type": "token", "content": chunk.content})
             fix_writes, _fix_deletes = parse_forge_tags("".join(fix_buf))
             fixed, fix_violations = await apply_validated_writes_async(
-                project_id_str, fix_writes, snapshot_label="before edit retry", allow_brand_writes=allow_brand
+                project_id_str,
+                fix_writes,
+                snapshot_label="before edit retry",
+                allow_brand_writes=allow_brand,
+                allowed_paths=allowed_paths,
             )
             applied.extend(fixed)
             for item in fixed:
@@ -1073,6 +1140,7 @@ async def send_message(
 
     prior_count = db.query(Message).filter(Message.chat_id == chat.id).count()
     force_scaffold = prior_count == 0
+    site_target = _resolve_site_target(str(project.id), body)
     route = classify_and_route(user_content, force_scaffold=force_scaffold)
     route = _route_for_request(route, db, user, getattr(body, "model", None))
     from app.services.history import bind_history_actor
@@ -1108,7 +1176,9 @@ async def send_message(
     user_msg_id = str(user_msg.id)
     chat_id_pk = chat.id
     run_pk = run.id
-    use_single_pass = _should_single_pass(route.task_class, user_content, mode)
+    use_single_pass = _should_single_pass(route.task_class, user_content, mode) or _forces_single_pass(
+        site_target, mode
+    )
     clarify = (
         False
         if use_single_pass
@@ -1351,9 +1421,11 @@ async def send_message(
                         locale=locale,  # type: ignore[arg-type]
                         route_effort=route_effort,
                         user_id=stream_user_id,
-                        surgical_edit=route_task_class
+                        surgical_edit=_forces_single_pass(site_target, mode)
+                        or route_task_class
                         in ("code.edit.small", "text.copy", "text.micro", "code.edit.medium"),
                         carry_references=route_tier != "lite",
+                        target=site_target,
                     ):
                         yield chunk
                 return
@@ -1775,6 +1847,7 @@ async def branch_messages(
         db.query(Message).filter(Message.chat_id == chat.id, Message.created_at < anchor.created_at).count()
     )
     force_scaffold = prior_count == 0
+    site_target = _resolve_site_target(str(project.id), body)
     route = classify_and_route(user_content, force_scaffold=force_scaffold)
     route = _route_for_request(route, db, user, getattr(body, "model", None))
     from app.services.history import bind_history_actor
@@ -1805,7 +1878,9 @@ async def branch_messages(
     project_id_str = str(project.id)
     chat_id_pk = chat.id
     run_pk = run.id
-    use_single_pass = _should_single_pass(route.task_class, user_content, mode)
+    use_single_pass = _should_single_pass(route.task_class, user_content, mode) or _forces_single_pass(
+        site_target, mode
+    )
     clarify = (
         False
         if use_single_pass
@@ -1945,9 +2020,10 @@ async def branch_messages(
                     locale=locale,  # type: ignore[arg-type]
                     route_effort=route_effort,
                     user_id=user.id,
-                    surgical_edit=route.task_class
-                    in ("code.edit.small", "text.copy", "text.micro", "code.edit.medium"),
+                    surgical_edit=_forces_single_pass(site_target, mode)
+                    or route.task_class in ("code.edit.small", "text.copy", "text.micro", "code.edit.medium"),
                     carry_references=route.tier != "lite",
+                    target=site_target,
                 ):
                     yield chunk
                 return

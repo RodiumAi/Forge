@@ -103,11 +103,92 @@ export function lazyImagesPlugin(api) {
   };
 }
 
+// forge-id-plugin:start (kept identical in public/runner.js, see tests/forge-id.test.mjs)
+/** HTML and SVG tags that receive a preview `data-forge-id`. Other lowercase
+ *  JSX names (react-three-fiber objects, custom renderers) are left alone:
+ *  r3f reads a dashed prop as a nested path and would throw. */
+const FORGE_ID_HOST_TAGS = new Set((
+  "a abbr address area article aside audio b bdi bdo blockquote body br button canvas caption " +
+  "cite code col colgroup data datalist dd del details dfn dialog div dl dt em embed fieldset " +
+  "figcaption figure footer form h1 h2 h3 h4 h5 h6 header hgroup hr i iframe img input ins kbd " +
+  "label legend li main map mark menu meter nav noscript object ol optgroup option output p " +
+  "picture pre progress q rp rt ruby s samp search section select slot small source span strong " +
+  "sub summary sup table tbody td template textarea tfoot th thead time tr track u ul var video " +
+  "wbr svg circle clipPath defs ellipse g line linearGradient mask path pattern polygon " +
+  "polyline radialGradient rect stop symbol text tspan use"
+).split(" "));
+const FORGE_ID_ATTR = "data-forge-id";
+
+/** Preview only: tag every host JSX element with `data-forge-id="<file>:<line>:<col>"`
+ *  (1-based line and column of the opening `<`). Files importing a
+ *  @react-three package are skipped: their lowercase tags are 3D objects. */
+function forgeIdPreviewPlugin(api, opts) {
+  const t = api.types;
+  return {
+    visitor: {
+      Program(path, state) {
+        state.forgeIdSkip = path.node.body.some(
+          (s) =>
+            t.isImportDeclaration(s) &&
+            typeof s.source.value === "string" &&
+            s.source.value.startsWith("@react-three/"),
+        );
+      },
+      JSXOpeningElement(path, state) {
+        if (state.forgeIdSkip) return;
+        const name = path.node.name;
+        if (!t.isJSXIdentifier(name) || !FORGE_ID_HOST_TAGS.has(name.name)) return;
+        const loc = path.node.loc;
+        if (!loc) return;
+        const file = String((opts && opts.file) || state.filename || "");
+        const value = file + ":" + loc.start.line + ":" + (loc.start.column + 1);
+        const attrs = path.node.attributes;
+        // An id copied into the source by hand would point at the wrong place:
+        // the fresh location always wins.
+        for (let i = attrs.length - 1; i >= 0; i--) {
+          const a = attrs[i];
+          if (t.isJSXAttribute(a) && t.isJSXIdentifier(a.name) && a.name.name === FORGE_ID_ATTR) {
+            attrs.splice(i, 1);
+          }
+        }
+        attrs.push(t.jsxAttribute(t.jsxIdentifier(FORGE_ID_ATTR), t.stringLiteral(value)));
+      },
+    },
+  };
+}
+// forge-id-plugin:end
+
+export { forgeIdPreviewPlugin, FORGE_ID_ATTR };
+
+/**
+ * Published builds only: drop any `data-forge-id` left in the source (the
+ * preview ids are an editing aid and must never ship).
+ * @param {any} api
+ */
+export function stripForgeIdsPlugin(api) {
+  const t = api.types;
+  return {
+    visitor: {
+      JSXOpeningElement(path) {
+        const attrs = path.node.attributes;
+        for (let i = attrs.length - 1; i >= 0; i--) {
+          const a = attrs[i];
+          if (t.isJSXAttribute(a) && t.isJSXIdentifier(a.name) && a.name.name === FORGE_ID_ATTR) {
+            attrs.splice(i, 1);
+          }
+        }
+      },
+    },
+  };
+}
+
 /**
  * @param {string} code
  * @param {string} path
- * @param {{ production?: boolean }} [options] production: no source maps,
- *   lazy images (publish). Preview keeps inline source maps for debugging.
+ * @param {{ production?: boolean, forgeIds?: boolean }} [options] production: no source
+ *   maps, lazy images, preview ids stripped (publish). Preview keeps inline source
+ *   maps for debugging; forgeIds tags host elements with `data-forge-id` (preview only,
+ *   ignored when production is set).
  * @returns {TransformResult}
  */
 export function transform(code, path, options = {}) {
@@ -116,7 +197,11 @@ export function transform(code, path, options = {}) {
     const out = Babel.transform(code, {
       filename: path,
       presets: PRESETS,
-      plugins: production ? [lazyImagesPlugin] : [],
+      plugins: production
+        ? [stripForgeIdsPlugin, lazyImagesPlugin]
+        : options.forgeIds
+          ? [[forgeIdPreviewPlugin, { file: path }]]
+          : [],
       // Inline maps would ship the original TSX inside every published file.
       sourceMaps: production ? false : "inline",
       compact: false,
