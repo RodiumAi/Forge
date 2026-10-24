@@ -1,0 +1,49 @@
+{
+  "kind": "slides",
+  "id": "slides-workshop",
+  "title": {
+    "fr": "Atelier",
+    "en": "Workshop"
+  },
+  "description": {
+    "fr": "Support d'atelier collaboratif et énergique, violet et ambre sur lavande : objectifs, règles du jeu, déroulé, exercices, restitution et suites.",
+    "en": "Collaborative, energetic workshop deck in violet and amber on lavender: goals, ground rules, agenda, exercises, debrief and next steps."
+  },
+  "tags": [
+    "workshop",
+    "facilitation",
+    "training",
+    "colorful"
+  ],
+  "category": "education",
+  "preview": "preview.html",
+  "bootHint": {
+    "fr": "Adapte slides-workshop : thème de l'atelier, participants, déroulé, exercices, livrables.",
+    "en": "Adapt slides-workshop: workshop topic, participants, agenda, exercises, deliverables."
+  },
+  "accent": "#6D28D9",
+  "bg": "#F4F1FF",
+  "fg": "#1F1937",
+  "muted": "#625A80",
+  "tone": "inviting, energetic, practical",
+  "fonts": {
+    "display": "Lexend",
+    "body": "Lexend",
+    "mono": "JetBrains Mono"
+  },
+  "transitionPreset": "dynamic",
+  "layouts": {
+    "title": "s1",
+    "text": "s2",
+    "two-columns": "s3",
+    "timeline": "s4",
+    "section": "s5",
+    "image-text": "s6",
+    "key-figures": "s7",
+    "chart": "s8",
+    "quote": "s9",
+    "table": "s10",
+    "team": "s11",
+    "thank-you": "s12"
+  }
+}

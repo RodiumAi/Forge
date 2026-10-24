@@ -1,0 +1,214 @@
+{
+  "id": "s4",
+  "background": {
+    "type": "color",
+    "token": "--bg"
+  },
+  "elements": [
+    {
+      "id": "s4-image",
+      "type": "image",
+      "x": 100,
+      "y": 160,
+      "w": 760,
+      "h": 760,
+      "z": 1,
+      "src": "public/images/map.webp",
+      "alt": "Carte du monde la nuit",
+      "fit": "cover",
+      "matchKey": "hero-image",
+      "credit": {
+        "source": "pixabay",
+        "author": "WikiImages",
+        "url": "https://pixabay.com/photos/earth-map-atlas-cartology-world-11048/"
+      },
+      "radius": 380
+    },
+    {
+      "id": "s4-bar",
+      "type": "shape",
+      "x": 1000,
+      "y": 217,
+      "w": 20,
+      "h": 20,
+      "z": 2,
+      "shape": "ellipse",
+      "fill": "--accent",
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s4-kicker",
+      "type": "text",
+      "role": "label",
+      "x": 1036,
+      "y": 206,
+      "w": 744,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Où sont-ils ?"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 600,
+        "color": "--accent",
+        "align": "left",
+        "lineHeight": 1.4,
+        "letterSpacing": 3,
+        "uppercase": true
+      }
+    },
+    {
+      "id": "s4-heading",
+      "type": "text",
+      "role": "heading",
+      "x": 1000,
+      "y": 256,
+      "w": 780,
+      "h": 210,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "La ceinture de feu"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 60,
+        "weight": 600,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.1
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "on-enter",
+        "durationMs": 500
+      }
+    },
+    {
+      "id": "s4-body",
+      "type": "text",
+      "role": "body",
+      "x": 1000,
+      "y": 490,
+      "w": 780,
+      "h": 180,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "La plupart des volcans se trouvent là où les plaques de la croûte terrestre se rencontrent ou s'écartent."
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 30,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.5
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 80,
+        "durationMs": 450
+      }
+    },
+    {
+      "id": "s4-list",
+      "type": "text",
+      "role": "body",
+      "x": 1000,
+      "y": 690,
+      "w": 780,
+      "h": 250,
+      "z": 3,
+      "content": [
+        {
+          "type": "bullet-list",
+          "items": [
+            {
+              "text": "Environ 1 500 volcans actifs"
+            },
+            {
+              "text": "452 autour de l'océan Pacifique"
+            },
+            {
+              "text": "3 volcans actifs en France d'outre-mer"
+            }
+          ]
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 28,
+        "weight": 400,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.55
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 80,
+        "durationMs": 450
+      }
+    },
+    {
+      "id": "s4-page",
+      "type": "text",
+      "role": "caption",
+      "x": 1660,
+      "y": 1000,
+      "w": 120,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "04"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "right",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s4-ring",
+      "type": "shape",
+      "x": 70,
+      "y": 130,
+      "w": 820,
+      "h": 820,
+      "z": 0,
+      "shape": "ellipse",
+      "fill": "#00000000",
+      "stroke": "--accent",
+      "strokeWidth": 3
+    },
+    {
+      "id": "s4-spot",
+      "type": "shape",
+      "x": 700,
+      "y": 760,
+      "w": 140,
+      "h": 140,
+      "z": 2,
+      "shape": "ellipse",
+      "fill": "--accent-2"
+    }
+  ]
+}

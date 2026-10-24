@@ -1,0 +1,703 @@
+{
+  "id": "s11",
+  "background": {
+    "type": "color",
+    "token": "--bg"
+  },
+  "elements": [
+    {
+      "id": "s11-bar",
+      "type": "shape",
+      "x": 140,
+      "y": 103,
+      "w": 96,
+      "h": 4,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 0,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s11-kicker",
+      "type": "text",
+      "role": "label",
+      "x": 140,
+      "y": 126,
+      "w": 1200,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Jury"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 600,
+        "color": "--accent",
+        "align": "left",
+        "lineHeight": 1.4,
+        "letterSpacing": 3,
+        "uppercase": true
+      }
+    },
+    {
+      "id": "s11-heading",
+      "type": "text",
+      "role": "heading",
+      "x": 140,
+      "y": 176,
+      "w": 1640,
+      "h": 140,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Composition du jury"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 64,
+        "weight": 600,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.1
+      }
+    },
+    {
+      "id": "s11-avatar1",
+      "type": "shape",
+      "x": 230,
+      "y": 370,
+      "w": 200,
+      "h": 200,
+      "z": 1,
+      "shape": "ellipse",
+      "fill": "--surface",
+      "stroke": "--accent",
+      "strokeWidth": 4,
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 0
+      }
+    },
+    {
+      "id": "s11-initials1",
+      "type": "text",
+      "role": "label",
+      "x": 230,
+      "y": 370,
+      "w": 200,
+      "h": 200,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "EA"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 64,
+        "weight": 600,
+        "color": "--accent",
+        "align": "center",
+        "lineHeight": 1.0,
+        "valign": "middle"
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 0
+      }
+    },
+    {
+      "id": "s11-name1",
+      "type": "text",
+      "role": "heading",
+      "x": 140,
+      "y": 600,
+      "w": 380,
+      "h": 50,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Euloge Agbossou"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 32,
+        "weight": 700,
+        "color": "--fg",
+        "align": "center",
+        "lineHeight": 1.3
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 0
+      }
+    },
+    {
+      "id": "s11-role1",
+      "type": "text",
+      "role": "caption",
+      "x": 140,
+      "y": 656,
+      "w": 380,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Directeur"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 600,
+        "color": "--accent",
+        "align": "center",
+        "lineHeight": 1.4
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 0
+      }
+    },
+    {
+      "id": "s11-bio1",
+      "type": "text",
+      "role": "caption",
+      "x": 150,
+      "y": 710,
+      "w": 360,
+      "h": 110,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Professeur, Abomey-Calavi"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 22,
+        "weight": 400,
+        "color": "--muted",
+        "align": "center",
+        "lineHeight": 1.45
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 0
+      }
+    },
+    {
+      "id": "s11-avatar2",
+      "type": "shape",
+      "x": 650,
+      "y": 370,
+      "w": 200,
+      "h": 200,
+      "z": 1,
+      "shape": "ellipse",
+      "fill": "--surface",
+      "stroke": "--accent",
+      "strokeWidth": 4,
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 1
+      }
+    },
+    {
+      "id": "s11-initials2",
+      "type": "text",
+      "role": "label",
+      "x": 650,
+      "y": 370,
+      "w": 200,
+      "h": 200,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "AR"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 64,
+        "weight": 600,
+        "color": "--accent",
+        "align": "center",
+        "lineHeight": 1.0,
+        "valign": "middle"
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 1
+      }
+    },
+    {
+      "id": "s11-name2",
+      "type": "text",
+      "role": "heading",
+      "x": 560,
+      "y": 600,
+      "w": 380,
+      "h": 50,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Anne Rivière"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 32,
+        "weight": 700,
+        "color": "--fg",
+        "align": "center",
+        "lineHeight": 1.3
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 1
+      }
+    },
+    {
+      "id": "s11-role2",
+      "type": "text",
+      "role": "caption",
+      "x": 560,
+      "y": 656,
+      "w": 380,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Rapporteure"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 600,
+        "color": "--accent",
+        "align": "center",
+        "lineHeight": 1.4
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 1
+      }
+    },
+    {
+      "id": "s11-bio2",
+      "type": "text",
+      "role": "caption",
+      "x": 570,
+      "y": 710,
+      "w": 360,
+      "h": 110,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Directrice de recherche, Montpellier"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 22,
+        "weight": 400,
+        "color": "--muted",
+        "align": "center",
+        "lineHeight": 1.45
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 1
+      }
+    },
+    {
+      "id": "s11-avatar3",
+      "type": "shape",
+      "x": 1070,
+      "y": 370,
+      "w": 200,
+      "h": 200,
+      "z": 1,
+      "shape": "ellipse",
+      "fill": "--surface",
+      "stroke": "--accent",
+      "strokeWidth": 4,
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 2
+      }
+    },
+    {
+      "id": "s11-initials3",
+      "type": "text",
+      "role": "label",
+      "x": 1070,
+      "y": 370,
+      "w": 200,
+      "h": 200,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "MD"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 64,
+        "weight": 600,
+        "color": "--accent",
+        "align": "center",
+        "lineHeight": 1.0,
+        "valign": "middle"
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 2
+      }
+    },
+    {
+      "id": "s11-name3",
+      "type": "text",
+      "role": "heading",
+      "x": 980,
+      "y": 600,
+      "w": 380,
+      "h": 50,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Moussa Diop"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 32,
+        "weight": 700,
+        "color": "--fg",
+        "align": "center",
+        "lineHeight": 1.3
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 2
+      }
+    },
+    {
+      "id": "s11-role3",
+      "type": "text",
+      "role": "caption",
+      "x": 980,
+      "y": 656,
+      "w": 380,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Rapporteur"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 600,
+        "color": "--accent",
+        "align": "center",
+        "lineHeight": 1.4
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 2
+      }
+    },
+    {
+      "id": "s11-bio3",
+      "type": "text",
+      "role": "caption",
+      "x": 990,
+      "y": 710,
+      "w": 360,
+      "h": 110,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Professeur, Dakar"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 22,
+        "weight": 400,
+        "color": "--muted",
+        "align": "center",
+        "lineHeight": 1.45
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 2
+      }
+    },
+    {
+      "id": "s11-avatar4",
+      "type": "shape",
+      "x": 1490,
+      "y": 370,
+      "w": 200,
+      "h": 200,
+      "z": 1,
+      "shape": "ellipse",
+      "fill": "--surface",
+      "stroke": "--accent",
+      "strokeWidth": 4,
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 3
+      }
+    },
+    {
+      "id": "s11-initials4",
+      "type": "text",
+      "role": "label",
+      "x": 1490,
+      "y": 370,
+      "w": 200,
+      "h": 200,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "LB"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 64,
+        "weight": 600,
+        "color": "--accent",
+        "align": "center",
+        "lineHeight": 1.0,
+        "valign": "middle"
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 3
+      }
+    },
+    {
+      "id": "s11-name4",
+      "type": "text",
+      "role": "heading",
+      "x": 1400,
+      "y": 600,
+      "w": 380,
+      "h": 50,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Laura Bianchi"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 32,
+        "weight": 700,
+        "color": "--fg",
+        "align": "center",
+        "lineHeight": 1.3
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 3
+      }
+    },
+    {
+      "id": "s11-role4",
+      "type": "text",
+      "role": "caption",
+      "x": 1400,
+      "y": 656,
+      "w": 380,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Examinatrice"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 600,
+        "color": "--accent",
+        "align": "center",
+        "lineHeight": 1.4
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 3
+      }
+    },
+    {
+      "id": "s11-bio4",
+      "type": "text",
+      "role": "caption",
+      "x": 1410,
+      "y": 710,
+      "w": 360,
+      "h": 110,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Maîtresse de conférences, Avignon"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 22,
+        "weight": 400,
+        "color": "--muted",
+        "align": "center",
+        "lineHeight": 1.45
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 3
+      }
+    },
+    {
+      "id": "s11-footer",
+      "type": "text",
+      "role": "caption",
+      "x": 140,
+      "y": 1000,
+      "w": 1100,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "R. Ahouandjinou · Soutenance de thèse · Université d'Abomey-Calavi"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s11-page",
+      "type": "text",
+      "role": "caption",
+      "x": 1660,
+      "y": 1000,
+      "w": 120,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "11"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "right",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s11-rule",
+      "type": "shape",
+      "x": 140,
+      "y": 104,
+      "w": 1640,
+      "h": 2,
+      "z": 1,
+      "shape": "rect",
+      "fill": "--border"
+    },
+    {
+      "id": "s11-footrule",
+      "type": "shape",
+      "x": 140,
+      "y": 978,
+      "w": 1640,
+      "h": 2,
+      "z": 1,
+      "shape": "rect",
+      "fill": "--border"
+    }
+  ]
+}

@@ -1,0 +1,446 @@
+{
+  "id": "s4",
+  "background": {
+    "type": "color",
+    "token": "--bg"
+  },
+  "elements": [
+    {
+      "id": "s4-grid1",
+      "type": "shape",
+      "x": 213,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.6
+    },
+    {
+      "id": "s4-grid2",
+      "type": "shape",
+      "x": 427,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.6
+    },
+    {
+      "id": "s4-grid3",
+      "type": "shape",
+      "x": 640,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.6
+    },
+    {
+      "id": "s4-grid4",
+      "type": "shape",
+      "x": 853,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.6
+    },
+    {
+      "id": "s4-grid5",
+      "type": "shape",
+      "x": 1067,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.6
+    },
+    {
+      "id": "s4-grid6",
+      "type": "shape",
+      "x": 1280,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.6
+    },
+    {
+      "id": "s4-grid7",
+      "type": "shape",
+      "x": 1493,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.6
+    },
+    {
+      "id": "s4-grid8",
+      "type": "shape",
+      "x": 1707,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.6
+    },
+    {
+      "id": "s4-bar",
+      "type": "shape",
+      "x": 140,
+      "y": 103,
+      "w": 96,
+      "h": 4,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 0,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s4-kicker",
+      "type": "text",
+      "role": "label",
+      "x": 140,
+      "y": 126,
+      "w": 1200,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Thèmes"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 600,
+        "color": "--accent",
+        "align": "left",
+        "lineHeight": 1.4,
+        "letterSpacing": 3,
+        "uppercase": true
+      }
+    },
+    {
+      "id": "s4-heading",
+      "type": "text",
+      "role": "heading",
+      "x": 140,
+      "y": 176,
+      "w": 1640,
+      "h": 140,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Deux thèmes pour le premier semestre"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 64,
+        "weight": 700,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.1
+      }
+    },
+    {
+      "id": "s4-card1",
+      "type": "shape",
+      "x": 140,
+      "y": 360,
+      "w": 800,
+      "h": 560,
+      "z": 1,
+      "shape": "rect",
+      "fill": "--surface",
+      "stroke": "--border",
+      "strokeWidth": 1,
+      "radius": 12,
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 0
+      }
+    },
+    {
+      "id": "s4-badge1",
+      "type": "shape",
+      "x": 196,
+      "y": 410,
+      "w": 104,
+      "h": 104,
+      "z": 2,
+      "shape": "ellipse",
+      "fill": "--accent",
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 0
+      }
+    },
+    {
+      "id": "s4-icon1",
+      "type": "icon",
+      "x": 222,
+      "y": 436,
+      "w": 52,
+      "h": 52,
+      "z": 3,
+      "icon": "plug-zap",
+      "color": "--accent-contrast",
+      "strokeWidth": 1.75,
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 0
+      }
+    },
+    {
+      "id": "s4-col1-title",
+      "type": "text",
+      "role": "heading",
+      "x": 196,
+      "y": 560,
+      "w": 690,
+      "h": 64,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Recharge intelligente"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 40,
+        "weight": 700,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.2
+      }
+    },
+    {
+      "id": "s4-col1-body",
+      "type": "text",
+      "role": "body",
+      "x": 196,
+      "y": 636,
+      "w": 690,
+      "h": 250,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Planifier la recharge des véhicules électriques selon les tarifs et les tournées du lendemain."
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 30,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.5
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 1
+      }
+    },
+    {
+      "id": "s4-card2",
+      "type": "shape",
+      "x": 980,
+      "y": 360,
+      "w": 800,
+      "h": 560,
+      "z": 1,
+      "shape": "rect",
+      "fill": "--surface",
+      "stroke": "--border",
+      "strokeWidth": 1,
+      "radius": 12,
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 2
+      }
+    },
+    {
+      "id": "s4-badge2",
+      "type": "shape",
+      "x": 1036,
+      "y": 410,
+      "w": 104,
+      "h": 104,
+      "z": 2,
+      "shape": "ellipse",
+      "fill": "--accent",
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 2
+      }
+    },
+    {
+      "id": "s4-icon2",
+      "type": "icon",
+      "x": 1062,
+      "y": 436,
+      "w": 52,
+      "h": 52,
+      "z": 3,
+      "icon": "smartphone",
+      "color": "--accent-contrast",
+      "strokeWidth": 1.75,
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 2
+      }
+    },
+    {
+      "id": "s4-col2-title",
+      "type": "text",
+      "role": "heading",
+      "x": 1036,
+      "y": 560,
+      "w": 690,
+      "h": 64,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Appli conducteur"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 40,
+        "weight": 700,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.2
+      }
+    },
+    {
+      "id": "s4-col2-body",
+      "type": "text",
+      "role": "body",
+      "x": 1036,
+      "y": 636,
+      "w": 690,
+      "h": 250,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Déclarer un sinistre, un plein ou une panne en trois écrans, même hors connexion."
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 30,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.5
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 3
+      }
+    },
+    {
+      "id": "s4-footer",
+      "type": "text",
+      "role": "caption",
+      "x": 140,
+      "y": 1000,
+      "w": 1100,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Atlas · Roadmap produit 2027"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s4-page",
+      "type": "text",
+      "role": "caption",
+      "x": 1660,
+      "y": 1000,
+      "w": 120,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "04"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "right",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s4-rule",
+      "type": "shape",
+      "x": 140,
+      "y": 104,
+      "w": 1640,
+      "h": 2,
+      "z": 1,
+      "shape": "rect",
+      "fill": "--border"
+    }
+  ]
+}

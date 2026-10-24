@@ -19,14 +19,19 @@ EXPECTED_SLIDES_IDS = {
     "slides-course-lesson",
     "slides-fundraising",
     "slides-market-research",
+    "slides-media-kit",
     "slides-minimal-dark",
     "slides-pitch-startup",
     "slides-portfolio",
     "slides-product-demo",
     "slides-product-launch",
+    "slides-product-roadmap",
     "slides-quarterly-review",
     "slides-sales-proposal",
+    "slides-school-presentation",
     "slides-strategic-plan",
+    "slides-thesis-defense",
+    "slides-workshop",
 }
 
 EXPECTED_IDS = EXPECTED_SLIDES_IDS | {

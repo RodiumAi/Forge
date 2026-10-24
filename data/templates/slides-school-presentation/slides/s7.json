@@ -1,0 +1,249 @@
+{
+  "id": "s7",
+  "background": {
+    "type": "color",
+    "token": "--bg"
+  },
+  "elements": [
+    {
+      "id": "s7-blob1",
+      "type": "shape",
+      "x": 1620,
+      "y": -170,
+      "w": 470,
+      "h": 470,
+      "z": 0,
+      "shape": "ellipse",
+      "fill": "--accent-2",
+      "opacity": 0.22
+    },
+    {
+      "id": "s7-blob2",
+      "type": "shape",
+      "x": 1500,
+      "y": 140,
+      "w": 150,
+      "h": 150,
+      "z": 0,
+      "shape": "ellipse",
+      "fill": "--accent",
+      "opacity": 0.18
+    },
+    {
+      "id": "s7-bar",
+      "type": "shape",
+      "x": 140,
+      "y": 137,
+      "w": 20,
+      "h": 20,
+      "z": 2,
+      "shape": "ellipse",
+      "fill": "--accent",
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s7-kicker",
+      "type": "text",
+      "role": "label",
+      "x": 176,
+      "y": 126,
+      "w": 1164,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Volcans célèbres"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 600,
+        "color": "--accent",
+        "align": "left",
+        "lineHeight": 1.4,
+        "letterSpacing": 3,
+        "uppercase": true
+      }
+    },
+    {
+      "id": "s7-heading",
+      "type": "text",
+      "role": "heading",
+      "x": 140,
+      "y": 176,
+      "w": 1640,
+      "h": 140,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Quatre volcans à connaître"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 64,
+        "weight": 600,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.1
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "on-enter",
+        "durationMs": 500
+      }
+    },
+    {
+      "id": "s7-table",
+      "type": "table",
+      "x": 140,
+      "y": 360,
+      "w": 1640,
+      "h": 530,
+      "z": 2,
+      "rows": [
+        [
+          {
+            "text": "Volcan"
+          },
+          {
+            "text": "Pays"
+          },
+          {
+            "text": "Hauteur"
+          },
+          {
+            "text": "Dernière éruption"
+          }
+        ],
+        [
+          {
+            "text": "Etna"
+          },
+          {
+            "text": "Italie"
+          },
+          {
+            "text": "3 357 m"
+          },
+          {
+            "text": "2025"
+          }
+        ],
+        [
+          {
+            "text": "Piton de la Fournaise"
+          },
+          {
+            "text": "La Réunion (France)"
+          },
+          {
+            "text": "2 632 m"
+          },
+          {
+            "text": "2024"
+          }
+        ],
+        [
+          {
+            "text": "Kilauea"
+          },
+          {
+            "text": "États-Unis"
+          },
+          {
+            "text": "1 247 m"
+          },
+          {
+            "text": "2025"
+          }
+        ],
+        [
+          {
+            "text": "Fuji"
+          },
+          {
+            "text": "Japon"
+          },
+          {
+            "text": "3 776 m"
+          },
+          {
+            "text": "1707"
+          }
+        ]
+      ],
+      "headerRow": true,
+      "style": {
+        "size": 28,
+        "color": "--fg",
+        "headerFill": "--surface",
+        "border": "--border"
+      },
+      "columnWidths": [
+        1.5,
+        1.5,
+        0.9,
+        1.2
+      ],
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 80,
+        "durationMs": 450
+      }
+    },
+    {
+      "id": "s7-footer",
+      "type": "text",
+      "role": "caption",
+      "x": 140,
+      "y": 1000,
+      "w": 1100,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Les volcans · Exposé de 5e B · Collège Jean-Moulin"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s7-page",
+      "type": "text",
+      "role": "caption",
+      "x": 1660,
+      "y": 1000,
+      "w": 120,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "07"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "right",
+        "lineHeight": 1.4
+      }
+    }
+  ]
+}
