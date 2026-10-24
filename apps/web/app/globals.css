@@ -398,9 +398,9 @@ select option {
 }
 
 /* Compact primary buttons inside the authenticated app shell only */
-.home .btn,
-.home .home-connector-action,
-.home .home-settings-save,
+:is(.home, .f-app) .btn,
+:is(.home, .f-app) .home-connector-action,
+:is(.home, .f-app) .home-settings-save,
 .builder .btn,
 .builder-publish-btn,
 .publish-run,
@@ -410,7 +410,7 @@ select option {
 }
 
 /* Dashboard prompt send — same chrome as landing `.lp-send`, themed for home */
-.home .lp-send {
+:is(.home, .f-app) .lp-send {
   margin-left: auto;
   min-width: 2.45rem;
   height: 2.45rem;
@@ -431,24 +431,24 @@ select option {
   transition: transform 0.15s ease, filter 0.15s ease, opacity 0.15s ease;
 }
 
-.home .lp-send:hover:not(:disabled) {
+:is(.home, .f-app) .lp-send:hover:not(:disabled) {
   filter: brightness(1.08);
   transform: translateY(-1px);
 }
 
-.home .lp-send:disabled {
+:is(.home, .f-app) .lp-send:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
 
-.home .landing-plus {
+:is(.home, .f-app) .landing-plus {
   width: 2.2rem;
   height: 2.2rem;
   background: color-mix(in srgb, #f2620a 16%, var(--home-input-bg));
   color: #c2410c;
 }
 
-[data-theme="dark"] .home .landing-plus {
+[data-theme="dark"] :is(.home, .f-app) .landing-plus {
   color: #fdba74;
 }
 
@@ -463,12 +463,12 @@ select option {
   background: var(--home-hover, rgba(0, 0, 0, 0.04));
 }
 
-.home .integ-cta.btn-ghost {
+:is(.home, .f-app) .integ-cta.btn-ghost {
   border-color: var(--home-border-strong, var(--border));
   color: var(--home-text, var(--fg));
 }
 
-.home .integ-cta.btn-ghost:hover:not(:disabled) {
+:is(.home, .f-app) .integ-cta.btn-ghost:hover:not(:disabled) {
   background: var(--home-chip, rgba(0, 0, 0, 0.04));
 }
 
@@ -9858,7 +9858,7 @@ body:has(.home) [data-next-mark] {
   cursor: default;
 }
 
-.home .landing-prompt {
+:is(.home, .f-app) .landing-prompt {
   margin-top: 0;
   padding: 0.75rem 0.9rem 0.7rem;
   border-radius: var(--radius-surface);
@@ -9868,23 +9868,23 @@ body:has(.home) [data-next-mark] {
   backdrop-filter: none;
 }
 
-.home .landing-prompt:focus-within {
+:is(.home, .f-app) .landing-prompt:focus-within {
   border-color: color-mix(in srgb, #f2620a 55%, var(--home-border-strong));
   box-shadow: 5px 6px 0 0 #c4a574, 0 0 0 3px rgba(242, 98, 10, 0.18);
 }
 
-.home .landing-prompt textarea {
+:is(.home, .f-app) .landing-prompt textarea {
   min-height: 72px;
   max-height: 140px;
   font-size: 0.98rem;
   color: var(--home-text);
 }
 
-.home .landing-prompt textarea::placeholder {
+:is(.home, .f-app) .landing-prompt textarea::placeholder {
   color: var(--home-text-soft);
 }
 
-.home .landing-file-chip {
+:is(.home, .f-app) .landing-file-chip {
   color: var(--home-text);
 }
 

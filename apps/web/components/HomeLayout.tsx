@@ -1,246 +1,70 @@
 "use client";
 
-import { BrandLogo } from "@/components/BrandLogo";
-import { ProfileMenu } from "@/components/ProfileMenu";
-import { nextPlanName, RodiumWalletBadge } from "@/components/RodiumWalletBadge";
-import { ThemeSwitch } from "@/components/ThemeSwitch";
-import { Icon } from "@/components/ui/icon";
-import { rodiumUpgradeUrl } from "@/lib/constants/rodium-links";
-import { useForgeStatus } from "@/lib/forge-status";
-import { LocaleSwitch, useI18n } from "@/lib/i18n/I18nProvider";
-import {
-  Blocks,
-  ChevronLeft,
-  ChevronRight,
-  CircleHelp,
-  Home,
-  LayoutTemplate,
-  Settings,
-  Users,
-  Zap,
-} from "lucide-react";
-import Link from "next/link";
-import { useEffect, useState } from "react";
+/**
+ * Compatibility layer: the pages written for the old home shell keep their
+ * imports while they render inside the redesign's AppShell
+ * (components/shell/AppShell.tsx). New code imports AppShell directly.
+ */
 
-export const SIDEBAR_KEY = "forge_home_sidebar";
+import { AppShell, SIDEBAR_KEY as SHELL_SIDEBAR_KEY } from "@/components/shell/AppShell";
+import type { AppNavId } from "@/components/shell/nav";
+import type { MessageKey } from "@/lib/i18n/dictionaries";
+import { useI18n } from "@/lib/i18n/I18nProvider";
+
+export const SIDEBAR_KEY = SHELL_SIDEBAR_KEY;
 export const BUILDER_SIDEBAR_KEY = "forge_builder_sidebar";
 
-export type HomeNavItem = "projects" | "templates" | "integrations" | "how" | "settings" | "team" | null;
+export type HomeNavItem = AppNavId | null;
+
+const TITLES: Partial<Record<AppNavId, MessageKey>> = {
+  home: "uiNavHome",
+  projects: "uiNavProjects",
+  templates: "uiNavTemplates",
+  integrations: "uiNavIntegrations",
+  team: "uiNavTeam",
+  billing: "uiNavBilling",
+  settings: "uiNavSettings",
+  how: "landingNavHow",
+};
 
 type HomeShellProps = {
   children: React.ReactNode;
   activeNav: HomeNavItem;
   fillMain?: boolean;
+  /** false: no app chrome at all (the builder owns the viewport). */
   showTopbar?: boolean;
   storageKey?: string;
   defaultOpen?: boolean;
 };
 
-export function HomeShell({
-  children,
-  activeNav,
-  fillMain = false,
-  showTopbar = true,
-  storageKey = SIDEBAR_KEY,
-  defaultOpen = true,
-}: HomeShellProps) {
+export function HomeShell({ children, activeNav, fillMain = false, showTopbar = true, storageKey, defaultOpen = true }: HomeShellProps) {
   const { t } = useI18n();
-  const forge = useForgeStatus();
-  const planSlug = forge?.plan ?? forge?.entitlements?.plan_slug ?? "";
-  const showTeam = planSlug.startsWith("team");
-  const nextPlan = nextPlanName(planSlug);
-  const [sidebarOpen, setSidebarOpen] = useState(defaultOpen);
-
-  useEffect(() => {
-    const stored = localStorage.getItem(storageKey);
-    if (stored !== null) {
-      setSidebarOpen(stored === "1");
-      return;
-    }
-    if (defaultOpen) {
-      setSidebarOpen(window.innerWidth > 900);
-    } else {
-      setSidebarOpen(false);
-    }
-  }, [storageKey, defaultOpen]);
-
-  function setSidebar(next: boolean) {
-    setSidebarOpen(next);
-    localStorage.setItem(storageKey, next ? "1" : "0");
-  }
-
+  const titleKey = activeNav ? TITLES[activeNav] : undefined;
   return (
-    <div
-      className={`home ${sidebarOpen ? "home-sidebar-open" : "home-sidebar-collapsed"}`}
+    <AppShell
+      active={activeNav}
+      title={titleKey ? t(titleKey) : undefined}
+      chrome={showTopbar ? "app" : "bare"}
+      fill={fillMain}
+      storageKey={storageKey}
+      defaultCollapsed={!defaultOpen}
     >
-      <div className="home-glow home-glow-a" aria-hidden />
-      <div className="home-glow home-glow-b" aria-hidden />
-      <div className="home-glow home-glow-c" aria-hidden />
-      <div className="home-glow home-glow-d" aria-hidden />
-
-      <aside className="home-sidebar" aria-label={t("homeNav")}>
-        <div className="home-sidebar-head">
-          <Link
-            href="/dashboard"
-            className="home-sidebar-logo"
-            title={t("projects")}
-          >
-            {sidebarOpen ? (
-              <BrandLogo alt={t("brandAlt")} width={165} height={55} priority />
-            ) : (
-              <BrandLogo
-                alt={t("brandAlt")}
-                width={32}
-                height={32}
-                variant="mark"
-                priority
-                className="home-sidebar-mark"
-              />
-            )}
-          </Link>
-        </div>
-        <nav className="home-sidebar-nav">
-          <Link
-            href="/dashboard"
-            className={`home-sidebar-btn ${activeNav === "projects" ? "active" : ""}`}
-            title={t("projects")}
-          >
-            <span className="home-sidebar-icon" aria-hidden>
-              <Icon icon={Home} />
-            </span>
-            <span className="home-sidebar-label">{t("projects")}</span>
-          </Link>
-          <Link
-            href="/dashboard?tab=templates"
-            className={`home-sidebar-btn ${activeNav === "templates" ? "active" : ""}`}
-            title={t("navTemplates")}
-          >
-            <span className="home-sidebar-icon" aria-hidden>
-              <Icon icon={LayoutTemplate} />
-            </span>
-            <span className="home-sidebar-label">{t("navTemplates")}</span>
-          </Link>
-          <Link
-            href="/integrations"
-            className={`home-sidebar-btn ${activeNav === "integrations" ? "active" : ""}`}
-            title={t("navIntegrations")}
-          >
-            <span className="home-sidebar-icon" aria-hidden>
-              <Icon icon={Blocks} />
-            </span>
-            <span className="home-sidebar-label">{t("navIntegrations")}</span>
-          </Link>
-          <Link
-            href="/dashboard/how"
-            className={`home-sidebar-btn ${activeNav === "how" ? "active" : ""}`}
-            title={t("landingNavHow")}
-          >
-            <span className="home-sidebar-icon" aria-hidden>
-              <Icon icon={CircleHelp} />
-            </span>
-            <span className="home-sidebar-label">{t("landingNavHow")}</span>
-          </Link>
-          {showTeam ? (
-            <Link
-              href="/team"
-              className={`home-sidebar-btn ${activeNav === "team" ? "active" : ""}`}
-              title="Team"
-            >
-              <span className="home-sidebar-icon" aria-hidden>
-                <Icon icon={Users} />
-              </span>
-              <span className="home-sidebar-label">Team</span>
-            </Link>
-          ) : null}
-          <Link
-            href="/settings"
-            className={`home-sidebar-btn ${activeNav === "settings" ? "active" : ""}`}
-            title={t("settings")}
-          >
-            <span className="home-sidebar-icon" aria-hidden>
-              <Icon icon={Settings} />
-            </span>
-            <span className="home-sidebar-label">{t("settings")}</span>
-          </Link>
-        </nav>
-
-        <hr className="home-sidebar-divider" />
-        <div className="home-sidebar-wallet">
-          <RodiumWalletBadge compact collapsed={!sidebarOpen} />
-          {nextPlan && !showTeam ? (
-            <Link
-              href={rodiumUpgradeUrl()}
-              className="home-sidebar-upgrade"
-              title={t("upgradeToPlan").replace("{plan}", nextPlan)}
-            >
-              <span className="home-sidebar-upgrade-copy">
-                <strong className="home-sidebar-label">
-                  {t("upgradeToPlan").replace("{plan}", nextPlan)}
-                </strong>
-                <span className="home-sidebar-label">{t("upgradeUnlock")}</span>
-              </span>
-              <span className="home-sidebar-upgrade-bolt" aria-hidden>
-                <Icon icon={Zap} className="ui-icon-sm" />
-              </span>
-            </Link>
-          ) : null}
-          <Link
-            href="/settings?tab=generation"
-            className="home-sidebar-rodi-link"
-            title={t("useRodiBalance")}
-          >
-            <span className="home-sidebar-label">{t("useRodiBalance")}</span>
-          </Link>
-        </div>
-
-        <button
-          type="button"
-          className="home-sidebar-toggle"
-          onClick={() => setSidebar(!sidebarOpen)}
-          aria-label={sidebarOpen ? t("sidebarClose") : t("sidebarOpen")}
-          aria-expanded={sidebarOpen}
-        >
-          {sidebarOpen ? (
-            <Icon icon={ChevronLeft} />
-          ) : (
-            <Icon icon={ChevronRight} />
-          )}
-        </button>
-      </aside>
-
-      <div className={`home-main ${fillMain ? "home-main-fill" : ""}`}>
-        {showTopbar ? (
-          <header className="home-topbar">
-            <div className="home-topbar-spacer" />
-            <div className="home-topbar-actions">
-              <ThemeSwitch />
-              <LocaleSwitch />
-              <ProfileMenu />
-            </div>
-          </header>
-        ) : null}
-
-        <div className={`home-scroll ${fillMain ? "home-scroll-fill" : ""}`}>
-          {children}
-        </div>
-      </div>
-    </div>
+      {children}
+    </AppShell>
   );
 }
-
-type HomeLayoutProps = {
-  children: React.ReactNode;
-  activeNav: HomeNavItem;
-  fillMain?: boolean;
-};
 
 export function HomeLayout({
   children,
   activeNav,
   fillMain = false,
-}: HomeLayoutProps) {
+}: {
+  children: React.ReactNode;
+  activeNav: HomeNavItem;
+  fillMain?: boolean;
+}) {
   return (
-    <HomeShell activeNav={activeNav} fillMain={fillMain} showTopbar>
+    <HomeShell activeNav={activeNav} fillMain={fillMain}>
       {children}
     </HomeShell>
   );
