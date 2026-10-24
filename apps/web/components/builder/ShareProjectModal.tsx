@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Canva-style project share slideover.
+ * Project share dialog.
  *
  * Invite another Forge account by email, pick their role (editor/viewer), decide
  * who pays for their generations (owner_pays / each_pays_own) and optionally cap
@@ -13,11 +13,14 @@
  * per-cycle cap instead.
  */
 
-import { Loader2, UserPlus, X } from "lucide-react";
 import { FormEvent, useCallback, useEffect, useState } from "react";
-import { createPortal } from "react-dom";
 
-import { Icon } from "@/components/ui/icon";
+import { Avatar } from "@/components/ui/Avatar";
+import { Tag } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Dialog } from "@/components/ui/Dialog";
+import { Field, Input, Select } from "@/components/ui/Input";
+import { Glyph } from "@/components/ui/glyph";
 import { api } from "@/lib/api";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 
@@ -79,14 +82,6 @@ export function ShareProjectModal({ projectId, projectName, seatLimit = null, on
     void loadMembers();
   }, [loadMembers]);
 
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
   async function submit(e: FormEvent) {
     e.preventDefault();
     const trimmed = email.trim();
@@ -145,163 +140,138 @@ export function ShareProjectModal({ projectId, projectName, seatLimit = null, on
     }
   }
 
-  if (typeof document === "undefined") return null;
+  const accepted = (m: Collaborator) => Boolean(m.accepted_at || m.status === "accepted");
+  const capLabel = (m: Collaborator) =>
+    m.frodi_used_this_cycle != null
+      ? t("shareUsedOfCap")
+          .replace("{used}", String(m.frodi_used_this_cycle))
+          .replace(
+            "{cap}",
+            m.frodi_cap_per_cycle == null || m.frodi_cap_per_cycle === 0 ? "∞" : String(m.frodi_cap_per_cycle),
+          )
+      : m.frodi_cap_per_cycle == null || m.frodi_cap_per_cycle === 0
+        ? t("shareCapNone")
+        : t("shareCapValue").replace("{n}", String(m.frodi_cap_per_cycle));
 
-  return createPortal(
-    <div className="design-slideover-root share-slideover-root">
-      <button
-        type="button"
-        className="design-slideover-backdrop"
-        aria-label={t("close")}
-        onClick={onClose}
-      />
-      <aside
-        className="design-slideover share-slideover"
-        role="dialog"
-        aria-modal="true"
-        aria-label={t("shareTitle")}
-      >
-        <header className="history-panel-head">
-          <span className="history-panel-title">
-            <Icon icon={UserPlus} className="ui-icon-sm" />
-            {t("shareTitle")}
-          </span>
-          <button
-            type="button"
-            className="history-panel-close"
-            onClick={onClose}
-            aria-label={t("close")}
-          >
-            <Icon icon={X} className="ui-icon-sm" />
-          </button>
-        </header>
-        <p className="share-sub">{t("shareSubtitle").replace("{name}", projectName)}</p>
+  return (
+    <Dialog
+      open
+      onClose={onClose}
+      title={t("bdShareTitle").replace("{name}", projectName || t("projectFallback"))}
+      description={t("shareSubtitle").replace("{name}", projectName)}
+      closeLabel={t("close")}
+      className="f-bd-share"
+    >
+      <form className="f-bd-share-form" onSubmit={(e) => void submit(e)}>
+        <div className="f-bd-share-invite">
+          <Input
+            id="share-email"
+            type="email"
+            value={email}
+            placeholder="nom@exemple.com"
+            aria-label={t("shareEmail")}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="off"
+            required
+            data-autofocus
+          />
+          <Button type="submit" loading={busy} disabled={!email.trim()} icon="send">
+            {busy ? t("shareInviting") : t("shareInvite")}
+          </Button>
+        </div>
 
-        <form className="share-body" onSubmit={(e) => void submit(e)}>
-          <div className="options-field">
-            <label htmlFor="share-email">{t("shareEmail")}</label>
-            <input
-              id="share-email"
-              type="email"
-              value={email}
-              placeholder="teammate@example.com"
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="off"
-              required
+        <div className="f-bd-share-row">
+          <Field label={t("shareRole")}>
+            <Select id="share-role" value={role} onChange={(e) => setRole(e.target.value as Role)}>
+              <option value="editor">{t("shareRoleEditor")}</option>
+              <option value="viewer">{t("shareRoleViewer")}</option>
+            </Select>
+          </Field>
+          <Field label={t("shareBilling")}>
+            <Select
+              id="share-billing"
+              value={billingPolicy}
+              onChange={(e) => setBillingPolicy(e.target.value as BillingPolicy)}
+            >
+              <option value="owner_pays">{t("shareBillingOwner")}</option>
+              <option value="each_pays_own">{t("shareBillingEach")}</option>
+            </Select>
+          </Field>
+        </div>
+
+        {billingPolicy === "owner_pays" ? (
+          <Field label={t("shareFrodiCap")} hint={t("shareFrodiCapHelp")}>
+            <Input
+              id="share-cap"
+              type="number"
+              min={0}
+              step={1}
+              inputMode="numeric"
+              value={frodiCap}
+              placeholder={t("shareFrodiCapPlaceholder")}
+              onChange={(e) => setFrodiCap(e.target.value)}
             />
-          </div>
+          </Field>
+        ) : null}
 
-          <div className="share-row">
-            <div className="options-field">
-              <label htmlFor="share-role">{t("shareRole")}</label>
-              <select
-                id="share-role"
-                value={role}
-                onChange={(e) => setRole(e.target.value as Role)}
-              >
-                <option value="editor">{t("shareRoleEditor")}</option>
-                <option value="viewer">{t("shareRoleViewer")}</option>
-              </select>
-            </div>
+        {error ? (
+          <p className="f-bd-share-note err" role="alert">
+            {error}
+          </p>
+        ) : null}
+        {message ? (
+          <p className="f-bd-share-note ok" role="status" aria-live="polite">
+            {message}
+          </p>
+        ) : null}
+      </form>
 
-            <div className="options-field">
-              <label htmlFor="share-billing">{t("shareBilling")}</label>
-              <select
-                id="share-billing"
-                value={billingPolicy}
-                onChange={(e) => setBillingPolicy(e.target.value as BillingPolicy)}
-              >
-                <option value="owner_pays">{t("shareBillingOwner")}</option>
-                <option value="each_pays_own">{t("shareBillingEach")}</option>
-              </select>
-            </div>
-          </div>
-
-          {billingPolicy === "owner_pays" ? (
-            <div className="options-field">
-              <label htmlFor="share-cap">{t("shareFrodiCap")}</label>
-              <p className="options-help">{t("shareFrodiCapHelp")}</p>
-              <input
-                id="share-cap"
-                type="number"
-                min={0}
-                step={1}
-                inputMode="numeric"
-                value={frodiCap}
-                placeholder={t("shareFrodiCapPlaceholder")}
-                onChange={(e) => setFrodiCap(e.target.value)}
-              />
-            </div>
-          ) : null}
-
-          {error ? <p className="builder-pane-error">{error}</p> : null}
-          {message ? (
-            <p className="share-ok" role="status" aria-live="polite">
-              {message}
-            </p>
-          ) : null}
-
-          <div className="options-actions">
-            <button type="submit" className="btn" disabled={busy || !email.trim()}>
-              <Icon icon={busy ? Loader2 : UserPlus} className={`ui-icon-sm ${busy ? "agent-spin" : ""}`} />
-              {busy ? t("shareInviting") : t("shareInvite")}
-            </button>
-          </div>
-        </form>
-
-        <section className="share-members">
-          <h5>{t("shareMembers")}</h5>
-          {membersLoading ? (
-            <p className="options-help">{t("loading")}</p>
-          ) : members.length === 0 ? (
-            <p className="options-help">{t("shareMembersEmpty")}</p>
-          ) : (
-            <ul className="share-member-list">
-              {members.map((m) => (
-                <li key={m.user_id || m.email} className="share-member">
-                  <div className="share-member-id">
-                    <strong>{m.name || m.email}</strong>
-                    <span>{m.email}</span>
+      <section className="f-bd-share-members" aria-label={t("shareMembers")}>
+        <h3>{t("shareMembers")}</h3>
+        {membersLoading ? (
+          <p className="f-muted">{t("loading")}</p>
+        ) : members.length === 0 ? (
+          <p className="f-muted">{t("shareMembersEmpty")}</p>
+        ) : (
+          <ul>
+            {members.map((m, index) => {
+              const key = m.user_id || m.email;
+              return (
+                <li key={key} className="f-bd-member">
+                  <Avatar name={m.name || m.email} size="sm" tone={index === 0 ? "self" : "other"} />
+                  <div className="nm">
+                    <b>{m.name || m.email}</b>
+                    <small>
+                      {m.email} · {capLabel(m)}
+                    </small>
                   </div>
-                  <div className="share-member-meta">
-                    <span className={`share-member-status${m.accepted_at || m.status === "accepted" ? " is-accepted" : ""}`}>
-                      {m.accepted_at || m.status === "accepted"
-                        ? t("shareStatusAccepted")
-                        : t("shareStatusPending")}
-                    </span>
-                    <span className="share-member-role">
-                      {m.role === "viewer" ? t("shareRoleViewer") : t("shareRoleEditor")}
-                    </span>
-                    <button
-                      type="button"
-                      className="share-member-remove"
-                      disabled={removing === (m.user_id || m.email)}
+                  <div className="meta">
+                    <Tag tone={accepted(m) ? "ok" : "warn"}>
+                      {accepted(m) ? t("shareStatusAccepted") : t("shareStatusPending")}
+                    </Tag>
+                    <Tag>{m.role === "viewer" ? t("shareRoleViewer") : t("shareRoleEditor")}</Tag>
+                    <Button
+                      size="xs"
+                      variant="ghost"
+                      disabled={removing === key}
                       onClick={() => void removeMember(m)}
                     >
-                      {removing === (m.user_id || m.email) ? t("shareRemoving") : t("shareRemove")}
-                    </button>
-                    <span className="share-member-cap">
-                      {m.frodi_used_this_cycle != null
-                        ? t("shareUsedOfCap")
-                            .replace("{used}", String(m.frodi_used_this_cycle))
-                            .replace(
-                              "{cap}",
-                              m.frodi_cap_per_cycle == null || m.frodi_cap_per_cycle === 0
-                                ? "∞"
-                                : String(m.frodi_cap_per_cycle),
-                            )
-                        : m.frodi_cap_per_cycle == null || m.frodi_cap_per_cycle === 0
-                          ? t("shareCapNone")
-                          : t("shareCapValue").replace("{n}", String(m.frodi_cap_per_cycle))}
-                    </span>
+                      {removing === key ? t("shareRemoving") : t("shareRemove")}
+                    </Button>
                   </div>
                 </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      </aside>
-    </div>,
-    document.body,
+              );
+            })}
+          </ul>
+        )}
+      </section>
+
+      {seatLimit != null ? (
+        <p className="f-bd-share-note">
+          <Glyph name="users" size="sm" />
+          {t("shareLimit").replace("{n}", String(seatLimit))}
+        </p>
+      ) : null}
+    </Dialog>
   );
 }

@@ -12,12 +12,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
   ArrowDown,
-  ArrowLeft,
   ArrowUp,
-  Braces,
   Code2,
   Download,
-  Eye,
   FileDiff,
   FolderTree,
   Image as ImageIcon,
@@ -59,6 +56,8 @@ import { DetailsPanel, type CodelabPublisher } from "./DetailsPanel";
 import { FilesPanel } from "./FilesPanel";
 import { addDownload, addStep, insertBlock, moveStep, removeStep, snippet, totalMinutes, updateStep, type SnippetKind } from "./model";
 import { useCodelabStrings, type CodelabEditorKey } from "./strings";
+import { WorkspaceBar } from "@/components/builder/WorkspaceBar";
+import { Segmented } from "@/components/ui/Tabs";
 import "./codelab-editor.css";
 
 export type CodelabEditorProps = {
@@ -391,21 +390,28 @@ export function CodelabEditor({ projectId, projectName, chat, assetUrl, publishe
 
   return (
     <div className="cle-root" data-codelab-editor="">
-      <header className="cle-top">
-        <a className="cle-back" href={backHref}>
-          <ArrowLeft size={16} /> {t("back")}
-        </a>
-        <strong className="cle-name" title={codelab.title}>
-          {codelab.title || projectName || t("untitled")}
-        </strong>
-        <span className="cle-save" data-state={saveState} role="status">
-          {readOnly ? t("readOnly") : saveLabel[saveState]}
-        </span>
-        <span className="cle-spacer" />
-        <button type="button" className={mode === "player" ? "cle-active" : ""} onClick={() => setMode(mode === "player" ? "edit" : "player")}>
-          {mode === "player" ? <Braces size={16} /> : <Eye size={16} />} {mode === "player" ? t("backToEditor") : t("fullPreview")}
-        </button>
-      </header>
+      <WorkspaceBar
+        kind="codelab"
+        name={codelab.title || projectName || t("untitled")}
+        backHref={backHref}
+        className="cle-top"
+        saveStatus={
+          <span className="cle-save" data-state={saveState} role="status">
+            {readOnly ? t("readOnly") : saveLabel[saveState]}
+          </span>
+        }
+        tools={
+          <Segmented
+            label={t("modeLabel")}
+            value={mode === "player" ? "player" : "edit"}
+            onChange={(next) => setMode(next)}
+            items={[
+              { id: "edit", label: t("modeEdit") },
+              { id: "player", label: t("modePreview") },
+            ]}
+          />
+        }
+      />
 
       {saveState === "conflict" ? (
         <div className="cle-banner" role="alert">

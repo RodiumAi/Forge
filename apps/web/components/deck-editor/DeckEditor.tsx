@@ -10,25 +10,18 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import {
-  ArrowLeft,
-  ChevronsLeft,
-  ChevronsRight,
   Code2,
   Circle,
   ImageIcon,
-  LayoutGrid,
   Loader2,
   Minus,
   MoveRight,
   PieChart,
-  Play,
   Plus,
-  Redo2,
   Smile,
   Square,
   Table2,
   Type,
-  Undo2,
   Video,
 } from "lucide-react";
 import { DEFAULT_TOKENS, themeTokensFromDesign, type AssetUrl, type ThemeTokens } from "@/components/deck-player";
@@ -88,6 +81,8 @@ import { canRedo, canUndo } from "./state";
 import { copyFor, useDeckStrings, type DeckStringKey } from "./strings";
 import type { TextCommands, TextMarks } from "./text-style";
 import { useDeckDocument } from "./useDeckDocument";
+import { WorkspaceBar } from "@/components/builder/WorkspaceBar";
+import { Button, IconButton } from "@/components/ui/Button";
 import "./deck-editor.css";
 
 const TextEditor = lazy(() => import("./TextEditor"));
@@ -147,7 +142,8 @@ export function DeckEditor(props: DeckEditorProps) {
   // Badge shown unless the plan allows removing it and the user turned it off.
   const [keepBadge, setKeepBadge] = useState(true);
   const badge = !props.badgeRemovable || keepBadge;
-  const [chatOpen, setChatOpen] = useState(true);
+  // Phones open on the canvas; the assistant slides over it on demand.
+  const [chatOpen, setChatOpen] = useState(() => typeof window === "undefined" || window.innerWidth > 900);
   const [insertOpen, setInsertOpen] = useState(false);
   const [emptyPicker, setEmptyPicker] = useState(false);
   const [commands, setCommands] = useState<TextCommands | null>(null);
@@ -415,72 +411,83 @@ export function DeckEditor(props: DeckEditorProps) {
 
   return (
     <div className={`de-root${chatOpen ? "" : " chat-closed"}`}>
-      <header className="de-topbar">
-        <Link href={props.backHref} className="de-icon-button" aria-label={t("back")} title={t("back")}>
-          <ArrowLeft size={16} aria-hidden />
-        </Link>
-        <div className="de-title">
-          <strong>{doc.deck.title || props.projectName || t("untitled")}</strong>
+      <WorkspaceBar
+        kind="slides"
+        name={doc.deck.title || props.projectName || t("untitled")}
+        backHref={props.backHref}
+        className="de-topbar"
+        saveStatus={
           <span className={`de-save is-${docState.save}`} role="status">
             {saveLabel}
           </span>
-        </div>
-        <div className="de-topbar-tools">
-          <button type="button" className="de-icon-button" onClick={() => dispatch({ type: "undo" })} disabled={!canUndo(state) || readOnly} aria-label={t("undo")} title={`${t("undo")} (Ctrl+Z)`}>
-            <Undo2 size={16} aria-hidden />
-          </button>
-          <button type="button" className="de-icon-button" onClick={() => dispatch({ type: "redo" })} disabled={!canRedo(state) || readOnly} aria-label={t("redo")} title={`${t("redo")} (Ctrl+Shift+Z)`}>
-            <Redo2 size={16} aria-hidden />
-          </button>
-          <div className="de-insert">
-            <button type="button" className="de-button" onClick={() => setInsertOpen(!insertOpen)} aria-expanded={insertOpen} aria-haspopup="menu" disabled={readOnly || !slide}>
-              <Plus size={14} aria-hidden /> {t("insert")}
-            </button>
-            {insertOpen ? (
-              <div className="de-menu de-insert-menu" role="menu" onMouseLeave={() => setInsertOpen(false)}>
-                {INSERTS.map(({ kind, label, icon: Icon }) => (
-                  <button key={kind} type="button" role="menuitem" onClick={() => insert(kind)}>
-                    <Icon size={14} aria-hidden /> {t(label)}
+        }
+        center={
+          <div className="de-topbar-tools">
+            <IconButton icon="undo" size="sm" plain onClick={() => dispatch({ type: "undo" })} disabled={!canUndo(state) || readOnly} label={t("undo")} title={`${t("undo")} (Ctrl+Z)`} />
+            <IconButton icon="redo" size="sm" plain onClick={() => dispatch({ type: "redo" })} disabled={!canRedo(state) || readOnly} label={t("redo")} title={`${t("redo")} (Ctrl+Shift+Z)`} />
+            <div className="de-insert">
+              <Button variant="ghost" size="sm" icon="plus" onClick={() => setInsertOpen(!insertOpen)} aria-expanded={insertOpen} aria-haspopup="menu" disabled={readOnly || !slide}>
+                {t("insert")}
+              </Button>
+              {insertOpen ? (
+                <div className="de-menu de-insert-menu" role="menu" onMouseLeave={() => setInsertOpen(false)}>
+                  {INSERTS.map(({ kind, label, icon: Icon }) => (
+                    <button key={kind} type="button" role="menuitem" onClick={() => insert(kind)}>
+                      <Icon size={14} aria-hidden /> {t(label)}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setInsertOpen(false);
+                      setImageTarget({ kind: "new" });
+                    }}
+                  >
+                    <ImageIcon size={14} aria-hidden /> {t("insertImage")}
                   </button>
-                ))}
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() => {
-                    setInsertOpen(false);
-                    setImageTarget({ kind: "new" });
-                  }}
-                >
-                  <ImageIcon size={14} aria-hidden /> {t("insertImage")}
-                </button>
+                </div>
+              ) : null}
+            </div>
+            <IconButton icon="layout" size="sm" plain onClick={() => setTab("deck")} label={t("deckSettings")} />
+          </div>
+        }
+        tools={
+          <IconButton
+            icon="sparkles"
+            size="sm"
+            label={t("chat")}
+            aria-pressed={chatOpen}
+            aria-expanded={chatOpen}
+            onClick={() => setChatOpen(!chatOpen)}
+          />
+        }
+        actions={
+          <>
+            {props.publisher && !readOnly ? (
+              <PublishMenu publisher={props.publisher} badge={keepBadge} onBadgeChange={setKeepBadge} beforePublish={docState.flush} disabled={visibleCount === 0} t={t} />
+            ) : null}
+            <Button
+              variant="ghost"
+              size="sm"
+              icon="play"
+              disabled={visibleCount === 0}
+              onClick={() => {
+                dispatch({ type: "editText", id: null });
+                setPresenting(presentIndex(doc.deck, state.slideId));
+              }}
+              title={t("presentFromHere")}
+            >
+              <span className="f-bd-lbl">{t("present")}</span>
+            </Button>
+            {props.exportMenu ? (
+              <div className="de-export-slot" onPointerDownCapture={() => void docState.flush()}>
+                {props.exportMenu}
               </div>
             ) : null}
-          </div>
-          <button type="button" className="de-icon-button" onClick={() => setTab("deck")} aria-label={t("deckSettings")} title={t("deckSettings")}>
-            <LayoutGrid size={16} aria-hidden />
-          </button>
-          {props.exportMenu ? (
-            <div className="de-export-slot" onPointerDownCapture={() => void docState.flush()}>
-              {props.exportMenu}
-            </div>
-          ) : null}
-          {props.publisher && !readOnly ? (
-            <PublishMenu publisher={props.publisher} badge={keepBadge} onBadgeChange={setKeepBadge} beforePublish={docState.flush} disabled={visibleCount === 0} t={t} />
-          ) : null}
-          <button
-            type="button"
-            className="de-button de-button-primary"
-            disabled={visibleCount === 0}
-            onClick={() => {
-              dispatch({ type: "editText", id: null });
-              setPresenting(presentIndex(doc.deck, state.slideId));
-            }}
-            title={t("presentFromHere")}
-          >
-            <Play size={14} aria-hidden /> {t("present")}
-          </button>
-        </div>
-      </header>
+          </>
+        }
+      />
 
       <div className="de-body">
         {chatOpen ? (
@@ -498,9 +505,6 @@ export function DeckEditor(props: DeckEditorProps) {
             readOnly={readOnly}
           />
         ) : null}
-        <button type="button" className="de-chat-toggle" onClick={() => setChatOpen(!chatOpen)} aria-label={t("chat")} title={t("chat")} aria-expanded={chatOpen}>
-          {chatOpen ? <ChevronsLeft size={14} aria-hidden /> : <ChevronsRight size={14} aria-hidden />}
-        </button>
 
         <SlideRail
           deck={doc.deck}

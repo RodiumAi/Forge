@@ -85,36 +85,6 @@ export type ExportMenuProps = {
   style?: CSSProperties;
 };
 
-const panel: CSSProperties = {
-  position: "absolute",
-  right: 0,
-  top: "calc(100% + 6px)",
-  zIndex: 50,
-  width: 300,
-  padding: 8,
-  borderRadius: "var(--radius-surface, 12px)",
-  background: "var(--bg-elevated, #151922)",
-  color: "var(--fg, #F5F7FA)",
-  border: "1px solid var(--border, #2A3140)",
-  boxShadow: "0 12px 32px rgba(0,0,0,0.35)",
-  font: "14px/1.4 var(--font-body, system-ui, sans-serif)",
-};
-
-const itemStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "flex-start",
-  gap: 10,
-  width: "100%",
-  padding: "8px 10px",
-  border: 0,
-  borderRadius: 8,
-  background: "transparent",
-  color: "inherit",
-  textAlign: "left",
-  font: "inherit",
-  cursor: "pointer",
-};
-
 export function ExportMenu({ projectId, projectName, status: statusProp, onUpgrade, onExported, className, style }: ExportMenuProps) {
   const { locale } = useI18n();
   const t = LABELS[locale === "en" ? "en" : "fr"];
@@ -191,14 +161,13 @@ export function ExportMenu({ projectId, projectName, status: statusProp, onUpgra
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="btn btn-ghost"
-        style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+        className="f-btn f-btn-primary f-btn-sm"
       >
-        {busy ? <Loader2 size={16} className="agent-spin" aria-hidden="true" /> : <Download size={16} aria-hidden="true" />}
-        {busy ? t.working : t.export}
+        {busy ? <Loader2 size={16} className="f-spin" aria-hidden="true" /> : <Download size={16} aria-hidden="true" />}
+        <span className="f-bd-lbl">{busy ? t.working : t.export}</span>
       </button>
       {open && (
-        <div role="menu" style={panel}>
+        <div role="menu" className="f-dx-panel">
           {DECK_EXPORT_FORMATS.map((format) => {
             const Icon = ICONS[format];
             const allowed = deckExportAllowed(status, format);
@@ -207,7 +176,8 @@ export function ExportMenu({ projectId, projectName, status: statusProp, onUpgra
                 <button
                   type="button"
                   role="menuitem"
-                  style={{ ...itemStyle, opacity: busy && busy !== format ? 0.5 : 1 }}
+                  className="f-dx-item"
+                  style={{ opacity: busy && busy !== format ? 0.5 : 1 }}
                   disabled={!!busy}
                   onClick={() => run(format)}
                   data-format={format}
@@ -216,18 +186,18 @@ export function ExportMenu({ projectId, projectName, status: statusProp, onUpgra
                   <Icon size={18} aria-hidden="true" style={{ flex: "none", marginTop: 1 }} />
                   <span style={{ flex: 1, minWidth: 0 }}>
                     <strong style={{ display: "block", fontWeight: 600 }}>{names[format]}</strong>
-                    <span style={{ display: "block", color: "var(--muted, #8B93A7)", fontSize: 12 }}>
+                    <span className="f-dx-hint">
                       {allowed ? hints[format] : t.upgrade(PLAN_NAMES[REQUIRED_PLAN[format]])}
                     </span>
                   </span>
                   {busy === format ? (
-                    <Loader2 size={16} className="agent-spin" aria-hidden="true" />
+                    <Loader2 size={16} className="f-spin" aria-hidden="true" />
                   ) : !allowed ? (
-                    <Lock size={14} aria-hidden="true" style={{ color: "var(--muted, #8B93A7)" }} />
+                    <Lock size={14} aria-hidden="true" className="f-dx-lock" />
                   ) : null}
                 </button>
                 {format === "pdf" && allowed && (
-                  <label style={{ display: "flex", gap: 8, alignItems: "center", padding: "0 10px 6px 38px", fontSize: 12 }}>
+                  <label className="f-dx-check f-dx-sub">
                     <input type="checkbox" checked={steps} onChange={(e) => setSteps(e.target.checked)} disabled={!!busy} />
                     {t.steps}
                   </label>
@@ -236,20 +206,20 @@ export function ExportMenu({ projectId, projectName, status: statusProp, onUpgra
             );
           })}
           {(deckExportAllowed(status, "pptx") || deckExportAllowed(status, "html")) && (
-            <label style={{ display: "flex", gap: 8, alignItems: "center", padding: "6px 10px", fontSize: 12, borderTop: "1px solid var(--border, #2A3140)" }}>
+            <label className="f-dx-check f-dx-sep">
               <input type="checkbox" checked={notes} onChange={(e) => setNotes(e.target.checked)} disabled={!!busy} />
               {t.notes}
             </label>
           )}
           {message && (
-            <p role="status" style={{ margin: "6px 10px", fontSize: 12, color: message.kind === "ok" ? "var(--home-ok-text, #34D399)" : "var(--danger, #F87171)" }}>
+            <p role="status" className={`f-dx-msg ${message.kind === "ok" ? "ok" : "err"}`}>
               {message.text}
             </p>
           )}
           {warnings.length > 0 && (
-            <div style={{ margin: "4px 10px 6px", fontSize: 12 }} data-export-warnings="">
+            <div className="f-dx-warn" data-export-warnings="">
               <strong style={{ display: "block", marginBottom: 2 }}>{t.warnings}</strong>
-              <ul style={{ margin: 0, paddingLeft: 16, color: "var(--muted, #8B93A7)" }}>
+              <ul>
                 {warnings.map((w, i) => (
                   <li key={`${w.code}-${i}`}>{warningText(w, locale === "en" ? "en" : "fr")}</li>
                 ))}

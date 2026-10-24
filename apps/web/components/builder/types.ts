@@ -1,4 +1,4 @@
-export type BuilderMode = "preview" | "files" | "code" | "options";
+export type BuilderMode = "preview" | "files" | "code" | "history" | "options";
 export type ViewportMode = "desktop" | "tablet" | "phone";
 export type PreviewTool = "select" | "text" | "comment" | "image";
 

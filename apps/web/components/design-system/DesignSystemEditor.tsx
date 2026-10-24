@@ -1,9 +1,9 @@
 "use client";
 
-import { ArrowLeft, Download, ExternalLink, Globe, Share2, Star } from "lucide-react";
-import Link from "next/link";
+import { Download, ExternalLink, Globe, Share2, Star } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { WorkspaceBar } from "@/components/builder/WorkspaceBar";
 import { Icon } from "@/components/ui/icon";
 import { designSystemSchema } from "@/lib/contracts/forge-design";
 import { useI18n } from "@/lib/i18n/I18nProvider";
@@ -173,26 +173,29 @@ export function DesignSystemEditor({ projectId }: { projectId: string }) {
   return (
     <div className="dse-page">
       {fontsHref ? <link rel="stylesheet" href={fontsHref} /> : null}
-      <header className="dse-top">
-        <Link href="/dashboard?tab=design_systems" className="dse-icon-btn" aria-label={t("dsBack")}>
-          <Icon icon={ArrowLeft} />
-        </Link>
-        <div className="dse-title">
-          <input
-            value={doc.name}
-            maxLength={120}
-            disabled={readOnly}
-            aria-label={t("dsName")}
-            onChange={(event) => onChange({ ...doc, name: event.target.value })}
-          />
+      <WorkspaceBar
+        kind="design_system"
+        name={doc.name}
+        backHref="/dashboard?tab=design_systems"
+        className="dse-top"
+        onRename={
+          readOnly
+            ? undefined
+            : async (next) => {
+                onChange({ ...doc, name: next.slice(0, 120) });
+                return next.slice(0, 120);
+              }
+        }
+        saveStatus={
           <span className={`dse-save is-${save}`} role="status">
             {save === "idle" ? "" : t(`dsSave_${save}` as MessageKey)}
           </span>
-        </div>
+        }
+        actions={
         <div className="dse-actions">
           <div className="dse-menu">
-            <button type="button" className="dse-btn is-quiet" aria-expanded={menu === "share"} onClick={() => setMenu(menu === "share" ? null : "share")}>
-              <Icon icon={Share2} className="ui-icon-sm" /> {t("dsShare")}
+            <button type="button" className="f-btn f-btn-ghost f-btn-sm" aria-expanded={menu === "share"} onClick={() => setMenu(menu === "share" ? null : "share")}>
+              <Icon icon={Share2} className="ui-icon-sm" /> <span className="f-bd-lbl">{t("dsShare")}</span>
             </button>
             {menu === "share" && item ? (
               <div className="dse-pop" role="menu">
@@ -236,8 +239,8 @@ export function DesignSystemEditor({ projectId }: { projectId: string }) {
             ) : null}
           </div>
           <div className="dse-menu">
-            <button type="button" className="dse-btn is-quiet" aria-expanded={menu === "export"} onClick={() => setMenu(menu === "export" ? null : "export")}>
-              <Icon icon={Download} className="ui-icon-sm" /> {t("dsExport")}
+            <button type="button" className="f-btn f-btn-ghost f-btn-sm" aria-expanded={menu === "export"} onClick={() => setMenu(menu === "export" ? null : "export")}>
+              <Icon icon={Download} className="ui-icon-sm" /> <span className="f-bd-lbl">{t("dsExport")}</span>
             </button>
             {menu === "export" ? (
               <div className="dse-pop" role="menu">
@@ -257,21 +260,22 @@ export function DesignSystemEditor({ projectId }: { projectId: string }) {
           {item?.owner.mine ? (
             <button
               type="button"
-              className="dse-btn"
+              className="f-btn f-btn-primary f-btn-sm"
               onClick={() =>
                 void run(async () => setPublishedUrl((await publish(projectId)).public_url), "dsPublished")
               }
             >
-              <Icon icon={Globe} className="ui-icon-sm" /> {t("dsPublish")}
+              <Icon icon={Globe} className="ui-icon-sm" /> <span className="f-bd-lbl">{t("dsPublish")}</span>
             </button>
           ) : null}
           {publishedUrl ? (
-            <a className="dse-icon-btn" href={publishedUrl} target="_blank" rel="noopener noreferrer" aria-label={t("dsOpenSite")}>
+            <a className="f-icon-btn f-icon-btn-sm" href={publishedUrl} target="_blank" rel="noopener noreferrer" aria-label={t("dsOpenSite")}>
               <Icon icon={ExternalLink} />
             </a>
           ) : null}
         </div>
-      </header>
+        }
+      />
       {notice ? (
         <p className="dse-notice" role="status">
           {notice}

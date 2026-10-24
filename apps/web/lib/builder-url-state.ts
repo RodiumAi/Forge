@@ -1,6 +1,6 @@
 import type { BuilderMode, PreviewTool, ViewportMode } from "@/components/builder/types";
 
-export type BuilderViewParam = "preview" | "files" | "codeEditor" | "more";
+export type BuilderViewParam = "preview" | "files" | "codeEditor" | "history" | "more";
 
 export type OptionsSubview =
   | "general"
@@ -49,6 +49,8 @@ export function viewToMode(view: string | null | undefined): BuilderMode {
     case "code":
     case "codeeditor":
       return "code";
+    case "history":
+      return "history";
     case "more":
     case "options":
       return "options";
