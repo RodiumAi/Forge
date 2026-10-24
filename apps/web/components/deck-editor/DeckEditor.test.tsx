@@ -6,6 +6,7 @@ import { AUTOSAVE_DELAY_MS } from "./autosave";
 import type { ChatClient } from "./chat-client";
 import { DeckEditor } from "./DeckEditor";
 import { MemoryDocServer } from "./memory-transport";
+import type { DeckPublisher } from "./PublishMenu";
 import { deckString } from "./strings";
 
 vi.mock("next/link", () => ({
@@ -40,7 +41,7 @@ const slides: Record<string, Slide> = {
   s2: { id: "s2", elements: [] },
 };
 
-function setup(chat: ChatClient | null = null) {
+function setup(chat: ChatClient | null = null, publisher: DeckPublisher | null = null) {
   localStorage.setItem("forge_locale", "fr");
   const server = new MemoryDocServer(deck, slides, { s1: "Notes 1" });
   render(
@@ -52,7 +53,8 @@ function setup(chat: ChatClient | null = null) {
         assetUrl={(p) => p}
         chat={chat}
         images={null}
-        badge
+        badgeRemovable={false}
+        publisher={publisher}
         backHref="/dashboard"
       />
     </I18nProvider>,
@@ -156,5 +158,34 @@ describe("DeckEditor", () => {
     fireEvent.click(screen.getByRole("button", { name: "Slide 2" }));
     expect(await screen.findByText(t("noticeFallback"))).toBeInTheDocument();
     expect(screen.getByDisplayValue("Dites bonjour")).toBeInTheDocument();
+  });
+
+  it("saves pending edits, then publishes with notes and the badge kept on a plan that cannot remove it", async () => {
+    const calls: unknown[] = [];
+    const ref: { server?: MemoryDocServer } = {};
+    const publisher: DeckPublisher = {
+      badgeRemovable: false,
+      publish: async (options) => {
+        calls.push({ options, saved: ref.server!.slides.get("s1")!.value.elements.find((e) => e.id === "box") });
+        return { public_url: "https://deck.example/" };
+      },
+      presenterUrl: (url) => `${url}presenter/`,
+    };
+    ref.server = setup(null, publisher);
+    await screen.findByText("Test deck");
+    fireEvent.click(screen.getByRole("button", { name: /shape\s*box/ }));
+    fireEvent.keyDown(window, { key: "ArrowRight" });
+    fireEvent.click(screen.getByRole("button", { name: t("publish") }));
+    const dialog = screen.getByRole("dialog", { name: t("publishTitle") });
+    const badge = within(dialog).getByRole("checkbox", { name: t("publishBadge") });
+    expect(badge).toBeChecked();
+    expect(badge).toBeDisabled();
+    fireEvent.click(within(dialog).getByRole("checkbox", { name: t("publishNotes") }));
+    await act(async () => {
+      fireEvent.click(within(dialog).getByRole("button", { name: t("publishRun") }));
+    });
+    await waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]).toMatchObject({ options: { notes: true, badge: true }, saved: { x: 1001 } });
+    expect(await within(dialog).findByRole("link", { name: t("publishPresenter") })).toHaveAttribute("href", "https://deck.example/presenter/");
   });
 });

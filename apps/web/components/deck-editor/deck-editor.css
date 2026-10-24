@@ -1504,3 +1504,54 @@
 .de-present-close:focus-visible {
   opacity: 1;
 }
+
+.de-publish {
+  gap: 8px;
+  width: 300px;
+  padding: 12px;
+}
+
+.de-publish-title {
+  font-size: 14px;
+}
+
+.de-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.de-check input {
+  margin-top: 2px;
+}
+
+.de-error {
+  color: var(--danger, #dc2626);
+}
+
+.de-publish-result {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.de-publish-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  color: var(--fg);
+  text-decoration: none;
+}
+
+.de-publish-link:hover,
+.de-publish-link:focus-visible {
+  background: var(--de-soft);
+}
+
+.de-export-slot {
+  display: flex;
+}

@@ -5,6 +5,7 @@ import { DeckEditor } from "@/components/deck-editor/DeckEditor";
 import type { ChatClient, StreamHandler } from "@/components/deck-editor/chat-client";
 import { slideFromLayout } from "@/components/deck-editor/layouts";
 import { MemoryDocServer } from "@/components/deck-editor/memory-transport";
+import type { DeckPublisher } from "@/components/deck-editor/PublishMenu";
 import { copyFor } from "@/components/deck-editor/strings";
 import type { Deck, Slide } from "@/lib/contracts/forge-design";
 
@@ -87,6 +88,16 @@ function fakeChat(server: MemoryDocServer): ChatClient {
   };
 }
 
+const demoPublisher: DeckPublisher = {
+  badgeRemovable: true,
+  publish: async (options) => {
+    await wait(700);
+    (window as unknown as { __deckPublished?: unknown }).__deckPublished = options;
+    return { public_url: "https://demo.forge.example/" };
+  },
+  presenterUrl: (url) => `${url.replace(/\/+$/, "")}/presenter/`,
+};
+
 let demo: { server: MemoryDocServer; transport: ReturnType<MemoryDocServer["transport"]>; chat: ChatClient } | null = null;
 
 /** One in-memory document per page load (exposed as `window.__deckServer` for checks). */
@@ -111,7 +122,8 @@ export function DeckEditorDemo({ designSystem }: { designSystem: string }) {
       assetUrl={placeholderAsset}
       chat={chat}
       images={null}
-      badge
+      badgeRemovable
+      publisher={demoPublisher}
       backHref="/dev/deck-player"
     />
   );

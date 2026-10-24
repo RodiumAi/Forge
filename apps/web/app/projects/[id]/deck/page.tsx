@@ -14,7 +14,11 @@ import { documentTransport, readProjectFile } from "@/components/deck-editor/tra
 import { useDeckStrings } from "@/components/deck-editor/strings";
 import { api, getToken } from "@/lib/api";
 import { projectPublicUrl } from "@/lib/asset-url";
-import { forgeFeatureEnabled, useForgeStatus } from "@/lib/forge-status";
+import { ExportMenu } from "@/components/deck-exports/ExportMenu";
+import type { DeckPublisher } from "@/components/deck-editor/PublishMenu";
+import { rodiumUpgradeUrl } from "@/lib/constants/rodium-links";
+import { badgeRemovable, presenterUrl, publishDeck } from "@/lib/deck-exports";
+import { useForgeStatus } from "@/lib/forge-status";
 import { editorHref, type ProjectKindId } from "@/lib/kinds";
 import { useMediaToken } from "@/lib/media-token";
 
@@ -63,6 +67,16 @@ export default function DeckEditorPage() {
     return (path: string) => projectPublicUrl(projectId, path) ?? "";
   }, [projectId, mediaToken]);
 
+  const removable = badgeRemovable(status);
+  const publisher = useMemo<DeckPublisher>(
+    () => ({
+      badgeRemovable: removable,
+      publish: (options) => publishDeck(projectId, options),
+      presenterUrl,
+    }),
+    [projectId, removable],
+  );
+
   if (error) {
     return (
       <div className="de-root de-center" role="alert">
@@ -83,7 +97,18 @@ export default function DeckEditorPage() {
       assetUrl={assetUrl}
       chat={chat}
       images={images}
-      badge={!forgeFeatureEnabled(status, "remove_badge")}
+      badgeRemovable={removable}
+      exportMenu={
+        <ExportMenu
+          projectId={projectId}
+          projectName={project.name}
+          status={status}
+          onUpgrade={() => {
+            window.location.href = rodiumUpgradeUrl();
+          }}
+        />
+      }
+      publisher={project.access_role === "viewer" ? null : publisher}
       readOnly={project.access_role === "viewer"}
       backHref="/dashboard"
     />

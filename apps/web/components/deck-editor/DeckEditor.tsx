@@ -7,7 +7,7 @@
  * through adapters so the same editor runs on the API and on fixtures.
  */
 
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -81,6 +81,7 @@ import {
 } from "./ops";
 import { colorTokens } from "./fields";
 import { PresentOverlay, presentIndex } from "./PresentOverlay";
+import { PublishMenu, type DeckPublisher } from "./PublishMenu";
 import { PropertiesPanel, type ImageTarget, type PanelTab } from "./PropertiesPanel";
 import { SlideRail, LayoutPicker } from "./SlideRail";
 import { canRedo, canUndo } from "./state";
@@ -100,8 +101,12 @@ export type DeckEditorProps = {
   assetUrl: AssetUrl;
   chat: ChatClient | null;
   images: ImageClient | null;
-  /** "Made with Forge" badge when presenting (no `remove_badge` right). */
-  badge: boolean;
+  /** Whether this plan may hide the "Made with Forge" badge (`remove_badge`). */
+  badgeRemovable: boolean;
+  /** Export menu mounted in the top bar (pending edits are saved when it is opened). */
+  exportMenu?: ReactNode;
+  /** Publish action; hidden when absent. */
+  publisher?: DeckPublisher | null;
   readOnly?: boolean;
   backHref: string;
 };
@@ -139,6 +144,9 @@ export function DeckEditor(props: DeckEditorProps) {
   const [tab, setTab] = useState<PanelTab>("slide");
   const [imageTarget, setImageTarget] = useState<ImageTarget | null>(null);
   const [presenting, setPresenting] = useState<number | null>(null);
+  // Badge shown unless the plan allows removing it and the user turned it off.
+  const [keepBadge, setKeepBadge] = useState(true);
+  const badge = !props.badgeRemovable || keepBadge;
   const [chatOpen, setChatOpen] = useState(true);
   const [insertOpen, setInsertOpen] = useState(false);
   const [emptyPicker, setEmptyPicker] = useState(false);
@@ -451,6 +459,14 @@ export function DeckEditor(props: DeckEditorProps) {
           <button type="button" className="de-icon-button" onClick={() => setTab("deck")} aria-label={t("deckSettings")} title={t("deckSettings")}>
             <LayoutGrid size={16} aria-hidden />
           </button>
+          {props.exportMenu ? (
+            <div className="de-export-slot" onPointerDownCapture={() => void docState.flush()}>
+              {props.exportMenu}
+            </div>
+          ) : null}
+          {props.publisher && !readOnly ? (
+            <PublishMenu publisher={props.publisher} badge={keepBadge} onBadgeChange={setKeepBadge} beforePublish={docState.flush} disabled={visibleCount === 0} t={t} />
+          ) : null}
           <button
             type="button"
             className="de-button de-button-primary"
@@ -679,7 +695,7 @@ export function DeckEditor(props: DeckEditorProps) {
           tokens={tokens}
           assetUrl={assetUrl}
           startAt={presenting}
-          badge={props.badge}
+          badge={badge}
           locale={locale}
           onClose={() => setPresenting(null)}
           t={t}
