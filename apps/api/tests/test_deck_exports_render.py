@@ -144,3 +144,47 @@ def test_single_file_html_plays_offline(deck_project, tmp_path):
             assert not errors
         finally:
             browser.close()
+
+
+def test_published_presenter_page_drives_the_audience_page(deck_project, tmp_path):
+    """Two windows of the published site stay in sync over BroadcastChannel (no server)."""
+    _needs_chromium()
+    from playwright.sync_api import sync_playwright
+
+    from app.services.exports.bundle import build_player_bundle
+    from app.services.exports.deck_site import write_published_site
+    from app.services.exports.deck_source import load_deck
+    from app.services.prerender import _serve
+
+    src = load_deck(deck_project, include_notes=True)
+    bundle = asyncio.run(build_player_bundle(src.icons(), variant="site"))
+    site = tmp_path / "site"
+    write_published_site(deck_project, src, site, bundle, title="Deck", lang="en", badge=True, notes=True)
+    origin = "https://deck.forge-test.invalid"
+
+    def handle(route):
+        if route.request.url.startswith(origin):
+            status, body, ctype = _serve(site, route.request.url)
+            route.fulfill(status=status, body=body, headers={"Content-Type": ctype})
+        else:
+            route.abort()
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        try:
+            context = browser.new_context(viewport={"width": 1280, "height": 720})
+            context.route("**/*", handle)
+            audience = context.new_page()
+            audience.goto(f"{origin}/")
+            audience.wait_for_selector("[data-deck-player]")
+            assert audience.locator("[data-forge-badge]").count() == 1
+            presenter = context.new_page()
+            presenter.goto(f"{origin}/presenter/")
+            presenter.wait_for_function("() => document.body.innerText.includes('Saluer le public.')")
+            presenter.keyboard.press("ArrowRight")
+            presenter.keyboard.press("ArrowRight")
+            audience.wait_for_function(
+                "() => document.querySelector('[data-deck-player]').dataset.index === '1'", timeout=10_000
+            )
+        finally:
+            browser.close()
