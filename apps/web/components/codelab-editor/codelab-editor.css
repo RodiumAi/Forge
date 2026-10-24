@@ -1,0 +1,555 @@
+/* Codelab editor. Chrome colors come from the app theme tokens (light and
+   dark); the preview carries the codelab's own design system tokens. */
+
+.cle-root {
+  --cle-accent: var(--accent, #f2620a);
+  --cle-panel: var(--bg-elevated, #fff);
+  --cle-soft: var(--bg-soft, #fafafa);
+  --cle-line: var(--border, #e4e4e7);
+  --cle-radius: var(--radius-control, 10px);
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body, system-ui, sans-serif);
+  font-size: 13px;
+  z-index: 1;
+}
+
+.cle-root button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--cle-line);
+  background: var(--cle-panel);
+  color: inherit;
+  border-radius: var(--cle-radius);
+  padding: 5px 9px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.cle-root button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.cle-root input,
+.cle-root select,
+.cle-root textarea {
+  border: 1px solid var(--cle-line);
+  background: var(--cle-panel);
+  color: inherit;
+  border-radius: var(--cle-radius);
+  padding: 6px 8px;
+  font: inherit;
+  min-width: 0;
+}
+
+.cle-center {
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.cle-spin {
+  animation: cle-spin 0.9s linear infinite;
+}
+
+@keyframes cle-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.cle-hint {
+  color: var(--muted, #71717a);
+  font-size: 12px;
+}
+
+.cle-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--cle-line);
+  background: var(--cle-panel);
+}
+
+.cle-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.cle-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 40vw;
+}
+
+.cle-save {
+  color: var(--muted, #71717a);
+  font-size: 12px;
+}
+
+.cle-save[data-state="error"],
+.cle-save[data-state="conflict"] {
+  color: #dc2626;
+}
+
+.cle-spacer {
+  flex: 1;
+}
+
+.cle-root .cle-active {
+  border-color: var(--cle-accent);
+  color: var(--cle-accent);
+}
+
+.cle-root .cle-primary {
+  background: var(--cle-accent);
+  border-color: var(--cle-accent);
+  color: #fff;
+}
+
+.cle-banner {
+  padding: 8px 14px;
+  background: color-mix(in srgb, #dc2626 10%, var(--bg));
+  border-bottom: 1px solid var(--cle-line);
+  cursor: default;
+}
+
+.cle-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr) 340px;
+}
+
+.cle-steps {
+  border-right: 1px solid var(--cle-line);
+  overflow: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cle-steps-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.cle-steps ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cle-steps li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 2px 6px;
+  padding: 4px;
+  border-radius: var(--cle-radius);
+  border: 1px solid transparent;
+}
+
+.cle-steps li[data-active] {
+  border-color: var(--cle-accent);
+  background: var(--cle-soft);
+}
+
+.cle-steps li[data-streaming] .cle-step-n {
+  background: var(--cle-accent);
+  color: #fff;
+}
+
+.cle-root .cle-step-pick {
+  border: 0;
+  background: transparent;
+  padding: 2px;
+  min-width: 0;
+  text-align: left;
+}
+
+.cle-step-n {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: inline-grid;
+  place-items: center;
+  font-size: 11px;
+  background: var(--cle-soft);
+  border: 1px solid var(--cle-line);
+}
+
+.cle-step-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cle-step-min {
+  font-size: 11px;
+  color: var(--muted, #71717a);
+}
+
+.cle-step-tools {
+  grid-column: 1 / -1;
+  display: none;
+  gap: 4px;
+}
+
+.cle-steps li:hover .cle-step-tools,
+.cle-steps li[data-active] .cle-step-tools {
+  display: flex;
+}
+
+.cle-root .cle-step-tools button {
+  padding: 3px 5px;
+}
+
+.cle-add {
+  justify-content: center;
+}
+
+.cle-main {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  gap: 8px;
+}
+
+.cle-empty {
+  margin: auto;
+}
+
+.cle-step-meta {
+  display: flex;
+  gap: 10px;
+}
+
+.cle-step-meta label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  font-size: 12px;
+}
+
+.cle-step-meta .cle-minutes {
+  flex: none;
+  width: 120px;
+}
+
+.cle-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.cle-split {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.cle-root .cle-markdown {
+  resize: none;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 12.5px;
+  line-height: 1.55;
+  height: 100%;
+}
+
+.cle-preview {
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid var(--cle-line);
+  border-radius: var(--cle-radius);
+}
+
+.cle-preview .fcl-root {
+  min-height: 100%;
+}
+
+.cle-player {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.cle-side {
+  border-left: 1px solid var(--cle-line);
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.cle-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 8px;
+  border-bottom: 1px solid var(--cle-line);
+}
+
+.cle-side-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 10px;
+}
+
+.cle-side-body[hidden] {
+  display: none;
+}
+
+.cle-details {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cle-details label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.cle-details .cle-check-row {
+  flex-direction: row;
+  align-items: center;
+}
+
+.cle-details h3 {
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+
+.cle-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.cle-link {
+  color: var(--cle-accent);
+}
+
+.cle-root button.cle-link {
+  border: 0;
+  background: none;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.cle-notice {
+  color: var(--cle-accent);
+}
+
+.cle-files {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cle-files-upload,
+.cle-files-folders {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: flex-end;
+}
+
+.cle-files-upload label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.cle-file-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cle-file-list li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cle-file-path {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 12px;
+}
+
+.cle-file-actions {
+  display: flex;
+  gap: 3px;
+}
+
+.cle-root .cle-file-actions button {
+  padding: 3px 5px;
+}
+
+.cle-chat {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cle-chat-log {
+  flex: 1;
+  min-height: 120px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cle-msg p {
+  margin: 2px 0 0;
+  white-space: pre-wrap;
+}
+
+.cle-msg-who {
+  font-size: 11px;
+  color: var(--muted, #71717a);
+}
+
+.cle-msg-error p {
+  color: #dc2626;
+}
+
+.cle-outline,
+.cle-check {
+  border: 1px solid var(--cle-line);
+  border-radius: var(--cle-radius);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cle-outline ol {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cle-outline li {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+}
+
+.cle-outline li input:first-child {
+  flex: 1;
+}
+
+.cle-outline li input[type="number"] {
+  width: 56px;
+}
+
+.cle-root .cle-outline li button {
+  padding: 3px 4px;
+}
+
+.cle-check li[data-severity="error"] {
+  color: #dc2626;
+}
+
+.cle-check ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.cle-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted, #71717a);
+}
+
+.cle-chat-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.cle-target {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.cle-chat-form {
+  display: flex;
+  gap: 6px;
+  align-items: flex-end;
+}
+
+.cle-chat-form textarea {
+  flex: 1;
+  resize: vertical;
+}
+
+@media (max-width: 1100px) {
+  .cle-body {
+    grid-template-columns: 200px minmax(0, 1fr);
+  }
+  .cle-side {
+    grid-column: 1 / -1;
+    border-left: 0;
+    border-top: 1px solid var(--cle-line);
+    max-height: 45vh;
+  }
+}
+
+@media (max-width: 760px) {
+  .cle-body {
+    grid-template-columns: minmax(0, 1fr);
+    overflow: auto;
+  }
+  .cle-steps {
+    border-right: 0;
+    border-bottom: 1px solid var(--cle-line);
+    max-height: 30vh;
+  }
+  .cle-split {
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-rows: minmax(240px, auto);
+  }
+}
