@@ -223,6 +223,111 @@ def template_deck(template_id: str) -> dict | None:
     return {"deck": deck, "slides": slides, "design": design}
 
 
+#: Upper bounds on what the public detail view of a kit reads.
+_DETAIL_MAX_STEP_CHARS = 60_000
+_DETAIL_MAX_FILES = 60
+_JSX_TAG_RE = re.compile(r"<([A-Z][A-Za-z0-9]*)\b[^>]*/>")
+_SCREEN_RE = re.compile(r"^([A-Z][A-Za-z0-9]*)Screen\.tsx$")
+
+
+def _read_json(path: Path) -> dict | None:
+    try:
+        loaded = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return loaded if isinstance(loaded, dict) else None
+
+
+def _site_sections(folder: Path) -> list[str]:
+    """Top-level blocks of a site kit, in page order, read from src/App.tsx."""
+    app = folder / "src" / "App.tsx"
+    if not app.is_file():
+        return []
+    try:
+        text = app.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return []
+    start, end = text.find("<main"), text.find("</main>")
+    body = text[start:end] if start >= 0 and end > start else text
+    out: list[str] = []
+    for name in _JSX_TAG_RE.findall(body):
+        if name.endswith("Background") or name in out:
+            continue
+        out.append(name)
+    return out[:24]
+
+
+def _app_screens(folder: Path) -> list[str]:
+    """Screens of a mobile kit (src/screens/*Screen.tsx), onboarding first."""
+    screens_dir = folder / "src" / "screens"
+    if not screens_dir.is_dir():
+        return []
+    names = sorted(m.group(1) for p in screens_dir.iterdir() if (m := _SCREEN_RE.match(p.name)))
+    names.sort(key=lambda n: (n != "Onboarding", n != "Home"))
+    return names[:12]
+
+
+def _codelab_detail(folder: Path) -> dict | None:
+    codelab = _read_json(folder / "codelab.json")
+    if codelab is None:
+        return None
+    steps: dict[str, str] = {}
+    for step in codelab.get("steps") or []:
+        if not isinstance(step, dict):
+            continue
+        sid, rel = str(step.get("id") or ""), str(step.get("file") or "")
+        if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", sid) or ".." in rel.replace("\\", "/").split("/"):
+            continue
+        path = (folder / rel).resolve()
+        if not str(path).startswith(str(folder.resolve())) or not path.is_file():
+            continue
+        steps[sid] = path.read_text(encoding="utf-8", errors="replace")[:_DETAIL_MAX_STEP_CHARS]
+    files: list[str] = []
+    files_root = folder / "files"
+    if files_root.is_dir():
+        for path in sorted(files_root.rglob("*")):
+            if path.is_file() and not (_SKIP_NAMES & set(path.parts)):
+                files.append(path.relative_to(files_root).as_posix())
+            if len(files) >= _DETAIL_MAX_FILES:
+                break
+    return {"codelab": codelab, "steps": steps, "files": files}
+
+
+def template_detail(template_id: str) -> dict | None:
+    """What the public template page shows beyond the catalogue row.
+
+    Always ``{"id", "kind", "fg", "muted", "tone", "fonts"}``, plus per kind:
+    ``sections`` (site blocks in page order), ``screens`` (app screens),
+    ``codelab`` + ``steps`` + ``files`` (codelab document, step Markdown by id,
+    files under files/), ``design_system`` (design-system.json). Slides use
+    ``/deck``. None for an unknown template.
+    """
+    meta = get_template(template_id)
+    if meta is None:
+        return None
+    raw = _read_json(meta.path / "template.json") or {}
+    fonts = raw.get("fonts") if isinstance(raw.get("fonts"), dict) else {}
+    out: dict = {
+        "id": meta.id,
+        "kind": meta.kind,
+        "fg": meta.fg,
+        "muted": meta.muted,
+        "tone": meta.tone,
+        "fonts": {k: str(v) for k, v in fonts.items() if isinstance(v, str)},
+    }
+    if meta.kind == "web":
+        out["sections"] = _site_sections(meta.path)
+    elif meta.kind == "mobile":
+        out["screens"] = _app_screens(meta.path)
+    elif meta.kind == "codelab":
+        out.update(_codelab_detail(meta.path) or {})
+    elif meta.kind == "design_system":
+        doc = _read_json(meta.path / "design-system.json")
+        if doc is not None:
+            out["design_system"] = doc
+    return out
+
+
 def fork_template(template_id: str, project_id: str, app_name: str | None = None) -> TemplateMeta:
     meta = get_template(template_id)
     if meta is None:

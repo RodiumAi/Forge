@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from app.i18n import resolve_locale
 from app.kinds import get_kind, kind_enabled, resolve_kind
 from app.schemas import TemplateOut
-from app.services.templates import get_template, list_templates, preview_path, template_deck
+from app.services.templates import get_template, list_templates, preview_path, template_deck, template_detail
 
 router = APIRouter(prefix="/templates", tags=["templates"])
 
@@ -72,6 +72,20 @@ def template_deck_documents(template_id: str) -> JSONResponse:
     payload = template_deck(template_id)
     if payload is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not a slides template")
+    return JSONResponse(content=payload, headers={"Cache-Control": "public, max-age=300"})
+
+
+@router.get("/{template_id}/detail")
+def template_detail_documents(template_id: str) -> JSONResponse:
+    """Kind-specific content of a kit for the public template page (site
+    sections, app screens, codelab steps and files, design system document).
+    Public like the rest of the catalogue."""
+    meta = get_template(template_id)
+    if meta is None or not kind_enabled(meta.kind):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Unknown template")
+    payload = template_detail(template_id)
+    if payload is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Unknown template")
     return JSONResponse(content=payload, headers={"Cache-Control": "public, max-age=300"})
 
 
