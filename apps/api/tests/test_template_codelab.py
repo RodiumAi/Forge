@@ -92,7 +92,8 @@ class TestCodelabKit:
     def test_french_typography_and_size(self, kit):
         total = 0
         for path in kit.path.rglob("*"):
-            if path.is_file():
+            # preview.png is the gallery image, never forked into a project.
+            if path.is_file() and path.relative_to(kit.path).as_posix() != "preview.png":
                 total += path.stat().st_size
                 assert LONG_DASH not in path.read_text(encoding="utf-8"), path
         assert total <= MAX_KIT_BYTES

@@ -19,6 +19,7 @@ import type { DeckRatio } from "@/lib/create-project";
 import type { MessageKey } from "@/lib/i18n/dictionaries";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { kindStyle } from "@/lib/kind-style";
+import { useSpeechInput } from "@/lib/speech-input";
 import type { ProjectKindId } from "@/lib/kinds";
 import {
   attachmentName,
@@ -30,6 +31,7 @@ import {
 import { DesignSystemMenu, type ComposerDesignSystem } from "./DesignSystemMenu";
 import { KindPict } from "./KindPict";
 import { ModelMenu } from "./ModelMenu";
+import { VoiceButton, VoiceStatus } from "./VoiceInput";
 
 /** A suggestion chip: short label, the full prompt it inserts, optional kind icon. */
 export type ComposerSuggestion = { label: string; prompt: string; kind?: ProjectKindId };
@@ -129,7 +131,7 @@ export type ComposerProps = {
   onSubmit: () => void;
 
   files?: PromptAttachment[];
-  onAddFiles?: (list: FileList) => void;
+  onAddFiles?: (list: File[]) => void;
   onRemoveFile?: (id: string) => void;
 
   /** Selected starting tile; "blank" shows no chip (the kind is guessed). */
@@ -147,6 +149,10 @@ export type ComposerProps = {
   /** Off when the design_system kind is switched off. */
   showDesignSystems?: boolean;
   manageDesignSystemsHref?: string;
+  /** Plan below Builder: design systems shown locked, with an upgrade link. */
+  designSystemsLocked?: boolean;
+  /** Starts a new design system from the menu. */
+  onCreateDesignSystem?: () => void;
 
   /** Optional code mode toggle (hidden without a handler). */
   codeMode?: boolean;
@@ -204,6 +210,8 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
     onDesignSystemChange,
     showDesignSystems = true,
     manageDesignSystemsHref,
+    designSystemsLocked,
+    onCreateDesignSystem,
     codeMode,
     onCodeModeChange,
     hideModel,
@@ -221,12 +229,13 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
   },
   ref,
 ) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const id = useId();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [kindsOpen, setKindsOpen] = useState(kindsDefaultOpen);
   const [dragging, setDragging] = useState(false);
+  const voice = useSpeechInput({ value, onChange, locale, maxLength: PROMPT_MAX_CHARS });
 
   useImperativeHandle(
     ref,
@@ -258,7 +267,8 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
   const typed = useTypewriter(animated, rotating);
   const placeholder = chosenKind ? t(KIND_PLACEHOLDER[chosenKind]) : animated ? typed : rotating[0];
 
-  const canSubmit = Boolean(value.trim() || files.length) && !busy;
+  // While dictating, the text is still moving: send once the user is done.
+  const canSubmit = Boolean(value.trim() || files.length) && !busy && !voice.listening;
   const format = deckFormat ?? tile.format ?? "16:9";
 
   function pickTile(next: HomeTileId) {
@@ -285,7 +295,7 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
           if (!onAddFiles) return;
           event.preventDefault();
           setDragging(false);
-          if (!busy && event.dataTransfer.files?.length) onAddFiles(event.dataTransfer.files);
+          if (!busy && event.dataTransfer.files?.length) onAddFiles(Array.from(event.dataTransfer.files));
         }}
       >
         <div className="f-composer">
@@ -351,6 +361,7 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
             maxLength={PROMPT_MAX_CHARS}
             placeholder={placeholder}
             disabled={busy}
+            readOnly={voice.listening}
             onChange={(event) => onChange(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
@@ -359,6 +370,7 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
               }
             }}
           />
+          <VoiceStatus voice={voice} />
           <div className="f-composer-bar">
             {onAddFiles ? (
               <>
@@ -371,7 +383,8 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
                   aria-hidden
                   style={{ display: "none" }}
                   onChange={(event) => {
-                    if (event.target.files?.length) onAddFiles(event.target.files);
+                    // Copy before clearing the input: a FileList empties with it.
+                    if (event.target.files?.length) onAddFiles(Array.from(event.target.files));
                     event.target.value = "";
                   }}
                 />
@@ -394,6 +407,9 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
                 onChange={onDesignSystemChange}
                 disabled={busy}
                 manageHref={manageDesignSystemsHref}
+                locked={designSystemsLocked}
+                upgradeHref={upgradeHref}
+                onCreate={onCreateDesignSystem}
               />
             ) : null}
             {onCodeModeChange ? (
@@ -411,6 +427,7 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
             ) : null}
             <span className="f-grow" />
             {hideModel ? null : <ModelMenu disabled={busy} upgradeHref={upgradeHref} />}
+            <VoiceButton voice={voice} disabled={busy} className="f-c-btn is-icon" />
             <button
               type="submit"
               className={cx("f-send", busy && "is-busy")}
@@ -421,15 +438,15 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
               <Glyph name={busy ? "refresh" : "arrow-up"} className={busy ? "f-spin" : undefined} />
             </button>
           </div>
+          {hint && variant === "hero" ? (
+            <div className="f-composer-hint">
+              <span className="f-kb">
+                <kbd>{t("uiKeyEnter")}</kbd> {t("uiHintEnter")} · <kbd>{t("uiKeyShiftEnter")}</kbd> {t("uiHintShift")}
+              </span>
+              <span>{hintRight ?? t("uiHintFree")}</span>
+            </div>
+          ) : null}
         </div>
-        {hint && variant === "hero" ? (
-          <div className="f-composer-hint">
-            <span className="f-kb">
-              <kbd>{t("uiKeyEnter")}</kbd> {t("uiHintEnter")} · <kbd>{t("uiKeyShiftEnter")}</kbd> {t("uiHintShift")}
-            </span>
-            <span>{hintRight ?? t("uiHintFree")}</span>
-          </div>
-        ) : null}
       </form>
 
       {suggestions.length ? (

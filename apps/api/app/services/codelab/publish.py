@@ -214,8 +214,13 @@ def build_codelab_site(
     site_url: str,
     lang: str = "fr",
     badge: bool = True,
+    public_url: str | None = None,
 ) -> dict[str, Any]:
-    """Write the static codelab site into ``out``; returns a build summary."""
+    """Write the static codelab site into ``out``; returns a build summary.
+
+    ``public_url`` is the address the cover's QR code points to: the site
+    URL when publishing, the live URL (or nothing) for the PDF export.
+    """
     entry = bundle_entry()
     codelab = read_codelab(project_id)
     steps = read_all_steps(project_id, codelab)
@@ -238,6 +243,7 @@ def build_codelab_site(
         "feedbackUrl": settings.get("feedbackUrl"),
         "badge": badge,
         "locale": lang,
+        "publicUrl": public_url,
     }
     (out / DATA_FILE).write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
     titles = _step_titles(codelab, steps)
@@ -263,7 +269,13 @@ async def publish_codelab_player(
         out = Path(tmp) / "dist"
         out.mkdir(parents=True, exist_ok=True)
         build = await asyncio.to_thread(
-            build_codelab_site, project_id, out, site_url=site_url, lang=lang, badge=badge
+            build_codelab_site,
+            project_id,
+            out,
+            site_url=site_url,
+            lang=lang,
+            badge=badge,
+            public_url=site_url,
         )
         uploaded, orphans = await upload_site_dir(out, slug)
     return {

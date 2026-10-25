@@ -1,0 +1,47 @@
+/* "Créer une charte graphique" dialog (BrandIntakeDialog). */
+.dsi.f-dialog { gap: 14px; }
+.dsi-form { display: grid; gap: 18px; }
+.dsi-section { display: grid; gap: 12px; padding-top: 16px; border-top: 1px solid var(--f-line); }
+.dsi-section:first-child { padding-top: 0; border-top: 0; }
+.dsi-section h3 { font-size: 15px; font-weight: 700; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.dsi-section h3 small { font-size: 12.5px; font-weight: 400; color: var(--f-faint); }
+.dsi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.dsi-logos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.dsi-logo { display: grid; gap: 8px; align-content: start; min-width: 0; }
+.dsi-logo.is-disabled { opacity: .55; }
+.dsi-logo-label { font-size: 13.5px; font-weight: 600; display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; }
+.dsi-logo-label small { font-weight: 400; color: var(--f-faint); font-size: 12px; }
+.dsi-logo-box {
+  height: 84px; border-radius: var(--f-r-md); border: 1px dashed var(--f-line-strong);
+  background: var(--f-surface-2); display: grid; place-items: center; color: var(--f-faint); overflow: hidden;
+}
+.dsi-logo.is-dark .dsi-logo-box { background: #1C1F26; color: #7D8391; border-color: rgba(255, 255, 255, .18); }
+.dsi-logo-box img { max-width: 86%; max-height: 70px; object-fit: contain; }
+.dsi-logo-acts { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.dsi-logo-acts .f-btn { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-flex; }
+
+.dsi-colors { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.f-chip.is-on, .dsi .f-chip[aria-pressed="true"] { border-color: var(--f-orange); background: var(--f-orange-soft); }
+.dsi-color {
+  display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 2px 0 4px;
+  border-radius: var(--f-r-pill); border: 1px solid var(--f-line); background: var(--f-surface-2);
+}
+.dsi-color.is-invalid { border-color: var(--f-danger-text); }
+.dsi-color input[type="color"] {
+  width: 28px; height: 28px; padding: 0; border: 0; border-radius: 99px; background: none; cursor: pointer;
+}
+.dsi-color input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+.dsi-color input[type="color"]::-webkit-color-swatch { border: 1px solid var(--f-line-strong); border-radius: 99px; }
+.dsi-color input[type="color"]::-moz-color-swatch { border: 1px solid var(--f-line-strong); border-radius: 99px; }
+.dsi-hex {
+  width: 78px; border: 0; background: transparent; color: var(--f-text); font: inherit;
+  font-family: var(--f-mono); font-size: 13px; text-transform: uppercase;
+}
+.dsi-hex:focus { outline: none; }
+.dsi-color:focus-within { box-shadow: 0 0 0 3px var(--f-orange-ring); border-color: var(--f-orange); }
+
+@media (max-width: 560px) {
+  .dsi-grid { grid-template-columns: 1fr; }
+  .dsi-logos { grid-template-columns: 1fr 1fr; }
+}

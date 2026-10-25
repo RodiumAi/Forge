@@ -7,6 +7,9 @@ and BYOK installs (no entitlement cache) are unrestricted and show no badge.
 As in ``require_feature``, the plan slug wins over a stale cache row: a Free
 account never exports and a Starter account never gets HTML or PPTX, whatever
 an old row says. The acting user's plan counts, on a shared project too.
+A format is included from its plan upward: a plan ranked at or above the one
+that unlocks it gets it even when its entitlements lack the flag (Pro, Scale,
+the team plans).
 """
 
 from __future__ import annotations
@@ -32,7 +35,25 @@ _NEVER: dict[str, set[str]] = {
     "export_pptx": {"free", "starter"},
 }
 
+#: Plan order, the same as the client's (lib/forge-plans.ts). Unknown slugs
+#: rely on their flag alone.
+PLAN_RANK: dict[str, int] = {
+    "free": 0,
+    "starter": 1,
+    "builder": 2,
+    "pro": 3,
+    "scale": 4,
+    "team-pro": 10,
+    "team-scale": 11,
+}
+
 EXPORT_NOT_IN_PLAN = "EXPORT_NOT_IN_PLAN"
+
+
+def plan_reaches(slug: str, required: str) -> bool:
+    """Whether ``slug`` is ``required`` or a plan above it."""
+    rank = PLAN_RANK.get(slug)
+    return rank is not None and rank >= PLAN_RANK[required]
 
 
 def export_allowed(db: Session, user: User, fmt: str) -> bool:
@@ -45,7 +66,9 @@ def export_allowed(db: Session, user: User, fmt: str) -> bool:
     slug = (row.plan_slug if row is not None else "free").strip().lower()
     if slug in _NEVER[flag]:
         return False
-    return row is not None and bool(getattr(row, flag, False))
+    if row is None:
+        return False
+    return bool(getattr(row, flag, False)) or plan_reaches(slug, REQUIRED_PLAN[flag])
 
 
 def require_export(db: Session, user: User, fmt: str) -> None:

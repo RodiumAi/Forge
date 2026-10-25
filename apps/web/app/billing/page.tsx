@@ -23,7 +23,6 @@ import { frodiUsage } from "@/lib/frodi-usage";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { kindStyle } from "@/lib/kind-style";
 import { useEnabledKinds, type ProjectKindId } from "@/lib/kinds";
-import { countryName } from "@/lib/payment-countries";
 import { getSessionSnapshot, subscribeSession } from "@/lib/session-cache";
 
 type UsageWeek = { start: string; counts: Partial<Record<ProjectKindId, number>> };
@@ -111,7 +110,7 @@ export default function BillingPage() {
   const plan = status?.plan ?? status?.entitlements?.plan_slug ?? null;
   const monthlyFrodi = plan === "free";
   const days = daysUntil(usage?.resetsAt);
-  const { iso, country, currency, setCountry } = usePaymentCountry();
+  const { iso, currency, setCountry } = usePaymentCountry();
   const { plans, error: plansError } = useForgePlans(currency);
   const [wallet, setWallet] = useState<RodiumWallet | null>(null);
   const [rodiumSub, setRodiumSub] = useState<string | null>(null);
@@ -144,7 +143,6 @@ export default function BillingPage() {
   const sub = wallet?.rodium_sub ?? rodiumSub;
   const accountBilling = `${rodiumUserAppOrigin()}/dashboard/billing`;
   const returnTo = typeof window !== "undefined" ? `${window.location.origin}/billing` : undefined;
-  const methods = country?.methodsCount ?? null;
 
   return (
     <AppShell active="billing" title={t("uiNavBilling")}>
@@ -237,19 +235,6 @@ export default function BillingPage() {
           <div className="f-field">
             <label>{t("uiCountryLabel")}</label>
             <CountryPicker value={iso} onChange={(next) => setCountry(next)} align="start" />
-          </div>
-          <div className="f-pay-method">
-            <span className="f-pay-logo" aria-hidden>
-              MoMo
-            </span>
-            <div style={{ minWidth: 0 }}>
-              <b>{t("apPayMethodTitle")}</b>
-              <br />
-              <small className="f-muted">
-                {country ? countryName(country, locale) : iso} · {currency}
-                {methods ? ` · ${t(methods > 1 ? "uiCountryMethods" : "uiCountryMethod").replace("{n}", String(methods))}` : ""}
-              </small>
-            </div>
           </div>
           <p className="f-note">{t("apPayMethodNote")}</p>
         </section>

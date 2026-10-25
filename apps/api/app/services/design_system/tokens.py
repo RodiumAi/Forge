@@ -221,9 +221,35 @@ class IconSpec(_Loose):
         return _clip(value, 300)
 
 
+class BrandSpec(_Loose):
+    """Facts about the brand, filled only from what the request gives (empty otherwise)."""
+
+    tagline: str = ""
+    website: str = ""
+    audience: str = ""
+
+    @field_validator("tagline", mode="before")
+    @classmethod
+    def _tagline(cls, value: Any) -> str:
+        return _clip(value, 160)
+
+    @field_validator("audience", mode="before")
+    @classmethod
+    def _audience(cls, value: Any) -> str:
+        return _clip(value, 300)
+
+    @field_validator("website", mode="before")
+    @classmethod
+    def _website(cls, value: Any) -> str:
+        # Only an https address is kept; anything else is dropped, never rewritten.
+        url = str(value or "").strip()
+        return url if re.match(r"^https://[^\s]{3,290}$", url) else ""
+
+
 class Spec(_Loose):
     name: str = "Design system"
     description: str = ""
+    brand: BrandSpec = Field(default_factory=BrandSpec)
     colors: dict[str, str] = Field(default_factory=dict)
     fonts: FontsSpec = Field(default_factory=FontsSpec)
     type: TypeSpec = Field(default_factory=TypeSpec)
@@ -599,13 +625,22 @@ def _guidance(spec: GuidanceSpec) -> dict[str, Any] | None:
     return out or None
 
 
-def _logo(spec: LogoSpec, src: str | None, dark_src: str | None = None) -> dict[str, Any] | None:
+def _brand(spec: BrandSpec) -> dict[str, Any] | None:
+    out = {key: value for key, value in spec.model_dump().items() if value}
+    return out or None
+
+
+def _logo(
+    spec: LogoSpec, src: str | None, dark_src: str | None = None, icon_src: str | None = None
+) -> dict[str, Any] | None:
     if not src:
         return None
     usage = [*spec.usage, *(MISUSE_PREFIX + line for line in spec.misuse)][:40]
     out: dict[str, Any] = {"src": src, "minSizePx": spec.minSizePx}
     if dark_src:
         out["darkSrc"] = dark_src
+    if icon_src:
+        out["iconSrc"] = icon_src
     if spec.clearSpace:
         out["clearSpace"] = spec.clearSpace
     if usage:
@@ -614,7 +649,11 @@ def _logo(spec: LogoSpec, src: str | None, dark_src: str | None = None) -> dict[
 
 
 def build_document(
-    spec: Spec, *, logo_src: str | None = LOGO_PATH, logo_dark_src: str | None = None
+    spec: Spec,
+    *,
+    logo_src: str | None = LOGO_PATH,
+    logo_dark_src: str | None = None,
+    logo_icon_src: str | None = None,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     """(validated design-system.json, contrast fixes) for ``spec``."""
     colors, fixes = repair_contrast(complete_palette(spec.colors))
@@ -625,7 +664,10 @@ def build_document(
     document: dict[str, Any] = {"version": 1, "name": spec.name, "tokens": tokens}
     if spec.description:
         document["description"] = spec.description
-    logo = _logo(spec.logo, logo_src, logo_dark_src)
+    brand = _brand(spec.brand)
+    if brand:
+        document["brand"] = brand
+    logo = _logo(spec.logo, logo_src, logo_dark_src, logo_icon_src)
     if logo:
         document["logo"] = logo
     for key in ("voice", "imagery", "guidelines"):
@@ -688,6 +730,7 @@ def spec_from_document(document: dict[str, Any]) -> Spec:
         {
             "name": document.get("name") or "Design system",
             "description": document.get("description") or "",
+            "brand": document.get("brand") or {},
             "colors": colors,
             "fonts": {
                 "display": _first_family(font.get("display"), "Inter"),
@@ -748,7 +791,9 @@ def apply_section(
         tokens["icon"] = build_icon_group(spec.iconography)
     elif section == "logo":
         current = doc.get("logo") or {}
-        logo = _logo(spec.logo, current.get("src") or LOGO_PATH, current.get("darkSrc"))
+        logo = _logo(
+            spec.logo, current.get("src") or LOGO_PATH, current.get("darkSrc"), current.get("iconSrc")
+        )
         if logo:
             doc["logo"] = logo
     elif section == "components":
@@ -833,8 +878,21 @@ def token_css(value: Any, kind: str | None) -> str | None:
     return None
 
 
+# A token value is one CSS value. These characters would end the declaration,
+# the rule or the surrounding <style> element, so a value holding one is dropped.
+_UNSAFE_CSS_VALUE_RE = re.compile(r"[<>{};\\\x00-\x1f\x7f\u2028\u2029]")
+
+
+def safe_css_value(value: str) -> bool:
+    return not _UNSAFE_CSS_VALUE_RE.search(value)
+
+
 def css_variables(document: dict[str, Any]) -> dict[str, str]:
-    """``--name`` to CSS value for every token, ``$type`` inherited from groups."""
+    """``--name`` to CSS value for every token, ``$type`` inherited from groups.
+
+    Values that could break out of a declaration are left out (see
+    `safe_css_value`): every page, export and stylesheet is built from here.
+    """
     out: dict[str, str] = {}
 
     def walk(node: Any, path: list[str], inherited: str | None) -> None:
@@ -843,7 +901,7 @@ def css_variables(document: dict[str, Any]) -> dict[str, str]:
         kind = node.get("$type") if isinstance(node.get("$type"), str) else inherited
         if "$value" in node:
             css = token_css(node["$value"], kind)
-            if css is not None and path:
+            if css is not None and path and safe_css_value(css):
                 out[_var_name(path)] = css
             return
         for key, child in node.items():

@@ -154,3 +154,114 @@ export function linesOf(text: string, max = 30): string[] | undefined {
     .slice(0, max);
   return items.length ? items : undefined;
 }
+
+// ── cover, presenter and setup pages ───────────────────────────────────────
+
+export type CodelabCover = NonNullable<Codelab["cover"]>;
+export type CodelabPresenter = NonNullable<Codelab["presenter"]>;
+export type CodelabSetup = NonNullable<Codelab["setup"]>;
+
+const LANGUAGE_RE = /^[a-z0-9+#-]{1,32}$/;
+
+function text(value: string | undefined, max: number): string | undefined {
+  return value && value.trim() ? value.slice(0, max) : undefined;
+}
+
+export function httpsUrl(value: string | undefined): string | undefined {
+  const v = (value ?? "").trim();
+  return /^https:\/\/\S+$/i.test(v) ? v.slice(0, 2000) : undefined;
+}
+
+/** Drops undefined keys; undefined when nothing is left. */
+function compact<T extends object>(value: T): T | undefined {
+  const out = Object.fromEntries(Object.entries(value).filter(([, v]) => v !== undefined)) as T;
+  return Object.keys(out).length ? out : undefined;
+}
+
+/**
+ * The editor keeps a draft of each section (half-typed URLs, empty rows);
+ * codelab.json only ever gets what the schema accepts.
+ */
+export function cleanCover(draft: CodelabCover | undefined): CodelabCover | undefined {
+  if (!draft) return undefined;
+  const highlights = (draft.highlights ?? []).map((l) => l.trim().slice(0, 200)).filter(Boolean).slice(0, 8);
+  return compact({
+    eyebrow: text(draft.eyebrow, 160),
+    highlights: highlights.length ? highlights : undefined,
+    showQr: draft.showQr === false ? false : undefined,
+  });
+}
+
+export function cleanPresenter(draft: CodelabPresenter | undefined): CodelabPresenter | undefined {
+  if (!draft) return undefined;
+  const links = (draft.links ?? [])
+    .map((link) => ({ label: link.label.trim().slice(0, 60), url: httpsUrl(link.url) }))
+    .filter((link): link is { label: string; url: string } => !!link.label && !!link.url)
+    .slice(0, 6);
+  return compact({
+    name: text(draft.name, 120),
+    role: text(draft.role, 120),
+    company: text(draft.company, 120),
+    photo: draft.photo && /^(?!.*\.\.)(?!\/)[A-Za-z0-9_./-]+$/.test(draft.photo) ? draft.photo : undefined,
+    bio: text(draft.bio, 1500),
+    links: links.length ? links : undefined,
+  });
+}
+
+export function cleanSetup(draft: CodelabSetup | undefined): CodelabSetup | undefined {
+  if (!draft) return undefined;
+  const tools = (draft.tools ?? [])
+    .filter((tool) => tool.name.trim())
+    .map((tool) => compact({ name: tool.name.slice(0, 80), version: text(tool.version, 40), url: httpsUrl(tool.url) })!)
+    .slice(0, 20);
+  const groups = (draft.groups ?? [])
+    .filter((group) => group.title.trim())
+    .map((group) => ({
+      title: group.title.slice(0, 120),
+      items: group.items
+        .filter((item) => item.text.trim())
+        .map((item) => compact({ text: item.text.slice(0, 300), url: httpsUrl(item.url), code: text(item.code, 200) })!)
+        .slice(0, 12),
+    }))
+    .slice(0, 6);
+  const promo = draft.promo?.code?.trim()
+    ? compact({ code: draft.promo.code.trim().slice(0, 64), label: text(draft.promo.label, 200), url: httpsUrl(draft.promo.url) })
+    : undefined;
+  const commands = (draft.commands ?? [])
+    .filter((command) => command.code.trim())
+    .map((command) => {
+      const language = (command.language ?? "").trim().toLowerCase();
+      return compact({
+        label: text(command.label, 120),
+        language: LANGUAGE_RE.test(language) ? language : undefined,
+        code: command.code.slice(0, 4000),
+      })!;
+    })
+    .slice(0, 12);
+  return compact({
+    intro: text(draft.intro, 1000),
+    tools: tools.length ? tools : undefined,
+    groups: groups.length ? groups : undefined,
+    promo,
+    commands: commands.length ? commands : undefined,
+  });
+}
+
+/** codelab.json with one page flag set; `pages` disappears when both are unset. */
+export function withPageFlag(codelab: Codelab, page: "presenter" | "setup", shown: boolean | undefined): Codelab {
+  const pages = compact({ ...(codelab.pages ?? {}), [page]: shown });
+  const next = { ...codelab, pages };
+  if (!pages) delete next.pages;
+  return next;
+}
+
+/** codelab.json with a section replaced; absent when empty. */
+export function withSection<K extends "cover" | "presenter" | "setup">(
+  codelab: Codelab,
+  key: K,
+  value: Codelab[K] | undefined,
+): Codelab {
+  const next = { ...codelab, [key]: value };
+  if (value === undefined) delete next[key];
+  return next;
+}

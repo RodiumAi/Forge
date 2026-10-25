@@ -1,0 +1,32 @@
+{
+  "kind": "mobile",
+  "id": "voyage-trips",
+  "title": {
+    "en": "Voyage",
+    "fr": "Voyage"
+  },
+  "description": {
+    "en": "Travel app: editorial explore feed with a trending carousel of tall destination cards, saved places, upcoming trips with a boarding pass and itinerary, a profile, a destination detail and a booking flow, in an airy light phone shell with a glass tab bar.",
+    "fr": "App de voyage : fil d'exploration éditorial avec carrousel tendance de grandes cartes de destinations, lieux enregistrés, voyages à venir avec carte d'embarquement et itinéraire, profil, fiche destination et parcours de réservation, dans un shell clair et aéré avec barre d'onglets en verre."
+  },
+  "tags": [
+    "mobile",
+    "travel",
+    "booking",
+    "lifestyle"
+  ],
+  "preview": "preview.html",
+  "bootHint": {
+    "en": "Adapt voyage-trips: agency name, destinations and photos, prices per night, the upcoming trip and its itinerary.",
+    "fr": "Adapte voyage-trips : nom de l'agence, destinations et photos, prix par nuit, le prochain voyage et son itinéraire."
+  },
+  "accent": "#1f6feb",
+  "bg": "#f5f7f8",
+  "fg": "#0e1a22",
+  "muted": "#6b7a86",
+  "tone": "airy, editorial, quietly adventurous",
+  "fonts": {
+    "display": "Instrument Serif",
+    "body": "Manrope"
+  }
+}

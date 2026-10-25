@@ -1,6 +1,7 @@
 {
   "kind": "slides",
   "id": "slides-travel",
+  "free": true,
   "title": {
     "fr": "Voyage",
     "en": "Travel journal"

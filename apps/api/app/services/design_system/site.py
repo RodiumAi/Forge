@@ -212,11 +212,19 @@ box-shadow:var(--shadow-md,none);max-width:320px}
 .alert b{margin-right:6px}
 .alert.info b{color:var(--info)}.alert.success b{color:var(--success)}.alert.danger b{color:var(--danger)}
 footer{padding:40px 0 56px;color:var(--muted);font-size:var(--text-sm,13px)}
-.badge-forge{position:fixed;right:16px;bottom:16px;background:var(--fg);color:var(--bg);border-radius:999px;
-padding:6px 12px;font-size:12px;font-weight:600;text-decoration:none}
+.badge-forge{position:fixed;right:16px;bottom:16px;z-index:20;display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 9px 0 6px;border-radius:999px;background:#1C1F26;color:#fff;border:1px solid rgba(255,255,255,.14);font-size:11.5px;font-weight:600;white-space:nowrap;text-decoration:none;font-family:system-ui,sans-serif}
+.badge-forge svg{width:14px;height:14px;flex:none}
 @media (max-width:640px){.spec{grid-template-columns:1fr}header.hero{padding-top:48px}}
-@media print{.badge-forge{position:static;display:inline-block}section{break-inside:avoid-page}nav.toc{display:none}}
+@media print{.badge-forge{position:static}section{break-inside:avoid-page}nav.toc{display:none}}
 """
+
+
+# The Forge icon for the "By Forge" pill: inline, the site and the guide render without assets.
+FORGE_MARK_SVG = (
+    '<svg viewBox="100 100 1000 1000" width="14" height="14" aria-hidden="true">'
+    '<path d="M100 100L360 360L575 360L575 575L625 625L840 625L840 840L1100 1100L1100 100Z" fill="#EB6118"/>'
+    "</svg>"
+)
 
 
 def local_asset_url(project_id: str) -> Callable[[str], str]:
@@ -295,9 +303,9 @@ def brand_site_html(
             "#ffffff" if contrast_ratio("#ffffff", value) >= contrast_ratio("#0b0b0f", value) else "#0b0b0f"
         )
         swatches.append(
-            f'<div class="swatch"><div class="chip" style="background:{value};color:{text_on};'
+            f'<div class="swatch"><div class="chip" style="background:{escape(value)};color:{escape(text_on)};'
             f'display:flex;align-items:flex-end;padding:10px;font-weight:700">Aa</div>'
-            f'<div class="meta"><b>{escape(token_name)}</b><span class="mono">{value}</span>'
+            f'<div class="meta"><b>{escape(token_name)}</b><span class="mono">{escape(value)}</span>'
             f'<div class="muted">{escape(ROLES.get(token_name, ""))}</div></div></div>'
         )
     rows = []
@@ -354,7 +362,7 @@ def brand_site_html(
     # Spacing, radius, shadows, motion
     bars = "".join(
         f'<div class="bar"><span class="mono" style="width:90px">{key[2:]}</span>'
-        f'<span class="v" style="width:var({key})"></span><span class="muted">{value}</span></div>'
+        f'<span class="v" style="width:var({escape(key)})"></span><span class="muted">{escape(value)}</span></div>'
         for key, value in variables.items()
         if key.startswith("--space-")
     )
@@ -503,7 +511,8 @@ def brand_site_html(
         else ""
     )
     forge_badge = (
-        f'<a class="badge-forge" href="https://forge.rodiumai.io" rel="noopener">{labels["made_with"]}</a>'
+        f'<a class="badge-forge" href="https://forge.rodiumai.io" rel="noopener" aria-label="{labels["made_with"]}">'
+        f"{FORGE_MARK_SVG}By Forge</a>"
         if badge
         else ""
     )
@@ -511,6 +520,8 @@ def brand_site_html(
     return (
         f'<!doctype html><html lang="{"fr" if lang == "fr" else "en"}"><head><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width,initial-scale=1">'
+        # The page is static: no script may run, whatever ends up in the tokens.
+        '<meta http-equiv="Content-Security-Policy" content="script-src \'none\'; object-src \'none\'; base-uri \'none\'">'
         f"<title>{name} · {labels['guidelines']}</title>"
         f'<meta name="description" content="{description or name}">'
         f"{fonts_link}<style>:root{{{root}}}{_STYLE}</style></head><body>"

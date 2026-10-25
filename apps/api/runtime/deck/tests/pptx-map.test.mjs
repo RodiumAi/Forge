@@ -54,7 +54,7 @@ test("paragraphs keep runs, bullets, levels, links and exact line spacing", () =
   assert.equal(text[0].options.bold, true);
   assert.equal(text[1].options.breakLine, true);
   assert.deepEqual(text[1].options.hyperlink, { url: "https://example.com" });
-  assert.deepEqual(text[2].options.bullet, { type: "number" });
+  assert.deepEqual(text[2].options.bullet, { type: "number", numberStartAt: 1 });
   assert.equal(text[2].options.indentLevel, 1);
   assert.equal(text[2].options.breakLine, undefined);
 });
@@ -161,4 +161,11 @@ test("buildPptx writes slides, notes and transitions", async () => {
   const notesText = await Promise.all(notes.map((n) => zip.file(n).async("string")));
   assert.ok(notesText.some((x) => x.includes("Speaker")));
   assert.deepEqual(warnings.map((w) => w.code), ["FONT_NOT_EMBEDDED"]);
+});
+
+test("numbered paragraphs carry their own number, restarting after a break", () => {
+  const item = (text, bullet = "number", level = 0) => ({ runs: [{ text, size: 32, color: white }], align: "left", bullet, level });
+  const paras = [item("a"), item("b"), item("b1", "number", 1), item("c"), item("plain", null), item("d")];
+  const starts = paragraphsToText(paras).map((r) => r.options.bullet?.numberStartAt ?? null);
+  assert.deepEqual(starts, [1, 2, 1, 3, null, 1]);
 });

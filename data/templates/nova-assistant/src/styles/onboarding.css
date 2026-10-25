@@ -1,0 +1,38 @@
+/* Onboarding (first launch). Scoped under .onboarding-screen. */
+.onboarding-screen {
+  min-height: 100dvh;
+  padding: calc(1rem + var(--safe-top)) 1.4rem calc(1.4rem + var(--safe-bottom));
+  gap: 1.5rem; justify-content: space-between;
+  background: radial-gradient(80% 50% at 50% 30%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 70%), var(--bg);
+}
+.onboarding-screen .onboard-top { display: flex; align-items: center; justify-content: space-between; min-height: 2.75rem; }
+.onboarding-screen .brand { display: inline-flex; align-items: center; gap: .55rem; font-family: var(--font-display); font-weight: 600; font-size: 1.2rem; letter-spacing: -.03em; }
+.onboarding-screen .skip { appearance: none; border: 0; background: transparent; color: var(--muted); font-weight: 600; min-height: 2.75rem; padding: 0 .4rem; }
+
+.onboarding-screen .onboard-art { position: relative; height: 44vh; min-height: 290px; max-height: 370px; display: grid; place-items: center; }
+.onboarding-screen .orbit { position: absolute; border-radius: 999px; border: 1px dashed color-mix(in srgb, var(--accent) 20%, transparent); }
+.onboarding-screen .orbit.o1 { width: 15rem; height: 15rem; animation: onboard-turn 40s linear infinite; }
+.onboarding-screen .orbit.o2 { width: 20rem; height: 20rem; border-style: solid; border-color: color-mix(in srgb, var(--fg) 5%, transparent); }
+.onboarding-screen .bubble {
+  position: absolute; display: inline-flex; align-items: center; gap: .4rem; padding: .55rem .85rem; border-radius: 1rem;
+  background: color-mix(in srgb, var(--surface-2) 90%, transparent); border: 1px solid var(--line); backdrop-filter: blur(10px);
+  font-size: .78rem; font-weight: 500; box-shadow: 0 16px 30px -12px rgba(0, 0, 0, .6); transition: opacity .4s ease, transform .5s cubic-bezier(.2, .8, .2, 1);
+}
+.onboarding-screen .bubble.a { top: 8%; left: 2%; border-radius: 1rem 1rem 1rem .3rem; background: color-mix(in srgb, var(--accent) 16%, var(--surface)); }
+.onboarding-screen .bubble.b { top: 22%; right: 0; color: var(--pink); }
+.onboarding-screen .bubble.c { bottom: 16%; left: 4%; color: var(--accent); }
+.onboarding-screen .bubble.d { bottom: 4%; right: 6%; color: var(--muted); }
+.onboarding-screen .step-0 .bubble.b, .onboarding-screen .step-0 .bubble.c, .onboarding-screen .step-0 .bubble.d { opacity: 0; transform: scale(.9); }
+.onboarding-screen .step-1 .bubble.a, .onboarding-screen .step-1 .bubble.d { opacity: 0; transform: scale(.9); }
+.onboarding-screen .step-2 .bubble.a, .onboarding-screen .step-2 .bubble.b, .onboarding-screen .step-2 .bubble.c { opacity: 0; transform: scale(.9); }
+.onboarding-screen .step-2 .bubble.d { bottom: 10%; right: 50%; transform: translateX(50%); color: var(--accent); }
+
+.onboarding-screen .kicker { margin-bottom: .7rem; color: var(--accent); }
+.onboarding-screen .onboard-body h2 { font-size: 2.15rem; line-height: 1.08; font-weight: 600; margin-bottom: .75rem; max-width: 14ch; }
+.onboarding-screen .onboard-body .muted { font-size: .95rem; max-width: 32ch; }
+.onboarding-screen .onboard-actions { display: grid; gap: 1.1rem; }
+.onboarding-screen .dots { display: flex; gap: .4rem; }
+.onboarding-screen .dots i { width: .5rem; height: .5rem; border-radius: 999px; background: var(--surface-2); transition: width .3s ease, background .3s ease; }
+.onboarding-screen .dots i.on { width: 1.6rem; background: var(--accent); box-shadow: var(--glow); }
+
+@keyframes onboard-turn { to { transform: rotate(360deg); } }

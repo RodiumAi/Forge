@@ -1,0 +1,42 @@
+/* Sleep tab: a dusk-tinted night block, then stories on cream. Scoped under .sleep-screen. */
+.sleep-screen .night {
+  position: relative; display: grid; gap: 1.25rem; margin-inline: -1.25rem; padding: 1.3rem 1.25rem 1.6rem;
+  border-radius: 0 0 2.2rem 2.2rem; color: #f4ece6;
+  background:
+    radial-gradient(1.5px 1.5px at 18% 12%, rgba(255, 255, 255, .8), transparent),
+    radial-gradient(1px 1px at 72% 8%, rgba(255, 255, 255, .7), transparent),
+    radial-gradient(1.5px 1.5px at 88% 30%, rgba(255, 255, 255, .6), transparent),
+    radial-gradient(1px 1px at 40% 22%, rgba(255, 255, 255, .5), transparent),
+    radial-gradient(70% 60% at 85% 0%, rgba(224, 122, 95, .32), transparent 70%),
+    linear-gradient(180deg, var(--night-2), var(--night));
+}
+.sleep-screen .night-head { display: flex; align-items: center; justify-content: space-between; }
+.sleep-screen .night-kicker { margin: 0; display: inline-flex; align-items: center; gap: .4rem; font-size: .74rem; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--peach); }
+.sleep-screen .night-time { font-size: .8rem; color: rgba(244, 236, 230, .65); }
+
+.sleep-screen .tonight { position: relative; display: block; aspect-ratio: 16 / 11; border-radius: 1.6rem; overflow: hidden; color: #fffaf5; text-decoration: none; box-shadow: 0 24px 50px -20px rgba(0, 0, 0, .7); }
+.sleep-screen .tonight img { width: 100%; height: 100%; object-fit: cover; }
+.sleep-screen .tonight-shade { position: absolute; inset: 0; background: linear-gradient(180deg, transparent 30%, rgba(20, 16, 36, .85)); }
+.sleep-screen .tonight-body { position: absolute; left: 1.1rem; right: 4.6rem; bottom: 1.05rem; display: grid; gap: .2rem; }
+.sleep-screen .tonight-body small { font-size: .72rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--peach); }
+.sleep-screen .tonight-body strong { font-family: var(--font-display); font-weight: 500; font-size: 1.6rem; line-height: 1.1; }
+.sleep-screen .tonight-body span { font-size: .82rem; opacity: .8; }
+.sleep-screen .tonight-play { position: absolute; right: 1rem; bottom: 1.1rem; width: 3.3rem; height: 3.3rem; border-radius: 999px; display: grid; place-items: center; background: var(--accent); color: var(--on-accent); }
+
+.sleep-screen .night-label { margin: 0 0 .6rem; font-size: .8rem; font-weight: 600; color: rgba(244, 236, 230, .7); }
+.sleep-screen .sounds { display: grid; grid-template-columns: repeat(4, 1fr); gap: .55rem; }
+.sleep-screen .sound {
+  appearance: none; display: grid; justify-items: center; gap: .4rem; min-height: 4.6rem; padding: .7rem .2rem; border-radius: 1.2rem;
+  border: 1px solid rgba(255, 255, 255, .1); background: rgba(255, 255, 255, .06); color: rgba(244, 236, 230, .8); font-size: .74rem; font-weight: 600;
+}
+.sleep-screen .sound.on { background: color-mix(in srgb, var(--accent) 24%, transparent); border-color: color-mix(in srgb, var(--accent) 70%, transparent); color: #fffaf5; }
+
+.sleep-screen .timers { display: flex; gap: .3rem; padding: .3rem; border-radius: 999px; background: rgba(255, 255, 255, .07); }
+.sleep-screen .timers button { appearance: none; flex: 1; border: 0; min-height: 2.75rem; border-radius: 999px; background: transparent; color: rgba(244, 236, 230, .7); font-size: .82rem; font-weight: 600; }
+.sleep-screen .timers button.on { background: #f4ece6; color: var(--night); }
+
+.sleep-screen .stories { list-style: none; margin: 0; padding: 0; }
+.sleep-screen .story-link { flex: 1; min-width: 0; display: flex; align-items: center; gap: .9rem; text-decoration: none; color: inherit; }
+.sleep-screen .story-link img { width: 4.2rem; height: 4.2rem; border-radius: 1.1rem; object-fit: cover; flex-shrink: 0; }
+.sleep-screen .heart { appearance: none; border: 0; background: none; width: 2.75rem; height: 2.75rem; border-radius: 999px; display: grid; place-items: center; color: var(--muted); }
+.sleep-screen .heart.on { color: var(--accent); }

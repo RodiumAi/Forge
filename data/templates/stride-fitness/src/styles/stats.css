@@ -1,0 +1,40 @@
+/* Stats tab. Scoped under .stats-screen. */
+.stats-screen .total { display: grid; gap: .35rem; }
+.stats-screen .total-km { margin: 0; font-size: 5.6rem; font-weight: 800; letter-spacing: -.01em; }
+.stats-screen .total-km small { font-size: 1.6rem; font-weight: 700; color: var(--accent); margin-left: .3rem; }
+.stats-screen .delta { justify-self: start; display: inline-flex; align-items: center; gap: .3rem; padding: .32rem .7rem; border-radius: 999px; font-size: .74rem; font-weight: 600; background: color-mix(in srgb, var(--ring-stand) 14%, transparent); color: var(--ring-stand); }
+
+.stats-screen .chart { padding: 1rem .9rem .8rem; }
+.stats-screen .bars { display: flex; align-items: flex-end; gap: .4rem; height: 11rem; }
+.stats-screen .col { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: .35rem; }
+.stats-screen .col em { font-style: normal; font-family: var(--font-display); font-weight: 700; font-size: .85rem; color: var(--muted); min-height: 1rem; }
+.stats-screen .col span { width: 100%; max-width: 2rem; border-radius: .5rem .5rem .3rem .3rem; background: var(--surface-2); transition: height .4s cubic-bezier(.2, .8, .2, 1); }
+.stats-screen .col small { font-size: .7rem; font-weight: 600; color: var(--muted); }
+.stats-screen .col.peak span { background: linear-gradient(180deg, var(--volt), var(--accent)); }
+.stats-screen .col.peak em { color: var(--volt); }
+
+.stats-screen .summary { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
+.stats-screen .summary .card { display: grid; gap: .3rem; padding: .9rem 1rem; }
+.stats-screen .summary .num { margin: 0; font-size: 2.2rem; }
+
+.stats-screen .trophy { color: var(--volt); }
+.stats-screen .records { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; }
+.stats-screen .records li {
+  display: grid; grid-template-columns: 4.8rem 1fr auto; align-items: center; gap: .6rem; min-height: 3.6rem; padding: .5rem .9rem;
+  border-radius: 1.1rem; background: var(--surface); border: 1px solid var(--line);
+}
+.stats-screen .pr-label { font-family: var(--font-display); font-weight: 800; font-size: 1.35rem; text-transform: uppercase; color: var(--accent); }
+.stats-screen .pr-when { font-size: .76rem; color: var(--muted); }
+.stats-screen .pr-value { margin: 0; font-size: 1.75rem; }
+
+.stats-screen .club ol { list-style: none; margin: 0; padding: 0; display: grid; gap: .55rem; }
+.stats-screen .club li { display: grid; grid-template-columns: 1.6rem 2.4rem 4rem 1fr 2.8rem; align-items: center; gap: .55rem; min-height: 2.75rem; }
+.stats-screen .rank { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; color: var(--muted); display: grid; place-items: center; }
+.stats-screen .club li:first-child .rank { color: var(--volt); }
+.stats-screen .club img { width: 2.4rem; height: 2.4rem; border-radius: 999px; object-fit: cover; }
+.stats-screen .club-name { font-size: .88rem; font-weight: 600; }
+.stats-screen .club-bar { height: .45rem; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+.stats-screen .club-bar i { display: block; height: 100%; border-radius: 999px; background: var(--muted); }
+.stats-screen .club li.me .club-bar i { background: var(--accent); }
+.stats-screen .club li.me .club-name { color: var(--accent); }
+.stats-screen .club-km { margin: 0; text-align: right; font-size: 1.3rem; }

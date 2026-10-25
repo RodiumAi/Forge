@@ -234,6 +234,19 @@ class TestOutline:
         # Nothing written before confirmation.
         assert len(store.read_deck(deck)["slides"]) == 1
 
+    async def test_outline_prompt_gets_the_imported_powerpoint_in_its_own_section(self, deck, monkeypatch, run_log):
+        calls = script(monkeypatch, json.dumps(OUTLINE))
+        prompt = (
+            "Recrée cette présentation\n\n[Document: ancien.pptx | pptx]\n"
+            "--- Slide 1 ---\nTitle: Rapport annuel\n- Chiffre clé\n[/Document]"
+        )
+        await events_of(flow.document_stream(ctx(deck, fresh=True, prompt=prompt)))
+        user = calls[0][-1]["content"]
+        assert "Request:\nRecrée cette présentation\n\n" in user
+        assert "[Document:" not in user
+        assert 'PowerPoint "ancien.pptx"' in user
+        assert "<document>\n--- Slide 1 ---\nTitle: Rapport annuel" in user
+
     def test_confirmed_plan_keeps_order_titles_and_ids(self):
         stored = check_outline(json.loads(json.dumps(OUTLINE))).model_dump()
         tasks = plan_tasks(check_outline(json.loads(json.dumps(OUTLINE))))

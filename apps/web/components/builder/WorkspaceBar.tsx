@@ -58,7 +58,7 @@ export function WorkspaceBar({
   tools,
   actions,
   people = [],
-  backHref = APP_ROUTES.projects,
+  backHref = APP_ROUTES.home,
   className,
 }: Props) {
   const { t, locale, setLocale } = useI18n();
@@ -76,8 +76,12 @@ export function WorkspaceBar({
 
   return (
     <header className={cx("f-bd-top", className)}>
-      <Link href={backHref} className="f-bd-back" aria-label={t("bdBackToProjects")} title={t("bdBackToProjects")}>
-        <img src="/brand/forge/forge-app-icon-orange.svg" alt="" width={26} height={26} />
+      <Link href={backHref} className="f-bd-back" aria-label={t("bdBackToProjects")}>
+        <Glyph name="chevron-left" size="sm" className="f-bd-back-arrow" />
+        <img src="/brand/forge/forge-app-icon-orange.svg" alt="" width={24} height={24} />
+        <span className="f-bd-back-tip" aria-hidden>
+          {t("bdBackToProjects")}
+        </span>
       </Link>
       <div className="f-bd-name">
         <span className="f-bd-kind" style={{ background: k.color }} title={t(k.labelKey)}>

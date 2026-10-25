@@ -9,9 +9,9 @@
   content: ""; position: absolute; inset: -1px; border-radius: 29px; padding: 1px; background: rgba(235, 97, 24, .45);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
   mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude;
-  pointer-events: none; z-index: 2; opacity: .7; transition: opacity .3s;
+  pointer-events: none; z-index: 2; opacity: 0; transition: opacity .3s;
 }
-.f-composer-wrap:focus-within::before { opacity: 1; }
+.f-composer-wrap:focus-within::before { opacity: 1; background: rgba(255, 255, 255, .16); }
 .f-composer-wrap.is-drop::before { opacity: 1; background: var(--f-orange); }
 .f-composer {
   position: relative; background: var(--f-composer); color: #F6F4F0; border-radius: 28px; padding: 18px 18px 14px;
@@ -68,14 +68,17 @@
 .f-model-dot { width: 8px; height: 8px; border-radius: 99px; background: #4ADE80; box-shadow: 0 0 0 3px rgba(74, 222, 128, .18); flex: none; }
 .f-send {
   width: 44px; height: 44px; border-radius: var(--f-r-pill); display: grid; place-items: center; background: var(--f-orange); color: #fff;
-  border: 0; cursor: pointer; flex: none; box-shadow: 0 10px 24px -8px rgba(235, 97, 24, .8);
+  border: 0; cursor: pointer; flex: none;
   transition: transform .2s var(--f-ease), opacity .2s, box-shadow .2s;
 }
 .f-send:hover:not(:disabled) { transform: translateY(-1px) scale(1.04); }
 .f-send:disabled { opacity: .35; box-shadow: none; transform: none; cursor: not-allowed; background: #4A505D; }
 .f-send.is-busy { opacity: 1; background: var(--f-orange); cursor: progress; }
-.f-composer-hint { display: flex; justify-content: space-between; gap: 12px; margin-top: 12px; font-size: 13px; color: var(--f-faint); padding: 0 8px; }
-.f-composer-hint kbd { font-family: var(--f-font); font-size: 12px; padding: 1px 6px; border-radius: 6px; border: 1px solid var(--f-line-strong); }
+.f-composer-hint {
+  display: flex; justify-content: space-between; gap: 12px; margin-top: 10px; padding: 10px 6px 0;
+  border-top: 1px solid rgba(255, 255, 255, .07); font-size: 12.5px; color: #8C92A0;
+}
+.f-composer-hint kbd { font-family: var(--f-font); font-size: 11.5px; padding: 1px 6px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, .14); color: #C9CDD6; }
 .f-composer-suggest { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 14px; }
 .f-composer-suggest button {
   max-width: 100%; height: 34px; padding: 0 14px; border-radius: var(--f-r-pill); background: var(--f-surface); border: 1px solid var(--f-line);
@@ -140,3 +143,82 @@
 .f-composer-wrap.is-compact .f-c-btn { height: 34px; min-width: 34px; font-size: 13px; padding: 0 10px; }
 .f-composer-wrap.is-compact .f-c-btn.is-icon { width: 34px; padding: 0; }
 .f-composer-wrap.is-compact .f-send { width: 38px; height: 38px; }
+
+/* design system menu: locked below Builder, empty state with "create" */
+.f-ds-locked { display: flex; gap: 10px; align-items: flex-start; margin: 4px 4px 6px; padding: 10px 12px; border-radius: 12px; background: rgba(235, 97, 24, 0.12); color: #F6F4F0; }
+.f-ds-locked > svg { flex: none; margin-top: 2px; color: #EB6118; }
+.f-ds-locked strong { display: block; font-size: 13px; font-weight: 600; }
+.f-ds-locked small { display: block; margin-top: 2px; font-size: 12px; line-height: 1.4; color: #B8BDC8; }
+.f-ds-empty p { margin: 6px 10px 2px; font-size: 12px; color: #9AA0AD; }
+
+/* Dictation (components/composer/VoiceInput): mic button, listening strip. */
+.f-voice-btn.is-listening,
+.f-voice-btn.is-listening:hover:not(:disabled) {
+  background: #EB6118; border-color: transparent; color: #fff;
+  animation: f-voice-pulse 1.6s ease-out infinite;
+}
+@keyframes f-voice-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(235, 97, 24, .55); }
+  70% { box-shadow: 0 0 0 9px rgba(235, 97, 24, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(235, 97, 24, 0); }
+}
+.f-voice-strip {
+  display: flex; align-items: center; gap: 10px; margin: 6px 4px 0; padding: 7px 8px 7px 12px;
+  border-radius: 12px; background: rgba(235, 97, 24, .12); border: 1px solid rgba(235, 97, 24, .35);
+  color: #F6F4F0; font-size: 13px; min-width: 0;
+}
+.f-voice-strip .f-grow { flex: 1; }
+.f-voice-strip.is-error { background: rgba(252, 165, 165, .1); border-color: rgba(252, 165, 165, .35); color: #FCA5A5; }
+.f-voice-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.f-voice-time { font-variant-numeric: tabular-nums; color: #C9CDD6; }
+.f-voice-time.is-ending { color: #FFB48A; font-weight: 600; }
+.f-voice-bars { display: inline-flex; align-items: center; gap: 3px; height: 16px; flex: none; }
+.f-voice-bars i { display: block; width: 3px; height: 100%; border-radius: 2px; background: #EB6118; animation: f-voice-bar 1s ease-in-out infinite; }
+.f-voice-bars i:nth-child(2) { animation-delay: -.8s; }
+.f-voice-bars i:nth-child(3) { animation-delay: -.55s; }
+.f-voice-bars i:nth-child(4) { animation-delay: -.3s; }
+.f-voice-bars i:nth-child(5) { animation-delay: -.15s; }
+@keyframes f-voice-bar { 0%, 100% { transform: scaleY(.3); } 50% { transform: scaleY(1); } }
+.f-voice-act {
+  display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 11px; border-radius: 99px; flex: none;
+  border: 1px solid rgba(255, 255, 255, .14); background: transparent; color: #E7E4DE;
+  font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
+}
+.f-voice-act:hover { background: rgba(255, 255, 255, .08); }
+.f-voice-act.is-primary { background: #EB6118; border-color: transparent; color: #fff; }
+.f-voice-act.is-primary:hover { filter: brightness(1.08); background: #EB6118; }
+.f-voice-act:focus-visible { outline: 2px solid var(--f-orange); outline-offset: 2px; }
+.f-voice-strip.is-error .f-voice-act { width: 28px; padding: 0; justify-content: center; color: inherit; }
+/* Builder chat: a narrower column, so a tighter strip. */
+.f-voice-strip.is-compact { margin: 4px 0 6px; gap: 8px; font-size: 12.5px; }
+.f-voice-strip.is-compact { gap: 6px; padding: 6px 6px 6px 10px; }
+.f-voice-strip.is-compact .f-voice-act { padding: 0 9px; font-size: 12px; }
+/* the chat column is narrow: Done drops its tick so "Listening..." stays whole */
+.f-voice-strip.is-compact .f-voice-act.is-primary svg { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .f-voice-btn.is-listening { animation: none; }
+  .f-voice-bars i { animation: none; transform: scaleY(.7); }
+}
+.f-voice-strip.is-error .f-voice-label { white-space: normal; line-height: 1.35; }
+
+/* Dictation outside the main composers (slides, codelabs, design system, image prompts). */
+.f-mic {
+  display: inline-flex; align-items: center; justify-content: center; flex: none; width: 32px; height: 32px; padding: 0;
+  border-radius: 999px; border: 1px solid transparent; background: transparent; color: inherit; opacity: .85; cursor: pointer;
+}
+.f-mic:hover:not(:disabled) { opacity: 1; background: color-mix(in srgb, currentColor 12%, transparent); }
+.f-mic:disabled { opacity: .4; cursor: not-allowed; }
+.f-mic:focus-visible { outline: 2px solid #EB6118; outline-offset: 2px; }
+.f-voice-field { position: relative; display: block; }
+.f-voice-field textarea { width: 100%; padding-right: 42px; }
+.f-voice-field .f-mic { position: absolute; right: 6px; bottom: 8px; }
+.f-voice-strip.is-surface { margin: 0; color: var(--f-text); background: rgba(235, 97, 24, .1); border-color: rgba(235, 97, 24, .4); }
+.f-voice-strip.is-surface .f-voice-time { color: var(--f-muted); }
+.f-voice-strip.is-surface .f-voice-time.is-ending { color: var(--f-orange, #EB6118); }
+.f-voice-strip.is-surface .f-voice-act:not(.is-primary) { color: var(--f-text); border-color: var(--f-line); }
+.f-voice-strip.is-surface .f-voice-act:not(.is-primary):hover { background: var(--f-surface-2); }
+.f-voice-strip.is-surface.is-error { color: var(--f-danger-text, #DC2626); background: rgba(220, 38, 38, .08); border-color: rgba(220, 38, 38, .35); }
+.de-composer-send { display: inline-flex; align-items: center; gap: 6px; }
+.dse-chat-send { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+.cle-chat-form .f-mic { align-self: flex-end; margin-bottom: 2px; }
+.f-voice-strip.is-compact .f-voice-label { flex-shrink: 0; }

@@ -88,6 +88,14 @@ def _has_thumbnail(project_id: str | UUID) -> bool:
     return _thumbnail_path(project_id).is_file()
 
 
+def _thumbnail_at(project_id: str | UUID) -> int | None:
+    """mtime of the stored card, so its URL changes when it is re-rendered."""
+    try:
+        return int(_thumbnail_path(project_id).stat().st_mtime)
+    except OSError:
+        return None
+
+
 def _project_out(
     project: Project,
     *,
@@ -120,6 +128,7 @@ def _project_out(
         created_at=project.created_at,
         updated_at=project.updated_at,
         has_thumbnail=_has_thumbnail(project.id),
+        thumbnail_at=_thumbnail_at(project.id),
         access_role=access_role,
         collaborators=collaborators or [],
     )
@@ -259,6 +268,11 @@ def list_projects(user: User = Depends(get_current_user), db: Session = Depends(
         for project, role in shared
     )
     out.sort(key=lambda item: item.updated_at, reverse=True)
+    # Cards show a stored image only: (re)render the stale ones in the background.
+    from app.services.project_thumbnail import request_thumbnail
+
+    for item in out:
+        request_thumbnail(str(item.id), item.platform, item.name)
     return out
 
 
@@ -381,13 +395,22 @@ async def create_project(
     template_id = (body.template_id or "").strip() or None
     prompt = (body.prompt or "").strip()
     platform = resolve_kind(body.platform or "web")
-    if template_id:
-        meta_for_kind = get_template(template_id)
-        if meta_for_kind is not None:
-            platform = resolve_kind(meta_for_kind.kind)
+    meta_for_kind = get_template(template_id) if template_id else None
+    if meta_for_kind is not None:
+        platform = resolve_kind(meta_for_kind.kind)
     # Forge Design kinds ship dark: refused until their flag is on.
     if not kind_enabled(platform):
         raise SitesError(400, "KIND_DISABLED", "This project type is not available yet.")
+    # Design systems (a new one, or one dressing the project) start at Builder.
+    if platform == "design_system" or body.design_system_id is not None:
+        from app.services.design_system.gating import require_design_systems
+
+        require_design_systems(db, user)
+    # Free starts from its free kits only; the others start at Starter.
+    if meta_for_kind is not None:
+        from app.services.template_gating import require_template
+
+        require_template(db, user, meta_for_kind)
     # The format only means something for a deck; other kinds ignore it.
     deck_ratio = body.format if platform == "slides" else None
     # A design system to dress the new project: it must be a design_system

@@ -11,7 +11,11 @@ from typing import Any
 from app.config import get_settings
 from app.db import SessionLocal
 from app.i18n import Locale, t
-from app.services.apply_writes import apply_validated_writes_async, brand_change_requested
+from app.services.apply_writes import (
+    apply_validated_writes_async,
+    brand_change_requested,
+    rules_change_requested,
+)
 from app.services.filesystem import delete_file
 from app.services.llm import (
     ERR_AUTH_BUSY,
@@ -381,6 +385,7 @@ async def _stream_verify_repair(
     surgical_edit: bool = True,
     model: str | None = None,
     allow_brand_writes: bool = False,
+    allow_rules_writes: bool = False,
 ) -> AsyncIterator[str]:
     """One LLM verify-repair pass.
 
@@ -443,7 +448,11 @@ async def _stream_verify_repair(
         parsed = parse_forge_output("".join(repair_buf))
         writes, deletes = parsed.writes, parsed.deletes
         written, violations = await apply_validated_writes_async(
-            project_id, writes, snapshot_label=snapshot_label, allow_brand_writes=allow_brand_writes
+            project_id,
+            writes,
+            snapshot_label=snapshot_label,
+            allow_brand_writes=allow_brand_writes,
+            allow_rules_writes=allow_rules_writes,
         )
         applied.extend(written)
         for item in written:
@@ -502,6 +511,8 @@ async def run_plan_tasks(
     tasks = ensure_coherence_task(tasks, locale)
     # DESIGN.md / public/logo.* stay locked unless this request asks for a new brand.
     allow_brand = brand_change_requested(user_prompt)
+    # AI_RULES.md likewise, unless the request names the project rules.
+    allow_rules = rules_change_requested(user_prompt)
     thinking_parts: list[str] = []
     full: list[str] = []
     applied: list[dict] = []
@@ -846,7 +857,11 @@ async def run_plan_tasks(
                 continue
 
         written, violations = await apply_validated_writes_async(
-            project_id, writes, snapshot_label=f"before: {title}", allow_brand_writes=allow_brand
+            project_id,
+            writes,
+            snapshot_label=f"before: {title}",
+            allow_brand_writes=allow_brand,
+            allow_rules_writes=allow_rules,
         )
         applied.extend(written)
         for item in written:
@@ -890,6 +905,7 @@ async def run_plan_tasks(
                 extra_prompt=_task_prompt_block(task, idx=idx, total=len(tasks)),
                 model=task_model,
                 allow_brand_writes=allow_brand,
+                allow_rules_writes=allow_rules,
             ):
                 yield chunk
 
@@ -974,6 +990,7 @@ async def run_plan_tasks(
                     focus_paths=repair_focus_paths(critical_mid),
                     model=model,
                     allow_brand_writes=allow_brand,
+                    allow_rules_writes=allow_rules,
                 ):
                     yield chunk
                 recheck = [
@@ -1008,6 +1025,7 @@ async def run_plan_tasks(
                         extra_prompt=css_extra,
                         model=model,
                         allow_brand_writes=allow_brand,
+                        allow_rules_writes=allow_rules,
                     ):
                         yield chunk
                     still = [
@@ -1054,7 +1072,7 @@ async def run_plan_tasks(
                 return
 
     # Deterministic verify + optional repair (black-preview prevention)
-    from app.services.orchestration.page_visit_check import page_route_findings
+    from app.services.orchestration.page_visit_check import page_route_findings, state_screen_findings
     from app.services.orchestration.smoke_check import smoke_transform_findings
     from app.services.orchestration.verify_build import (
         autofix_local_imports,
@@ -1088,6 +1106,7 @@ async def run_plan_tasks(
         + verify_project_build(project_id)
         + await smoke_transform_findings(project_id)
         + page_route_findings(project_id)
+        + state_screen_findings(project_id, {str(a.get("path")) for a in applied})
     )
     for finding in findings:
         yield _sse(
@@ -1134,6 +1153,7 @@ async def run_plan_tasks(
             focus_paths=repair_focus_paths(findings),
             model=model,
             allow_brand_writes=allow_brand,
+            allow_rules_writes=allow_rules,
         ):
             yield chunk
 
@@ -1143,6 +1163,7 @@ async def run_plan_tasks(
             + verify_project_build(project_id)
             + await smoke_transform_findings(project_id)
             + page_route_findings(project_id)
+            + state_screen_findings(project_id, {str(a.get("path")) for a in applied})
         )
         if findings_have_critical(findings) and css_critical_findings(findings):
             yield push_step("verify_repair_css", "CSS repair pass 2", "running")
@@ -1172,6 +1193,7 @@ async def run_plan_tasks(
                 extra_prompt=css_extra,
                 model=model,
                 allow_brand_writes=allow_brand,
+                allow_rules_writes=allow_rules,
             ):
                 yield chunk
             _, re_scaffolded2 = autofix_local_imports(project_id)
@@ -1225,6 +1247,7 @@ async def run_plan_tasks(
                 extra_prompt=_failed_context_block(failures),
                 model=model,
                 allow_brand_writes=allow_brand,
+                allow_rules_writes=allow_rules,
             ):
                 yield chunk
             findings = (

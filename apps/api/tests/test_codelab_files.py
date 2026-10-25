@@ -291,7 +291,8 @@ class TestRoutes:
             assert r.json()["detail"]["code"] == "FEATURE_NOT_IN_PLAN"
 
     def test_starter_exports_markdown_and_zip_pdf_needs_the_right(self, project, monkeypatch):
-        starter = SimpleNamespace(plan_slug="starter", export_pdf=False)
+        # An unknown plan without the PDF right: Starter and above get it by rank.
+        starter = SimpleNamespace(plan_slug="custom", export_pdf=False)
         client = _client(project, monkeypatch, cloud=True, entitlements=starter)
         assert client.get(f"/projects/{project}/codelab/export/markdown").status_code == 200
         assert client.get(f"/projects/{project}/codelab/export/sources").status_code == 200
@@ -354,6 +355,7 @@ def test_site_build_packs_downloads_and_data(project, fake_bundle, tmp_path):
     data = json.loads((out / "codelab-data.json").read_text(encoding="utf-8"))
     assert data["badge"] is True
     assert data["feedbackUrl"] == "https://forms.example/avis"
+    assert data["publicUrl"] is None  # no QR code unless the live URL is known
     assert set(data["steps"]) == {"intro"}
     downloads = {d["id"]: d for d in data["downloads"]}
     assert downloads["starter"]["url"] == "downloads/starter.zip"
@@ -367,6 +369,23 @@ def test_site_build_packs_downloads_and_data(project, fake_bundle, tmp_path):
         "name": "data.csv",
     }
     assert "url" not in downloads["gone"]
+
+
+def test_site_build_passes_the_public_url_and_cover_fields(project, fake_bundle, tmp_path):
+    codelab = store.read_codelab(project)
+    codelab["cover"] = {"eyebrow": "Workshop", "highlights": ["Next.js"], "showQr": True}
+    codelab["presenter"] = {"name": "Ada", "links": [{"label": "GitHub", "url": "https://github.com/ada"}]}
+    codelab["setup"] = {"promo": {"code": "EXAMPLE10"}, "commands": [{"language": "bash", "code": "npm i"}]}
+    store.write_codelab(project, codelab)
+    out = tmp_path / "site"
+    out.mkdir()
+    publish.build_codelab_site(
+        project, out, site_url="https://lab.example/", public_url="https://lab.example/"
+    )
+    data = json.loads((out / "codelab-data.json").read_text(encoding="utf-8"))
+    assert data["publicUrl"] == "https://lab.example/"
+    assert data["codelab"]["presenter"]["name"] == "Ada"
+    assert data["codelab"]["setup"]["promo"]["code"] == "EXAMPLE10"
 
 
 def test_site_build_without_bundle_says_how_to_build_it(project, monkeypatch, tmp_path):

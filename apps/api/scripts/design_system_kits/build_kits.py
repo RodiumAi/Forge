@@ -7,24 +7,44 @@ design system. Run from ``apps/api``:
     .venv/Scripts/python.exe scripts/design_system_kits/build_kits.py
 
 Files per kit: ``template.json`` (catalogue entry), ``design-system.json``,
-``DESIGN.md``, ``public/brand/logo.svg`` (wordmark) and ``preview.html`` (the
-brand guidelines page with its assets inlined, shown in the gallery).
+``DESIGN.md``, the brand files in ``public/brand/`` (``logo.svg`` for light
+grounds, ``logo-dark.svg`` for dark grounds, ``icon.svg``), ``preview.html``
+(the brand guidelines page with its assets inlined) and ``preview.png`` (the
+gallery card: the guidelines cover with the colour and type pages, rendered
+here with Playwright).
+
+The brand files come from ``brands/<id>/``. They were drawn by
+``draw_brandmarks.py`` (geometric icon, wordmark outlined from the display font),
+so they render the same everywhere, without a web font.
 """
 
 from __future__ import annotations
 
+import base64
 import json
+import shutil
 import sys
+from html import escape
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from app.services.design_system.logo import wordmark_svg
+from app.services.design_system.color import best_text_on, contrast_ratio
 from app.services.design_system.render import design_md
 from app.services.design_system.site import brand_site_html
-from app.services.design_system.tokens import LOGO_PATH, Spec, build_document, colors_of
+from app.services.design_system.tokens import (
+    LOGO_PATH,
+    Spec,
+    build_document,
+    colors_of,
+    font_families,
+    google_fonts_url,
+)
 
 ROOT = Path(__file__).resolve().parents[4] / "data" / "templates"
+BRANDS = Path(__file__).resolve().parent / "brands"
+LOGO_DARK_PATH = "public/brand/logo-dark.svg"
+ICON_PATH = "public/brand/icon.svg"
 
 KITS: list[dict] = [
     {
@@ -211,7 +231,7 @@ KITS: list[dict] = [
             "shadow": "soft",
             "motion": "calm",
             "logo": {
-                "clearSpace": "La hauteur de la lettre S tout autour",
+                "clearSpace": "La hauteur des deux feuilles tout autour",
                 "minSizePx": 32,
                 "usage": ["Sur fond crème ou blanc", "Version blanche sur la sarcelle"],
                 "misuse": [
@@ -355,7 +375,7 @@ KITS: list[dict] = [
             "shadow": "hard",
             "motion": "snappy",
             "logo": {
-                "clearSpace": "Deux fois l'épaisseur du trait du O",
+                "clearSpace": "La hauteur de la vague tout autour",
                 "minSizePx": 40,
                 "usage": [
                     "Noir sur papier",
@@ -466,28 +486,115 @@ KITS: list[dict] = [
 ]
 
 
+def _is_dark(hex_value: str) -> bool:
+    return contrast_ratio(hex_value, "#ffffff") > contrast_ratio(hex_value, "#000000")
+
+
+def thumbnail_html(document: dict, colors: dict[str, str], inline) -> str:
+    """The gallery card (480 x 270): the guidelines cover in front, the colour and type pages behind.
+
+    Modelled on the Forge brand guidelines: a dark cover with the logo and the icon
+    bleeding off the corner, then light editorial pages.
+    """
+    name = escape(document["name"])
+    families = font_families(document)
+    display, body = [*families, "sans-serif", "sans-serif"][:2]
+    fonts = google_fonts_url(families[:2])
+    bg, fg, accent = colors["bg"], colors["fg"], colors["accent"]
+    cover = bg if _is_dark(bg) else fg
+    on_cover = best_text_on(cover)
+    stage = "#101114" if _is_dark(bg) else "#ececee"
+    logo, logo_dark, icon = inline(LOGO_PATH), inline(LOGO_DARK_PATH), inline(ICON_PATH)
+    swatches = [
+        ("accent", accent),
+        ("secondary", colors.get("secondary", accent)),
+        ("fg", fg),
+        ("bg", bg),
+    ]
+    swatch_html = "".join(
+        f'<div class="sw" style="background:{value};color:{best_text_on(value)};'
+        f'{"box-shadow:inset 0 0 0 1px #e4e4e7;" if value.lower() in ("#ffffff", "#fff") else ""}">'
+        f"<b>{label}</b><span>{value.upper()}</span></div>"
+        for label, value in swatches
+    )
+    return f"""<!doctype html><html lang="fr"><head><meta charset="utf-8">
+<link rel="stylesheet" href="{fonts}">
+<style>
+*{{margin:0;padding:0;box-sizing:border-box}}
+body{{width:480px;height:270px;overflow:hidden;position:relative;background:
+radial-gradient(60% 80% at 85% 0%, {accent}2e, transparent 70%),
+radial-gradient(50% 70% at 0% 100%, {accent}1f, transparent 70%), {stage};
+font-family:"{body}",system-ui,sans-serif}}
+.pg{{position:absolute;width:196px;height:139px;background:#fff;border-radius:5px;overflow:hidden;
+box-shadow:0 18px 40px rgba(0,0,0,.28),0 2px 6px rgba(0,0,0,.12);padding:12px 13px}}
+.lab{{font-size:4.6px;font-weight:700;letter-spacing:.14em;color:{accent};text-transform:uppercase}}
+.ttl{{font-family:"{display}",serif;font-size:13px;color:#111;margin-top:3px;line-height:1.05}}
+.hl{{position:absolute;top:10px;right:12px;height:8px}}
+.col{{right:12px;top:16px;transform:rotate(4deg)}}
+.sws{{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:4px;margin-top:9px;height:72px}}
+.sw{{border-radius:3px;padding:5px;display:flex;flex-direction:column;justify-content:flex-end;font-size:4.3px}}
+.sw b{{font-weight:700;margin-bottom:1px}} .sw span{{opacity:.8}}
+.typ{{right:24px;top:140px;transform:rotate(-3deg)}}
+.aa{{font-family:"{display}",serif;font-size:58px;line-height:1;color:{fg if _is_dark(fg) else bg};margin-top:4px}}
+.fn{{position:absolute;left:96px;top:44px;font-size:5.4px;color:#555;line-height:1.6}}
+.fn b{{display:block;font-size:8px;color:#111;font-family:"{display}",serif}}
+.cv{{left:20px;top:52px;width:236px;height:167px;background:{cover};transform:rotate(-3deg);padding:18px 18px;z-index:3}}
+.cv .lg{{height:15px;position:relative;z-index:2}}
+.cv .big{{position:absolute;right:-22px;bottom:-26px;width:112px;height:112px;opacity:.92}}
+.cv .ey{{position:absolute;left:18px;bottom:68px;font-size:5px;letter-spacing:.14em;font-weight:700;color:{accent if contrast_ratio(accent, cover) >= 3 else on_cover}}}
+.cv h1{{position:absolute;left:18px;bottom:18px;font-family:"{display}",serif;font-weight:600;font-size:22px;line-height:1;color:{on_cover}}}
+.tile{{position:absolute;left:226px;top:192px;width:52px;height:52px;border-radius:12px;background:#fff;z-index:4;
+display:grid;place-items:center;box-shadow:0 12px 26px rgba(0,0,0,.3);transform:rotate(-3deg)}}
+.tile img{{width:31px;height:31px}}
+</style></head><body>
+<div class="pg col"><img class="hl" src="{logo}" alt=""><p class="lab">04 · Couleurs</p><p class="ttl">Une palette, un ton</p><div class="sws">{swatch_html}</div></div>
+<div class="pg typ"><img class="hl" src="{logo}" alt=""><p class="lab">05 · Typographie</p><p class="aa">Aa</p>
+<p class="fn"><b>{escape(display)}</b>Titres<br><b style="margin-top:3px">{escape(body)}</b>Texte courant</p></div>
+<div class="pg cv"><img class="lg" src="{logo_dark}" alt="{name}"><img class="big" src="{icon}" alt="">
+<p class="ey">VERSION 1.0 · OCTOBRE 2026</p><h1>Charte<br>graphique</h1></div>
+<div class="tile"><img src="{icon}" alt=""></div>
+</body></html>"""
+
+
+def render_thumbnail(html: str, out: Path) -> None:
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = browser.new_page(viewport={"width": 480, "height": 270}, device_scale_factor=2)
+        page.set_content(html, wait_until="networkidle")
+        page.evaluate("document.fonts.ready")
+        page.wait_for_timeout(300)
+        page.screenshot(path=str(out), type="png")
+        browser.close()
+
+
 def build_kit(kit: dict) -> Path:
     folder = ROOT / kit["id"]
     folder.mkdir(parents=True, exist_ok=True)
-    document, fixes = build_document(Spec.model_validate(kit["spec"]), logo_src=LOGO_PATH)
+    document, fixes = build_document(
+        Spec.model_validate(kit["spec"]),
+        logo_src=LOGO_PATH,
+        logo_dark_src=LOGO_DARK_PATH,
+        logo_icon_src=ICON_PATH,
+    )
     if fixes:
         raise SystemExit(f"{kit['id']}: contrast repaired, fix the spec instead: {fixes}")
     colors = colors_of(document)
     spec = kit["spec"]
-    logo = wordmark_svg(document["name"], colors["accent"], colors["fg"], spec["fonts"]["display"])
     (folder / "public" / "brand").mkdir(parents=True, exist_ok=True)
-    (folder / LOGO_PATH).write_text(logo, encoding="utf-8")
+    for source, target in (("logo.svg", LOGO_PATH), ("logo-dark.svg", LOGO_DARK_PATH), ("icon.svg", ICON_PATH)):
+        shutil.copyfile(BRANDS / kit["id"] / source, folder / target)
     (folder / "design-system.json").write_text(
         json.dumps(document, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
     (folder / "DESIGN.md").write_text(design_md(document), encoding="utf-8")
 
     def inline(path: str) -> str:
-        import base64
-
         data = (folder / path).read_bytes()
         return "data:image/svg+xml;base64," + base64.b64encode(data).decode("ascii")
 
+    render_thumbnail(thumbnail_html(document, colors, inline), folder / "preview.png")
     (folder / "preview.html").write_text(
         brand_site_html(document, asset_url=inline, lang="fr", badge=False, remote_fonts=False),
         encoding="utf-8",

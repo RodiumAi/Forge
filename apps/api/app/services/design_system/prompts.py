@@ -10,6 +10,7 @@ _FONTS = ", ".join(GOOGLE_FONTS)
 SPEC_SHAPE = """{
   "name": "Brand name",
   "description": "One paragraph: what the brand is, for whom, three personality adjectives.",
+  "brand": {"tagline": "", "website": "", "audience": ""},
   "colors": {
     "bg": "#rrggbb", "surface": "#rrggbb", "fg": "#rrggbb", "muted": "#rrggbb",
     "accent": "#rrggbb", "accent-contrast": "#rrggbb", "secondary": "#rrggbb", "border": "#rrggbb",
@@ -47,6 +48,13 @@ Rules:
   misuse lists what never to do (stretch, recolour, effects, busy backgrounds...).
 - imagery, voice, guidelines: a summary and 3 to 6 short, concrete do and don't lines each,
   written in the language of the request.
+- brand holds facts, never guesses: tagline only when the request or the website states one (copy
+  it as written), website only when an https address is given in the request, audience only when
+  the request or the website says who the brand is for. Leave a field "" when it is not given.
+- When the request states rules (how to write the name, what to do or never do with the logo,
+  words and tone to use or avoid), put them first, close to the user's words: logo rules in
+  logo.usage and logo.misuse, writing rules in voice.do and voice.dont, other bans in
+  guidelines.dont. Then complete with your own suggestions; never contradict the user's rules.
 - When website findings are given, keep its real colours, fonts (closest family from the list),
   radius and spacing: the design system documents that site, it does not reinvent it.
 - When a logo image is attached, derive the palette and mood from it.

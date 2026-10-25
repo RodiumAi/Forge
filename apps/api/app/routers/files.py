@@ -1,3 +1,4 @@
+import logging
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
@@ -37,6 +38,8 @@ from app.services.filesystem import (
 from app.services.project_access import accessible_project
 from app.services.visual_edit import apply_visual_text_edit
 from app.services.visual_image import apply_visual_image_replace
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/projects", tags=["files"])
 
@@ -517,7 +520,9 @@ async def upload_project_image(
     except SitesError:
         raise
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc)[:500]) from exc
+        # Storage errors name internal hosts and keys: log them, show a plain sentence.
+        logger.exception("project image upload failed", extra={"project_id": str(project.id)})
+        raise SitesError(503, "UPLOAD_FAILED", t("upload_failed", locale)) from exc
     name = asset_display_name(row.object_key)
     return FileUploadResponse(
         object_id=str(row.id),

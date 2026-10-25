@@ -1,6 +1,7 @@
 {
   "kind": "codelab",
   "id": "codelab-beginner-workshop",
+  "free": true,
   "title": {
     "fr": "Atelier débutant",
     "en": "Beginner workshop"

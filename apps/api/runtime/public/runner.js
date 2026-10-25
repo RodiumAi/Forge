@@ -675,6 +675,17 @@ function phoneWatchdogMs() {
   return (window.innerWidth || 1280) <= 500 ? 22000 : 12000;
 }
 
+/** The html2canvas module used by every preview capture (dashboard thumb, pages rail). */
+async function loadHtml2Canvas() {
+  const mod = await Promise.race([
+    import("https://esm.sh/html2canvas@1.4.1"),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("html2canvas-import-timeout")), 5000),
+    ),
+  ]);
+  return mod.default || mod;
+}
+
 async function captureThumbSnapshot() {
   // Phone previews are narrow. Dashboard cards are ~16:10 landscape — capture
   // the top band of the phone UI so the JPEG fills the card (full-height
@@ -694,13 +705,7 @@ async function captureThumbSnapshot() {
   for (let i = 0; i < attempts; i++) {
     try {
       if (i > 0) await new Promise((r) => setTimeout(r, 600 * i));
-      const mod = await Promise.race([
-        import("https://esm.sh/html2canvas@1.4.1"),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("html2canvas-import-timeout")), 5000),
-        ),
-      ]);
-      const html2canvas = mod.default || mod;
+      const html2canvas = await loadHtml2Canvas();
       const shot = await Promise.race([
         html2canvas(target, {
           width: w,
@@ -923,7 +928,146 @@ window.addEventListener("message", (e) => {
       }
     })();
   }
+  if (data.type === "forge:capture-page") {
+    // Builder pages rail: a small picture of the page on screen. The reply
+    // echoes `requestId` so the builder files it under the route it asked for.
+    const requestId = typeof data.requestId === "string" ? data.requestId.slice(0, 80) : "";
+    const width = Math.max(120, Math.min(Number(data.width) || 320, 480));
+    void (async () => {
+      let reason = "";
+      const dataUrl = await capturePageSnapshot(width).catch((err) => {
+        reason = String((err && err.message) || err || "error").slice(0, 160);
+        return null;
+      });
+      // `reason` only helps debugging: the builder keeps its placeholder either way.
+      send({ type: "forge:page-snapshot", requestId, dataUrl: dataUrl || null, reason: dataUrl ? "" : reason || "empty" });
+    })();
+  }
 });
+
+let pageCaptureBusy = false;
+
+// html2canvas 1.4 cannot parse CSS Color 4 values (`color(srgb ...)`, oklch,
+// lab...), which Tailwind 4 and color-mix() produce: it throws on the whole
+// capture. In the clone it draws, rewrite those values as rgba().
+const MODERN_COLOR_RE = /\b(?:color|oklch|oklab|lch|lab|hwb)\((?:[^()]|\([^()]*\))*\)/gi;
+const COLOR_PROPS = [
+  "color",
+  "background-color",
+  "background-image",
+  "border-top-color",
+  "border-right-color",
+  "border-bottom-color",
+  "border-left-color",
+  "outline-color",
+  "text-decoration-color",
+  "box-shadow",
+  "text-shadow",
+  "fill",
+  "stroke",
+  "caret-color",
+  "column-rule-color",
+];
+
+function modernColorConverter() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1;
+  canvas.height = 1;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  const cache = new Map();
+  return (value) => {
+    const hit = cache.get(value);
+    if (hit) return hit;
+    let out = "rgba(0, 0, 0, 0)";
+    if (ctx) {
+      ctx.clearRect(0, 0, 1, 1);
+      ctx.fillStyle = "rgba(0, 0, 0, 0)";
+      ctx.fillStyle = value;
+      ctx.fillRect(0, 0, 1, 1);
+      const d = ctx.getImageData(0, 0, 1, 1).data;
+      out = `rgba(${d[0]}, ${d[1]}, ${d[2]}, ${Math.round((d[3] / 255) * 1000) / 1000})`;
+    }
+    cache.set(value, out);
+    return out;
+  };
+}
+
+function rewriteModernColors(doc) {
+  const view = doc.defaultView;
+  if (!view) return;
+  const toRgba = modernColorConverter();
+  for (const el of doc.querySelectorAll("*")) {
+    let cs;
+    try {
+      cs = view.getComputedStyle(el);
+    } catch {
+      continue;
+    }
+    for (const prop of COLOR_PROPS) {
+      const value = cs.getPropertyValue(prop);
+      if (!value || !MODERN_COLOR_RE.test(value)) continue;
+      MODERN_COLOR_RE.lastIndex = 0;
+      el.style.setProperty(prop, value.replace(MODERN_COLOR_RE, (m) => toRgba(m)), "important");
+    }
+    MODERN_COLOR_RE.lastIndex = 0;
+  }
+}
+
+/**
+ * Top of the current page at viewport proportions (portrait in a phone
+ * frame), scaled down to `width` pixels. Null when nothing useful rendered.
+ */
+async function capturePageSnapshot(width) {
+  if (pageCaptureBusy) throw new Error("busy");
+  pageCaptureBusy = true;
+  try {
+    const target = document.getElementById("root") || document.body;
+    if (!target || target.childElementCount === 0) throw new Error("nothing-rendered");
+    const vw = Math.max(1, Math.min(window.innerWidth || 1280, 1600));
+    const vh = Math.max(1, Math.min(window.innerHeight || 800, Math.round(vw * 2.2)));
+    const scale = Math.min(1, width / vw);
+    const html2canvas = await loadHtml2Canvas();
+    let background = "#ffffff";
+    try {
+      const bg = getComputedStyle(document.body).backgroundColor;
+      if (bg && !/rgba\(0, 0, 0, 0\)|transparent/.test(bg)) {
+        background = MODERN_COLOR_RE.test(bg) ? modernColorConverter()(bg) : bg;
+        MODERN_COLOR_RE.lastIndex = 0;
+      }
+    } catch {
+      /* keep white */
+    }
+    const shot = await Promise.race([
+      html2canvas(target, {
+        width: vw,
+        height: vh,
+        windowWidth: vw,
+        windowHeight: vh,
+        x: 0,
+        y: 0,
+        scale,
+        useCORS: true,
+        allowTaint: false,
+        logging: false,
+        backgroundColor: background,
+        onclone: (clonedDoc) => rewriteModernColors(clonedDoc),
+      }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("html2canvas-timeout")), 7000)),
+    ]);
+    let dataUrl = "";
+    try {
+      dataUrl = shot.toDataURL("image/webp", 0.72);
+    } catch {
+      dataUrl = "";
+    }
+    if (!dataUrl.startsWith("data:image/webp")) dataUrl = shot.toDataURL("image/jpeg", 0.72);
+    // A few hundred bytes is a blank frame: the builder keeps its placeholder.
+    if (!dataUrl || dataUrl.length < 1500) throw new Error(`blank-${dataUrl ? dataUrl.length : 0}`);
+    return dataUrl;
+  } finally {
+    pageCaptureBusy = false;
+  }
+}
 
 // Standalone draft mode: the API can embed the source bundle directly in the
 // shell (GET /projects/{id}/draft), so the page renders without a builder

@@ -6,6 +6,20 @@ import type { ChatClient, StreamHandler } from "./chat-client";
 import { DeckChat, type DeckChatProps } from "./DeckChat";
 import { deckString } from "./strings";
 
+// The file readers have their own tests (document-import.test.ts): here a
+// PowerPoint reads as one slide, a PDF as one line.
+vi.mock("./document-import", async (original) => {
+  const actual = await original<typeof import("./document-import")>();
+  return {
+    ...actual,
+    extractDocument: vi.fn(async (_file: File, kind: "pdf" | "pptx") =>
+      kind === "pptx"
+        ? { text: "--- Slide 1 ---\nTitle: Bilan 2026", truncated: false, slides: 1 }
+        : { text: "Chiffres du rapport", truncated: false },
+    ),
+  };
+});
+
 const t = (key: Parameters<typeof deckString>[1], vars?: Record<string, string | number>) => deckString("fr", key, vars);
 
 function client(overrides: Partial<ChatClient> = {}) {
@@ -72,6 +86,15 @@ describe("DeckChat", () => {
     await waitFor(() => expect(sent[0]).toEqual({ content: "Plus court", mode: "agent", target: { slideId: "s2", elementId: "body" } }));
   });
 
+  it("shows the target on the sent message, not on deck-wide ones", async () => {
+    const { c } = client();
+    renderChat({ client: c, target: { slideId: "s6" }, targetLabel: "Slide 6" });
+    fireEvent.change(screen.getByLabelText(t("chatPlaceholder")), { target: { value: "Plus visuel" } });
+    fireEvent.click(screen.getByRole("button", { name: t("send") }));
+    const bubble = (await screen.findByText("Plus visuel")).closest(".de-msg-user");
+    expect(bubble?.querySelector(".de-msg-tag")).toHaveTextContent("Slide 6");
+  });
+
   it("sends quick actions with the label as content, on the current slide when nothing is selected", async () => {
     const { c, sent } = client();
     renderChat({ client: c });
@@ -133,8 +156,13 @@ describe("DeckChat", () => {
     fireEvent.click(screen.getByRole("button", { name: t("send") }));
     const outline = await screen.findByTestId("deck-outline");
     expect(outline).toHaveTextContent("Pitch");
+    // Only the first slide is unfolded; the others open on click.
+    expect(screen.getByLabelText(`${t("title")} 1`)).toBeInTheDocument();
+    expect(screen.queryByLabelText(`${t("title")} 2`)).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /Marché/ }));
+    expect(screen.queryByLabelText(`${t("title")} 1`)).toBeNull();
     fireEvent.change(screen.getByLabelText(`${t("title")} 2`), { target: { value: "Le marché" } });
-    fireEvent.click(screen.getAllByRole("button", { name: t("moveUp") })[1]);
+    fireEvent.click(screen.getByRole("button", { name: t("moveUp") }));
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: t("outlineConfirm") }));
     });
@@ -170,5 +198,76 @@ describe("DeckChat", () => {
     fireEvent.change(screen.getByLabelText(t("chatPlaceholder")), { target: { value: "go" } });
     fireEvent.click(screen.getByRole("button", { name: t("send") }));
     expect(await screen.findByRole("alert")).toHaveTextContent(t("insufficientCredits"));
+  });
+
+  it("opens the + menu and imports a PowerPoint sent with its slides", async () => {
+    const { c, sent } = client();
+    renderChat({ client: c });
+    const plus = screen.getByRole("button", { name: t("attachMenu") });
+    fireEvent.click(plus);
+    const item = screen.getByRole("menuitem", { name: new RegExp(t("attachDocs")) });
+    expect(item).toHaveTextContent(t("attachDocsHint"));
+    const input = screen.getByTestId("deck-attach-input") as HTMLInputElement;
+    const pick = vi.spyOn(input, "click").mockImplementation(() => undefined);
+    fireEvent.click(item);
+    expect(pick).toHaveBeenCalled();
+    expect(input.accept).toContain(".pptx");
+    expect(input.accept).not.toContain("image/");
+    fireEvent.change(input, { target: { files: [new File(["x"], "ancien.pptx")] } });
+    const list = await screen.findByRole("list", { name: t("attachList") });
+    await waitFor(() => expect(list).toHaveTextContent(t("attachSlides", { n: 1 })));
+    expect(list).toHaveTextContent("ancien.pptx");
+    fireEvent.click(screen.getByRole("button", { name: t("send") }));
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0].content).toBe(`${t("attachPptxDefault")}\n\n[Document: ancien.pptx | pptx]\n--- Slide 1 ---\nTitle: Bilan 2026\n[/Document]`);
+    // The history shows the file as a chip, not its text.
+    expect(await screen.findByText("ancien.pptx")).toBeInTheDocument();
+    expect(screen.queryByText(/Title: Bilan 2026/)).toBeNull();
+  });
+
+  it("sends a PDF with the typed request", async () => {
+    const { c, sent } = client();
+    renderChat({ client: c });
+    fireEvent.change(screen.getByTestId("deck-attach-input"), { target: { files: [new File(["%PDF"], "rapport.pdf", { type: "application/pdf" })] } });
+    const list = await screen.findByRole("list", { name: t("attachList") });
+    expect(list).toHaveTextContent("rapport.pdf");
+    fireEvent.change(screen.getByLabelText(t("chatPlaceholder")), { target: { value: "Un deck de 5 slides" } });
+    await waitFor(() => expect(screen.getByRole("button", { name: t("send") })).not.toBeDisabled());
+    fireEvent.click(screen.getByRole("button", { name: t("send") }));
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0].content).toBe("Un deck de 5 slides\n\n[Document: rapport.pdf | pdf]\nChiffres du rapport\n[/Document]");
+  });
+
+  it("refuses a file over 5 MB and an unsupported type", async () => {
+    const { c } = client();
+    renderChat({ client: c });
+    const big = new File(["x"], "gros.pdf", { type: "application/pdf" });
+    Object.defineProperty(big, "size", { value: 5 * 1024 * 1024 + 1 });
+    fireEvent.change(screen.getByTestId("deck-attach-input"), { target: { files: [big, new File(["x"], "notes.docx")] } });
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(t("attachTooBig", { name: "gros.pdf" }));
+    expect(alert).toHaveTextContent(t("attachUnsupported", { name: "notes.docx" }));
+    expect(screen.queryByRole("list", { name: t("attachList") })).toBeNull();
+  });
+
+  it("says images need the image upload", async () => {
+    const { c } = client();
+    renderChat({ client: c });
+    fireEvent.change(screen.getByTestId("deck-attach-input"), { target: { files: [new File(["x"], "photo.png", { type: "image/png" })] } });
+    expect(await screen.findByRole("alert")).toHaveTextContent(t("attachNoImages", { name: "photo.png" }));
+  });
+
+  it("uploads an imported image and sends its path", async () => {
+    const { c, sent } = client();
+    const uploadImage = vi.fn(async () => ({ path: "public/images/photo.webp" }) as never);
+    globalThis.URL.createObjectURL ??= () => "blob:x";
+    globalThis.URL.revokeObjectURL ??= () => undefined;
+    renderChat({ client: c, uploadImage });
+    fireEvent.change(screen.getByTestId("deck-attach-input"), { target: { files: [new File(["x"], "photo.png", { type: "image/png" })] } });
+    await waitFor(() => expect(uploadImage).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByRole("button", { name: t("send") })).not.toBeDisabled());
+    fireEvent.click(screen.getByRole("button", { name: t("send") }));
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0].content).toBe(`${t("attachDefault")}\n\n[Images: public/images/photo.webp]`);
   });
 });

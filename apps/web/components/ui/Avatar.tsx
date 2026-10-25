@@ -20,11 +20,13 @@ type AvatarProps = {
   size?: AvatarSize;
   /** `self` is flat orange (the signed-in user); `other` is neutral (teammates). */
   tone?: "self" | "other";
+  /** The signed-in user's own avatar: a user icon instead of initials when there is no photo. */
+  glyph?: boolean;
   className?: string;
 };
 
-/** Rounded-square avatar with a photo or initials. */
-export function Avatar({ name, src, size = "md", tone = "self", className }: AvatarProps) {
+/** Rounded-square avatar with a photo, initials, or (`glyph`) a user icon. */
+export function Avatar({ name, src, size = "md", tone = "self", glyph, className }: AvatarProps) {
   const [broken, setBroken] = useState(false);
   const photo = src && !broken ? src : null;
   return (
@@ -32,14 +34,26 @@ export function Avatar({ name, src, size = "md", tone = "self", className }: Ava
       className={cx("f-avatar", size !== "md" && `f-avatar-${size}`, tone === "other" && "f-avatar-neutral", className)}
       aria-hidden
     >
-      {photo ? <img src={photo} alt="" onError={() => setBroken(true)} /> : initialsOf(name)}
+      {photo ? <img src={photo} alt="" onError={() => setBroken(true)} /> : glyph ? <UserGlyph /> : initialsOf(name)}
     </span>
   );
 }
 
-/** The same avatar as a button (opens the account menu). */
+/** Head and shoulders, shown on the account button when there is no photo. */
+function UserGlyph() {
+  return (
+    <svg className="f-avatar-glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4.5 20.5c1.2-3.6 4-5.5 7.5-5.5s6.3 1.9 7.5 5.5" />
+    </svg>
+  );
+}
+
+/** The account button: the user's photo, or a user icon (opens the account menu). */
 export function AvatarButton({
-  name,
+  // Kept in the props so callers stay the same; the button shows an icon, not initials.
+  name: _name,
+  glyph: _glyph,
   src,
   size = "md",
   className,
@@ -49,7 +63,7 @@ export function AvatarButton({
   const photo = src && !broken ? src : null;
   return (
     <button type="button" {...rest} className={cx("f-avatar", size !== "md" && `f-avatar-${size}`, className)}>
-      {photo ? <img src={photo} alt="" onError={() => setBroken(true)} /> : initialsOf(name)}
+      {photo ? <img src={photo} alt="" onError={() => setBroken(true)} /> : <UserGlyph />}
     </button>
   );
 }

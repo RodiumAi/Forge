@@ -375,6 +375,8 @@ class ProjectOut(BaseModel):
     created_at: datetime
     updated_at: datetime
     has_thumbnail: bool = False
+    # mtime of the stored card image (cache buster); None when there is none yet.
+    thumbnail_at: int | None = None
     #: ``owner`` for projects you created, otherwise the accepted share role.
     access_role: str = "owner"
     #: Accepted collaborators, for the dashboard avatar stack. Empty when the
@@ -417,7 +419,11 @@ class TemplateOut(BaseModel):
     accent: str | None = None
     bg: str | None = None
     preview_url: str | None = None
+    # Still image of the card, when the kit ships one; preferred over preview_url.
+    preview_image_url: str | None = None
     kind: KindId = "web"
+    # Lowest plan that may use the kit on Forge Cloud: None (Free), "starter" or "builder".
+    required_plan: Literal["starter", "builder"] | None = None
 
 
 class KindOut(BaseModel):
@@ -443,6 +449,8 @@ class IntegrationOut(BaseModel):
     badge: str | None = None
     enabled_hint: bool = False
     logo_url: str | None = None
+    # Domains of the embed snippet, so the composer can tell the user pasted it.
+    embed_hosts: list[str] = []
 
 
 class IntegrationDetailOut(IntegrationOut):
@@ -511,6 +519,21 @@ class MessageTarget(BaseModel):
     forgeId: str | None = Field(default=None, max_length=320)
     filePath: str | None = Field(default=None, max_length=300)
     restrict: bool = False
+    #: Pages the user picked in the builder's pages rail: the change applies to
+    #: them (a focus for the model, never a write restriction).
+    pages: list[str] | None = Field(default=None, max_length=40)
+
+    @field_validator("pages")
+    @classmethod
+    def _clip_pages(cls, value: list[str] | None) -> list[str] | None:
+        if value is None:
+            return None
+        out: list[str] = []
+        for raw in value:
+            item = str(raw or "").strip()[:200]
+            if item and item not in out:
+                out.append(item)
+        return out or None
 
 
 #: Quick actions of the deck editor (sent with a target) and of the codelab

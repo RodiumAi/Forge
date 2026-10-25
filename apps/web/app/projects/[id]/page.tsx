@@ -13,6 +13,7 @@ import {
 } from "react";
 import Link from "next/link";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { api, apiBase, ApiError, getToken, logoutToHome, readApiError } from "@/lib/api";
 import {
   classifyChatError,
@@ -36,6 +37,18 @@ import { getSessionSnapshot, refreshRodiumWallet, subscribeSession } from "@/lib
 import { topProgressDone, topProgressStart } from "@/lib/top-progress";
 import { Button } from "@/components/ui/Button";
 import { Glyph } from "@/components/ui/glyph";
+import { MenuItem, MenuLabel, Popover } from "@/components/ui/Popover";
+import { IntegrationPicker, MAX_PICKED_INTEGRATIONS } from "@/components/builder/IntegrationPicker";
+import { IntegrationLogo } from "@/components/IntegrationLogo";
+import { integrationLogoSrc } from "@/components/app/integrations";
+import {
+  formatIntegrationsMarker,
+  integrationsMissingSnippet,
+  type PickedIntegration,
+} from "@/lib/integrations-marker";
+import { getCachedIntegrations } from "@/lib/lists-cache";
+import { clearPromptDraft, type PromptDraft, usePromptDraft } from "@/lib/prompt-draft";
+import { modelName, modelProvider } from "@/lib/model-label";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import {
   AgentActivityPanel,
@@ -65,6 +78,8 @@ import { FilesPane } from "@/components/builder/FilesPane";
 import { ImageEditPanel } from "@/components/builder/ImageEditPanel";
 import { OptionsPane } from "@/components/builder/OptionsPane";
 import { PreviewPane } from "@/components/builder/PreviewPane";
+import { PageRail, pageThumbs, type RailPlacement } from "@/components/builder/PageRail";
+import { formatPagesMarker, pageLabel, stateScreenNames } from "@/components/builder/page-rail-model";
 import {
   detectRoutes,
   flattenFiles,
@@ -80,6 +95,7 @@ import {
   PROMPT_FILE_ACCEPT,
   MAX_PROMPT_FILES,
   type MessageAttachment,
+  type ProjectRefPromptAttachment,
   type PromptAttachment,
   attachmentName,
   attachmentPreviewUrl,
@@ -117,6 +133,8 @@ import { editorHref, isReactKind, type ProjectKindId } from "@/lib/kinds";
 import { buildChatTarget, forgeIdLabel, scopeRefusedPaths, type ChatTarget } from "@/lib/edit-target";
 import { frodiUsage } from "@/lib/frodi-usage";
 import { kindStyle } from "@/lib/kind-style";
+import { useSpeechInput } from "@/lib/speech-input";
+import { VoiceButton, VoiceStatus } from "@/components/composer/VoiceInput";
 import { rodiumRechargeUrl } from "@/lib/constants/rodium-links";
 import { sitesHostLabel } from "@/lib/sites-url";
 
@@ -170,7 +188,20 @@ type SendOpts = {
    * composer toggle; the "allow other files" action resends with false.
    */
   restrict?: boolean;
+  /** Explicit pages (resend/edit): win over the pages picked in the rail. */
+  pages?: string[];
+  /** Explicit integrations (resend): win over the ones picked in the composer. */
+  integrations?: PickedIntegration[];
 };
+
+/** Catalogue data (embed domains, logo) for integration tags read back from a message. */
+function withEmbedHosts(items: PickedIntegration[], locale: string): PickedIntegration[] {
+  const catalog = getCachedIntegrations(locale) || [];
+  return items.map((item) => {
+    const hit = catalog.find((c) => c.id === item.id);
+    return hit ? { ...item, embedHosts: hit.embed_hosts || [], logoUrl: hit.logo_url } : item;
+  });
+}
 
 /** Writes the API refused because the edit was limited to the selection. */
 type ScopeNotice = {
@@ -407,6 +438,18 @@ export default function ProjectPage() {
   const [elementSelection, setElementSelection] = useState<ElementSelection | null>(null);
   // "Modifier seulement la sélection": on by default for every new selection.
   const [restrictToSelection, setRestrictToSelection] = useState(true);
+  // Pages rail: pages picked for the next request, placement and collapsed state.
+  const [selectedPages, setSelectedPages] = useState<string[]>([]);
+  /** Integrations picked from the + menu, sent as a marker with the next message. */
+  const [pickedIntegrations, setPickedIntegrations] = useState<PickedIntegration[]>([]);
+  const [integPickerOpen, setIntegPickerOpen] = useState(false);
+  /** Picked integrations whose embed code is not in the message (asked before sending). */
+  const [integMissing, setIntegMissing] = useState<PickedIntegration[] | null>(null);
+  /** True from the composer's send until the API accepted (or refused) it: the
+   *  emptied field must not erase the saved draft in between. */
+  const composerSendRef = useRef(false);
+  const [railPlacement, setRailPlacement] = useState<RailPlacement>("left");
+  const [railCollapsed, setRailCollapsed] = useState(false);
   const [scopeNotice, setScopeNotice] = useState<ScopeNotice | null>(null);
   const [commentAnchor, setCommentAnchor] = useState<ElementSelection | null>(null);
   const [imageSelection, setImageSelection] = useState<ImageSelection | null>(null);
@@ -414,6 +457,21 @@ export default function ProjectPage() {
     initialUrl.page ?? (initialUrl.subview && initialUrl.view === "preview" ? `/${initialUrl.subview.replace(/^\//, "")}` : "/"),
   );
   const [pages, setPages] = useState<string[]>(["/"]);
+  /** Screens an older project switches by state instead of routes. */
+  const [stateScreens, setStateScreens] = useState<string[]>([]);
+  useEffect(() => {
+    // Read after mount: the server render has no localStorage.
+    const placement = readRailPref(RAIL_PLACEMENT_KEY);
+    if (placement === "left" || placement === "bottom") setRailPlacement(placement);
+    if (readRailPref(RAIL_COLLAPSED_KEY) === "1") setRailCollapsed(true);
+  }, []);
+  // A page that disappeared (renamed, deleted) cannot stay targeted.
+  useEffect(() => {
+    setSelectedPages((prev) => {
+      const next = prev.filter((p) => pages.includes(p));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [pages]);
   const [designOpen, setDesignOpen] = useState(initialUrl.design);
   const [optionsSection, setOptionsSection] = useState<OptionsSubview>(
     initialUrl.view === "more" && isOptionsSubview(initialUrl.subview)
@@ -682,6 +740,8 @@ export default function ProjectPage() {
           }),
         );
         const routes = detectRoutes(tree, sources);
+        const screens = stateScreenNames(sources);
+        setStateScreens((prev) => (prev.join("|") === screens.join("|") ? prev : screens));
         // Keep the array identity when nothing changed: a fresh array on every
         // call made `pages` look different to PreviewPane, which re-posted
         // `forge-preview-routes` into the iframe each time.
@@ -713,6 +773,7 @@ export default function ProjectPage() {
   // An open SSE connection is the honest signal that a run is in flight.
   const working = busy || streamActive;
   const composerInputLocked = working || awaitingHitl;
+  const voice = useSpeechInput({ value: input, onChange: setInput, locale, maxLength: PROMPT_MAX_CHARS });
   // There is something to pick up: a plan with unfinished steps and a run to
   // re-arm. `confirm-plan` resets everything not already `done`, so resuming
   // re-runs exactly the failed steps and skips the rest.
@@ -1212,6 +1273,15 @@ export default function ProjectPage() {
     addFiles(list);
   }
 
+  function toggleIntegration(item: PickedIntegration) {
+    setIntegMissing(null);
+    setPickedIntegrations((prev) => {
+      if (prev.some((p) => p.id === item.id)) return prev.filter((p) => p.id !== item.id);
+      if (prev.length >= MAX_PICKED_INTEGRATIONS) return prev;
+      return [...prev, item];
+    });
+  }
+
   function openFilePicker() {
     const input = fileInputRef.current;
     if (!input || composerInputLocked) return;
@@ -1610,10 +1680,12 @@ export default function ProjectPage() {
             }
           : null,
       );
+      setSelectedPages(parsed.pages);
+      setPickedIntegrations(withEmbedHosts(parsed.integrations, locale));
       setError(null);
       textareaRef.current?.focus();
     },
-    [busy, restorePromptAttachments],
+    [busy, locale, restorePromptAttachments],
   );
 
   const cancelEditMessage = useCallback(() => {
@@ -1621,6 +1693,7 @@ export default function ProjectPage() {
     setInput("");
     setAttachments([]);
     setElementSelection(null);
+    setSelectedPages([]);
   }, []);
 
   const dismissPlan = useCallback(async () => {
@@ -1743,13 +1816,28 @@ export default function ProjectPage() {
         const isBrowserNetworkFailure =
           /failed to fetch|network request failed|networkerror|load failed/i.test(raw) || !raw.trim();
         pushChatError(isBrowserNetworkFailure ? t("attachmentUploadFailed") : raw.slice(0, 500), null);
+        if (composerSendRef.current) {
+          composerSendRef.current = false;
+          setInput((prev) => (prev.trim() ? prev : content));
+        }
         return;
       }
 
       const sel = opts.selection !== undefined ? opts.selection : elementSelection;
+      const targetPages = opts.pages !== undefined ? opts.pages : selectedPages;
       const withSelection = sel
         ? `${formatElementSelectionMarker(sel, t("selectionMarker"))}\n\n${content}`.trim()
         : content;
+      // Pages picked in the rail: a plain line the model reads even without the
+      // structured target, shown as a tag on the sent bubble.
+      const withPagesOnly = targetPages.length
+        ? `${formatPagesMarker(targetPages, t("bdPagesMarker"), t("bdPagesHome"))}\n\n${withSelection}`.trim()
+        : withSelection;
+      // Integrations from the + menu: the API loads each one's guide from this line.
+      const targetIntegrations = opts.integrations !== undefined ? opts.integrations : pickedIntegrations;
+      const withPages = targetIntegrations.length
+        ? `${formatIntegrationsMarker(targetIntegrations, t("bdIntegMarker"))}\n\n${withPagesOnly}`.trim()
+        : withPagesOnly;
       // React projects: the route the preview shows, plus the selected element
       // (data-forge-id) and the "only the selection" scope.
       const chatTarget: ChatTarget | undefined = isReactKind(project?.platform ?? "web")
@@ -1757,9 +1845,10 @@ export default function ProjectPage() {
             route: previewPath,
             selection: sel,
             restrict: opts.restrict !== undefined ? opts.restrict : restrictToSelection,
+            pages: targetPages,
           })
         : undefined;
-      const built = await buildPromptWithAttachments(withSelection, uploaded, {
+      const built = await buildPromptWithAttachments(withPages, uploaded, {
         importFiles: t("importFiles"),
         imageAttached: t("promptImageAttached"),
         assetAttached: t("promptSiteAsset"),
@@ -1777,6 +1866,9 @@ export default function ProjectPage() {
         return;
       }
       setElementSelection(null);
+      setSelectedPages([]);
+      setPickedIntegrations([]);
+      setIntegMissing(null);
       setRestrictToSelection(true);
       setScopeNotice(null);
       // Esc / auto-off: sending a prompt means we're done with Select/T overlay.
@@ -1930,6 +2022,10 @@ export default function ProjectPage() {
           }
           throw apiErr;
         }
+        if (composerSendRef.current) {
+          composerSendRef.current = false;
+          clearPromptDraft(`project.${projectId}`);
+        }
 
         const stateRef = seedStreamState({ steps: [], ops: [], effort: null, planTasks: [], planNeedsConfirm: false, clarify: [] });
         let bootCleared = false;
@@ -1964,6 +2060,13 @@ export default function ProjectPage() {
           }
         }
       } catch (err) {
+        if (composerSendRef.current) {
+          // The draft is still saved; give the field its prompt back too.
+          composerSendRef.current = false;
+          setInput((prev) => (prev.trim() ? prev : content));
+          setPickedIntegrations((prev) => (prev.length ? prev : targetIntegrations));
+          setSelectedPages((prev) => (prev.length ? prev : targetPages));
+        }
         if (err instanceof Error && err.name === "AbortError") {
           return;
         }
@@ -2014,7 +2117,7 @@ export default function ProjectPage() {
         void refreshForgeStatus({ fresh: true });
       }
     },
-    [busy, chatId, editingMessageId, elementSelection, handleStreamEvent, locale, planMode, previewPath, previewTool, project?.platform, projectId, pushChatError, pushStreamError, restrictToSelection, seedStreamState, subscribeRunEvents, syncBuilderUrl, t],
+    [busy, chatId, editingMessageId, elementSelection, handleStreamEvent, locale, planMode, previewPath, previewTool, project?.platform, projectId, pickedIntegrations, pushChatError, pushStreamError, restrictToSelection, seedStreamState, selectedPages, subscribeRunEvents, syncBuilderUrl, t],
   );
 
   /** Re-run a user prompt as a branch without opening the editor. */
@@ -2041,6 +2144,8 @@ export default function ProjectPage() {
       void sendMessage(parsed.text, restored, {
         branchFromId: messageId,
         selection,
+        pages: parsed.pages,
+        integrations: parsed.integrations,
       });
     },
     [busy, restorePromptAttachments, sendMessage],
@@ -2286,8 +2391,9 @@ export default function ProjectPage() {
     });
   }, [chatId, loading, messages, projectId, sendMessage]);
 
-  async function submitComposer() {
-    if (composerInputLocked) return;
+  async function submitComposer(skipSnippetCheck = false) {
+    // While dictating, the text is still moving: send once the user is done.
+    if (composerInputLocked || voice.listening) return;
     // Guard BEFORE clearing the input: sendMessage silently no-ops without a
     // chat id (slow load / failed boot), which used to eat the message while
     // leaving the attachment chip stranded in the composer.
@@ -2297,7 +2403,16 @@ export default function ProjectPage() {
     }
     const text = input.trim();
     const files = attachments;
-    if (!text && files.length === 0 && !elementSelection) return;
+    if (!text && files.length === 0 && !elementSelection && !pickedIntegrations.length) return;
+    if (!skipSnippetCheck) {
+      const missing = integrationsMissingSnippet(text, pickedIntegrations);
+      if (missing.length) {
+        setIntegMissing(missing);
+        return;
+      }
+    }
+    setIntegMissing(null);
+    composerSendRef.current = true;
     setInput("");
     setFileError(null);
     // Keep the caret in the composer so the next message can be typed straight
@@ -2365,9 +2480,51 @@ export default function ProjectPage() {
     }
   }
 
+  // Prompt draft: survives a reload. Paused while a message is on its way and
+  // while an old message is being edited (that text is not a new prompt).
+  const draftPausedRef = useRef(false);
+  draftPausedRef.current = composerSendRef.current || Boolean(editingMessageId);
+  usePromptDraft({
+    key: projectId ? `project.${projectId}` : null,
+    pausedRef: draftPausedRef,
+    draft: {
+      text: input,
+      extras: {
+        integrations: pickedIntegrations.map(({ id, name }) => ({ id, name })),
+        pages: selectedPages,
+        // Files already in the project can come back; a local file cannot.
+        files: attachments.flatMap((a) =>
+          a.source === "project"
+            ? [{ id: a.id, kind: a.kind, name: a.name, publicUrl: a.publicUrl, objectId: a.objectId ?? null }]
+            : [],
+        ),
+        localFiles: attachments.flatMap((a) => (a.source === "local" ? [a.file.name] : [])),
+      },
+    },
+    onRestore: (draft: PromptDraft) => restoreDraft(draft),
+  });
+
+  function restoreDraft(draft: PromptDraft) {
+    const extras = draft.extras || {};
+    setInput((prev) => (prev.trim() ? prev : draft.text));
+    const integ = Array.isArray(extras.integrations) ? (extras.integrations as PickedIntegration[]) : [];
+    if (integ.length) setPickedIntegrations((prev) => (prev.length ? prev : withEmbedHosts(integ, locale)));
+    const pages = Array.isArray(extras.pages) ? (extras.pages as string[]) : [];
+    if (pages.length) setSelectedPages((prev) => (prev.length ? prev : pages));
+    const files = Array.isArray(extras.files) ? (extras.files as Omit<ProjectRefPromptAttachment, "source">[]) : [];
+    if (files.length) {
+      setAttachments((prev) =>
+        prev.length ? prev : files.map((f) => ({ ...f, source: "project" as const, previewUrl: null })),
+      );
+    }
+    const lost = Array.isArray(extras.localFiles) ? (extras.localFiles as string[]) : [];
+    if (lost.length) setFileNotice(t("draftFilesLost").replace("{files}", lost.join(", ")));
+  }
+
   const canSend =
-    Boolean(input.trim() || attachments.length || elementSelection) &&
+    Boolean(input.trim() || attachments.length || elementSelection || pickedIntegrations.length) &&
     !composerInputLocked &&
+    !voice.listening &&
     Boolean(chatId);
   const showLivePanel =
     busy ||
@@ -2552,6 +2709,18 @@ export default function ProjectPage() {
         style={{ ["--f-bd-chat-w" as string]: `${rail.width}px` } as CSSProperties}
       >
         <aside className="f-bd-chat" aria-label={t("bdChatLabel")}>
+          <div className="f-bd-chat-head">
+            <span>{t("bdAssistant")}</span>
+            <button
+              type="button"
+              className="f-bd-chat-collapse"
+              onClick={() => rail.setOpen(false)}
+              aria-label={t("bdChatCollapse")}
+              title={t("bdChatCollapse")}
+            >
+              <PanelLeftClose size={15} aria-hidden />
+            </button>
+          </div>
           <div
             className="f-bd-scroll"
             ref={messagesRef}
@@ -2874,6 +3043,72 @@ export default function ProjectPage() {
                     setMentionQuery("");
                   }}
                 />
+                {pickedIntegrations.length ? (
+                  <div className="f-bd-attach-row f-bd-integ-row">
+                    {pickedIntegrations.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        className="f-bd-sel f-bd-sel-integ"
+                        onClick={() => toggleIntegration(item)}
+                        title={t("bdIntegRemove").replace("{name}", item.name)}
+                        aria-label={t("bdIntegRemove").replace("{name}", item.name)}
+                      >
+                        <IntegrationLogo
+                          src={integrationLogoSrc(item.id, item.logoUrl)}
+                          label={item.name}
+                          width={16}
+                          height={16}
+                          className="f-bd-integ-logo"
+                        />
+                        <span>{item.name}</span>
+                        <Glyph name="x" size="sm" />
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+                {integMissing?.length ? (
+                  <div className="f-bd-integ-missing" role="alert">
+                    <p className="f-bd-integ-missing-title">
+                      {t("bdIntegMissingTitle").replace("{names}", integMissing.map((i) => i.name).join(", "))}
+                    </p>
+                    <p className="f-bd-integ-missing-hint">{t("bdIntegMissingHint")}</p>
+                    <div className="f-bd-integ-missing-actions">
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          setIntegMissing(null);
+                          textareaRef.current?.focus();
+                        }}
+                      >
+                        {t("bdIntegMissingPaste")}
+                      </Button>
+                      <Button size="sm" variant="ghost" disabled={busy} onClick={() => void submitComposer(true)}>
+                        {t("bdIntegMissingSend")}
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
+                {selectedPages.length ? (
+                  <div className="f-bd-attach-row">
+                    <button
+                      type="button"
+                      className="f-bd-sel f-bd-sel-pages"
+                      onClick={() => setSelectedPages([])}
+                      title={`${t("bdPagesClear")} · ${selectedPages.join(", ")}`}
+                      aria-label={`${t("bdPagesClear")}: ${selectedPages.join(", ")}`}
+                    >
+                      <Glyph name="layers" size="sm" />
+                      <span>
+                        {t("bdPagesChip").replace(
+                          "{pages}",
+                          selectedPages.map((p) => pageLabel(p, t("bdPagesHome"))).join(", "),
+                        )}
+                      </span>
+                      <Glyph name="x" size="sm" />
+                    </button>
+                  </div>
+                ) : null}
                 {elementSelection ? (
                   <div className="f-bd-attach-row">
                     <button
@@ -2936,6 +3171,7 @@ export default function ProjectPage() {
                   onChange={(e) => {
                     const v = e.target.value;
                     setInput(v);
+                    if (integMissing) setIntegMissing(null);
                     const caret = e.target.selectionStart ?? v.length;
                     const before = v.slice(0, caret);
                     // The `@` must start a token: `(^|\s)` prevents the picker
@@ -2958,9 +3194,10 @@ export default function ProjectPage() {
                   aria-controls="prompt-mention-listbox"
                   aria-autocomplete="list"
                   rows={2}
-                  readOnly={composerInputLocked}
+                  readOnly={composerInputLocked || voice.listening}
                   aria-busy={busy}
                 />
+                <VoiceStatus voice={voice} compact />
                 <div className="f-bd-bar">
                   {/* The file input must NOT live inside the button: nested
                       interactive controls are invalid HTML and the change
@@ -2975,59 +3212,174 @@ export default function ProjectPage() {
                     tabIndex={-1}
                     aria-hidden
                   />
-                  <button
-                    type="button"
-                    className="f-bd-cbtn icon"
-                    title={t("importHint")}
-                    aria-label={t("importAria")}
-                    disabled={composerInputLocked}
-                    onClick={openFilePicker}
+                  <Popover
+                    tone="dark"
+                    role="menu"
+                    side="top"
+                    align="start"
+                    label={t("bdPlusMenu")}
+                    width={284}
+                    trigger={
+                      <button
+                        type="button"
+                        className="f-bd-cbtn icon f-bd-plus"
+                        title={t("bdPlusMenu")}
+                        aria-label={t("bdPlusMenu")}
+                        disabled={composerInputLocked}
+                      >
+                        <Glyph name="plus" size="sm" />
+                        {attachments.length + pickedIntegrations.length > 0 ? (
+                          <span className="badge" aria-hidden>
+                            {attachments.length + pickedIntegrations.length}
+                          </span>
+                        ) : null}
+                      </button>
+                    }
                   >
-                    <Glyph name="paperclip" size="sm" />
-                    {attachments.length > 0 ? (
-                      <span className="badge" aria-hidden>
-                        {attachments.length}
-                      </span>
-                    ) : null}
-                  </button>
-                  <div className="f-bd-mode" role="group" aria-label={t("agentModeGroup")}>
-                    <button
-                      type="button"
-                      aria-pressed={!planMode}
-                      disabled={busy}
-                      onClick={() => setPlanMode(false)}
-                    >
-                      {t("bdModeAgent")}
-                    </button>
-                    <button
-                      type="button"
-                      aria-pressed={planMode}
-                      disabled={busy}
-                      onClick={() => setPlanMode(true)}
-                    >
-                      {t("bdModePlan")}
-                    </button>
-                  </div>
+                    {(close) => (
+                      <>
+                        <MenuItem
+                          icon="paperclip"
+                          hint={t("bdPlusFilesHint")}
+                          onClick={() => {
+                            close();
+                            openFilePicker();
+                          }}
+                        >
+                          {t("bdPlusFiles")}
+                        </MenuItem>
+                        <MenuItem
+                          icon="puzzle"
+                          hint={t("bdPlusIntegHint")}
+                          onClick={() => {
+                            close();
+                            setIntegPickerOpen(true);
+                          }}
+                        >
+                          {t("bdPlusInteg")}
+                        </MenuItem>
+                      </>
+                    )}
+                  </Popover>
+                  <IntegrationPicker
+                    open={integPickerOpen}
+                    onClose={() => {
+                      setIntegPickerOpen(false);
+                      textareaRef.current?.focus();
+                    }}
+                    picked={pickedIntegrations}
+                    onToggle={toggleIntegration}
+                  />
+                  <Popover
+                    tone="dark"
+                    role="listbox"
+                    side="top"
+                    align="start"
+                    label={t("agentModeGroup")}
+                    width={264}
+                    trigger={
+                      <button
+                        type="button"
+                        className="f-bd-pick"
+                        disabled={busy}
+                        aria-label={`${t("agentModeGroup")} : ${planMode ? t("bdModePlan") : t("bdModeAgent")}`}
+                      >
+                        <Glyph name={planMode ? "list" : "zap"} size="sm" />
+                        <span>{planMode ? t("bdModePlan") : t("bdModeAgent")}</span>
+                        <Glyph name="chevron-down" size="xs" className="cv" />
+                      </button>
+                    }
+                  >
+                    {(close) => (
+                      <>
+                        <MenuLabel>{t("agentModeGroup")}</MenuLabel>
+                        {(
+                          [
+                            [false, "zap", "bdModeAgent", "bdModeAgentHint"],
+                            [true, "list", "bdModePlan", "bdModePlanHint"],
+                          ] as const
+                        ).map(([plan, icon, label, hint]) => (
+                          <MenuItem
+                            key={label}
+                            role="option"
+                            icon={icon}
+                            selected={planMode === plan}
+                            hint={t(hint)}
+                            onClick={() => {
+                              setPlanMode(plan);
+                              close();
+                            }}
+                          >
+                            {t(label)}
+                          </MenuItem>
+                        ))}
+                      </>
+                    )}
+                  </Popover>
                   <span className="sp" />
                   {canPickModel && modelChoices.length > 0 ? (
-                    <label className="f-bd-model">
-                      <span className="f-sr-only">{t("modelPicker")}</span>
-                      <Glyph name="cpu" size="sm" className="ic" />
-                      <select value={chatModel} disabled={busy} onChange={(e) => chooseChatModel(e.target.value)}>
-                        <option value="auto">{t("modelAuto")}</option>
-                        {modelChoices.map((item) => (
-                          <option key={item.slug} value={item.slug}>
-                            {item.label}
-                          </option>
-                        ))}
-                      </select>
-                      <Glyph name="chevron-down" size="xs" className="cv" />
-                    </label>
+                    <Popover
+                      tone="dark"
+                      role="listbox"
+                      side="top"
+                      align="start"
+                      label={t("modelPicker")}
+                      width={280}
+                      className="f-bd-model-pop"
+                      trigger={
+                        <button
+                          type="button"
+                          className="f-bd-pick"
+                          disabled={busy}
+                          aria-label={`${t("modelPicker")} : ${chatModel === "auto" ? t("modelAuto") : modelName(chatModel)}`}
+                        >
+                          <Glyph name={chatModel === "auto" ? "sparkles" : "cpu"} size="sm" />
+                          <span>{chatModel === "auto" ? t("modelAuto") : modelName(chatModel)}</span>
+                          <Glyph name="chevron-down" size="xs" className="cv" />
+                        </button>
+                      }
+                    >
+                      {(close) => (
+                        <>
+                          <MenuLabel>{t("modelPicker")}</MenuLabel>
+                          <MenuItem
+                            role="option"
+                            icon="sparkles"
+                            selected={chatModel === "auto"}
+                            hint={t("bdModelAutoHint")}
+                            onClick={() => {
+                              chooseChatModel("auto");
+                              close();
+                            }}
+                          >
+                            {t("modelAuto")}
+                          </MenuItem>
+                          {modelChoices.map((item) => (
+                            <MenuItem
+                              key={item.slug}
+                              role="option"
+                              icon="cpu"
+                              selected={chatModel === item.slug}
+                              hint={modelProvider(item.slug)}
+                              onClick={() => {
+                                chooseChatModel(item.slug);
+                                close();
+                              }}
+                            >
+                              {modelName(item.slug)}
+                            </MenuItem>
+                          ))}
+                        </>
+                      )}
+                    </Popover>
                   ) : (
                     <span className="f-bd-cbtn" title={t("modelPicker")} aria-label={`${t("modelPicker")} : ${t("modelAuto")}`}>
                       <Glyph name="cpu" size="sm" />
                       {t("modelAuto")}
                     </span>
+                  )}
+                  {working ? null : (
+                    <VoiceButton voice={voice} disabled={composerInputLocked} className="f-bd-cbtn icon" size="sm" />
                   )}
                   {working ? (
                     <button
@@ -3050,6 +3402,18 @@ export default function ProjectPage() {
           </div>
         </aside>
         <ChatResizeHandle rail={rail} />
+        {!rail.open ? (
+          <button
+            type="button"
+            className="f-bd-chat-reopen"
+            onClick={() => rail.setOpen(true)}
+            aria-label={t("bdChatShow")}
+            title={t("bdChatShow")}
+          >
+            <PanelLeftOpen size={16} aria-hidden />
+            <span>{t("bdAssistant")}</span>
+          </button>
+        ) : null}
 
         <main className={`f-bd-stage${mainMode === "preview" ? "" : " flush"}`} id="builder-stage">
           {mainMode === "preview" ? (
@@ -3091,6 +3455,36 @@ export default function ProjectPage() {
                     progress={planTasks.length ? planDone / planTasks.length : 0}
                   />
                 ) : (
+                  <div className={`f-pr-layout${previewSrc ? ` is-${railPlacement}` : ""}`}>
+                  {previewSrc ? (
+                  <PageRail
+                    projectId={projectId}
+                    pages={pages}
+                    currentPath={previewPath}
+                    mobile={platform === "mobile"}
+                    selected={selectedPages}
+                    onSelectedChange={setSelectedPages}
+                    onNavigate={(path) => {
+                      setPreviewPath(path);
+                      syncBuilderUrl({ previewPath: path });
+                    }}
+                    placement={railPlacement}
+                    onPlacementChange={(next) => {
+                      setRailPlacement(next);
+                      writeRailPref(RAIL_PLACEMENT_KEY, next);
+                    }}
+                    stateScreens={stateScreens}
+                    onConvertPages={() =>
+                      fillComposer(t("bdPagesConvertPrompt").replace("{screens}", stateScreens.join(", ")))
+                    }
+                    collapsed={railCollapsed}
+                    onCollapsedChange={(next) => {
+                      setRailCollapsed(next);
+                      writeRailPref(RAIL_COLLAPSED_KEY, next ? "1" : "0");
+                    }}
+                  />
+                  ) : null}
+                  <div className="f-pr-main">
                   <ErrorBoundary label="Preview" resetKey={previewKey}>
                     <PreviewPane
                       previewSrc={previewSrc}
@@ -3121,6 +3515,9 @@ export default function ProjectPage() {
                       }}
                       onCommentAnchor={(sel) => setCommentAnchor(sel)}
                       onImageSelect={(sel) => setImageSelection(sel)}
+                      onPageSnapshot={
+                        railCollapsed ? undefined : (path, dataUrl) => pageThumbs.set(projectId, path, dataUrl)
+                      }
                       onPreviewPathChange={(path) => {
                         setPreviewPath(path);
                         setPages((prev) =>
@@ -3185,6 +3582,8 @@ export default function ProjectPage() {
                       }
                     />
                   </ErrorBoundary>
+                  </div>
+                  </div>
                 )}
               </div>
             </>
@@ -3276,6 +3675,9 @@ export default function ProjectPage() {
                     setDesignOpen(true);
                     syncBuilderUrl({ designOpen: true });
                   }}
+                  onDesignApplied={() => {
+                    void forcePreviewRefresh({ softStart: true, remount: true, quiet: true });
+                  }}
                   onOpenHistory={() => changeMode("history")}
                 />
               </ErrorBoundary>
@@ -3331,4 +3733,23 @@ export default function ProjectPage() {
     </div>
     </AppShell>
   );
+}
+
+const RAIL_PLACEMENT_KEY = "forge.builder.pagesRail.placement";
+const RAIL_COLLAPSED_KEY = "forge.builder.pagesRail.collapsed";
+
+function readRailPref(key: string): string | null {
+  try {
+    return typeof window === "undefined" ? null : localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeRailPref(key: string, value: string) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // Private mode: the preference only lasts for this page.
+  }
 }

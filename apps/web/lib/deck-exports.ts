@@ -11,8 +11,9 @@
  * `EXPORT_NOT_IN_PLAN` with `requiredPlan`: `DeckExportError.upgradeRequired`.
  *
  * Plans (mirror of `apps/api/app/services/exports/gating.py`): Free exports
- * nothing; PDF and PNG from Starter; HTML and PPTX from Builder. Off Forge
- * Cloud (no entitlements) everything is allowed.
+ * nothing; PDF and PNG from Starter; HTML and PPTX from Builder, and every
+ * plan above those (Pro, Scale, team plans) even when its entitlements lack
+ * the flag. Off Forge Cloud (no entitlements) everything is allowed.
  */
 
 import { api, apiBase, ApiError, getToken, NetworkError, readApiError } from "@/lib/api";
@@ -44,6 +45,15 @@ const NEVER: Record<ExportFeature, string[]> = {
   export_pptx: ["free", "starter"],
 };
 
+/** Plan order (mirror of `PLAN_RANK` in gating.py). */
+const PLAN_RANK: Record<string, number> = { free: 0, starter: 1, builder: 2, pro: 3, scale: 4, "team-pro": 10, "team-scale": 11 };
+
+/** Whether `slug` is `required` or a plan above it. Unknown slugs: no. */
+export function planReaches(slug: string, required: string): boolean {
+  const rank = PLAN_RANK[slug];
+  return rank !== undefined && rank >= (PLAN_RANK[required] ?? Infinity);
+}
+
 export const EXPORT_NOT_IN_PLAN = "EXPORT_NOT_IN_PLAN";
 export const WARNINGS_HEADER = "X-Forge-Export-Warnings";
 /** Chromium renders every slide; a long deck takes a while. */
@@ -56,7 +66,7 @@ export function deckExportAllowed(status: ForgeStatus | null, format: DeckExport
   const feature = EXPORT_FEATURE[format];
   const slug = planSlugOf(status) ?? "free";
   if (NEVER[feature].includes(slug)) return false;
-  return Boolean(ent[feature]);
+  return Boolean(ent[feature]) || planReaches(slug, REQUIRED_PLAN[format]);
 }
 
 /** Whether the "Made with Forge" badge may be removed on this plan. */

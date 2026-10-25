@@ -23,7 +23,9 @@ export type WriteSegment = {
 export type DeleteSegment = { kind: "delete"; path: string };
 export type MessageSegment = ProseSegment | WriteSegment | DeleteSegment;
 
-const WRITE_OPEN = /<forge-write\s+path=["']([^"']+)["']\s*>/i;
+// `<forge-edit>` (SEARCH/REPLACE blocks) is a file operation too: shown as
+// prose it flashed raw code in the chat until the run reloaded the message.
+const WRITE_OPEN = /<forge-(write|edit)\s+path=["']([^"']+)["']\s*>/i;
 const DELETE_TAG = /<forge-delete\s+path=["']([^"']+)["']\s*\/?>/i;
 
 /** Drop markdown fences the model sometimes wraps file bodies in. */
@@ -46,7 +48,7 @@ function trimPartialTag(buffer: string): string {
   if (lt === -1) return buffer;
   const tail = buffer.slice(lt).toLowerCase();
   if (tail.includes(">")) return buffer; // tag closed — the parser handles it
-  const tags = ["<forge-write", "</forge-write", "<forge-delete", "<forge"];
+  const tags = ["<forge-write", "</forge-write", "<forge-edit", "</forge-edit", "<forge-delete", "<forge", "</forge"];
   if (tags.some((tag) => tag.startsWith(tail) || tail.startsWith(tag))) {
     return buffer.slice(0, lt);
   }
@@ -84,8 +86,9 @@ export function splitMessageSegments(raw: string): MessageSegment[] {
     text = "";
 
     const afterOpen = rest.slice(writeAt + write![0].length);
-    const closeAt = afterOpen.search(/<\/forge-write\s*>/i);
-    const path = write![1].trim().replace(/^\.\//, "");
+    const closeTag = new RegExp(`</forge-${write![1].toLowerCase()}\\s*>`, "i");
+    const closeAt = afterOpen.search(closeTag);
+    const path = write![2].trim().replace(/^\.\//, "");
 
     if (closeAt === -1) {
       // Still streaming: everything left belongs to this file.
@@ -99,7 +102,7 @@ export function splitMessageSegments(raw: string): MessageSegment[] {
       content: stripFences(afterOpen.slice(0, closeAt)),
       complete: true,
     });
-    rest = afterOpen.slice(closeAt).replace(/^<\/forge-write\s*>/i, "");
+    rest = afterOpen.slice(closeAt).replace(closeTag, "");
   }
 
   pushText(out, text);

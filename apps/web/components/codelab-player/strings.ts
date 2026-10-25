@@ -56,6 +56,18 @@ const fr = {
   shortcuts: "Raccourcis : ← → pour naviguer, / pour chercher",
   madeWith: "Made with Forge",
   empty: "Cette étape est vide.",
+  presentedBy: "Présenté par",
+  presenter: "Présentateur",
+  beforeStart: "Avant de commencer",
+  setupMenu: "Installation",
+  setupTag: "Ressources",
+  setupTitle: "Préparez votre environnement",
+  tools: "Outils et frameworks",
+  commands: "Commandes à lancer",
+  promoCode: "Code promo",
+  openLink: "Ouvrir",
+  scanQr: "Scanner pour ouvrir le codelab",
+  qrPending: "QR code disponible une fois publié",
 };
 
 export type StringKey = keyof typeof fr;
@@ -111,6 +123,18 @@ const en: Record<StringKey, string> = {
   shortcuts: "Shortcuts: ← → to navigate, / to search",
   madeWith: "Made with Forge",
   empty: "This step is empty.",
+  presentedBy: "Presented by",
+  presenter: "Presenter",
+  beforeStart: "Before you start",
+  setupMenu: "Setup",
+  setupTag: "Resources",
+  setupTitle: "Set up your environment",
+  tools: "Tools and frameworks",
+  commands: "Commands to run",
+  promoCode: "Promo code",
+  openLink: "Open",
+  scanQr: "Scan to open the codelab",
+  qrPending: "QR code available once published",
 };
 
 const TABLES: Record<CodelabLocale, Record<StringKey, string>> = { fr, en };

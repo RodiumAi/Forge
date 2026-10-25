@@ -22,6 +22,9 @@ import {
   type OutlineStep,
 } from "./ai";
 import type { Translate } from "./strings";
+import { useI18n } from "@/lib/i18n/I18nProvider";
+import { useSpeechInput } from "@/lib/speech-input";
+import { VoiceButton, VoiceStatus } from "@/components/composer/VoiceInput";
 
 type Action =
   | { type: "event"; payload: Record<string, unknown> }
@@ -38,10 +41,13 @@ export type ChatPanelProps = {
   onEffect: (effect: EditorEffect) => void;
   onSelectStep: (stepId: string) => void;
   readOnly?: boolean;
+  /** Prompt typed on the home page, sent once on a codelab with no conversation yet. */
+  initialPrompt?: string | null;
+  onInitialPromptUsed?: () => void;
   t: Translate;
 };
 
-export function ChatPanel({ client, selected, onEffect, onSelectStep, readOnly, t }: ChatPanelProps) {
+export function ChatPanel({ client, selected, onEffect, onSelectStep, readOnly, initialPrompt, onInitialPromptUsed, t }: ChatPanelProps) {
   const effectRef = useRef(onEffect);
   effectRef.current = onEffect;
   const pending = useRef<EditorEffect[]>([]);
@@ -76,9 +82,16 @@ export function ChatPanel({ client, selected, onEffect, onSelectStep, readOnly, 
   });
 
   const [text, setText] = useState("");
+  const { locale } = useI18n();
+  const voice = useSpeechInput({ value: text, onChange: setText, locale });
   const [targeted, setTargeted] = useState(true);
   const abortRef = useRef<AbortController | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
+  // Set once the history is read: whether the codelab already has a conversation or a run.
+  const [started, setStarted] = useState<boolean | null>(null);
+  const bootSentRef = useRef(false);
+  const usedRef = useRef(onInitialPromptUsed);
+  usedRef.current = onInitialPromptUsed;
 
   const onEvent = useCallback((payload: Record<string, unknown>) => dispatch({ type: "event", payload }), []);
 
@@ -115,7 +128,9 @@ export function ChatPanel({ client, selected, onEffect, onSelectStep, readOnly, 
             .map((m) => ({ id: m.id, role: m.role === "user" ? "user" : "assistant", text: m.content })),
         });
         const active = await client.active();
-        if (!alive || !active) return;
+        if (!alive) return;
+        setStarted(rows.length > 0 || !!active);
+        if (!active) return;
         if (active.status === "awaiting_plan_confirm") {
           dispatch({
             type: "event",
@@ -126,6 +141,7 @@ export function ChatPanel({ client, selected, onEffect, onSelectStep, readOnly, 
         }
       } catch {
         // The chat stays usable without its history.
+        if (alive) setStarted(true);
       }
     })();
     return () => {
@@ -135,12 +151,24 @@ export function ChatPanel({ client, selected, onEffect, onSelectStep, readOnly, 
   }, [client, onEvent, run]);
 
   useEffect(() => {
+    const prompt = initialPrompt?.trim();
+    if (started === null || bootSentRef.current || !prompt || readOnly) return;
+    bootSentRef.current = true;
+    usedRef.current?.();
+    if (started) return;
+    dispatch({ type: "user", text: prompt });
+    void run((signal) => client.send(messageBody(prompt, { stepId: null }), onEvent, signal));
+  }, [started, initialPrompt, readOnly, client, onEvent, run]);
+
+  useEffect(() => {
     listRef.current?.scrollTo?.({ top: listRef.current.scrollHeight });
   }, [state.lines.length, state.writing, state.check]);
 
   const send = (content: string, action?: CodelabAction) => {
     const value = content.trim();
     if (!value || state.busy || readOnly) return;
+    // A quick action can run during dictation; it ends the dictation first.
+    if (voice.listening) voice.cancel();
     const stepId = targeted && selected && !action ? selected.id : null;
     dispatch({ type: "user", text: value });
     setText("");
@@ -275,32 +303,35 @@ export function ChatPanel({ client, selected, onEffect, onSelectStep, readOnly, 
         </label>
       ) : null}
 
+      <VoiceStatus voice={voice} compact surface />
       <form
         className="cle-chat-form"
         onSubmit={(e) => {
           e.preventDefault();
-          send(text);
+          if (!voice.listening) send(text);
         }}
       >
         <textarea
           value={text}
           rows={3}
           disabled={readOnly}
+          readOnly={voice.listening}
           placeholder={targeted && selected ? t("chatPlaceholderStep", { title: selected.title }) : t("chatPlaceholder")}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
-              send(text);
+              if (!voice.listening) send(text);
             }
           }}
         />
+        {state.busy ? null : <VoiceButton voice={voice} disabled={readOnly} className="f-mic" size="sm" />}
         {state.busy ? (
           <button type="button" aria-label={t("stop")} onClick={stop}>
             <Square size={16} />
           </button>
         ) : (
-          <button type="submit" aria-label={t("send")} disabled={!text.trim() || readOnly}>
+          <button type="submit" aria-label={t("send")} disabled={!text.trim() || readOnly || voice.listening}>
             <Send size={16} />
           </button>
         )}

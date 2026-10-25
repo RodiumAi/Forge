@@ -1,0 +1,56 @@
+/* Profile: patient card and facts, teal insurance card, medical info, reminders, links, sign out. */
+.profile-screen { gap: 1.1rem; }
+.profile-screen .patient { display: flex; align-items: center; gap: .9rem; }
+.profile-screen .patient img { width: 4rem; height: 4rem; border-radius: 1.3rem; object-fit: cover; }
+.profile-screen .patient h2 { font-size: 1.2rem; font-weight: 800; }
+.profile-screen .facts { display: grid; grid-template-columns: repeat(4, 1fr); gap: .5rem; }
+.profile-screen .facts span { display: grid; justify-items: center; gap: .15rem; padding: .7rem .3rem; background: var(--surface); border-radius: 1.1rem; box-shadow: var(--shadow); }
+.profile-screen .facts small { font-size: .7rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.profile-screen .facts strong { font-size: 1rem; font-weight: 800; }
+
+/* Insurance card */
+.profile-screen .insurance {
+  position: relative; overflow: hidden; border-radius: 1.5rem; padding: 1.15rem 1.2rem; color: #fff; display: flex; flex-direction: column; gap: .3rem;
+  background: radial-gradient(90% 120% at 100% 0%, rgba(255, 138, 101, .55), transparent 55%), linear-gradient(140deg, #14907a, #0b5a4d);
+  box-shadow: 0 20px 36px -20px rgba(11, 90, 77, .9); aspect-ratio: 1.7;
+}
+.profile-screen .insurance::after { content: ""; position: absolute; left: -2rem; bottom: -5rem; width: 12rem; height: 12rem; border-radius: 999px; border: 1.4rem solid rgba(255, 255, 255, .06); }
+.profile-screen .ins-top { display: flex; justify-content: space-between; align-items: center; }
+.profile-screen .ins-mark { width: 2.4rem; height: 2.4rem; border-radius: .8rem; background: rgba(255, 255, 255, .18); display: grid; place-items: center; }
+.profile-screen .ins-cover { font-size: .75rem; font-weight: 800; padding: .3rem .65rem; border-radius: 999px; background: #fff; color: var(--accent-deep); }
+.profile-screen .ins-plan { margin: .6rem 0 0; font-size: 1.15rem; font-weight: 800; }
+.profile-screen .ins-member { margin: 0; font-size: 1.05rem; font-weight: 600; letter-spacing: .12em; opacity: .9; font-variant-numeric: tabular-nums; }
+.profile-screen .ins-foot { margin-top: auto; display: grid; grid-template-columns: 1.3fr 1.2fr .6fr; gap: .5rem; position: relative; z-index: 1; }
+.profile-screen .ins-foot span { display: grid; font-size: .8rem; font-weight: 700; min-width: 0; }
+.profile-screen .ins-foot small { font-size: .64rem; font-weight: 600; opacity: .75; text-transform: uppercase; letter-spacing: .05em; }
+
+/* Lists */
+.profile-screen .m-icon { width: 2.5rem; height: 2.5rem; border-radius: .85rem; flex-shrink: 0; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); }
+.profile-screen .m-icon.alert { background: var(--coral-soft); color: #e8643f; }
+.profile-screen .med { list-style: none; margin: 0; padding: .4rem 1rem; }
+.profile-screen .med li { display: flex; align-items: center; gap: .8rem; padding: .7rem 0; }
+.profile-screen .med li + li { border-top: 1px solid var(--line); }
+.profile-screen .med li > span:nth-child(2) { flex: 1; display: grid; gap: .1rem; }
+.profile-screen small { font-size: .76rem; color: var(--muted); font-weight: 600; }
+.profile-screen .med strong { font-size: .95rem; }
+.profile-screen .tag { font-size: .72rem; font-weight: 700; padding: .3rem .6rem; border-radius: 999px; background: var(--surface-2); color: var(--muted); }
+.profile-screen .tag.coral { background: var(--coral-soft); color: #c4502c; }
+
+.profile-screen .toggles { padding: .3rem 1rem; }
+.profile-screen .toggles .row { display: flex; align-items: center; gap: .8rem; min-height: 3.6rem; }
+.profile-screen .toggles .row + .row { border-top: 1px solid var(--line); }
+.profile-screen .toggles .row > span:nth-child(2) { flex: 1; display: grid; gap: .1rem; }
+.profile-screen .toggles strong { font-size: .93rem; }
+
+.profile-screen .links { list-style: none; margin: 0; padding: .3rem .4rem; }
+.profile-screen .links button {
+  appearance: none; border: 0; background: none; width: 100%; min-height: 3.5rem; display: flex; align-items: center; gap: .8rem;
+  padding: 0 .6rem; text-align: left; color: var(--fg);
+}
+.profile-screen .links strong { flex: 1; font-size: .93rem; }
+.profile-screen .links svg:last-child { color: var(--muted); }
+.profile-screen .links li + li { border-top: 1px solid var(--line); }
+.profile-screen .signout {
+  appearance: none; border: 0; min-height: 3.2rem; border-radius: 1.1rem; background: var(--coral-soft); color: #c4502c;
+  font-weight: 800; display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+}

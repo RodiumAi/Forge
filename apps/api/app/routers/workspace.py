@@ -231,6 +231,11 @@ async def duplicate_project(
     platform = resolve_kind(getattr(source, "platform", None))
     if not kind_enabled(platform):
         raise SitesError(400, "KIND_DISABLED", "This project type is not available yet.")
+    # Same plan rule as creating one.
+    if platform == "design_system":
+        from app.services.design_system.gating import require_design_systems
+
+        require_design_systems(db, user)
 
     db.query(User.id).filter(User.id == user.id).with_for_update().one()
     used = (

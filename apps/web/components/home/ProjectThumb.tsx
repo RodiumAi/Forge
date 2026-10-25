@@ -1,47 +1,33 @@
 "use client";
 
-import { SiteThumb } from "@/components/SiteThumb";
+import { useState } from "react";
 import { Icon } from "@/components/ui/icon";
 import { KIND_ICONS } from "@/components/home/home-kinds";
-import { kindOf, thumbSource, type HomeProject } from "@/components/home/projects";
+import { kindOf, projectCardImage, type HomeProject } from "@/components/home/projects";
 
 type Props = {
   project: HomeProject;
-  mediaToken: string | null;
-  /** `row` is the small list thumbnail: placeholders only, no live capture. */
+  /** Kept for callers; the card image carries its own media token. */
+  mediaToken?: string | null;
   size?: "card" | "row";
   onThumbPersisted?: (info?: { updated_at?: string }) => void;
 };
 
 /**
- * A project thumbnail on the kind's tone. Real captures when the project has
- * one (sites and apps, or a persisted JPEG); a deck shows a stack of blank
- * slides and the other document kinds their icon until thumbnails exist.
+ * A project thumbnail on the kind's tone: the card image the API rendered
+ * (a plain, lazy <img>), else a deck shows a stack of blank slides and the
+ * other kinds their icon.
  */
-export function ProjectThumb({ project, mediaToken, size = "card", onThumbPersisted }: Props) {
+export function ProjectThumb({ project, size = "card" }: Props) {
   const kind = kindOf(project);
-  const origin = typeof window !== "undefined" ? window.location.origin : null;
-  const source = thumbSource(project, size === "card" ? mediaToken : null, size === "card" ? origin : null);
+  const image = projectCardImage(project);
+  const [failed, setFailed] = useState<string | null>(null);
 
-  if (source && (size === "card" || source.imageSrc)) {
-    const vw = source.thumbViewport?.w ?? (kind === "mobile" ? 390 : 1280);
-    // Live mobile drafts: capture a 16:10 band, full phone viewports timed out.
-    const vh = source.thumbViewport?.h ?? (kind === "mobile" ? 244 : 800);
+  if (image && failed !== image) {
     return (
-      <div className={`fdh-thumb fdh-tone-${kind} fdh-thumb-${size}`}>
-        <SiteThumb
-          imageSrc={source.imageSrc}
-          frameSrc={size === "card" ? source.frameSrc : null}
-          src={size === "card" ? source.src : null}
-          authPath={size === "card" ? source.authPath : null}
-          persistProjectId={size === "card" ? source.persistProjectId : null}
-          onThumbPersisted={onThumbPersisted ?? null}
-          cacheKey={`${project.id}:${project.updated_at || project.created_at}:${kind}:tm2`}
-          title={project.name}
-          className={`home-card-thumb${kind === "mobile" ? " home-card-thumb--mobile" : ""}`}
-          viewportWidth={vw}
-          viewportHeight={vh}
-        />
+      <div className={`fdh-thumb fdh-tone-${kind} fdh-thumb-${size} fdh-thumb-image`}>
+        {/* eslint-disable-next-line @next/next/no-img-element -- authenticated API image */}
+        <img src={image} alt="" loading="lazy" decoding="async" onError={() => setFailed(image)} />
       </div>
     );
   }

@@ -6,9 +6,24 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from app.i18n import resolve_locale
 from app.kinds import get_kind, kind_enabled, resolve_kind
 from app.schemas import TemplateOut
-from app.services.templates import get_template, list_templates, preview_path, template_deck, template_detail
+from app.services.templates import (
+    get_template,
+    list_templates,
+    preview_image_path,
+    preview_path,
+    template_deck,
+    template_detail,
+)
 
 router = APIRouter(prefix="/templates", tags=["templates"])
+
+
+def _image_url(meta) -> str | None:
+    image = meta.path / "preview.png"
+    if not image.is_file():
+        return None
+    # The mtime busts the browser cache when the image is re-rendered.
+    return f"/templates/{meta.id}/preview.png?v={int(image.stat().st_mtime)}"
 
 
 def _to_out(meta, locale: str) -> TemplateOut:
@@ -21,7 +36,9 @@ def _to_out(meta, locale: str) -> TemplateOut:
         accent=meta.accent,
         bg=meta.bg,
         preview_url=f"/templates/{meta.id}/preview",
+        preview_image_url=_image_url(meta),
         kind=resolve_kind(meta.kind),
+        required_plan=meta.required_plan,
     )
 
 
@@ -59,6 +76,21 @@ def template_preview(template_id: str) -> FileResponse:
         path,
         media_type="text/html; charset=utf-8",
         headers={"Cache-Control": "public, max-age=300"},
+    )
+
+
+@router.get("/{template_id}/preview.png")
+def template_preview_image(template_id: str) -> FileResponse:
+    meta = get_template(template_id)
+    if meta is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Unknown template")
+    path = preview_image_path(template_id)
+    if path is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Preview image missing")
+    return FileResponse(
+        path,
+        media_type="image/png",
+        headers={"Cache-Control": "public, max-age=86400", "Cross-Origin-Resource-Policy": "cross-origin"},
     )
 
 

@@ -5,7 +5,7 @@
  * kinds go to their own editor.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { CodelabEditor } from "@/components/codelab-editor/CodelabEditor";
 import { codelabChatClient } from "@/components/codelab-editor/api";
@@ -13,12 +13,22 @@ import { useCodelabStrings } from "@/components/codelab-editor/strings";
 import type { CodelabPublisher } from "@/components/codelab-editor/DetailsPanel";
 import { api, getToken } from "@/lib/api";
 import { projectPublicUrl } from "@/lib/asset-url";
+import { clearBootPrompt, peekBootPrompt } from "@/lib/create-project";
 import { badgeRemovable, publishDeck } from "@/lib/deck-exports";
 import { useForgeStatus } from "@/lib/forge-status";
+import { useI18n } from "@/lib/i18n/I18nProvider";
 import { editorHref, type ProjectKindId } from "@/lib/kinds";
+import { removeProject } from "@/lib/lists-cache";
 import { useMediaToken } from "@/lib/media-token";
 
-type Project = { id: string; name: string; platform?: ProjectKindId; access_role?: string };
+type Project = {
+  id: string;
+  name: string;
+  platform?: ProjectKindId;
+  access_role?: string;
+  sites_url?: string | null;
+  published_at?: string | null;
+};
 
 export default function CodelabEditorPage() {
   const params = useParams<{ id: string }>();
@@ -29,6 +39,9 @@ export default function CodelabEditorPage() {
   const [error, setError] = useState<string | null>(null);
   const status = useForgeStatus();
   const mediaToken = useMediaToken();
+  const { locale } = useI18n();
+  // The prompt typed on the home page, sent to the assistant on arrival.
+  const [bootPrompt] = useState(() => (typeof window === "undefined" ? null : peekBootPrompt(projectId)));
 
   useEffect(() => {
     if (!getToken()) {
@@ -67,6 +80,13 @@ export default function CodelabEditorPage() {
     [projectId, removable],
   );
 
+  const deleteProject = useCallback(async () => {
+    await api(`/projects/${projectId}`, { method: "DELETE" });
+    clearBootPrompt(projectId);
+    removeProject(locale, projectId);
+    router.replace("/dashboard");
+  }, [projectId, locale, router]);
+
   if (error) {
     return (
       <div className="cle-root cle-center" role="alert">
@@ -88,6 +108,10 @@ export default function CodelabEditorPage() {
       publisher={readOnly ? null : publisher}
       readOnly={readOnly}
       backHref="/dashboard"
+      initialPrompt={bootPrompt}
+      onInitialPromptUsed={() => clearBootPrompt(projectId)}
+      onDelete={project.access_role === "owner" ? deleteProject : undefined}
+      publicUrl={project.published_at && project.sites_url ? project.sites_url : undefined}
     />
   );
 }

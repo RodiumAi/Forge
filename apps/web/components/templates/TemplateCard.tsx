@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 
-import { SiteThumb } from "@/components/SiteThumb";
+import { TemplateThumb } from "@/components/templates/TemplateThumb";
 import type { GalleryTemplate } from "@/components/TemplateGallery";
 import { cx } from "@/components/ui/cx";
 import { Glyph } from "@/components/ui/glyph";
 import { KindBadge } from "@/components/ui/KindBadge";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { normalizeKind } from "@/lib/kinds";
+import { TEMPLATE_PLAN_NAMES, useTemplateLock } from "@/lib/template-access";
 
 import { DeckThumb } from "./DeckThumb";
 
@@ -63,6 +64,7 @@ export function TemplateCard({
   const { t } = useI18n();
   const kind = normalizeKind(template.kind);
   const isDeck = kind === "slides";
+  const locked = useTemplateLock(template);
   const [playing, setPlaying] = useState(false);
   const [slideIndex, setSlideIndex] = useState(0);
   const [slideCount, setSlideCount] = useState<number | null>(null);
@@ -119,18 +121,18 @@ export function TemplateCard({
           onMissing={() => setDeckMissing(true)}
         />
       ) : (
-        <SiteThumb
-          src={template.preview_url || `/templates/${template.id}/preview`}
-          viewportWidth={480}
-          viewportHeight={270}
-          title={template.title}
-          className="f-thumb-site"
-        />
+        <TemplateThumb template={template} viewportWidth={480} viewportHeight={270} className="f-thumb-site" />
       )}
       {isDeck && slideCount ? (
         <span className="f-slide-count">
           <Glyph name="presentation" size="xs" />
           {slideCount}
+        </span>
+      ) : null}
+      {locked ? (
+        <span className="f-plan-lock" title={t("apTplLockedTitle").replace("{plan}", TEMPLATE_PLAN_NAMES[locked])}>
+          <Glyph name="lock" size="xs" />
+          {TEMPLATE_PLAN_NAMES[locked]}
         </span>
       ) : null}
       <div className="f-thumb-overlay">

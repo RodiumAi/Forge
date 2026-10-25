@@ -16,12 +16,9 @@ export const landingEn = {
   lndOpenForge: "Open Forge",
   lndGithubLabel: "GitHub: RodiumAi/Forge",
 
-  lndNewsTag: "New",
-  lndNewsText: "Slides, codelabs and design systems are coming to Forge",
   lndHeroTitle1: "Say it.",
   lndHeroTitle2: "Forge builds it.",
   lndHeroSub: "Sites, apps, slides and more, built in minutes.",
-  lndOssLine: "Forge is open source on GitHub",
   lndRibbonLabel: "A few Forge templates",
   lndHintFree: "Free: live preview, By Forge badge",
 
@@ -80,7 +77,6 @@ export const landingEn = {
   lndPriceEyebrow: "Pricing",
   lndPriceTitle: "A plan for every way you create.",
   lndPriceSub: "Start for free. Move to a paid plan when you want to export, publish on your domain or pick your model.",
-  lndPayMeta: "Mobile Money and card · billed monthly",
   lndLegendForge: "Forge",
   lndLegendBoth: "Forge + Code",
   lndLegendCode: "Code",
@@ -284,12 +280,9 @@ export const landingFr: Record<keyof typeof landingEn, string> = {
   lndOpenForge: "Ouvrir Forge",
   lndGithubLabel: "GitHub : RodiumAi/Forge",
 
-  lndNewsTag: "Nouveau",
-  lndNewsText: "Présentations, codelabs et design systems arrivent dans Forge",
   lndHeroTitle1: "Dites-le.",
   lndHeroTitle2: "Forge le construit.",
   lndHeroSub: "Sites, applis, slides et plus encore, créés en quelques minutes.",
-  lndOssLine: "Forge est open source sur GitHub",
   lndRibbonLabel: "Quelques modèles Forge",
   lndHintFree: "Gratuit : aperçu en direct, badge By Forge",
 
@@ -350,7 +343,6 @@ export const landingFr: Record<keyof typeof landingEn, string> = {
   lndPriceTitle: "Un plan pour chaque façon de créer.",
   lndPriceSub:
     "Commencez gratuitement. Passez à un plan payant quand vous voulez exporter, publier sur votre domaine ou choisir votre modèle.",
-  lndPayMeta: "Mobile Money et carte · facturé chaque mois",
   lndLegendForge: "Forge",
   lndLegendBoth: "Forge + Code",
   lndLegendCode: "Code",

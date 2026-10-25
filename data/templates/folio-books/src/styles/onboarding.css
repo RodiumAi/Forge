@@ -1,0 +1,43 @@
+/* Onboarding (first launch). Scoped under .onboarding-screen. */
+.onboarding-screen {
+  min-height: 100dvh;
+  padding: calc(1rem + var(--safe-top)) 1.4rem calc(1.4rem + var(--safe-bottom));
+  gap: 1.5rem; justify-content: space-between;
+  background:
+    radial-gradient(80% 50% at 50% 26%, color-mix(in srgb, var(--gold) 26%, transparent), transparent 70%),
+    var(--bg);
+}
+.onboarding-screen .onboard-top { display: flex; align-items: center; justify-content: space-between; min-height: 2.75rem; }
+.onboarding-screen .brand { font-family: var(--font-display); font-style: italic; font-weight: 500; font-size: 1.6rem; letter-spacing: -.02em; }
+.onboarding-screen .brand i { color: var(--accent); font-style: normal; }
+.onboarding-screen .skip { appearance: none; border: 0; background: transparent; color: var(--muted); font-weight: 600; min-height: 2.75rem; padding: 0 .4rem; }
+
+.onboarding-screen .onboard-art { position: relative; height: 44vh; min-height: 290px; max-height: 360px; display: grid; place-items: center; }
+.onboarding-screen .halo { position: absolute; width: 16rem; aspect-ratio: 1; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent); box-shadow: 0 0 0 2.2rem color-mix(in srgb, var(--surface) 55%, transparent); }
+.onboarding-screen .fan { position: absolute; transition: transform .6s cubic-bezier(.2, .8, .2, 1); }
+.onboarding-screen .f0 { transform: translate(-5.4rem, 1.2rem) rotate(-14deg); }
+.onboarding-screen .f1 { z-index: 2; transform: translateY(-.4rem); }
+.onboarding-screen .f2 { transform: translate(5.4rem, 1.2rem) rotate(14deg); }
+.onboarding-screen .step-1 .f0 { transform: translate(-4.6rem, .4rem) rotate(-8deg); }
+.onboarding-screen .step-1 .f1 { transform: translateY(-.9rem) rotate(3deg) scale(1.03); }
+.onboarding-screen .step-1 .f2 { transform: translate(4.8rem, 1.6rem) rotate(18deg); }
+.onboarding-screen .step-2 .f0 { transform: translate(-6rem, 1.8rem) rotate(-20deg); }
+.onboarding-screen .step-2 .f1 { transform: translateY(0) rotate(-2deg) scale(.97); }
+.onboarding-screen .step-2 .f2 { transform: translate(6rem, .6rem) rotate(9deg); }
+
+.onboarding-screen .float-chip {
+  position: absolute; z-index: 3; display: inline-flex; align-items: center; gap: .35rem; padding: .55rem .85rem; border-radius: 999px;
+  background: var(--surface); border: 1px solid var(--line); font-size: .78rem; font-weight: 600; box-shadow: 0 14px 28px -12px rgba(35, 28, 22, .5);
+}
+.onboarding-screen .float-chip em { font-family: var(--font-display); font-size: .95rem; font-weight: 500; }
+.onboarding-screen .float-chip.a { top: 8%; right: 2%; color: var(--accent); }
+.onboarding-screen .float-chip.b { bottom: 4%; left: 4%; }
+.onboarding-screen .float-chip.b svg { color: var(--gold); }
+
+.onboarding-screen .kicker { margin-bottom: .7rem; color: var(--accent); }
+.onboarding-screen .onboard-body h2 { font-size: 2.45rem; line-height: 1.02; font-weight: 500; margin-bottom: .8rem; max-width: 13ch; }
+.onboarding-screen .onboard-body .muted { font-size: .96rem; max-width: 32ch; }
+.onboarding-screen .onboard-actions { display: grid; gap: 1.1rem; }
+.onboarding-screen .dots { display: flex; gap: .4rem; }
+.onboarding-screen .dots i { width: .5rem; height: .5rem; border-radius: 999px; background: color-mix(in srgb, var(--fg) 15%, transparent); transition: width .3s ease, background .3s ease; }
+.onboarding-screen .dots i.on { width: 1.6rem; background: var(--accent); }

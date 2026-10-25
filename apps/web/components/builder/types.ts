@@ -68,11 +68,21 @@ function addStatePageRoute(routes: Set<string>, raw: string) {
   else routes.add(`/${page}`);
 }
 
+/** "NowPlaying" -> "now-playing", the path convention of the generation rules. */
+function kebab(name: string): string {
+  return name
+    .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
+    .replace(/([A-Z])([A-Z][a-z])/g, "$1-$2")
+    .toLowerCase();
+}
+
 function componentPageSlug(path: string): string | null {
   const norm = path.replace(/\\/g, "/");
-  const match = norm.match(/^src\/components\/(\w+)Page\.(tsx|jsx)$/i);
+  const match =
+    norm.match(/^src\/components\/(\w+)Page\.(tsx|jsx)$/i) ||
+    norm.match(/^src\/screens\/(\w+?)Screen\.(tsx|jsx)$/i);
   if (!match) return null;
-  const slug = match[1].toLowerCase();
+  const slug = kebab(match[1]);
   return slug === "home" ? null : slug;
 }
 
@@ -102,6 +112,8 @@ function collectStandalonePageSlugs(
         .replace(/^\//, "")
         .toLowerCase();
       if (route && route !== "home") slugs.add(route);
+      const name = norm.match(/^src\/pages\/(\w+)\.(tsx|jsx)$/i)?.[1];
+      if (name && !/^(home|index|notfound|not-found)$/i.test(name)) slugs.add(kebab(name));
     }
   }
   for (const content of Object.values(sources)) {
@@ -118,6 +130,16 @@ function collectStandalonePageSlugs(
     }
   }
   return slugs;
+}
+
+/** Paths of the `<Route path>` elements and route objects declared in source text. */
+export function parseDeclaredRoutes(content: string): string[] {
+  const routes = new Set<string>();
+  for (const match of content.matchAll(ROUTE_PATH_RE)) {
+    const normalized = normalizeRoute(match[1] || match[2] || "");
+    if (normalized) routes.add(normalized);
+  }
+  return Array.from(routes);
 }
 
 /** Parse React Router paths and in-app Link/href targets from source text. */
@@ -177,8 +199,14 @@ export function detectRoutes(
   const standalone = collectStandalonePageSlugs(files, sources);
   const sectionIds = collectSectionIds(sources);
   const routes = new Set<string>(["/"]);
+  // With a router, the declared routes are the pages: file names are only a
+  // guess for apps that switch screens without one.
+  const routerFiles = Object.entries(sources).filter(([path]) =>
+    /^src\/(App|main|routes|router)\.(tsx|jsx|ts|js)$/i.test(path.replace(/\\/g, "/")),
+  );
+  const declared = routerFiles.flatMap(([, content]) => parseDeclaredRoutes(content));
 
-  for (const slug of standalone) {
+  for (const slug of declared.length ? [] : standalone) {
     // A slug that is only an in-page section anchor (e.g. id="contact") is not a route.
     if (sectionIds.has(slug) && !files.some((f) => componentPageSlug(f) === slug)) continue;
     routes.add(`/${slug}`);
@@ -197,6 +225,9 @@ export function detectRoutes(
   for (const [path, content] of Object.entries(sources)) {
     const norm = path.replace(/\\/g, "/");
     if (!/^src\/(App|main|routes|router)\.(tsx|jsx|ts|js)$/i.test(norm)) continue;
+    // A `<Route path>` the app declares is a page, whatever its file is called.
+    // Param routes (`/album/:id`) are left out: they need an id to be shown.
+    for (const route of parseDeclaredRoutes(content)) routes.add(route);
     for (const route of parseRoutesFromSource(content)) {
       if (route === "/") {
         routes.add("/");

@@ -33,6 +33,14 @@ router = APIRouter(prefix="/projects", tags=["exports"])
 
 EXPORT_LIMIT_PER_HOUR = 40
 EXPORT_IP_LIMIT_PER_HOUR = 120
+
+
+def enforce_export_limits(request: Request, user: User) -> None:
+    """Hourly ceilings shared by every export that renders in Chromium."""
+    rate_limit.enforce(request, "project-export-ip", limit=EXPORT_IP_LIMIT_PER_HOUR, window_seconds=3600)
+    rate_limit.enforce(
+        request, "project-export", limit=EXPORT_LIMIT_PER_HOUR, window_seconds=3600, subject=str(user.id)
+    )
 WARNINGS_HEADER = "X-Forge-Export-Warnings"
 _MAX_WARNINGS_HEADER = 6000
 
@@ -75,10 +83,7 @@ async def export_document(
     if not kind_enabled(kind.id):
         raise SitesError(404, "KIND_DISABLED", "This project type is not available yet.")
     require_export(db, user, fmt)
-    rate_limit.enforce(request, "project-export-ip", limit=EXPORT_IP_LIMIT_PER_HOUR, window_seconds=3600)
-    rate_limit.enforce(
-        request, "project-export", limit=EXPORT_LIMIT_PER_HOUR, window_seconds=3600, subject=str(user.id)
-    )
+    enforce_export_limits(request, user)
     opts = options or ExportOptions()
     result = await export_deck(
         str(project.id),

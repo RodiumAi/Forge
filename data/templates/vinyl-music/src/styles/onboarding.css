@@ -1,0 +1,44 @@
+/* Onboarding (first launch). Scoped under .onboarding-screen. */
+.onboarding-screen {
+  min-height: 100dvh; overflow: hidden;
+  padding: calc(1rem + var(--safe-top)) 1.4rem calc(1.4rem + var(--safe-bottom));
+  gap: 1.5rem; justify-content: space-between;
+  background: radial-gradient(90% 55% at 70% 25%, color-mix(in srgb, var(--accent-2) 30%, transparent), transparent 70%), var(--bg);
+}
+.onboarding-screen .onboard-top { display: flex; align-items: center; justify-content: space-between; min-height: 2.75rem; }
+.onboarding-screen .brand { display: inline-flex; align-items: center; gap: .5rem; font-family: var(--font-display); font-weight: 800; font-size: 1.2rem; }
+.onboarding-screen .brand i { width: 1.3rem; height: 1.3rem; border-radius: 999px; background: radial-gradient(circle, var(--bg) 18%, var(--accent) 20% 42%, #1c1824 44%); box-shadow: 0 0 12px var(--accent); }
+.onboarding-screen .skip { appearance: none; border: 0; background: transparent; color: var(--muted); font-weight: 600; min-height: 2.75rem; padding: 0 .4rem; }
+
+/* Record sliding out of three tilted sleeves */
+.onboarding-screen .onboard-art { position: relative; height: 46vh; min-height: 300px; max-height: 380px; }
+.onboarding-screen .glow { position: absolute; left: 20%; top: 15%; width: 65%; aspect-ratio: 1; border-radius: 999px; background: var(--grad); filter: blur(70px); opacity: .45; }
+.onboarding-screen .record {
+  position: absolute; left: 34%; top: 8%; width: 62%; aspect-ratio: 1; border-radius: 999px; display: grid; place-items: center;
+  background: conic-gradient(from 20deg, transparent 0 10%, rgba(255, 255, 255, .14) 14%, transparent 20% 55%, rgba(255, 255, 255, .1) 60%, transparent 66%), repeating-radial-gradient(circle, #0b0a0e 0 2px, #17151c 2px 3px);
+  box-shadow: 0 30px 60px -16px rgba(0, 0, 0, .9); animation: spin 9s linear infinite; transition: transform .6s ease;
+}
+.onboarding-screen .record img { width: 38%; aspect-ratio: 1; border-radius: 999px; object-fit: cover; }
+.onboarding-screen .sleeve { position: absolute; width: 50%; aspect-ratio: 1; object-fit: cover; border-radius: 1.2rem; box-shadow: 0 24px 44px -14px rgba(0, 0, 0, .85); transition: transform .6s cubic-bezier(.2, .8, .2, 1), opacity .4s ease; }
+.onboarding-screen .s0 { left: 4%; top: 22%; z-index: 3; transform: rotate(-7deg); }
+.onboarding-screen .s1 { left: 0; top: 30%; z-index: 2; transform: rotate(-16deg) translateX(-14%); opacity: .7; }
+.onboarding-screen .s2 { left: 0; top: 38%; z-index: 1; transform: rotate(-25deg) translateX(-26%); opacity: .45; }
+.onboarding-screen .step-1 .s0 { transform: rotate(-16deg) translateX(-14%); opacity: .7; z-index: 2; }
+.onboarding-screen .step-1 .s1 { transform: rotate(-6deg) translate(12%, -14%); opacity: 1; z-index: 3; }
+.onboarding-screen .step-2 .s0 { transform: rotate(-25deg) translateX(-26%); opacity: .45; z-index: 1; }
+.onboarding-screen .step-2 .s2 { transform: rotate(-5deg) translate(18%, -30%); opacity: 1; z-index: 3; }
+
+.onboarding-screen .float-chip {
+  position: absolute; z-index: 4; display: inline-flex; align-items: center; gap: .35rem; padding: .55rem .8rem; border-radius: 999px;
+  background: rgba(34, 29, 44, .85); backdrop-filter: blur(10px); border: 1px solid var(--line); font-size: .78rem; font-weight: 600; box-shadow: 0 14px 30px rgba(0, 0, 0, .45);
+}
+.onboarding-screen .float-chip.a { top: 4%; left: 6%; color: var(--accent); }
+.onboarding-screen .float-chip.b { bottom: 2%; right: 2%; }
+
+.onboarding-screen .kicker { margin: 0 0 .7rem; font-size: .76rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.onboarding-screen .onboard-body h2 { font-size: 2.3rem; line-height: 1.02; font-weight: 800; margin-bottom: .75rem; }
+.onboarding-screen .onboard-body .muted { font-size: .95rem; max-width: 32ch; }
+.onboarding-screen .onboard-actions { display: grid; gap: 1.1rem; }
+.onboarding-screen .dots { display: flex; gap: .4rem; }
+.onboarding-screen .dots i { width: .5rem; height: .5rem; border-radius: 999px; background: var(--surface-2); transition: width .3s ease, background .3s ease; }
+.onboarding-screen .dots i.on { width: 1.6rem; background: var(--grad); }

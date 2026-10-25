@@ -29,7 +29,7 @@ type Props = {
   onChange: (next: string) => void;
   onSubmit: () => void;
   files: PromptAttachment[];
-  onAddFiles: (list: FileList) => void;
+  onAddFiles: (list: File[]) => void;
   onRemoveFile: (id: string) => void;
   /** Selected tile, shown as a removable chip; `null` or Blank shows nothing. */
   tile: HomeTile | null;
@@ -92,7 +92,7 @@ export const CreatePrompt = forwardRef<CreatePromptHandle, Props>(function Creat
       onDragOver={(event) => event.preventDefault()}
       onDrop={(event) => {
         event.preventDefault();
-        if (!busy && event.dataTransfer.files?.length) onAddFiles(event.dataTransfer.files);
+        if (!busy && event.dataTransfer.files?.length) onAddFiles(Array.from(event.dataTransfer.files));
       }}
     >
       <PromptFileChips items={files} onRemove={onRemoveFile} />
@@ -128,7 +128,7 @@ export const CreatePrompt = forwardRef<CreatePromptHandle, Props>(function Creat
           tabIndex={-1}
           aria-hidden
           onChange={(event) => {
-            if (event.target.files?.length) onAddFiles(event.target.files);
+            if (event.target.files?.length) onAddFiles(Array.from(event.target.files));
             event.target.value = "";
           }}
         />

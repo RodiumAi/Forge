@@ -29,6 +29,7 @@ from app.models import Project, User
 from app.services import history
 from app.services.design_system import registry, sync
 from app.services.design_system.exports import FORMATS, pdf_export, require_export, show_badge, text_export
+from app.services.design_system.gating import REQUIRED_PLAN, design_systems_allowed, require_design_systems
 from app.services.project_access import accessible_project
 
 router = APIRouter(tags=["design-systems"])
@@ -77,7 +78,16 @@ def list_design_systems(
     _require_enabled()
     items = registry.list_for_user(db, user)
     default = next((item["id"] for item in items if item["is_default_user"] or item["is_default_team"]), None)
-    return JSONResponse({"items": items, "default_id": default}, headers={"Cache-Control": "no-store"})
+    # `allowed` false: the plan is below Builder; the client shows the list locked.
+    return JSONResponse(
+        {
+            "items": items,
+            "default_id": default,
+            "allowed": design_systems_allowed(db, user),
+            "required_plan": REQUIRED_PLAN,
+        },
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 @router.get("/design-systems/{project_id}")
@@ -210,6 +220,7 @@ def attach(
     db: Session = Depends(get_db),
 ) -> JSONResponse:
     _require_enabled()
+    require_design_systems(db, user)
     project = _target(db, user, project_id, request, edit=True)
     source = registry.design_system_project(db, user, body.design_system_id)
     row = registry.ensure_record(db, source)
@@ -251,6 +262,7 @@ def resync(
 ) -> JSONResponse:
     """Apply the proposed version. 409 when the design system moved on since."""
     _require_enabled()
+    require_design_systems(db, user)
     project = _target(db, user, project_id, request, edit=True)
     source_id = getattr(project, "design_system_project_id", None)
     if source_id is None:
@@ -278,7 +290,7 @@ async def export(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> Response:
-    """tokens.json, CSS variables, Tailwind config, DESIGN.md or the guidelines PDF."""
+    """tokens.json, CSS variables, Tailwind config, or the brand guidelines (Markdown or PDF)."""
     _require_enabled()
     if fmt not in FORMATS:
         raise SitesError(400, "INVALID_FORMAT", f"Export format must be one of {', '.join(FORMATS)}.")
@@ -286,12 +298,17 @@ async def export(
     require_export(db, user, fmt)
     document = _document(project)
     if fmt == "pdf":
+        from app.routers.exports import enforce_export_limits
+        from app.services.exports.deck_exports import chromium_slots
+
+        enforce_export_limits(request, user)
         badge = show_badge(db, user)
         pid = str(project.id)
         db.close()
-        file = await pdf_export(pid, document, lang=resolve_locale(request), badge=badge)
+        async with chromium_slots:
+            file = await pdf_export(pid, document, lang=resolve_locale(request), badge=badge)
     else:
-        file = text_export(document, fmt)
+        file = text_export(document, fmt, lang=resolve_locale(request))
     return Response(
         content=file.body,
         media_type=file.media_type,
@@ -319,14 +336,15 @@ _ASSET_TYPES = {
 @router.post("/projects/{project_id}/design-system/logo")
 async def upload_logo(
     project_id: UUID,
-    variant: Literal["light", "dark"] = "light",
+    variant: Literal["light", "dark", "icon"] = "light",
     file: UploadFile = File(...),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> JSONResponse:
     """Store a raster logo under public/brand/ and point the design system at it.
 
-    The bytes are sniffed (never the name or the declared type); SVG uploads
+    ``variant``: the main logo, its version for dark backgrounds, or the square
+    icon (app icon and favicon). The bytes are sniffed (never the name or the declared type); SVG uploads
     are refused because an SVG can carry script.
     """
     from app.services.asset_storage import sniff_raster
@@ -346,10 +364,10 @@ async def upload_logo(
     document = _document(project)
     write_bytes(pid, relative, body)
     logo = dict(document.get("logo") or {})
-    if variant == "dark":
+    if variant in ("dark", "icon"):
         if not logo.get("src"):
             raise SitesError(409, "LOGO_MISSING", "Upload the main logo first.")
-        logo["darkSrc"] = relative
+        logo["darkSrc" if variant == "dark" else "iconSrc"] = relative
     else:
         logo["src"] = relative
     document["logo"] = logo

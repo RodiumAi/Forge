@@ -2141,8 +2141,14 @@ html[data-theme="light"] .builder-msg-attach-placeholder {
   line-height: 1.35;
 }
 
-.design-logo-input {
+.design-logo-input,
+.design-label input.design-logo-input {
   position: absolute;
+  left: 0;
+  top: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
   width: 1px;
   height: 1px;
   opacity: 0;
@@ -3882,7 +3888,6 @@ html[data-theme="light"] .builder-msg-attach-placeholder {
   background: #fff;
   color: #222;
   cursor: pointer;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.22);
   animation: lpClaimIn 0.18s ease-out;
 }
 
@@ -12560,6 +12565,7 @@ body:has(.home) [data-next-mark] {
   color: #fdba74;
 }
 
+.md-img-blocked { color: var(--color-text-tertiary, inherit); font-style: italic; opacity: 0.8; }
 .md-table-wrap { overflow-x: auto; margin: 0 0 0.65rem; }
 .md-table-wrap table { border-collapse: collapse; width: 100%; font-size: 0.84rem; }
 .md-table-wrap th,

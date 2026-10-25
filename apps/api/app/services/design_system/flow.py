@@ -365,8 +365,12 @@ async def _generate(ctx: DesignSystemContext) -> AsyncIterator[Event]:
     spec = answer.spec
     old_logo = (current or {}).get("logo") or {}
     src = logo_path or old_logo.get("src") or LOGO_PATH
+    # A new logo image makes the old dark and icon versions stale.
     document, fixes = build_document(
-        spec, logo_src=src, logo_dark_src=old_logo.get("darkSrc") if not logo_path else None
+        spec,
+        logo_src=src,
+        logo_dark_src=old_logo.get("darkSrc") if not logo_path else None,
+        logo_icon_src=old_logo.get("iconSrc") if not logo_path else None,
     )
 
     _checkpoint(pid, "before design system generation")

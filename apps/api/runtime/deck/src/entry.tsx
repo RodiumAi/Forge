@@ -11,24 +11,45 @@ import { useEffect, useMemo } from "react";
 import { createRoot } from "react-dom/client";
 import { DeckPlayer, PresenterView, themeTokensFromDesign } from "@forge/deck-player";
 import { assetResolver, loadData, readConfig, type DeckConfig, type DeckData } from "./data";
-import { googleFontsHrefs } from "./fonts";
+import { googleFamilies, googleFontsHrefs } from "./fonts";
 import { PrintPages } from "./print";
 import { installExportApi } from "./extract";
 
 declare const __FORGE_EXPORT__: boolean;
 
-function addFontLinks(hrefs: string[]) {
+/** Adds the font stylesheets; resolves when each has loaded (or failed). */
+function addFontLinks(hrefs: string[]): Promise<unknown> {
+  const loads: Promise<unknown>[] = [];
   for (const href of hrefs) {
     if (document.querySelector(`link[data-forge-font="${CSS.escape(href)}"]`)) continue;
     const link = document.createElement("link");
     link.rel = "stylesheet";
     link.href = href;
     link.dataset.forgeFont = href;
+    loads.push(
+      new Promise((resolve) => {
+        link.addEventListener("load", resolve, { once: true });
+        link.addEventListener("error", resolve, { once: true });
+      }),
+    );
     document.head.appendChild(link);
   }
+  return Promise.all(loads);
 }
 
-async function settle(): Promise<void> {
+/**
+ * Asks for each family at the weights and styles the slides use. Until a
+ * face is requested, `document.fonts.ready` resolves at once and the first
+ * slides would be captured in a fallback font.
+ */
+function loadFamilies(families: string[]): Promise<unknown> {
+  const fonts = document.fonts;
+  if (!fonts?.load) return Promise.resolve();
+  const faces = families.flatMap((f) => [`400 1em "${f}"`, `700 1em "${f}"`, `italic 400 1em "${f}"`]);
+  return Promise.all(faces.map((face) => fonts.load(face).catch(() => undefined)));
+}
+
+async function settle(fontsLoading: Promise<unknown>): Promise<void> {
   const images = Array.from(document.images).filter((img) => !img.complete);
   await Promise.race([
     Promise.all(
@@ -42,7 +63,10 @@ async function settle(): Promise<void> {
     ),
     new Promise((resolve) => setTimeout(resolve, 8000)),
   ]);
-  if (document.fonts?.ready) await Promise.race([document.fonts.ready, new Promise((resolve) => setTimeout(resolve, 4000))]);
+  await Promise.race([
+    fontsLoading.then(() => document.fonts?.ready),
+    new Promise((resolve) => setTimeout(resolve, 6000)),
+  ]);
 }
 
 function markReady(state: "1" | "error") {
@@ -53,12 +77,15 @@ function App({ data, config }: { data: DeckData; config: DeckConfig }) {
   const tokens = useMemo(() => themeTokensFromDesign(data.design), [data.design]);
   const assetUrl = useMemo(() => assetResolver(data, config), [data, config]);
   useEffect(() => {
-    if (config.webFonts !== false) addFontLinks(googleFontsHrefs(tokens));
+    const fontsLoading =
+      config.webFonts !== false
+        ? addFontLinks(googleFontsHrefs(tokens)).then(() => loadFamilies(googleFamilies(tokens)))
+        : Promise.resolve();
     let cancelled = false;
     // Two frames so the first layout (and its <img> tags) exists before waiting.
     requestAnimationFrame(() =>
       requestAnimationFrame(() => {
-        settle().then(() => {
+        settle(fontsLoading).then(() => {
           if (!cancelled) markReady("1");
         });
       }),

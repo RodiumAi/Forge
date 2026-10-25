@@ -21,6 +21,7 @@ specific ones are ``deck.outline``, ``deck.deck``, ``deck.slide``,
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import json
 import logging
 from collections.abc import AsyncIterator, Awaitable, Callable
@@ -39,7 +40,7 @@ from app.prompts.deck import (
     TARGETED_ELEMENT_SYSTEM,
     TARGETED_SLIDE_SYSTEM,
 )
-from app.services.deck_ai import store
+from app.services.deck_ai import attachments, store
 from app.services.deck_ai.layouts import (
     LAYOUT_NAMES,
     describe_layout,
@@ -50,7 +51,7 @@ from app.services.deck_ai.llm import DeckAnswerError, ask_json
 from app.services.deck_ai.outline import Outline, check_outline, plan_tasks
 from app.services.deck_ai.targeting import SlideResult, element_from_answer, find_element, slide_from_answer
 from app.services.deck_ai.theme import DeckTheme, load_theme
-from app.services.deck_ai.visuals import drop_placeholders, fill_visual
+from app.services.deck_ai.visuals import drop_placeholders, fill_visual, set_image
 from app.services.document_scaffold import DECK_PATH, DEFAULT_THEME
 from app.services.llm import RodiumError, error_code_for
 from app.services.orchestration.cancel import clear_cancelled, is_cancelled
@@ -218,7 +219,7 @@ def _conversation(history: list[tuple[str, str]], limit: int = 6) -> str:
     if not recent:
         return ""
     lines = ["Recent conversation:"]
-    lines += [f"{role}: {text.strip()[:600]}" for role, text in recent]
+    lines += [f"{role}: {attachments.strip_markers(text)[:600]}" for role, text in recent]
     return "\n".join(lines)
 
 
@@ -301,10 +302,13 @@ async def _outline(ctx: DeckContext) -> AsyncIterator[Event]:
     auth = await ctx.resolve_auth()
     theme = load_theme(ctx.project_id)
     deck = _read_deck_or_default(ctx.project_id)
+    uploads = attachments.existing_images(ctx.project_id, ctx.prompt)
     user = "\n\n".join(
         part
         for part in (
-            f"Request:\n{ctx.prompt[:MAX_PROMPT_CHARS]}",
+            f"Request:\n{attachments.strip_markers(ctx.prompt)[:MAX_PROMPT_CHARS]}",
+            attachments.describe(uploads),
+            attachments.describe_documents(attachments.documents(ctx.prompt), mode="outline"),
             _conversation(ctx.history),
             f"Current format: {deck['format']['ratio']}",
             "Layouts: " + ", ".join(LAYOUT_NAMES),
@@ -352,7 +356,8 @@ def _slide_prompt(*, outline: Outline, index: int, request: str, theme: DeckThem
         "This slide wants a photo or illustration." if slide.visual else "",
         theme.describe(),
         f"Brand charter:\n{theme.charter[:3000]}" if theme.charter else "",
-        f"Original request:\n{request[:MAX_PROMPT_CHARS]}",
+        f"Original request:\n{attachments.strip_markers(request)[:MAX_PROMPT_CHARS]}",
+        attachments.describe_for_slide(attachments.documents(request), index),
     ]
     return "\n\n".join(part for part in parts if part)
 
@@ -364,8 +369,13 @@ async def _place_visual(
     generate: bool,
     auth: Any,
     locale: str,
+    uploads: list[str] | None = None,
 ) -> tuple[dict[str, Any], str | None]:
-    """The slide with its picture filled (or its placeholder dropped)."""
+    """The slide with its picture filled (or its placeholder dropped).
+
+    ``uploads`` holds the images the user attached, still unused: the first
+    one is taken for this visual.
+    """
     if result.visual is None:
         return drop_placeholders(result.slide), None
     outcome = await fill_visual(
@@ -375,6 +385,7 @@ async def _place_visual(
         generate=generate,
         auth=auth,
         locale=locale,
+        user_image=uploads.pop(0) if uploads else None,
     )
     return drop_placeholders(outcome.slide), outcome.path
 
@@ -413,6 +424,7 @@ async def deck_write_events(
     auth = await resolve_auth()
     theme = load_theme(project_id)
     generate = wants_generated_images(prompt)
+    uploads = attachments.existing_images(project_id, prompt)
 
     store.begin_run(project_id, "before deck generation")
     previous = _read_deck_or_default(project_id)
@@ -467,7 +479,7 @@ async def deck_write_events(
         if result.visual is not None:
             yield steps.push("deck_visual", "running")
         slide, image_path = await _place_visual(
-            project_id, result, generate=generate, auth=auth, locale=locale
+            project_id, result, generate=generate, auth=auth, locale=locale, uploads=uploads
         )
         if result.visual is not None:
             yield steps.push("deck_visual", "done")
@@ -561,9 +573,13 @@ def spawn_deck_write_job(
 
 
 def _instruction(ctx: DeckContext) -> str:
-    request = ctx.prompt[:MAX_PROMPT_CHARS]
+    request = attachments.strip_markers(ctx.prompt)[:MAX_PROMPT_CHARS]
+    extra = attachments.describe_for_edit(attachments.image_paths(ctx.prompt))
+    docs = attachments.describe_documents(attachments.documents(ctx.prompt), mode="slide")
+    if docs:
+        extra = f"{extra}\n\n{docs}" if extra else docs
     if not ctx.action:
-        return f"User request:\n{request}"
+        return f"User request:\n{request}" + (f"\n{extra}" if extra else "")
     template = QUICK_ACTION_INSTRUCTIONS[ctx.action]
     if ctx.action == "change_layout":
         arg = (
@@ -665,8 +681,25 @@ async def _targeted_edit(ctx: DeckContext) -> AsyncIterator[Event]:
             "message": "TARGET_SCOPE: " + ", ".join(result.dropped),
             "violation": {"code": "TARGET_SCOPE", "path": store.slide_path(slide_id)},
         }
+    uploads = attachments.existing_images(pid, ctx.prompt)
+    if uploads and element_id and result.visual is None:
+        # An image element was targeted and kept as is by the model: the
+        # attached picture replaces it.
+        target = find_element(result.slide.get("elements") or [], element_id)
+        if target is not None and target.get("type") == "image":
+            result = dataclasses.replace(
+                result,
+                slide=set_image(
+                    result.slide, element_id, uploads.pop(0), str(target.get("alt") or ""), {"source": "upload"}
+                ),
+            )
     slide, image_path = await _place_visual(
-        pid, result, generate=wants_generated_images(ctx.prompt), auth=auth, locale=ctx.locale
+        pid,
+        result,
+        generate=wants_generated_images(ctx.prompt),
+        auth=auth,
+        locale=ctx.locale,
+        uploads=uploads,
     )
     slide = store.write_slide(pid, slide)
     applied.append({"op": "write", "path": store.slide_path(slide_id)})
@@ -772,7 +805,9 @@ async def _deck_edit(ctx: DeckContext) -> AsyncIterator[Event]:
             "Layouts: " + ", ".join(LAYOUT_NAMES),
             theme.describe(),
             _conversation(ctx.history),
-            f"User request:\n{ctx.prompt[:MAX_PROMPT_CHARS]}",
+            f"User request:\n{attachments.strip_markers(ctx.prompt)[:MAX_PROMPT_CHARS]}",
+            attachments.describe_for_edit(attachments.image_paths(ctx.prompt)),
+            attachments.describe_documents(attachments.documents(ctx.prompt), mode="edit"),
         )
         if part
     )
@@ -788,6 +823,7 @@ async def _deck_edit(ctx: DeckContext) -> AsyncIterator[Event]:
     store.begin_run(pid, "before deck edit")
     applied: list[dict[str, str]] = []
     generate = wants_generated_images(ctx.prompt)
+    uploads = attachments.existing_images(pid, ctx.prompt)
     refs = []
     for sid in edit.order:
         ref = dict(existing.get(sid) or {"id": sid, "layout": "text", "transition": dict(DEFAULT_TRANSITION)})
@@ -815,7 +851,9 @@ async def _deck_edit(ctx: DeckContext) -> AsyncIterator[Event]:
                 # Listed in order, never written: an empty slide keeps the player happy.
                 store.write_slide(pid, {"id": sid, "elements": []})
             continue
-        slide, image_path = await _place_visual(pid, result, generate=generate, auth=auth, locale=ctx.locale)
+        slide, image_path = await _place_visual(
+            pid, result, generate=generate, auth=auth, locale=ctx.locale, uploads=uploads
+        )
         slide = store.write_slide(pid, slide)
         notes = store.read_notes(pid, sid)
         if result.notes is not None:

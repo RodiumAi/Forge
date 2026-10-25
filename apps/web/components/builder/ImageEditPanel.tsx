@@ -7,6 +7,8 @@ import { assetContentUrl, projectPublicUrl } from "@/lib/asset-url";
 import { rodiumRechargeUrl } from "@/lib/constants/rodium-links";
 import { Icon } from "@/components/ui/icon";
 import { useI18n } from "@/lib/i18n/I18nProvider";
+import { useSpeechInput } from "@/lib/speech-input";
+import { VoiceButton, VoiceStatus } from "@/components/composer/VoiceInput";
 import type { MessageKey } from "@/lib/i18n/dictionaries";
 import { fetchProjectAssets, type ProjectAsset } from "@/lib/prompt-upload";
 import { getSessionSnapshot } from "@/lib/session-cache";
@@ -38,7 +40,6 @@ type StockPage = { hits: StockImage[]; total: number; page: number; hasMore: boo
 /** A file the API just wrote into the project (import or generation). */
 export type ProjectImage = { path: string; public_path: string; width: number; height: number };
 
-type ImageModel = { slug: string; label: string; default: boolean };
 
 const TABS: { id: Tab; labelKey: MessageKey }[] = [
   { id: "free", labelKey: "imageTabFree" },
@@ -72,9 +73,8 @@ export function ImageEditPanel({ projectId, selection, onClose, onReplaced }: Pr
   const [searching, setSearching] = useState(false);
   const [searchUnavailable, setSearchUnavailable] = useState(false);
 
-  const [models, setModels] = useState<ImageModel[] | null>(null);
-  const [model, setModel] = useState("");
   const [prompt, setPrompt] = useState("");
+  const voice = useSpeechInput({ value: prompt, onChange: setPrompt, locale, maxLength: 4000 });
   const [aspect, setAspect] = useState<Aspect>("1:1");
   const [noCredits, setNoCredits] = useState(false);
 
@@ -89,23 +89,6 @@ export function ImageEditPanel({ projectId, selection, onClose, onReplaced }: Pr
   useEffect(() => {
     void load();
   }, [load]);
-
-  useEffect(() => {
-    if (tab !== "ai" || models) return;
-    let alive = true;
-    api<ImageModel[]>("/images/models")
-      .then((rows) => {
-        if (!alive) return;
-        setModels(rows);
-        setModel((current) => current || rows.find((row) => row.default)?.slug || rows[0]?.slug || "");
-      })
-      .catch(() => {
-        if (alive) setModels([]);
-      });
-    return () => {
-      alive = false;
-    };
-  }, [tab, models]);
 
   async function applyUrl(publicUrl: string, objectId?: string) {
     if (!selection?.src) {
@@ -228,7 +211,7 @@ export function ImageEditPanel({ projectId, selection, onClose, onReplaced }: Pr
     try {
       const generated = await api<ProjectImage>(`/projects/${projectId}/images/generate`, {
         method: "POST",
-        body: JSON.stringify({ model: model || null, prompt: prompt.trim(), aspect, target: selection.src }),
+        body: JSON.stringify({ model: null, prompt: prompt.trim(), aspect, target: selection.src }),
         // Image models can take a couple of minutes.
         timeoutMs: 200_000,
       });
@@ -420,19 +403,13 @@ export function ImageEditPanel({ projectId, selection, onClose, onReplaced }: Pr
       {tab === "ai" && (
         <form role="tabpanel" className="image-panel-ai" onSubmit={onGenerate}>
           <label>
-            <span>{t("imageAiModel")}</span>
-            <select value={model} onChange={(e) => setModel(e.target.value)} disabled={!models?.length}>
-              {(models ?? []).map((row) => (
-                <option key={row.slug} value={row.slug}>
-                  {row.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
             <span>{t("imageAiPrompt")}</span>
-            <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={4} maxLength={4000} />
+            <span className="f-voice-field">
+              <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={4} maxLength={4000} readOnly={voice.listening} />
+              <VoiceButton voice={voice} className="f-mic" size="sm" />
+            </span>
           </label>
+          <VoiceStatus voice={voice} compact surface />
           <label>
             <span>{t("imageAiAspect")}</span>
             <select value={aspect} onChange={(e) => setAspect(e.target.value as Aspect)}>

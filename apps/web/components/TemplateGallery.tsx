@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { BookOpen, Monitor, Palette, Presentation, Search, Smartphone, type LucideIcon } from "lucide-react";
-import { SiteThumb } from "@/components/SiteThumb";
+import { TemplateThumb } from "@/components/templates/TemplateThumb";
 import { TemplatePreviewModal } from "@/components/TemplatePreviewModal";
 import { Icon } from "@/components/ui/icon";
 import { useI18n } from "@/lib/i18n/I18nProvider";
@@ -25,7 +25,11 @@ export type GalleryTemplate = {
   accent: string | null;
   bg: string | null;
   preview_url?: string | null;
+  /** Pre-rendered card image (preview.png), preferred over preview_url. */
+  preview_image_url?: string | null;
   kind?: ProjectKindId;
+  /** Lowest Forge plan that may use the kit: null (Free), "starter" or "builder". */
+  required_plan?: "starter" | "builder" | null;
 };
 
 type Props = {
@@ -163,13 +167,7 @@ export function TemplateGallery({
               onClick={() => setSelected(tpl)}
             >
               <div className="home-card-media">
-                <SiteThumb
-                  src={tpl.preview_url || `/templates/${tpl.id}/preview`}
-                  viewportWidth={480}
-                  viewportHeight={300}
-                  title={tpl.title}
-                  className="home-card-thumb tpl-card-thumb"
-                />
+                <TemplateThumb template={tpl} viewportWidth={480} viewportHeight={300} className="home-card-thumb tpl-card-thumb" />
               </div>
               <div className="home-card-body tpl-card-body">
                 <div className="home-card-meta">

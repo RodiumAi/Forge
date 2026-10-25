@@ -19,6 +19,7 @@ import { PresenterView, visibleSlides } from "./PresenterView";
 import { FittedSlide, SlideCanvas } from "./SlideView";
 import { nextPosition, previousPosition, stepCount, type Position } from "./steps";
 import type { AssetUrl, Deck, PlayerLocale, Slide, ThemeTokens } from "./types";
+import { BY_FORGE_PILL, ForgeMark } from "../ForgeMark";
 
 export type DeckPlayerProps = {
   deck: Deck;
@@ -398,10 +399,12 @@ export function DeckPlayer({
           href={BADGE_URL}
           target="_blank"
           rel="noopener noreferrer"
-          style={{ position: "absolute", right: 12, bottom: 12, zIndex: 25, background: "rgba(11,13,18,0.82)", color: "#F5F7FA", border: "1px solid rgba(255,255,255,0.18)", padding: "4px 10px", borderRadius: 999, font: "600 12px system-ui, sans-serif", textDecoration: "none" }}
+          aria-label={labels.madeWith}
+          style={{ position: "absolute", right: 12, bottom: 12, zIndex: 25, ...BY_FORGE_PILL, display: "inline-flex", alignItems: "center", gap: 6, height: 24, padding: "0 9px 0 6px", borderRadius: 999, font: "600 11.5px system-ui, sans-serif", whiteSpace: "nowrap", textDecoration: "none" }}
           data-forge-badge=""
         >
-          {labels.madeWith}
+          <ForgeMark />
+          By Forge
         </a>
       )}
 

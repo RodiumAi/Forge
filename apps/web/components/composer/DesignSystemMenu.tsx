@@ -57,6 +57,9 @@ export function DesignSystemMenu({
   onChange,
   disabled,
   manageHref,
+  locked,
+  upgradeHref,
+  onCreate,
 }: {
   options: readonly ComposerDesignSystem[];
   value: string | null;
@@ -64,9 +67,14 @@ export function DesignSystemMenu({
   disabled?: boolean;
   /** "Manage my design systems" link at the bottom. */
   manageHref?: string;
+  /** Plan below Builder: the systems show but cannot be picked. */
+  locked?: boolean;
+  upgradeHref?: string;
+  /** Starts a new design system (shown first when there is none). */
+  onCreate?: () => void;
 }) {
   const { t } = useI18n();
-  const current = options.find((d) => d.id === value) ?? null;
+  const current = locked ? null : (options.find((d) => d.id === value) ?? null);
   const name = current ? current.name : t("uiDsNone");
   return (
     <Popover
@@ -80,12 +88,43 @@ export function DesignSystemMenu({
         <button type="button" className="f-c-btn" disabled={disabled} aria-label={`${t("uiDsLabel")}: ${name}`}>
           <DesignSystemSwatch ds={current} />
           <span className="f-lbl-long">{name}</span>
+          {locked ? <Glyph name="lock" size="sm" /> : null}
           <Glyph name="chevron-down" className="f-caret" />
         </button>
       }
     >
       {(close) => (
         <>
+          {locked ? (
+            <div className="f-ds-locked" role="note">
+              <Glyph name="lock" size="sm" />
+              <span>
+                <strong>{t("uiDsLockedTitle")}</strong>
+                <small>{t("uiDsLockedHint")}</small>
+              </span>
+            </div>
+          ) : null}
+          {locked && upgradeHref ? (
+            <MenuItem icon="crown" href={upgradeHref}>
+              {t("uiDsUpgrade")}
+            </MenuItem>
+          ) : null}
+          {!locked && !options.length && onCreate ? (
+            <div className="f-ds-empty">
+              <p>{t("uiDsEmpty")}</p>
+              <MenuItem
+                icon="plus"
+                hint={t("uiDsCreateHint")}
+                onClick={() => {
+                  onCreate();
+                  close();
+                }}
+              >
+                {t("uiDsCreate")}
+              </MenuItem>
+              <MenuSeparator />
+            </div>
+          ) : null}
           {GROUPS.map((group) => {
             const rows = options.filter((d) => (d.scope ?? "personal") === group.scope);
             if (!rows.length) return null;
@@ -97,7 +136,8 @@ export function DesignSystemMenu({
                     key={d.id}
                     role="option"
                     lead={<DesignSystemSwatch ds={d} />}
-                    selected={d.id === value}
+                    selected={!locked && d.id === value}
+                    disabled={locked}
                     onClick={() => {
                       onChange(d.id);
                       close();
@@ -121,6 +161,20 @@ export function DesignSystemMenu({
           >
             {t("uiDsNone")}
           </MenuItem>
+          {!locked && options.length && onCreate ? (
+            <>
+              <MenuSeparator />
+              <MenuItem
+                icon="plus"
+                onClick={() => {
+                  onCreate();
+                  close();
+                }}
+              >
+                {t("uiDsCreate")}
+              </MenuItem>
+            </>
+          ) : null}
           {manageHref ? (
             <>
               <MenuSeparator />

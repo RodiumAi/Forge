@@ -1,0 +1,38 @@
+/* Stats tab. Scoped under .stats-screen. Heatmap levels go from pale sage to leaf green. */
+.stats-screen .kpis { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: .6rem; }
+.stats-screen .kpi { display: grid; gap: .15rem; align-content: end; padding: .95rem; border-radius: 1.4rem; background: var(--surface); box-shadow: var(--shadow); color: var(--accent-deep); min-height: 7rem; }
+.stats-screen .kpi svg { margin-bottom: auto; }
+.stats-screen .kpi.big { background: var(--accent); color: #fff; box-shadow: 0 16px 30px -16px rgba(58, 157, 93, .9); }
+.stats-screen .kpi strong { font-family: var(--font-display); font-size: 1.75rem; font-weight: 800; letter-spacing: -.03em; color: var(--fg); }
+.stats-screen .kpi.big strong { color: #fff; font-size: 2.1rem; }
+.stats-screen .kpi span { font-size: .72rem; font-weight: 600; color: var(--muted); line-height: 1.3; }
+.stats-screen .kpi.big span { color: rgba(255, 255, 255, .85); }
+
+.stats-screen .heat-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: .9rem; }
+.stats-screen .heat-head h2 { font-size: 1.05rem; }
+.stats-screen .heat-head .icon-btn { box-shadow: none; background: var(--surface-2); }
+.stats-screen .heat-head .icon-btn:disabled { opacity: .35; }
+.stats-screen .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: .35rem; }
+.stats-screen .dow { text-align: center; font-size: .68rem; font-weight: 700; color: var(--muted); padding-bottom: .15rem; }
+.stats-screen .day { aspect-ratio: 1; border-radius: .7rem; display: grid; place-items: center; font-size: .72rem; font-weight: 700; color: color-mix(in srgb, var(--fg) 60%, transparent); }
+.stats-screen .l0 { background: #eceee6; }
+.stats-screen .l1 { background: #d4ecdb; }
+.stats-screen .l2 { background: #a6d8b6; }
+.stats-screen .l3 { background: #6dbd88; color: #fff; }
+.stats-screen .l4 { background: var(--accent); color: #fff; }
+.stats-screen .future { border: 1.5px dashed #dde1d6; color: #b9c0b9; }
+.stats-screen .today { box-shadow: 0 0 0 2.5px var(--surface), 0 0 0 4.5px var(--fg); }
+.stats-screen .scale { display: flex; align-items: center; justify-content: flex-end; gap: .25rem; margin-top: .9rem; font-size: .7rem; font-weight: 600; color: var(--muted); }
+.stats-screen .scale i { width: .9rem; height: .9rem; border-radius: .3rem; aspect-ratio: auto; }
+.stats-screen .scale span:first-child { margin-right: .2rem; }
+.stats-screen .scale span:last-child { margin-left: .2rem; }
+
+.stats-screen .streaks { display: grid; gap: 1rem; }
+.stats-screen .streak { display: flex; align-items: center; gap: .8rem; }
+.stats-screen .s-icon { width: 2.6rem; height: 2.6rem; border-radius: .9rem; display: grid; place-items: center; flex-shrink: 0; }
+.stats-screen .s-body { flex: 1; display: grid; gap: .4rem; }
+.stats-screen .s-row { display: flex; justify-content: space-between; align-items: center; font-size: .9rem; }
+.stats-screen .s-row strong { font-weight: 700; }
+.stats-screen .s-row span { display: inline-flex; align-items: center; gap: .2rem; color: var(--flame); font-weight: 800; font-size: .82rem; }
+.stats-screen .s-bar { height: .5rem; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+.stats-screen .s-bar i { display: block; height: 100%; border-radius: inherit; }

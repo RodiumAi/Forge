@@ -13,6 +13,7 @@ import {
   groupElements,
   locate,
   moveZ,
+  placeZ,
   outermost,
   removeElements,
   ungroupElement,
@@ -79,6 +80,14 @@ export function deleteElements(slideId: string, ids: string[]): Recipe {
 export function zOrder(slideId: string, ids: string[], move: ZMove): Recipe {
   return onSlide(slideId, (slide) => {
     const elements = moveZ(slide.elements, ids, move);
+    return elements === slide.elements ? slide : { ...slide, elements };
+  });
+}
+
+/** Move sibling elements to a stacking slot (see `placeZ`). */
+export function placeLayers(slideId: string, ids: string[], slot: number): Recipe {
+  return onSlide(slideId, (slide) => {
+    const elements = placeZ(slide.elements, ids, slot);
     return elements === slide.elements ? slide : { ...slide, elements };
   });
 }

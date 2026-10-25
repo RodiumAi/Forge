@@ -9,7 +9,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { PricingPlans } from "@/components/landing/PricingPlans";
 import { Reveal } from "@/components/landing/PublicChrome";
-import { SiteThumb } from "@/components/SiteThumb";
+import { TemplateThumb } from "@/components/templates/TemplateThumb";
 import { TemplateCard } from "@/components/templates/TemplateCard";
 import type { GalleryTemplate } from "@/components/TemplateGallery";
 import { colorMap, fontFamily } from "@/components/design-system/tokens";
@@ -143,13 +143,7 @@ function Cell({
 function PreviewThumb({ tpl }: { tpl: GalleryTemplate | undefined }) {
   if (!tpl) return null;
   return (
-    <SiteThumb
-      src={tpl.preview_url || `/templates/${tpl.id}/preview`}
-      viewportWidth={480}
-      viewportHeight={252}
-      title={tpl.title}
-      className="f-thumb-site"
-    />
+    <TemplateThumb template={tpl} viewportWidth={480} viewportHeight={252} className="f-thumb-site" />
   );
 }
 
@@ -158,7 +152,7 @@ export function LandingCapabilities({ templates }: { templates: GalleryTemplate[
   const lists = useMemo(() => byKind(templates), [templates]);
   const deckCount = lists.slides.length;
   const site = templates.find((x) => x.id === "aurora-ai") ?? lists.web[0];
-  const app = templates.find((x) => x.id === "nova-bank") ?? lists.mobile[0];
+  const app = templates.find((x) => x.id === "lumen-wallet") ?? lists.mobile[0];
   const dsId = templates.find((x) => x.id === "design-system-luxe")?.id ?? lists.design_system[0]?.id ?? null;
   const ds = useTemplateDetail(dsId);
   const dsDoc = ds?.design_system;

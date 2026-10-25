@@ -61,10 +61,18 @@ describe("deck export gates", () => {
     expect(deckExportAllowed(starter, "pptx")).toBe(false);
   });
 
-  it("follow the rights on Builder and above", () => {
-    const builder = status("builder", { export_pdf: true, export_pptx: true });
+  it("include a format from its plan upward, even without the flag", () => {
+    const builder = status("builder", { export_pdf: true });
     expect(deckExportAllowed(builder, "pptx")).toBe(true);
-    expect(deckExportAllowed(builder, "html")).toBe(false);
+    expect(deckExportAllowed(builder, "html")).toBe(true);
+    const pro = status("pro");
+    for (const f of ["pdf", "png", "html", "pptx"] as const) expect(deckExportAllowed(pro, f)).toBe(true);
+    expect(deckExportAllowed(status("team-pro"), "pptx")).toBe(true);
+  });
+
+  it("follow the flag alone on an unknown plan", () => {
+    expect(deckExportAllowed(status("custom", { export_pptx: true }), "pptx")).toBe(true);
+    expect(deckExportAllowed(status("custom"), "html")).toBe(false);
   });
 });
 

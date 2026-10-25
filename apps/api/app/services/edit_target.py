@@ -159,6 +159,8 @@ class ResolvedTarget:
     restrict: bool = False
     allowed_paths: list[str] = field(default_factory=list)
     focus_paths: list[str] = field(default_factory=list)
+    #: Pages picked in the pages rail: (route, file that renders it or None).
+    pages: list[tuple[str, str | None]] = field(default_factory=list)
 
     @property
     def has_selection(self) -> bool:
@@ -177,7 +179,8 @@ def resolve_target(target: Any, files: dict[str, str]) -> ResolvedTarget | None:
     raw_route = getattr(target, "route", None)
     raw_forge = getattr(target, "forgeId", None)
     raw_file = getattr(target, "filePath", None)
-    if not (raw_route or raw_forge or raw_file):
+    raw_pages = getattr(target, "pages", None) or []
+    if not (raw_route or raw_forge or raw_file or raw_pages):
         return None
 
     out = ResolvedTarget()
@@ -185,6 +188,11 @@ def resolve_target(target: Any, files: dict[str, str]) -> ResolvedTarget | None:
         out.route = normalize_route(str(raw_route))
         if out.route:
             out.page_file = page_file_for_route(out.route, files)
+
+    for raw_page in list(raw_pages)[:40]:
+        page = normalize_route(str(raw_page))
+        if page and all(page != seen for seen, _ in out.pages):
+            out.pages.append((page, page_file_for_route(page, files)))
 
     loc = parse_forge_id(raw_forge)
     if loc is not None and loc.path in files:
@@ -196,7 +204,8 @@ def resolve_target(target: Any, files: dict[str, str]) -> ResolvedTarget | None:
     if explicit and explicit in files:
         out.file_path = explicit
 
-    for path in (out.element.path if out.element else None, out.file_path, out.page_file):
+    picked_files = [page_file for _, page_file in out.pages]
+    for path in (out.element.path if out.element else None, out.file_path, out.page_file, *picked_files):
         if path and path not in out.focus_paths:
             out.focus_paths.append(path)
 
@@ -231,6 +240,16 @@ def target_instruction(resolved: ResolvedTarget | None) -> str | None:
         if resolved.page_file:
             where += f" (rendered by `{resolved.page_file}`)"
         parts.append(where + ".")
+    if resolved.pages:
+        listed = ", ".join(
+            f"`{route}`" + (f" (`{page_file}`)" if page_file else "") for route, page_file in resolved.pages
+        )
+        parts.append(
+            f"Pages selected by the user for this request: {listed}. Apply the change to "
+            "these pages; leave the other pages as they are unless the request clearly says "
+            "otherwise. Shared parts (header, footer, layout) may change only when the "
+            "request is about them."
+        )
     if resolved.element is not None:
         loc = resolved.element
         parts.append(

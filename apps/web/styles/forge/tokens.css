@@ -177,6 +177,8 @@
   background: var(--f-paper);
   color: var(--f-paper-ink);
   --f-text: var(--f-paper-ink);
+  /* Inverted controls (dark buttons, selected chips) read --f-bg as their text colour. */
+  --f-bg: var(--f-paper);
   --f-muted: var(--f-paper-muted);
   --f-faint: #6E7380;
   --f-line: var(--f-paper-line);

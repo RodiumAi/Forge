@@ -1,0 +1,52 @@
+/* Home tab. Scoped under .home-screen. */
+.home-screen .continue {
+  position: relative; display: grid; grid-template-columns: auto 1fr; gap: 1rem 1.1rem; align-items: end;
+  margin-top: 1.6rem; padding: 0 1.15rem 1.15rem; border-radius: 1.6rem; color: var(--on-accent);
+  background:
+    radial-gradient(90% 70% at 100% 0%, color-mix(in srgb, var(--gold) 38%, transparent), transparent 65%),
+    linear-gradient(155deg, #ad4a38, #7a2a1e 70%, #5e1f16);
+  box-shadow: 0 22px 40px -22px rgba(94, 31, 22, .9);
+}
+.home-screen .continue::after { content: ""; position: absolute; inset: .55rem; border: 1px solid rgba(251, 246, 236, .14); border-radius: 1.25rem; pointer-events: none; }
+.home-screen .continue-cover { position: relative; z-index: 1; margin-top: -1.6rem; text-decoration: none; transform: rotate(-3deg); }
+.home-screen .continue-body { display: grid; gap: .3rem; padding-top: 1.1rem; min-width: 0; }
+.home-screen .continue .kicker { color: color-mix(in srgb, var(--on-accent) 70%, transparent); }
+.home-screen .continue h2 { font-size: 1.85rem; font-weight: 500; line-height: 1; }
+.home-screen .continue .by { margin: 0; font-family: var(--font-display); font-style: italic; font-size: 1.02rem; opacity: .85; }
+.home-screen .continue .chapter { margin: .45rem 0 .25rem; font-size: .76rem; opacity: .75; }
+.home-screen .continue .progress { background: rgba(251, 246, 236, .2); height: .34rem; }
+.home-screen .continue .progress i { background: var(--gold); }
+.home-screen .continue .left { margin: .15rem 0 0; font-size: .74rem; opacity: .8; }
+.home-screen .continue .left strong { font-family: var(--font-display); font-size: 1rem; font-weight: 600; opacity: 1; }
+.home-screen .continue-actions { grid-column: 1 / -1; display: grid; grid-template-columns: 1.4fr 1fr; gap: .6rem; position: relative; z-index: 1; }
+.home-screen .continue-actions .btn-primary { background: var(--on-accent); color: var(--accent); box-shadow: none; }
+.home-screen .continue-actions .listen { color: var(--on-accent); border-color: rgba(251, 246, 236, .35); }
+
+.home-screen .quote { position: relative; padding: .4rem .2rem 0 1.2rem; border-left: 2px solid var(--gold); display: grid; gap: .55rem; }
+.home-screen .q-mark { position: absolute; right: .2rem; top: -.2rem; color: var(--gold); opacity: .7; }
+.home-screen .quote blockquote { margin: 0; font-family: var(--font-display); font-style: italic; font-weight: 400; font-size: 1.75rem; line-height: 1.18; letter-spacing: -.01em; max-width: 17ch; }
+.home-screen .q-by { margin: 0; font-size: .8rem; color: var(--muted); }
+
+.home-screen .streak { display: grid; gap: 1rem; }
+.home-screen .streak-top { display: flex; align-items: center; gap: .75rem; }
+.home-screen .flame { width: 2.6rem; height: 2.6rem; border-radius: .9rem; display: grid; place-items: center; background: color-mix(in srgb, var(--gold) 20%, transparent); color: #a47518; }
+.home-screen .streak-top div { display: grid; gap: .1rem; }
+.home-screen .streak-top strong { font-family: var(--font-display); font-size: 1.15rem; font-weight: 600; }
+.home-screen .streak-top span { font-size: .78rem; color: var(--muted); }
+.home-screen .days { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(7, 1fr); gap: .5rem; height: 5.2rem; }
+.home-screen .days li { display: grid; grid-template-rows: 1fr auto; gap: .35rem; justify-items: center; }
+.home-screen .days span { align-self: end; width: 100%; max-width: 1.7rem; border-radius: .45rem; background: color-mix(in srgb, var(--accent) 45%, transparent); }
+.home-screen .days .full span { background: var(--accent); }
+.home-screen .days .rest span { background: var(--surface-2); }
+.home-screen .days small { font-size: .7rem; font-weight: 600; color: var(--muted); }
+
+.home-screen .stand-book { display: grid; gap: .5rem; text-decoration: none; width: 6.6rem; flex-shrink: 0; }
+.home-screen .stand-book span { font-size: .74rem; color: var(--muted); font-weight: 500; }
+.home-screen .stand-book .new { color: var(--accent); font-weight: 600; }
+
+.home-screen .friends { list-style: none; margin: 0; padding: 0; display: grid; gap: .55rem; }
+.home-screen .friends a { display: flex; align-items: center; gap: .8rem; min-height: 4.2rem; padding: .55rem .8rem .55rem .6rem; border-radius: 1.1rem; background: var(--surface); border: 1px solid var(--line); text-decoration: none; }
+.home-screen .friends img { width: 2.6rem; height: 2.6rem; border-radius: 999px; object-fit: cover; }
+.home-screen .f-text { flex: 1; font-size: .86rem; color: var(--muted); line-height: 1.35; }
+.home-screen .f-text strong { color: var(--fg); font-weight: 600; }
+.home-screen .f-text em { font-family: var(--font-display); font-size: 1rem; color: var(--fg); }

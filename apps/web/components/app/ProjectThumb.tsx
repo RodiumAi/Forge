@@ -1,17 +1,18 @@
 "use client";
 
-import { kindOf, thumbSource } from "@/components/home/projects";
-import { SiteThumb } from "@/components/SiteThumb";
+import { useState } from "react";
+import { kindOf, projectCardImage } from "@/components/home/projects";
 import { cx } from "@/components/ui/cx";
 import { Glyph } from "@/components/ui/glyph";
 import { kindStyle } from "@/lib/kind-style";
 
+import { DeckThumb } from "./DeckThumb";
 import type { AppProject } from "./project-data";
 
 type Props = {
   project: AppProject;
-  mediaToken: string | null;
-  /** `row` is the small list thumbnail: stored captures only, no live capture. */
+  /** Kept for callers; the card image carries its own media token. */
+  mediaToken?: string | null;
   size?: "card" | "row";
   /** Shimmer over the thumbnail while Forge builds. */
   building?: boolean;
@@ -20,33 +21,27 @@ type Props = {
 };
 
 /**
- * 16:10 project thumbnail: the real capture when the project has one (sites
- * and apps, or a stored JPEG), else the kind's colour with its icon.
+ * Project thumbnail: the card image the API renders on the server (a plain,
+ * lazy <img>, nothing runs in the page), else the first slide for a deck,
+ * else the kind's colour with its icon.
  */
-export function ProjectThumb({ project, mediaToken, size = "card", building, onThumbPersisted, className }: Props) {
+export function ProjectThumb({ project, size = "card", building, className }: Props) {
   const kind = kindOf(project);
   const style = kindStyle(kind);
-  const origin = typeof window !== "undefined" ? window.location.origin : null;
   const card = size === "card";
-  const source = thumbSource(project, card ? mediaToken : null, card ? origin : null);
-  const real = source && (card || source.imageSrc);
+  const image = projectCardImage(project);
+  const [failed, setFailed] = useState<string | null>(null);
+  const real = image && failed !== image;
+  const [deckMissing, setDeckMissing] = useState(false);
+  const deck = kind === "slides" && !real && !deckMissing && card;
 
   return (
-    <div className={cx("f-pthumb", className)} style={real ? undefined : { background: style.color }}>
-      {real && source ? (
-        <SiteThumb
-          imageSrc={source.imageSrc}
-          frameSrc={card ? source.frameSrc : null}
-          src={card ? source.src : null}
-          authPath={card ? source.authPath : null}
-          persistProjectId={card ? source.persistProjectId : null}
-          onThumbPersisted={onThumbPersisted ?? null}
-          cacheKey={`${project.id}:${project.updated_at || project.created_at}:${kind}:tm2`}
-          title={project.name}
-          className={cx("home-card-thumb", kind === "mobile" && "home-card-thumb--mobile")}
-          viewportWidth={source.thumbViewport?.w ?? (kind === "mobile" ? 390 : 1280)}
-          viewportHeight={source.thumbViewport?.h ?? (kind === "mobile" ? 244 : 800)}
-        />
+    <div className={cx("f-pthumb", className)} style={real || deck ? undefined : { background: style.color }}>
+      {real ? (
+        // eslint-disable-next-line @next/next/no-img-element -- authenticated API image
+        <img className="f-pthumb-img" src={image} alt="" loading="lazy" decoding="async" onError={() => setFailed(image)} />
+      ) : deck ? (
+        <DeckThumb projectId={project.id} version={project.updated_at || project.created_at || ""} onMissing={() => setDeckMissing(true)} />
       ) : (
         <span className="f-pthumb-ph" aria-hidden>
           <span className="tile">

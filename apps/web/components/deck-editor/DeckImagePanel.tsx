@@ -13,9 +13,11 @@ import type { AssetUrl } from "@/components/deck-player";
 import { ApiError } from "@/lib/api";
 import { rodiumRechargeUrl } from "@/lib/constants/rodium-links";
 import { useI18n } from "@/lib/i18n/I18nProvider";
+import { joinSpoken, useSpeechInput } from "@/lib/speech-input";
+import { VoiceButton, VoiceStatus } from "@/components/composer/VoiceInput";
 import type { MessageKey } from "@/lib/i18n/dictionaries";
 import { getSessionSnapshot } from "@/lib/session-cache";
-import { isInsufficientCredits, type ImageClient, type ImageModel, type PickedImage, type StockPage } from "./images-client";
+import { isInsufficientCredits, type ImageClient, type PickedImage, type StockPage } from "./images-client";
 import type { ImageTarget } from "./PropertiesPanel";
 import type { DeckT } from "./strings";
 
@@ -82,9 +84,20 @@ export function DeckImagePanel({
   const [projectImages, setProjectImages] = useState<string[] | null>(null);
   const sizes = useRef(new Map<string, { width: number; height: number }>());
 
-  const [models, setModels] = useState<ImageModel[] | null>(null);
-  const [model, setModel] = useState("");
   const [prompt, setPrompt] = useState(styleHint ? `\n\n${styleHint}` : "");
+  const voice = useSpeechInput({
+    value: prompt,
+    onChange: setPrompt,
+    locale,
+    maxLength: 4000,
+    // The description goes before the style line the panel starts with.
+    join: (base, spoken) => {
+      const at = styleHint ? base.lastIndexOf(`
+
+${styleHint}`) : -1;
+      return at < 0 ? joinSpoken(base, spoken) : joinSpoken(base.slice(0, at), spoken) + base.slice(at);
+    },
+  });
   const [aspect, setAspect] = useState<(typeof ASPECTS)[number]>(() => closestAspect(frame.w, frame.h));
   const [noCredits, setNoCredits] = useState(false);
 
@@ -95,17 +108,6 @@ export function DeckImagePanel({
       .then(setProjectImages)
       .catch(() => setProjectImages([]));
   }, [client, tab, projectImages]);
-
-  useEffect(() => {
-    if (!client || tab !== "ai" || models) return;
-    client
-      .models()
-      .then((rows) => {
-        setModels(rows);
-        setModel((current) => current || rows.find((r) => r.default)?.slug || rows[0]?.slug || "");
-      })
-      .catch(() => setModels([]));
-  }, [client, tab, models]);
 
   const fail = (err: unknown) => setError(err instanceof Error ? err.message : tApp("errorGeneric"));
 
@@ -284,23 +286,17 @@ export function DeckImagePanel({
           className="image-panel-ai"
           onSubmit={(e: FormEvent) => {
             e.preventDefault();
-            if (prompt.trim()) void wrap(() => client.generate(model || null, prompt.trim(), aspect, target.kind === "element" || target.kind === "fill" ? target.id : target.kind));
+            if (prompt.trim()) void wrap(() => client.generate(null, prompt.trim(), aspect, target.kind === "element" || target.kind === "fill" ? target.id : target.kind));
           }}
         >
           <label>
-            <span>{tApp("imageAiModel")}</span>
-            <select value={model} onChange={(e) => setModel(e.target.value)} disabled={!models?.length}>
-              {(models ?? []).map((row) => (
-                <option key={row.slug} value={row.slug}>
-                  {row.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
             <span>{tApp("imageAiPrompt")}</span>
-            <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={5} maxLength={4000} />
+            <span className="f-voice-field">
+              <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={5} maxLength={4000} readOnly={voice.listening} />
+              <VoiceButton voice={voice} className="f-mic" size="sm" />
+            </span>
           </label>
+          <VoiceStatus voice={voice} compact surface />
           <label>
             <span>{tApp("imageAiAspect")}</span>
             <select value={aspect} onChange={(e) => setAspect(e.target.value as (typeof ASPECTS)[number])}>

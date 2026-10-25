@@ -95,7 +95,6 @@ function Sidebar({
       <Link className="f-side-new" href={APP_ROUTES.create} title={t("uiNewProject")} onClick={onNavigate}>
         <Glyph name="plus" />
         <span>{t("uiNewProject")}</span>
-        <kbd>N</kbd>
       </Link>
       <nav className="f-side-nav" aria-label={t("uiNavLabel")}>
         {APP_NAV.map((group) => (
@@ -301,7 +300,8 @@ export function AppShell({
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
   const [drawer, setDrawer] = useState(false);
   const [palette, setPalette] = useState(false);
-  const [projectCount, setProjectCount] = useState<number | null>(() => getCachedProjects(locale)?.length ?? null);
+  // Read after mount: the warm cache is client-only, the server renders no count.
+  const [projectCount, setProjectCount] = useState<number | null>(null);
 
   useEffect(() => {
     try {
@@ -314,6 +314,8 @@ export function AppShell({
 
   useEffect(() => {
     if (chrome === "bare" || !getToken()) return;
+    const warm = getCachedProjects(locale);
+    if (warm) setProjectCount(warm.length);
     let alive = true;
     void ensureProjects(locale)
       .then((list) => alive && setProjectCount(list.length))

@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "name": "Bad website",
+  "tokens": {
+    "color": {
+      "$type": "color",
+      "bg": {
+        "$value": "#0B0D12",
+        "$description": "Page background"
+      },
+      "fg": {
+        "$value": "#F5F7FA"
+      },
+      "accent": {
+        "$value": "#F2620A"
+      }
+    },
+    "font": {
+      "$type": "fontFamily",
+      "display": {
+        "$value": [
+          "Inter",
+          "sans-serif"
+        ]
+      },
+      "body": {
+        "$value": [
+          "Inter",
+          "sans-serif"
+        ]
+      },
+      "mono": {
+        "$value": [
+          "JetBrains Mono",
+          "monospace"
+        ]
+      }
+    },
+    "radius": {
+      "md": {
+        "$type": "dimension",
+        "$value": {
+          "value": 8,
+          "unit": "px"
+        }
+      }
+    },
+    "shadow": {
+      "card": {
+        "$type": "shadow",
+        "$value": {
+          "color": "#00000033",
+          "offsetX": "0px",
+          "offsetY": "4px",
+          "blur": "12px",
+          "spread": "0px"
+        }
+      }
+    },
+    "motion": {
+      "fast": {
+        "$type": "duration",
+        "$value": {
+          "value": 150,
+          "unit": "ms"
+        }
+      },
+      "ease": {
+        "$type": "cubicBezier",
+        "$value": [
+          0.2,
+          0,
+          0,
+          1
+        ]
+      }
+    }
+  },
+  "brand": {
+    "website": "http://example.com"
+  }
+}

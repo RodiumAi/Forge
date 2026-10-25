@@ -50,6 +50,79 @@
       "type": "array",
       "maxItems": 50,
       "items": { "$ref": "#/$defs/download" }
+    },
+    "cover": {
+      "description": "Cover page: kicker above the title (event, workshop), short highlights and the QR code of the published page (`showQr`, default true).",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "eyebrow": { "type": "string", "maxLength": 160 },
+        "highlights": {
+          "type": "array",
+          "maxItems": 8,
+          "items": { "type": "string", "minLength": 1, "maxLength": 200 }
+        },
+        "showQr": { "type": "boolean" }
+      }
+    },
+    "presenter": {
+      "description": "Who presents the codelab. The name falls back to `author.name`.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "maxLength": 120 },
+        "role": { "type": "string", "maxLength": 120 },
+        "company": { "type": "string", "maxLength": 120 },
+        "photo": { "type": "string", "minLength": 1, "maxLength": 400, "pattern": "^(?!.*\\.\\.)(?!/)[A-Za-z0-9_./-]+$" },
+        "bio": { "type": "string", "maxLength": 1500 },
+        "links": {
+          "type": "array",
+          "maxItems": 6,
+          "items": { "$ref": "#/$defs/link" }
+        }
+      }
+    },
+    "setup": {
+      "description": "Setup page: tools to install, numbered steps per service, a promo code and commands to copy.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "intro": { "type": "string", "maxLength": 1000 },
+        "tools": {
+          "type": "array",
+          "maxItems": 20,
+          "items": { "$ref": "#/$defs/setupTool" }
+        },
+        "groups": {
+          "type": "array",
+          "maxItems": 6,
+          "items": { "$ref": "#/$defs/setupGroup" }
+        },
+        "promo": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["code"],
+          "properties": {
+            "code": { "type": "string", "minLength": 1, "maxLength": 64 },
+            "label": { "type": "string", "maxLength": 200 },
+            "url": { "type": "string", "maxLength": 2000, "pattern": "^https://" }
+          }
+        },
+        "commands": {
+          "type": "array",
+          "maxItems": 12,
+          "items": { "$ref": "#/$defs/setupCommand" }
+        }
+      }
+    },
+    "pages": {
+      "description": "Show (true) or hide (false) the presenter and setup pages; absent means shown when filled.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "presenter": { "type": "boolean" },
+        "setup": { "type": "boolean" }
+      }
     }
   },
   "$defs": {
@@ -86,6 +159,58 @@
           "pattern": "^files/(?!.*\\.\\.)[A-Za-z0-9_./-]+$"
         },
         "zip": { "type": "boolean" }
+      }
+    },
+    "link": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["label", "url"],
+      "properties": {
+        "label": { "type": "string", "minLength": 1, "maxLength": 60 },
+        "url": { "type": "string", "maxLength": 2000, "pattern": "^https://" }
+      }
+    },
+    "setupTool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "version": { "type": "string", "maxLength": 40 },
+        "url": { "type": "string", "maxLength": 2000, "pattern": "^https://" }
+      }
+    },
+    "setupGroup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "items"],
+      "properties": {
+        "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "items": {
+          "type": "array",
+          "maxItems": 12,
+          "items": { "$ref": "#/$defs/setupItem" }
+        }
+      }
+    },
+    "setupItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text"],
+      "properties": {
+        "text": { "type": "string", "minLength": 1, "maxLength": 300 },
+        "url": { "type": "string", "maxLength": 2000, "pattern": "^https://" },
+        "code": { "type": "string", "maxLength": 200 }
+      }
+    },
+    "setupCommand": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code"],
+      "properties": {
+        "label": { "type": "string", "maxLength": 120 },
+        "language": { "type": "string", "pattern": "^[a-z0-9+#-]{1,32}$" },
+        "code": { "type": "string", "minLength": 1, "maxLength": 4000 }
       }
     }
   }

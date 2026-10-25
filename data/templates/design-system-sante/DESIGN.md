@@ -84,7 +84,8 @@ Bienveillant et précis. On rassure sans minimiser.
 
 ## Logo
 - File: /brand/logo.svg
-- Clear space: La hauteur de la lettre S tout autour
+- On dark backgrounds: /brand/logo-dark.svg
+- Clear space: La hauteur des deux feuilles tout autour
 - Minimum size: 32px
 - Sur fond crème ou blanc
 - Version blanche sur la sarcelle

@@ -65,6 +65,7 @@ From the request (and any attached material), propose the outline of the deck:
   ]
 }}
 - 6 to 12 slides unless the user asked for another count (never more than 30).
+- An attached PowerPoint sets the slides: follow its count and order unless the user asks otherwise.
 - Start with a title slide, end with a closing slide (thanks, contact or call to action).
 - "format": 16:9 unless the user asks for 4:3, or for a square or social carousel (1:1).
 - "visual": true only when a photo really helps the idea (2 to 5 slides of a typical deck).

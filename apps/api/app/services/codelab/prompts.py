@@ -46,6 +46,12 @@ WRITING_RULES = f"""## Writing rules for a codelab
 - {NO_LONG_DASH_RULE}
 """
 
+SECTIONS_RULE = """- "cover", "presenter" and "setup" are optional pages before step 1. Fill them ONLY with facts
+  the user gave (event name, who presents, their role, company and links, accounts to create,
+  promo codes, tools and versions, commands). Never invent a person, a promo code, a link or
+  a URL; leave a key out when you do not have it. URLs start with https://. Omit the whole
+  object when the request says nothing about it."""
+
 OUTLINE_SYSTEM = f"""You are Forge, the technical writer of RodiumAi. You plan hands-on codelabs
 (step-by-step tutorials) before they are written. Answer with ONE JSON object and nothing else.
 
@@ -59,11 +65,19 @@ From the request, propose the outline:
   "prerequisites": ["short items"],
   "learn": ["what the reader will learn, 3 to 6 items"],
   "steps": [{{"title": "step title", "idea": "what the step does, one or two sentences", "minutes": 5}}],
-  "files": {{"starter": false, "solution": false}}
+  "files": {{"starter": false, "solution": false}},
+  "cover": {{"eyebrow": "event or workshop name", "highlights": ["stack or tool used", "..."]}},
+  "presenter": {{"name": "...", "role": "...", "company": "...", "bio": "...",
+                "links": [{{"label": "GitHub", "url": "https://..."}}]}},
+  "setup": {{"intro": "...", "tools": [{{"name": "Node.js", "version": "22+", "url": "https://..."}}],
+            "groups": [{{"title": "service name", "items": [{{"text": "what to do", "url": "https://...", "code": "..."}}]}}],
+            "promo": {{"code": "...", "label": "what it gives"}},
+            "commands": [{{"label": "Install", "language": "bash", "code": "npm install"}}]}}
 }}
 - 4 to 12 steps; the first introduces the result, the last sums up and points further.
 - minutes: realistic reading and typing time for each step (1 to 60).
 - files.starter / files.solution: true only when the user asked for starter or solution files.
+{SECTIONS_RULE}
 """
 
 STEP_SYSTEM = f"""You are Forge, the technical writer of RodiumAi. You write ONE step of a codelab.
@@ -89,12 +103,17 @@ CODELAB_EDIT_SYSTEM = f"""You are Forge, the technical writer of RodiumAi. You e
   "order": ["existing or new step ids, in reading order"],
   "steps": [{{"id": "step id", "title": "title", "minutes": 5, "markdown": "full Markdown of the step"}}],
   "meta": {{"title": "...", "summary": "...", "level": "beginner|intermediate|advanced",
-            "prerequisites": ["..."], "learn": ["..."]}}
+            "prerequisites": ["..."], "learn": ["..."],
+            "cover": {{...}}, "presenter": {{...}}, "setup": {{...}}}}
 }}
 - "order" lists every step that stays; a step left out is deleted.
 - "steps" holds only the steps you create or change; a new step needs an id made of
   lower-case letters, digits and dashes, and its full Markdown.
-- "meta" is optional; give only the fields that change.
+- "meta" is optional; give only the fields that change. "cover" (eyebrow, highlights, showQr),
+  "presenter" (name, role, company, bio, links [{{label, url}}]) and "setup" (intro, tools
+  [{{name, version, url}}], groups [{{title, items [{{text, url, code}}]}}], promo {{code, label, url}},
+  commands [{{label, language, code}}]) replace the whole section when given.
+{SECTIONS_RULE}
 
 {WRITING_RULES}
 {MARKDOWN_GUIDE}

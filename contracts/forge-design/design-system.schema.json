@@ -14,6 +14,16 @@
       "allOf": [{ "$ref": "#/$defs/group" }],
       "required": ["color", "font"]
     },
+    "brand": {
+      "description": "Facts about the brand, shown in the brand guidelines (tagline, website, audience).",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tagline": { "type": "string", "maxLength": 160 },
+        "website": { "type": "string", "maxLength": 300, "pattern": "^https://" },
+        "audience": { "type": "string", "maxLength": 300 }
+      }
+    },
     "logo": {
       "type": "object",
       "additionalProperties": false,
@@ -21,6 +31,10 @@
       "properties": {
         "src": { "$ref": "#/$defs/assetPath" },
         "darkSrc": { "$ref": "#/$defs/assetPath" },
+        "iconSrc": {
+          "description": "Square mark without the name: app icon and favicon.",
+          "$ref": "#/$defs/assetPath"
+        },
         "minSizePx": { "type": "integer", "minimum": 8, "maximum": 2000 },
         "clearSpace": { "type": "string", "maxLength": 200 },
         "usage": { "$ref": "#/$defs/lines" }

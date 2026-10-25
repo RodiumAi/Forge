@@ -37,18 +37,22 @@ from typing import Any
 
 from app.services.codelab.store import slugify, step_filename, unique_step_id
 
-MAX_IMPORT_CHARS = 2_000_000
+MAX_IMPORT_CHARS = 500_000
 MAX_STEPS = 200
 
 _META_RE = re.compile(r"^([A-Za-z][A-Za-z ]{0,30}):\s*(.*)$")
 _DURATION_RE = re.compile(r"^\s*duration:\s*([0-9:.]+)\s*$", re.I)
 _FENCE_RE = re.compile(r"^\s{0,3}(`{3,}|~{3,})(.*)$")
-_ASIDE_RE = re.compile(
-    r'<aside\s+class="?(positive|negative|special|warning)"?\s*>(.*?)</aside>', re.I | re.S
-)
-_BUTTON_RE = re.compile(r"<button[^>]*>\s*(\[[^\]]*\]\([^)]*\))\s*</button>", re.I)
-_IMG_RE = re.compile(r'<img\b[^>]*?src="([^"]+)"[^>]*?(?:alt="([^"]*)")?[^>]*>', re.I)
-_TAG_RE = re.compile(r"</?[A-Za-z][^>]*>")
+# The HTML left in a claat export is handled by the scanners below rather than
+# by regexes such as `<img[^>]*>`: on input full of unclosed openers those
+# rescan to the end from every opener, which is quadratic and stalls the worker.
+_ASIDE_OPEN_RE = re.compile(r'<aside\s+class="?(positive|negative|special|warning)"?\s*>', re.I)
+_ASIDE_CLOSE_RE = re.compile(r"</aside>", re.I)
+_BUTTON_OPEN_RE = re.compile(r"<button\b", re.I)
+_BUTTON_LINK_RE = re.compile(r"\s*(\[[^\]\n]{0,500}\]\([^)\n]{0,2000}\))\s*</button>", re.I)
+_IMG_OPEN_RE = re.compile(r"<img\b", re.I)
+_IMG_SRC_RE = re.compile(r'\bsrc="([^"]+)"', re.I)
+_IMG_ALT_RE = re.compile(r'\balt="([^"]*)"', re.I)
 _LEVELS = {"beginner", "intermediate", "advanced"}
 _ASIDE_KINDS = {"positive": "tip", "negative": "warning", "warning": "warning", "special": "info"}
 
@@ -110,14 +114,99 @@ def _outside_fences(lines: list[str]):
         yield index, line, fence is not None
 
 
+def _strip_tags(text: str) -> str:
+    """Remove `<tag ...>` and `</tag>`; a `<` with no `>` after it stays as text."""
+    out: list[str] = []
+    pos = 0
+    while True:
+        start = text.find("<", pos)
+        if start < 0:
+            break
+        nxt = text[start + 1 : start + 3]
+        is_tag = nxt[:1].isascii() and nxt[:1].isalpha() or (nxt[:1] == "/" and nxt[1:2].isascii() and nxt[1:2].isalpha())
+        if not is_tag:
+            out.append(text[pos : start + 1])
+            pos = start + 1
+            continue
+        end = text.find(">", start)
+        if end < 0:
+            break
+        out.append(text[pos:start])
+        pos = end + 1
+    out.append(text[pos:])
+    return "".join(out)
+
+
+def _replace_asides(text: str) -> str:
+    out: list[str] = []
+    pos = 0
+    while True:
+        opening = _ASIDE_OPEN_RE.search(text, pos)
+        if not opening:
+            break
+        closing = _ASIDE_CLOSE_RE.search(text, opening.end())
+        if not closing:
+            break
+        kind = _ASIDE_KINDS[opening.group(1).lower()]
+        inner = _strip_tags(text[opening.end() : closing.start()]).strip()
+        out.append(text[pos : opening.start()])
+        out.append(f"\n:::{kind}\n{inner}\n:::\n")
+        pos = closing.end()
+    out.append(text[pos:])
+    return "".join(out)
+
+
+def _replace_buttons(text: str) -> str:
+    """`<button ...>[label](url)</button>` to the bare Markdown link."""
+    out: list[str] = []
+    pos = 0
+    while True:
+        opening = _BUTTON_OPEN_RE.search(text, pos)
+        if not opening:
+            break
+        gt = text.find(">", opening.end())
+        if gt < 0:
+            break
+        link = _BUTTON_LINK_RE.match(text, gt + 1)
+        if link:
+            out.append(text[pos : opening.start()] + link.group(1))
+            pos = link.end()
+        else:
+            out.append(text[pos : gt + 1])
+            pos = gt + 1
+    out.append(text[pos:])
+    return "".join(out)
+
+
+def _replace_images(text: str) -> str:
+    """`<img src=... alt=...>` to `![alt](src)`; an image without src is left alone."""
+    out: list[str] = []
+    pos = 0
+    while True:
+        opening = _IMG_OPEN_RE.search(text, pos)
+        if not opening:
+            break
+        gt = text.find(">", opening.end())
+        if gt < 0:
+            break
+        attrs = text[opening.end() : gt]
+        src = _IMG_SRC_RE.search(attrs)
+        out.append(text[pos : opening.start()])
+        if src:
+            alt = _IMG_ALT_RE.search(attrs)
+            out.append(f"![{alt.group(1) if alt else ''}]({src.group(1)})")
+        else:
+            out.append(text[opening.start() : gt + 1])
+        pos = gt + 1
+    out.append(text[pos:])
+    return "".join(out)
+
+
 def _convert_body(body: str) -> str:
     """claat body to Forge extended Markdown (info boxes, consoles, HTML leftovers)."""
-    text = _ASIDE_RE.sub(
-        lambda m: f"\n:::{_ASIDE_KINDS[m.group(1).lower()]}\n{_TAG_RE.sub('', m.group(2)).strip()}\n:::\n",
-        body,
-    )
-    text = _BUTTON_RE.sub(r"\1", text)
-    text = _IMG_RE.sub(lambda m: f"![{m.group(2) or ''}]({m.group(1)})", text)
+    text = _replace_asides(body)
+    text = _replace_buttons(text)
+    text = _replace_images(text)
     lines = text.split("\n")
     out: list[str] = []
     skip_until = -1
@@ -145,7 +234,7 @@ def _convert_body(body: str) -> str:
         heading = re.match(r"^(#{3,6})\s+(.*)$", line)
         if heading:
             line = f"{heading.group(1)[1:]} {heading.group(2)}"
-        out.append(html.unescape(_TAG_RE.sub("", line)) if "<" in line else line)
+        out.append(html.unescape(_strip_tags(line)) if "<" in line else line)
     return re.sub(r"\n{3,}", "\n\n", "\n".join(out)).strip()
 
 

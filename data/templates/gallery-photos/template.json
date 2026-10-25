@@ -1,6 +1,7 @@
 {
   "kind": "web",
   "id": "gallery-photos",
+  "free": true,
   "title": {
     "en": "Photo Gallery",
     "fr": "Galerie Photo"

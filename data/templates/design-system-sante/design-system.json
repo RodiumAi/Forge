@@ -666,8 +666,10 @@
   },
   "logo": {
     "src": "public/brand/logo.svg",
+    "darkSrc": "public/brand/logo-dark.svg",
+    "iconSrc": "public/brand/icon.svg",
     "minSizePx": 32,
-    "clearSpace": "La hauteur de la lettre S tout autour",
+    "clearSpace": "La hauteur des deux feuilles tout autour",
     "usage": [
       "Sur fond crème ou blanc",
       "Version blanche sur la sarcelle",

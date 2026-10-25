@@ -1,0 +1,32 @@
+{
+  "kind": "mobile",
+  "id": "stride-fitness",
+  "title": {
+    "en": "Stride",
+    "fr": "Stride"
+  },
+  "description": {
+    "en": "Running and training tracker: activity rings and the week on Today, workout programs with athlete photos, weekly stats with personal records, a profile with badges, a workout detail and a live run with summary, in a dark shell with a raised run button.",
+    "fr": "Suivi de course et d'entraînement : anneaux d'activité et semaine sur Aujourd'hui, programmes avec photos d'athlètes, stats hebdomadaires et records personnels, profil avec badges, détail d'une séance et course en direct avec bilan, dans un shell sombre avec bouton de course central."
+  },
+  "tags": [
+    "mobile",
+    "fitness",
+    "running",
+    "health"
+  ],
+  "preview": "preview.html",
+  "bootHint": {
+    "en": "Adapt stride-fitness: app name, athlete, daily goals, programs and exercises, records, club members and units.",
+    "fr": "Adapte stride-fitness : nom de l'app, athlète, objectifs du jour, programmes et exercices, records, membres du club et unités."
+  },
+  "accent": "#ff5a1f",
+  "bg": "#0b0b0c",
+  "fg": "#fafafa",
+  "muted": "#8a8a8e",
+  "tone": "energetic, direct, coach-like",
+  "fonts": {
+    "display": "Barlow Condensed",
+    "body": "Inter"
+  }
+}

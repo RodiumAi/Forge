@@ -1,0 +1,46 @@
+/* Destination detail (stack screen, no tab bar). Scoped under .destination-screen. */
+.destination-screen { padding-bottom: calc(6.4rem + var(--safe-bottom)); }
+
+.destination-screen .hero { position: relative; height: 62vh; min-height: 360px; max-height: 520px; color: #fff; }
+.destination-screen .hero > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.destination-screen .hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(14, 26, 34, .35), transparent 30%, transparent 50%, rgba(14, 26, 34, .7)); }
+.destination-screen .hero-bar { position: absolute; z-index: 1; inset: 0 0 auto; display: flex; justify-content: space-between; padding: calc(.8rem + var(--safe-top)) 1.15rem 0; }
+.destination-screen .glass-btn.saved { background: #fff; color: var(--love); border-color: #fff; }
+.destination-screen .hero-text { position: absolute; z-index: 1; left: 1.3rem; right: 1.3rem; bottom: 2.6rem; display: grid; gap: .3rem; }
+.destination-screen .hero-place { display: inline-flex; align-items: center; gap: .3rem; font-size: .82rem; font-weight: 700; letter-spacing: .04em; }
+.destination-screen .hero-text h1 { font-size: 4rem; line-height: .9; letter-spacing: -.02em; }
+
+.destination-screen .sheet {
+  position: relative; z-index: 2; margin-top: -1.6rem; padding: 1.5rem 1.3rem 1rem; display: grid; gap: 1.5rem;
+  background: var(--bg); border-radius: 1.75rem 1.75rem 0 0;
+}
+.destination-screen .facts { display: flex; flex-wrap: wrap; gap: .5rem 1.1rem; font-size: .82rem; color: var(--muted); font-weight: 600; }
+.destination-screen .facts span { display: inline-flex; align-items: center; gap: .3rem; }
+.destination-screen .facts span:first-child svg { color: var(--sun); }
+.destination-screen .facts strong { color: var(--fg); }
+.destination-screen .story { margin: 0; font-size: 1rem; line-height: 1.6; }
+.destination-screen h2 { font-size: 1.55rem; margin-bottom: .7rem; }
+
+.destination-screen .highlights { display: flex; flex-wrap: wrap; gap: .5rem; }
+.destination-screen .highlights span { padding: .55rem .9rem; border-radius: 999px; background: color-mix(in srgb, var(--accent) 9%, var(--surface)); color: var(--accent); font-size: .82rem; font-weight: 700; }
+
+.destination-screen .gallery { display: flex; gap: .7rem; overflow-x: auto; scrollbar-width: none; margin-inline: -1.3rem; padding-inline: 1.3rem; }
+.destination-screen .gallery::-webkit-scrollbar { display: none; }
+.destination-screen .gallery img { width: 8.5rem; height: 10.5rem; border-radius: 1.2rem; object-fit: cover; flex-shrink: 0; }
+.destination-screen .gallery img:first-child { width: 11rem; }
+
+.destination-screen .stay { display: flex; align-items: center; gap: .85rem; padding: 1rem; border-radius: 1.3rem; background: var(--surface); box-shadow: 0 1px 0 var(--line); }
+.destination-screen .stay-icon { width: 3rem; height: 3rem; border-radius: 1rem; display: grid; place-items: center; background: #fff3df; color: #b06c00; flex-shrink: 0; }
+.destination-screen .stay > span:last-child { display: grid; gap: .1rem; }
+.destination-screen .stay strong { font-weight: 700; font-size: .93rem; }
+.destination-screen .stay span span { font-size: .78rem; color: var(--muted); }
+
+.destination-screen .book-bar {
+  position: fixed; z-index: 6; left: 50%; bottom: 0; transform: translateX(-50%); width: 100%; max-width: 460px;
+  display: flex; align-items: center; gap: 1rem; padding: .85rem 1.3rem calc(.85rem + var(--safe-bottom));
+  background: rgba(255, 255, 255, .78); backdrop-filter: blur(20px) saturate(180%); border-top: 1px solid var(--line);
+}
+.destination-screen .price { margin: 0; display: grid; }
+.destination-screen .price strong { font-family: var(--font-display); font-size: 2rem; font-weight: 400; line-height: 1; }
+.destination-screen .price span { font-size: .74rem; color: var(--muted); font-weight: 600; }
+.destination-screen .book-bar .btn-primary { flex: 1; }

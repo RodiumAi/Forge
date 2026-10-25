@@ -35,6 +35,10 @@
 }
 .dse-pop button:hover { background: var(--f-surface-2); }
 .dse-pop p { margin: 6px 10px; font-size: 0.8rem; }
+.dse-pop button.is-locked { flex-wrap: wrap; cursor: default; opacity: 0.7; }
+.dse-pop button.is-locked:hover { background: none; }
+.dse-lock-hint { flex-basis: 100%; padding-left: 24px; font-size: 0.75rem; opacity: 0.85; }
+.dse-plans-link { margin: 4px 10px 6px; font-size: 0.8rem; color: var(--f-orange); text-decoration: underline; }
 .dse-btn {
   display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 0.875rem; font-weight: 600;
   padding: 7px 12px; border-radius: 10px; border: 1px solid transparent; cursor: pointer;

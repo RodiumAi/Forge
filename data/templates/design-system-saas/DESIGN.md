@@ -84,6 +84,7 @@ Direct, concret, sans jargon. On parle de résultats.
 
 ## Logo
 - File: /brand/logo.svg
+- On dark backgrounds: /brand/logo-dark.svg
 - Clear space: La hauteur du symbole tout autour du logo
 - Minimum size: 24px
 - Sur fond blanc ou ardoise très clair

@@ -462,3 +462,53 @@
 .f-bd .btn.btn-ghost:hover:not(:disabled) { background: var(--f-surface-2); }
 .f-bd .btn.btn-danger { background: var(--f-danger); color: #fff; }
 .f-bd .btn:focus-visible { outline: 2px solid var(--f-orange); outline-offset: 2px; }
+
+/* ---------- Options refresh: nav with icon chips, roomier panels, card heads ---------- */
+.f-bd .options-shell-nav { padding: 18px 12px; }
+.f-bd .options-shell-nav-head { padding: 0 8px 14px; margin-bottom: 6px; border-bottom: 1px solid var(--f-line); }
+.f-bd .options-shell-nav-head h2 { font-size: 15px; font-weight: 700; }
+.f-bd .options-shell-nav-head p { font-size: 12px; line-height: 1.45; margin-top: 4px; }
+.f-bd .options-shell-group { display: grid; gap: 2px; margin-top: 14px; }
+.f-bd .options-shell-group-label { padding: 0 8px 4px; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; }
+.f-bd .options-shell-item {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 6px 8px; border-radius: 10px;
+  font-size: 13.5px; font-weight: 500; transition: background-color .15s, color .15s;
+}
+.f-bd .options-shell-item-icon {
+  display: grid; place-items: center; width: 28px; height: 28px; flex: none; border-radius: 8px;
+  background: var(--f-surface); color: var(--f-muted); transition: background-color .15s, color .15s;
+}
+.f-bd .options-shell-item:hover { background: var(--f-surface); color: var(--f-text); }
+.f-bd .options-shell-item.active { background: rgba(235, 97, 24, .1); box-shadow: none; color: var(--f-text); font-weight: 600; }
+.f-bd .options-shell-item.active .options-shell-item-icon { background: var(--f-orange); color: #fff; }
+.f-bd .options-shell-item.danger .options-shell-item-icon { color: var(--f-danger-text); }
+.f-bd .options-shell-item.danger.active { background: rgba(239, 68, 68, .1); box-shadow: none; }
+.f-bd .options-shell-item.danger.active .options-shell-item-icon { background: var(--f-danger); color: #fff; }
+.f-bd .options-shell-main { padding: 28px 32px 40px; overflow-y: auto; }
+.f-bd .options-shell-main > * { max-width: 880px; }
+.f-bd .options-panel-head { margin-bottom: 18px; }
+.f-bd .options-panel-head h3 { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
+.f-bd .options-panel-head p { font-size: 13.5px; margin-top: 4px; }
+.f-bd .options-card { padding: 18px 20px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.f-bd .options-card-head { display: flex; align-items: flex-start; gap: 12px; }
+.f-bd .options-card-head h4 { margin: 0; font-size: 14.5px; font-weight: 700; }
+.f-bd .options-card-head p { margin: 3px 0 0; font-size: 12.5px; line-height: 1.45; color: var(--f-muted); }
+.f-bd .options-card-icon {
+  display: grid; place-items: center; width: 32px; height: 32px; flex: none; border-radius: 10px;
+  background: rgba(235, 97, 24, .12); color: var(--f-orange);
+}
+
+/* Marque: design system card, then the charter in place (two columns when wide). */
+.f-bd .options-brand { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.f-bd .options-brand .de-ds, .f-bd .options-brand .de-ds-locked { margin-bottom: 0; max-width: 520px; }
+.f-bd .options-brand-linked { background: var(--f-surface-2); }
+.f-bd .options-brand-linked .options-help { margin: 0; }
+.f-bd .design-charter-editor { display: grid; gap: 14px; align-content: start; }
+.f-bd .options-brand .design-charter-editor { grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 1280px) {
+  .f-bd .options-brand .design-charter-editor { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); align-items: start; }
+  .f-bd .options-brand .design-charter-editor > .builder-error,
+  .f-bd .options-brand .design-charter-editor > .design-saved { grid-column: 1 / -1; }
+}
+/* The "Charte graphique" slide-over is narrow: one column whatever the screen. */
+.f-bd .design-slideover .options-brand .design-charter-editor { grid-template-columns: minmax(0, 1fr); }

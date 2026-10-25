@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Sprout preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 480px; height: 270px; overflow: hidden; position: relative;
+    background: radial-gradient(40% 55% at 8% 20%, #ffe3d3, transparent 70%), radial-gradient(40% 55% at 95% 15%, #e8defe, transparent 70%), radial-gradient(60% 60% at 50% 115%, #bfe5cb, transparent 70%), #f6f7f2;
+    font-family: "Plus Jakarta Sans", system-ui, sans-serif; color: #1c2420; font-weight: 600;
+  }
+  .dots { position: absolute; inset: 0; background-image: radial-gradient(rgba(28,36,32,.09) 1px, transparent 1.2px); background-size: 14px 14px; mask-image: radial-gradient(70% 70% at 50% 45%, #000, transparent); }
+  .dev { position: absolute; width: 128px; height: 268px; border-radius: 22px; background: #f6f7f2; border: 3px solid #1c2420; overflow: hidden; box-shadow: 0 24px 44px -12px rgba(28,36,32,.45); }
+  .dev::before { content: ""; position: absolute; top: 6px; left: 50%; transform: translateX(-50%); width: 34px; height: 9px; border-radius: 99px; background: #1c2420; z-index: 9; }
+  .l { left: 54px; top: 44px; transform: rotate(-8deg); }
+  .r { right: 54px; top: 44px; transform: rotate(8deg); }
+  .c { left: 50%; top: 14px; width: 144px; height: 300px; transform: translateX(-50%); z-index: 2; box-shadow: 0 28px 54px -10px rgba(28,36,32,.5); }
+  .s { padding: 22px 8px 0; display: grid; gap: 6px; }
+  .mu { color: #7a857e; }
+  .x { font-weight: 800; letter-spacing: -.03em; }
+  /* today */
+  .top { display: flex; align-items: center; gap: 5px; }
+  .av { width: 17px; height: 17px; border-radius: 99px; background: url("https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=80&q=60") center/cover; box-shadow: 0 0 0 1.2px #fff, 0 0 0 2.4px #3a9d5d; }
+  .top small { display: block; font-size: 4.5px; color: #7a857e; } .top b { font-size: 8px; font-weight: 800; }
+  .fl { margin-left: auto; font-size: 5.5px; font-weight: 800; color: #f2762e; background: #ffe8da; padding: 3px 5px; border-radius: 99px; }
+  .wk { display: grid; grid-template-columns: repeat(7,1fr); gap: 2px; text-align: center; }
+  .wk span { border-radius: 7px; padding: 3px 0; font-size: 4px; color: #7a857e; }
+  .wk b { display: block; font-size: 6.5px; font-weight: 800; color: #1c2420; }
+  .wk i { display: block; width: 2px; height: 2px; border-radius: 9px; margin: 1px auto 0; background: #3a9d5d; }
+  .wk .on { background: #1c2420; color: rgba(255,255,255,.65); } .wk .on b { color: #fff; }
+  .hero { position: relative; overflow: hidden; display: flex; align-items: center; gap: 7px; border-radius: 12px; background: #3a9d5d; color: #fff; padding: 8px; box-shadow: 0 8px 16px -8px rgba(58,157,93,.8); }
+  .ring { position: relative; width: 40px; height: 40px; flex-shrink: 0; }
+  .ring svg { width: 100%; height: 100%; }
+  .ring b { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; }
+  .top div, .hab div, .pv div { line-height: 1.25; } .top div small, .hab div small, .pv div small { display: block; }
+  .ring b small { font-size: 6px; opacity: .8; }
+  .hero .k { font-size: 4px; letter-spacing: .1em; opacity: .8; }
+  .hero h3 { font-size: 9px; font-weight: 800; letter-spacing: -.02em; }
+  .hero p { font-size: 4.5px; opacity: .85; }
+  .hero em { display: inline-block; margin-top: 3px; font-style: normal; font-size: 4.5px; font-weight: 800; color: #f2762e; background: #fff; padding: 2px 4px; border-radius: 99px; }
+  .h { font-size: 7px; font-weight: 800; display: flex; justify-content: space-between; align-items: baseline; } .h span { font-size: 5px; color: #2b7d48; font-weight: 700; }
+  .hab { display: flex; align-items: center; gap: 5px; padding: 4px; border-radius: 9px; }
+  .hab .ic { width: 17px; height: 17px; border-radius: 6px; background: rgba(255,255,255,.75); display: grid; place-items: center; }
+  .hab .ic i { width: 7px; height: 7px; border-radius: 2px; border: 1.4px solid currentColor; }
+  .hab div b { display: block; font-size: 6px; font-weight: 700; color: #1c2420; } .hab div small { font-size: 4.3px; color: rgba(28,36,32,.55); }
+  .hab .st { margin-left: auto; font-size: 5px; font-weight: 800; }
+  .hab .ck { width: 15px; height: 15px; border-radius: 99px; border: 1.3px solid rgba(28,36,32,.22); background: rgba(255,255,255,.55); display: grid; place-items: center; }
+  .hab.done .ck { background: #3a9d5d; border-color: #3a9d5d; box-shadow: 0 3px 6px -2px rgba(58,157,93,.7); }
+  .hab.done .ck::after { content: ""; width: 5px; height: 2.5px; border-left: 1.5px solid #fff; border-bottom: 1.5px solid #fff; transform: rotate(-45deg) translate(0.5px,-0.5px); }
+  .hab.done div b { text-decoration: line-through; text-decoration-color: rgba(28,36,32,.35); }
+  .tab { position: absolute; left: 0; right: 0; bottom: 0; height: 27px; background: #fff; border-radius: 12px 12px 0 0; box-shadow: 0 -4px 12px -6px rgba(28,36,32,.25); display: grid; grid-template-columns: 1fr 1fr 30px 1fr 1fr; align-items: center; justify-items: center; }
+  .tab span { display: grid; justify-items: center; gap: 1.5px; font-size: 3.8px; color: #a3aca6; font-weight: 700; }
+  .tab span i { width: 7px; height: 7px; border-radius: 2px; border: 1.3px solid currentColor; }
+  .tab span.on { color: #2b7d48; }
+  .tab .add { width: 22px; height: 22px; margin-top: -12px; border-radius: 99px; background: #3a9d5d; box-shadow: 0 0 0 2.5px #f6f7f2, 0 5px 10px -3px rgba(58,157,93,.7); position: relative; }
+  .tab .add::before, .tab .add::after { content: ""; position: absolute; left: 50%; top: 50%; width: 9px; height: 2px; background: #fff; border-radius: 2px; transform: translate(-50%,-50%); }
+  .tab .add::after { transform: translate(-50%,-50%) rotate(90deg); }
+  /* stats */
+  .t { font-size: 11px; font-weight: 800; letter-spacing: -.03em; }
+  .kp { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 3px; }
+  .kp div { border-radius: 7px; background: #fff; padding: 5px 4px; display: grid; gap: 1px; box-shadow: 0 3px 8px -5px rgba(28,36,32,.3); }
+  .kp div.g { background: #3a9d5d; color: #fff; }
+  .kp b { font-size: 9px; font-weight: 800; } .kp small { font-size: 3.8px; color: #7a857e; } .kp .g small { color: rgba(255,255,255,.85); }
+  .cal { background: #fff; border-radius: 10px; padding: 6px; box-shadow: 0 3px 10px -6px rgba(28,36,32,.3); }
+  .cal p { font-size: 6px; font-weight: 800; text-align: center; margin-bottom: 4px; }
+  .grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 2px; }
+  .grid i { aspect-ratio: 1; border-radius: 2.5px; }
+  .l0 { background: #eceee6; } .l1 { background: #d4ecdb; } .l2 { background: #a6d8b6; } .l3 { background: #6dbd88; } .l4 { background: #3a9d5d; } .fu { border: 1px dashed #dde1d6; } .td { box-shadow: 0 0 0 1px #fff, 0 0 0 2px #1c2420; }
+  .bs { background: #fff; border-radius: 10px; padding: 5px; display: grid; gap: 5px; }
+  .bs div { display: flex; align-items: center; gap: 4px; }
+  .bs span { width: 12px; height: 12px; border-radius: 4px; flex-shrink: 0; }
+  .bs em { flex: 1; height: 3px; border-radius: 9px; background: #eef0e8; position: relative; } .bs em::after { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: var(--w); border-radius: 9px; background: var(--c); }
+  .bs b { font-size: 4.5px; color: #f2762e; font-weight: 800; }
+  /* new habit */
+  .nb { display: flex; align-items: center; justify-content: space-between; font-size: 7px; font-weight: 800; }
+  .xb { width: 14px; height: 14px; border-radius: 99px; background: #fff; box-shadow: 0 2px 5px -2px rgba(28,36,32,.4); }
+  .pv { display: flex; align-items: center; gap: 5px; background: #e8defe; border-radius: 10px; padding: 5px; }
+  .pv .ic { width: 19px; height: 19px; border-radius: 7px; background: rgba(255,255,255,.8); display: grid; place-items: center; color: #7451c9; }
+  .pv .ic i { width: 8px; height: 8px; border: 1.5px solid currentColor; border-radius: 2px; }
+  .pv b { display: block; font-size: 6px; font-weight: 800; } .pv small { font-size: 4.3px; color: rgba(28,36,32,.55); }
+  .pv u { margin-left: auto; width: 14px; height: 14px; border-radius: 99px; border: 1.3px solid rgba(28,36,32,.22); }
+  .lb { font-size: 4.3px; letter-spacing: .08em; color: #7a857e; font-weight: 800; }
+  .in { background: #fff; border: 1px solid #3a9d5d; border-radius: 8px; padding: 5px; font-size: 6px; font-weight: 700; box-shadow: 0 0 0 2px rgba(58,157,93,.18); }
+  .ics { display: grid; grid-template-columns: repeat(6,1fr); gap: 3px; }
+  .ics i { aspect-ratio: 1; border-radius: 5px; background: #fff; border: 1px solid #e6e8e1; position: relative; }
+  .ics i::after { content: ""; position: absolute; inset: 4px; border: 1.3px solid #9aa39d; border-radius: 1.5px; }
+  .ics i.on { background: #1c2420; border-color: #1c2420; } .ics i.on::after { border-color: #fff; }
+  .sw { display: flex; gap: 5px; } .sw i { width: 15px; height: 15px; border-radius: 99px; } .sw i.on { box-shadow: 0 0 0 1.5px #f6f7f2, 0 0 0 2.5px #7451c9; }
+  .ch { display: flex; flex-wrap: wrap; gap: 3px; } .ch span { font-size: 4.5px; font-weight: 700; padding: 3px 5px; border-radius: 99px; background: #fff; border: 1px solid #e6e8e1; } .ch .on { background: #1c2420; color: #fff; border-color: #1c2420; }
+  .cta { margin-top: 2px; background: #3a9d5d; color: #fff; border-radius: 99px; text-align: center; font-size: 6px; font-weight: 800; padding: 6px; box-shadow: 0 6px 12px -6px rgba(58,157,93,.8); }
+</style>
+</head>
+<body>
+  <div class="dots"></div>
+
+  <div class="dev l">
+    <div class="s">
+      <p class="t">Stats</p>
+      <div class="kp"><div class="g"><b>81%</b><small>Completion</small></div><div><b>11</b><small>Perfect days</small></div><div><b>31</b><small>Best streak</small></div></div>
+      <div class="cal">
+        <p>October 2026</p>
+        <div class="grid">
+          <i></i><i></i><i></i><i class="l3"></i><i class="l4"></i><i class="l2"></i><i class="l4"></i>
+          <i class="l3"></i><i class="l1"></i><i class="l2"></i><i class="l4"></i><i class="l4"></i><i class="l3"></i><i class="l0"></i>
+          <i class="l2"></i><i class="l4"></i><i class="l4"></i><i class="l3"></i><i class="l4"></i><i class="l2"></i><i class="l1"></i>
+          <i class="l3"></i><i class="l4"></i><i class="l4"></i><i class="l2"></i><i class="l4"></i><i class="l4"></i><i class="l3 td"></i>
+          <i class="fu"></i><i class="fu"></i><i class="fu"></i><i class="fu"></i><i class="fu"></i><i></i><i></i>
+        </div>
+      </div>
+      <div class="bs">
+        <div><span style="background:#fff1c2"></span><em style="--w:100%;--c:#a37a00"></em><b>31</b></div>
+        <div><span style="background:#dfeaff"></span><em style="--w:77%;--c:#3b67c4"></em><b>24</b></div>
+        <div><span style="background:#e8defe"></span><em style="--w:68%;--c:#7451c9"></em><b>21</b></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="dev r">
+    <div class="s">
+      <div class="nb"><span class="xb"></span>New habit<span style="width:14px"></span></div>
+      <div class="pv"><span class="ic"><i></i></span><div><b>Journal 5 minutes</b><small>Every day, 07:00</small></div><u></u></div>
+      <p class="lb">NAME</p>
+      <div class="in">Journal 5 minutes</div>
+      <p class="lb">ICON</p>
+      <div class="ics"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i class="on"></i><i></i><i></i><i></i><i></i></div>
+      <p class="lb">COLOUR</p>
+      <div class="sw"><i style="background:#ffe3d3"></i><i style="background:#dfeaff"></i><i style="background:#fff1c2"></i><i class="on" style="background:#e8defe"></i><i style="background:#d9f2e1"></i></div>
+      <p class="lb">HOW OFTEN</p>
+      <div class="ch"><span class="on">Every day</span><span>Weekdays</span><span>3 times a week</span></div>
+      <div class="cta">Create habit</div>
+    </div>
+  </div>
+
+  <div class="dev c">
+    <div class="s">
+      <div class="top"><span class="av"></span><div><small>Sunday, 25 October</small><b>Hi, Inès</b></div><span class="fl">18</span></div>
+      <div class="wk"><span>M<b>19</b></span><span>T<b>20</b></span><span>W<b>21</b></span><span>T<b>22</b></span><span>F<b>23</b></span><span>S<b>24</b></span><span class="on">S<b>25</b></span></div>
+      <div class="hero">
+        <div class="ring"><svg viewBox="0 0 112 112"><circle cx="56" cy="56" r="46" fill="none" stroke="rgba(255,255,255,.22)" stroke-width="12"/><circle cx="56" cy="56" r="46" fill="none" stroke="#fff" stroke-width="12" stroke-linecap="round" stroke-dasharray="192.7 289" transform="rotate(-90 56 56)"/></svg><b>4<small>/6</small></b></div>
+        <div><p class="k">TODAY</p><h3>4 of 6 done</h3><p>2 left, you are on a roll.</p><em>Drink water, 18 days</em></div>
+      </div>
+      <p class="h">Your habits <span>See all</span></p>
+      <div class="hab done" style="background:#ffe3d3;color:#c2582b"><span class="ic"><i></i></span><div><b>Morning run</b><small>3 km, 06:30</small></div><span class="st">6</span><span class="ck"></span></div>
+      <div class="hab done" style="background:#dfeaff;color:#3b67c4"><span class="ic"><i></i></span><div><b>Drink water</b><small>8 glasses, 07:00</small></div><span class="st">18</span><span class="ck"></span></div>
+      <div class="hab done" style="background:#e8defe;color:#7451c9"><span class="ic"><i></i></span><div><b>Meditate</b><small>10 minutes, 07:15</small></div><span class="st">9</span><span class="ck"></span></div>
+      <div class="hab done" style="background:#d9f2e1;color:#2e8a4f"><span class="ic"><i></i></span><div><b>Eat greens</b><small>2 servings, 12:30</small></div><span class="st">4</span><span class="ck"></span></div>
+      <div class="hab" style="background:#fff1c2;color:#a37a00"><span class="ic"><i></i></span><div><b>Read 20 pages</b><small>20 pages, 21:30</small></div><span class="st">12</span><span class="ck"></span></div>
+    </div>
+    <div class="tab"><span class="on"><i></i>Today</span><span><i></i>Habits</span><span class="add"></span><span><i></i>Stats</span><span><i></i>Profile</span></div>
+  </div>
+</body>
+</html>

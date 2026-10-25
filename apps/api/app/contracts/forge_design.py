@@ -447,6 +447,70 @@ class CodelabDownload(_Doc):
 Line300 = Annotated[str, Field(min_length=1, max_length=300)]
 
 
+class CodelabCover(_Doc):
+    eyebrow: str | None = Field(default=None, max_length=160)
+    highlights: list[Annotated[str, Field(min_length=1, max_length=200)]] | None = Field(
+        default=None, max_length=8
+    )
+    showQr: bool | None = None
+
+
+class CodelabLink(_Doc):
+    label: str = Field(min_length=1, max_length=60)
+    url: HttpsUrl
+
+
+class CodelabPresenter(_Doc):
+    name: str | None = Field(default=None, max_length=120)
+    role: str | None = Field(default=None, max_length=120)
+    company: str | None = Field(default=None, max_length=120)
+    photo: AssetPath | None = None
+    bio: str | None = Field(default=None, max_length=1500)
+    links: list[CodelabLink] | None = Field(default=None, max_length=6)
+
+
+class CodelabSetupTool(_Doc):
+    name: str = Field(min_length=1, max_length=80)
+    version: str | None = Field(default=None, max_length=40)
+    url: HttpsUrl | None = None
+
+
+class CodelabSetupItem(_Doc):
+    text: Line300
+    url: HttpsUrl | None = None
+    code: str | None = Field(default=None, max_length=200)
+
+
+class CodelabSetupGroup(_Doc):
+    title: str = Field(min_length=1, max_length=120)
+    items: list[CodelabSetupItem] = Field(max_length=12)
+
+
+class CodelabPromo(_Doc):
+    code: str = Field(min_length=1, max_length=64)
+    label: str | None = Field(default=None, max_length=200)
+    url: HttpsUrl | None = None
+
+
+class CodelabCommand(_Doc):
+    label: str | None = Field(default=None, max_length=120)
+    language: str | None = Field(default=None, pattern=LANGUAGE_PATTERN)
+    code: str = Field(min_length=1, max_length=4000)
+
+
+class CodelabSetup(_Doc):
+    intro: str | None = Field(default=None, max_length=1000)
+    tools: list[CodelabSetupTool] | None = Field(default=None, max_length=20)
+    groups: list[CodelabSetupGroup] | None = Field(default=None, max_length=6)
+    promo: CodelabPromo | None = None
+    commands: list[CodelabCommand] | None = Field(default=None, max_length=12)
+
+
+class CodelabPages(_Doc):
+    presenter: bool | None = None
+    setup: bool | None = None
+
+
 class Codelab(_Doc):
     version: Literal[1]
     title: str = Field(min_length=1, max_length=200)
@@ -460,6 +524,10 @@ class Codelab(_Doc):
     theme: Theme | None = None
     steps: list[CodelabStep] = Field(max_length=200)
     downloads: list[CodelabDownload] | None = Field(default=None, max_length=50)
+    cover: CodelabCover | None = None
+    presenter: CodelabPresenter | None = None
+    setup: CodelabSetup | None = None
+    pages: CodelabPages | None = None
 
     @model_validator(mode="after")
     def _unique(self) -> Codelab:
@@ -482,9 +550,17 @@ Lines = Annotated[list[Line400], Field(max_length=40)]
 class Logo(_Doc):
     src: AssetPath
     darkSrc: AssetPath | None = None
+    # Square mark (no name): app icon and favicon.
+    iconSrc: AssetPath | None = None
     minSizePx: int | None = Field(default=None, ge=8, le=2000)
     clearSpace: str | None = Field(default=None, max_length=200)
     usage: Lines | None = None
+
+
+class Brand(_Doc):
+    tagline: str | None = Field(default=None, max_length=160)
+    website: str | None = Field(default=None, max_length=300, pattern=HTTPS_PATTERN)
+    audience: str | None = Field(default=None, max_length=300)
 
 
 class Guidance(_Doc):
@@ -539,6 +615,7 @@ class DesignSystem(_Doc):
     name: str = Field(min_length=1, max_length=120)
     description: str | None = Field(default=None, max_length=2000)
     tokens: dict[str, Any]
+    brand: Brand | None = None
     logo: Logo | None = None
     voice: Guidance | None = None
     imagery: Guidance | None = None

@@ -1,6 +1,7 @@
 {
   "kind": "codelab",
   "id": "codelab-mobile",
+  "free": true,
   "title": {
     "fr": "Tutoriel mobile",
     "en": "Mobile tutorial"

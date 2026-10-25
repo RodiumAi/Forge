@@ -97,10 +97,6 @@ describe("ImageEditPanel", () => {
 
   it("shows the insufficient credits message on the AI tab", async () => {
     route({
-      "/images/models": () => [
-        { slug: "openai/gpt-image-2", label: "Gpt image 2", default: true },
-        { slug: "google/imagen-5", label: "Imagen 5", default: false },
-      ],
       "/projects/p1/images/generate": () => {
         throw new ApiError("no credit", 402, "INSUFFICIENT_CREDITS", ["upgrade", "recharge"]);
       },
@@ -109,15 +105,15 @@ describe("ImageEditPanel", () => {
       <ImageEditPanel projectId="p1" selection={selection} onClose={() => {}} onReplaced={() => {}} />,
     );
     await user.click(screen.getByRole("tab", { name: "IA" }));
-    await screen.findByRole("option", { name: "Imagen 5" });
-    await user.selectOptions(screen.getByLabelText("Modèle"), "google/imagen-5");
+    // No model picker: the platform default image model is used.
+    expect(screen.queryByLabelText("Modèle")).not.toBeInTheDocument();
     await user.type(screen.getByLabelText("Décrivez l’image"), "Un phare au crépuscule");
     await user.selectOptions(screen.getByLabelText("Format"), "16:9");
     await user.click(screen.getByRole("button", { name: "Générer" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Crédits insuffisants");
     const call = apiMock.mock.calls.find(([path]) => path === "/projects/p1/images/generate");
     expect(JSON.parse(call![1].body)).toEqual({
-      model: "google/imagen-5",
+      model: null,
       prompt: "Un phare au crépuscule",
       aspect: "16:9",
       target: "/images/old.webp",

@@ -3,6 +3,9 @@ import { codelabSchema, type Codelab } from "@/lib/contracts/forge-design";
 import { parseBlocks } from "../codelab-player";
 import { editorHref } from "@/lib/kinds";
 import {
+  cleanPresenter,
+  cleanSetup,
+  withPageFlag,
   addDownload,
   addStep,
   insertBlock,
@@ -104,5 +107,29 @@ describe("codelab model", () => {
     expect(editorHref("p1", "codelab")).toBe("/projects/p1/codelab");
     expect(editorHref("p1", "slides")).toBe("/projects/p1/deck");
     expect(editorHref("p1", "web")).toBe("/projects/p1");
+  });
+});
+
+describe("cover, presenter and setup drafts", () => {
+  it("keeps only what the schema accepts", () => {
+    const presenter = cleanPresenter({ name: " ", role: "Dev", links: [{ label: "X", url: "http://x.com" }, { label: "", url: "https://a.b" }] });
+    expect(presenter).toEqual({ role: "Dev" });
+    const setup = cleanSetup({
+      tools: [{ name: "" }, { name: "Node.js", url: "nodejs.org" }],
+      groups: [{ title: "", items: [] }, { title: "RodiumAi", items: [{ text: "" }, { text: "Compte", code: "" }] }],
+      promo: { code: "  " },
+      commands: [{ code: "npm i", language: "Bash!" }],
+    });
+    expect(setup).toEqual({
+      tools: [{ name: "Node.js" }],
+      groups: [{ title: "RodiumAi", items: [{ text: "Compte" }] }],
+      commands: [{ code: "npm i" }],
+    });
+    expect(cleanSetup({ promo: { code: "" } })).toBeUndefined();
+    const base: Codelab = { version: 1, title: "T", level: "beginner", durationMinutes: 0, steps: [] };
+    const next = withPageFlag(base, "setup", false);
+    expect(next.pages).toEqual({ setup: false });
+    expect(withPageFlag(next, "setup", undefined).pages).toBeUndefined();
+    expect(codelabSchema.safeParse({ ...next, setup, presenter }).success).toBe(true);
   });
 });

@@ -515,3 +515,38 @@ async def test_make_files_keeps_paths_under_the_asked_kind(lab, monkeypatch, run
     assert next(e for e in events if e["type"] == "codelab.files")["files"] == ["files/solution/app.py"]
     assert [f.path for f in list_files(lab)] == ["files/solution/app.py"]
     assert store.read_codelab(lab)["downloads"][0]["id"] == "solution"
+
+
+# ── cover, presenter and setup pages ───────────────────────────────────────
+
+
+def test_outline_keeps_valid_cover_sections_and_drops_invented_junk():
+    outline = check_outline(
+        {
+            "title": "Atelier",
+            "steps": [{"title": "Intro", "idea": "x", "minutes": 5}],
+            "cover": {"eyebrow": "Google I/O Extended", "highlights": ["Gemini"]},
+            "presenter": {"name": "Ada", "links": [{"label": "Site", "url": "http://not-https.example"}]},
+            "setup": {"promo": {"code": "EXAMPLE10", "label": "300 RODI"}},
+        }
+    )
+    assert outline.cover == {"eyebrow": "Google I/O Extended", "highlights": ["Gemini"]}
+    assert outline.presenter is None  # an http link makes the section invalid: dropped, never guessed
+    assert outline.setup == {"promo": {"code": "EXAMPLE10", "label": "300 RODI"}}
+    kept = outline_from_plan(outline.model_dump(), plan_tasks(outline))
+    assert kept.setup == outline.setup
+    document = flow.new_codelab(kept, {"presenter": {"name": "Grace"}, "pages": {"setup": False}})
+    assert document["cover"]["eyebrow"] == "Google I/O Extended"
+    assert document["presenter"] == {"name": "Grace"}
+    assert document["pages"] == {"setup": False}
+    validate_codelab(document)
+
+
+def test_codelab_edit_meta_sets_valid_sections_only():
+    codelab = {"title": "T"}
+    flow._apply_meta(
+        codelab,
+        {"presenter": {"name": "Ada", "role": "Dev"}, "setup": {"promo": {"label": "no code"}}},
+    )
+    assert codelab["presenter"] == {"name": "Ada", "role": "Dev"}
+    assert "setup" not in codelab

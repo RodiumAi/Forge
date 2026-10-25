@@ -11,11 +11,30 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, ValidationError, field_validator
 
+from app.contracts.forge_design import CodelabCover, CodelabPresenter, CodelabSetup
 from app.services.codelab.store import slugify, unique_step_id
 
 MAX_STEPS = 30
+
+_SECTIONS: dict[str, type[BaseModel]] = {
+    "cover": CodelabCover,
+    "presenter": CodelabPresenter,
+    "setup": CodelabSetup,
+}
+
+
+def clean_section(key: str, value: Any) -> dict[str, Any] | None:
+    """A cover, presenter or setup object the contract accepts, else None (never raises)."""
+    model = _SECTIONS.get(key)
+    if model is None or not isinstance(value, dict):
+        return None
+    try:
+        dumped = model.model_validate(value).model_dump(exclude_none=True)
+    except ValidationError:
+        return None
+    return dumped or None
 
 
 class OutlineStep(BaseModel):
@@ -51,6 +70,15 @@ class Outline(BaseModel):
     learn: list[str] = Field(default_factory=list)
     steps: list[OutlineStep] = Field(min_length=1, max_length=MAX_STEPS)
     files: OutlineFiles = Field(default_factory=OutlineFiles)
+    # Cover, presenter and setup pages, only when the request gave the facts.
+    cover: dict[str, Any] | None = None
+    presenter: dict[str, Any] | None = None
+    setup: dict[str, Any] | None = None
+
+    @field_validator("cover", "presenter", "setup", mode="before")
+    @classmethod
+    def _section(cls, value: Any, info: Any) -> dict[str, Any] | None:
+        return clean_section(info.field_name, value)
 
     @field_validator("title", "summary", mode="before")
     @classmethod
@@ -152,6 +180,9 @@ def outline_from_plan(stored: Any, plan: list[dict] | None) -> Outline:
         learn=base.learn if base else [],
         steps=steps,
         files=base.files if base else OutlineFiles(),
+        cover=base.cover if base else None,
+        presenter=base.presenter if base else None,
+        setup=base.setup if base else None,
     )
     # Kept steps keep their ids; new ones get one from their title.
     taken = {step.id for step in outline.steps if step.id}

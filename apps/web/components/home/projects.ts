@@ -4,7 +4,6 @@
  * here unchanged from the old dashboard page).
  */
 
-import { apiBase } from "@/lib/api";
 import { normalizeKind, type ProjectKindId } from "@/lib/kinds";
 import { projectThumbnailUrl } from "@/lib/project-thumbnail";
 
@@ -21,6 +20,8 @@ export type HomeProject = {
   preview_running?: boolean;
   public_url?: string | null;
   has_thumbnail?: boolean;
+  /** mtime of the stored card image, changes when the API re-renders it. */
+  thumbnail_at?: number | null;
   platform?: ProjectKindId;
   /** `owner`, or the accepted share role (`editor`, `viewer`). */
   access_role?: string;
@@ -98,53 +99,13 @@ export function initials(name: string): string {
   return `${parts[0][0] || ""}${parts[1][0] || ""}`.toUpperCase();
 }
 
-export type ThumbSource = {
-  imageSrc: string | null;
-  frameSrc: string | null;
-  src: string | null;
-  authPath: string | null;
-  persistProjectId: string | null;
-  thumbViewport: { w: number; h: number } | null;
-};
-
 /**
- * Where a card thumbnail comes from. React kinds keep the old order: the
- * persisted JPEG, a live draft capture, the kit preview, the card preview.
- * Document kinds (slides, codelab, design system) have no draft site to
- * capture: they show the persisted JPEG once one exists, else `null` and the
- * card draws its kind placeholder.
+ * The card image of a project: the JPEG the API renders on the server (sites
+ * and apps: the home page framed in a 16:9 card with the project name; other
+ * kinds when they stored one). Null until it exists: the card then draws its
+ * kind placeholder. Cards never run a project live any more.
  */
-export function thumbSource(p: HomeProject, mediaToken: string | null, origin: string | null): ThumbSource | null {
-  const kind = kindOf(p);
-  const none = { imageSrc: null, frameSrc: null, src: null, authPath: null, persistProjectId: null, thumbViewport: null };
-  if (kind !== "web" && kind !== "mobile") {
-    const imageSrc = p.has_thumbnail ? projectThumbnailUrl(p.id, p.updated_at) : null;
-    return imageSrc ? { ...none, imageSrc } : null;
-  }
-  const base = apiBase().replace(/\/$/, "");
-  const parent = origin ? encodeURIComponent(origin) : "";
-  const draftFrame =
-    mediaToken && parent
-      ? `${base}/projects/${p.id}/draft?access_token=${encodeURIComponent(mediaToken)}&parent_origin=${parent}&thumb=1`
-      : null;
-  const templateSrc = p.template_id ? `/templates/${p.template_id}/preview` : null;
-
-  // Mobile apps forked from a kit: the 480x300 preview.html already looks like
-  // a phone card, better than a live capture in a landscape thumbnail.
-  if (kind === "mobile" && templateSrc) {
-    return { ...none, src: templateSrc, thumbViewport: { w: 480, h: 300 } };
-  }
-  if (p.has_thumbnail) {
-    const imageSrc = projectThumbnailUrl(p.id, p.updated_at);
-    if (imageSrc) {
-      // Keep the live draft as fallback: empty mobile captures used to stick
-      // forever once has_thumbnail flipped true.
-      return { ...none, imageSrc, frameSrc: draftFrame, src: templateSrc, persistProjectId: p.id };
-    }
-  }
-  if (draftFrame) return { ...none, frameSrc: draftFrame, persistProjectId: p.id };
-  if (templateSrc) {
-    return { ...none, src: templateSrc, thumbViewport: kind === "mobile" ? { w: 480, h: 300 } : null };
-  }
-  return { ...none, authPath: `/projects/${p.id}/card-preview` };
+export function projectCardImage(p: HomeProject): string | null {
+  if (!p.has_thumbnail) return null;
+  return projectThumbnailUrl(p.id, p.thumbnail_at != null ? String(p.thumbnail_at) : p.updated_at);
 }

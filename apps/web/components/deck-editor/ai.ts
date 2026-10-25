@@ -167,3 +167,62 @@ export function confirmPlanBody(tasks: OutlineTask[]): { plan: OutlineTask[] } {
       .map((t) => ({ id: t.id, title: t.title.trim(), detail: t.detail, layout: t.layout, visual: t.visual, status: "pending" })),
   };
 }
+
+// ── attached images ─────────────────────────────────────────────────────────
+
+const IMAGES_MARKER = /\n*\[(?:Images|Images jointes)\s*:\s*([^\]\n]+)\]/gi;
+
+/** Adds the attached project images to a message as one `[Images: ...]` line. */
+export function withImages(content: string, paths: string[]): string {
+  if (!paths.length) return content;
+  const marker = `[Images: ${paths.join(", ")}]`;
+  return content ? `${content}\n\n${marker}` : marker;
+}
+
+/** Splits a stored user message into its text and its attached image paths. */
+export function splitImages(content: string): { text: string; images: string[] } {
+  const images: string[] = [];
+  const text = content.replace(IMAGES_MARKER, (_m, list: string) => {
+    for (const raw of list.split(",")) {
+      const path = raw.trim();
+      if (path.startsWith("public/") && !images.includes(path)) images.push(path);
+    }
+    return "";
+  });
+  return { text: text.trim(), images };
+}
+
+// ── attached documents (PDF, PowerPoint) ────────────────────────────────────
+
+export type DocumentPart = { name: string; kind: "pdf" | "pptx"; text: string; truncated: boolean };
+
+const DOCUMENT_BLOCK = /\n*\[Document:\s*([^\]|\n]{1,200}?)\s*\|\s*(pdf|pptx)\s*(\|\s*truncated\s*)?\]\n([\s\S]*?)\n\[\/Document\]/gi;
+
+/** A file name safe inside the marker: no brackets, bars or line breaks. */
+function markerName(name: string): string {
+  return name.replace(/[[\]|\r\n]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 120) || "document";
+}
+
+/**
+ * Appends the text of each imported document as one block:
+ * `[Document: brief.pdf | pdf]` ... `[/Document]` (`| truncated` when cut).
+ * The API reads these blocks into the deck prompts (deck_ai/attachments.py).
+ */
+export function withDocuments(content: string, docs: DocumentPart[]): string {
+  if (!docs.length) return content;
+  const blocks = docs.map((doc) => {
+    const text = doc.text.replace(/\[\/Document\]/gi, "[/ Document]").trim();
+    return `[Document: ${markerName(doc.name)} | ${doc.kind}${doc.truncated ? " | truncated" : ""}]\n${text}\n[/Document]`;
+  });
+  return [content, ...blocks].filter(Boolean).join("\n\n");
+}
+
+/** Splits a stored user message into its text and its documents (names only). */
+export function splitDocuments(content: string): { text: string; documents: Array<Omit<DocumentPart, "text">> } {
+  const documents: Array<Omit<DocumentPart, "text">> = [];
+  const text = content.replace(DOCUMENT_BLOCK, (_m, name: string, kind: string, cut: string | undefined) => {
+    documents.push({ name: name.trim(), kind: kind.toLowerCase() === "pptx" ? "pptx" : "pdf", truncated: !!cut });
+    return "";
+  });
+  return { text: text.trim(), documents };
+}

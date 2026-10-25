@@ -338,7 +338,7 @@ export function RodiumGenerationPanel() {
     <>
       <div className="f-row-line">
         <div className="l" style={{ display: "flex", gap: 12, alignItems: "center", minWidth: 0 }}>
-          {linked ? <Avatar name={account?.name || account?.email || "RodiumAi"} src={account?.avatar_url} /> : null}
+          {linked ? <Avatar name={account?.name || account?.email || "RodiumAi"} src={account?.avatar_url} glyph /> : null}
           <div style={{ minWidth: 0 }}>
             <b>{t("apConnection")}</b>
             <small>{linked ? who || t("rodiumConnected") : t("apConnectionLead")}</small>

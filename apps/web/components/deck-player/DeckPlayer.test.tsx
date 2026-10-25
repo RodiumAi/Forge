@@ -151,7 +151,9 @@ describe("DeckPlayer", () => {
   it("shows the badge only when asked", () => {
     expect(setup().container.querySelector("[data-forge-badge]")).toBeNull();
     const badge = setup({ badge: true }).container.querySelector("[data-forge-badge]");
-    expect(badge?.textContent).toBe("Made with Forge");
+    expect(badge?.textContent).toBe("By Forge");
+    expect(badge?.getAttribute("aria-label")).toBe("Made with Forge");
+    expect(badge?.querySelector("svg")).not.toBeNull();
     expect(badge?.getAttribute("href")).toBe("https://forge.rodiumai.io");
   });
 

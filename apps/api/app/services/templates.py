@@ -48,6 +48,15 @@ class TemplateMeta:
     tone: str = ""
     fg: str | None = None
     muted: str | None = None
+    #: Usable on the Free plan; every other kit starts at Starter.
+    free: bool = False
+
+    @property
+    def required_plan(self) -> str | None:
+        """The lowest Forge plan that may start a project from this kit, None for Free."""
+        if self.kind == "design_system":
+            return "builder"
+        return None if self.free else "starter"
 
 
 def _parse_kind(raw: object) -> str:
@@ -113,6 +122,7 @@ def _load_meta(folder: Path) -> TemplateMeta | None:
         tone=str(data.get("tone") or "").strip(),
         fg=str(data["fg"]) if data.get("fg") else None,
         muted=str(data["muted"]) if data.get("muted") else None,
+        free=data.get("free") is True,
     )
 
 
@@ -175,6 +185,17 @@ def preview_path(template_id: str) -> Path | None:
     if meta is None:
         return None
     path = meta.path / "preview.html"
+    return path if path.is_file() else None
+
+
+def preview_image_path(template_id: str) -> Path | None:
+    """The gallery card as a still image (``preview.png``, rendered from
+    ``preview.html`` by ``scripts/render_template_previews.py``): an <img>
+    costs nothing to show, where an iframe per card had to lay out a page."""
+    meta = get_template(template_id)
+    if meta is None:
+        return None
+    path = meta.path / "preview.png"
     return path if path.is_file() else None
 
 
@@ -338,7 +359,11 @@ def fork_template(template_id: str, project_id: str, app_name: str | None = None
         raise FileExistsError(f"Project directory already exists: {project_id}")
 
     def ignore(directory: str, names: list[str]) -> set[str]:
-        return {n for n in names if n in _SKIP_NAMES}
+        skip = {n for n in names if n in _SKIP_NAMES}
+        # The gallery image is the kit's card, not part of the user's app.
+        if Path(directory) == meta.path and "preview.png" in names:
+            skip.add("preview.png")
+        return skip
 
     shutil.copytree(meta.path, dest, ignore=ignore)
 

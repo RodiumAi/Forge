@@ -28,20 +28,23 @@ import {
   Unlock,
   AlignHorizontalSpaceAround,
   AlignVerticalSpaceAround,
+  PanelRightClose,
 } from "lucide-react";
 import type { ReactNode } from "react";
+import type { Point } from "@/components/ui/ContextMenu";
 import type { ThemeTokens } from "@/components/deck-player";
 import { FORMAT_SIZES, PATTERNS, type Deck, type Slide, type SlideElement } from "@/lib/contracts/forge-design";
 import { ChartDataEditor, TableEditor } from "./DataEditors";
 import { colorTokens, ColorField, Field, NumberField, Section, SelectField, TextField, Toggle } from "./fields";
 import type { Align } from "./geometry";
-import { elementLabel, findElement, paintOrder, updateRef, type Doc, type SlideRef } from "./model";
+import { elementLabel, findElement, updateRef, type Doc, type SlideRef } from "./model";
 import { patchElements, setFields, setStyle, type Recipe } from "./ops";
+import { LayersPanel } from "./LayersPanel";
 import { AnimationPicker, TransitionPicker } from "./pickers";
 import { applyPreset, applyTransitionToAll, PRESETS, type PresetId } from "./presets";
 import type { DeckLocale, DeckStringKey, DeckT } from "./strings";
 
-export type PanelTab = "element" | "slide" | "deck";
+export type PanelTab = "element" | "slide" | "layers" | "deck";
 
 export type ImageTarget = { kind: "element"; id: string } | { kind: "fill"; id: string } | { kind: "background" } | { kind: "new" };
 
@@ -67,6 +70,14 @@ type Props = {
   t: DeckT;
   locale: DeckLocale;
   readOnly?: boolean;
+  /** Hides the panel; a tab on the right edge brings it back. */
+  onCollapse?: () => void;
+  /** Design system picker shown at the top of the Theme section. */
+  designSystem?: ReactNode;
+  /** Layers tab: pick elements inside a group (or the slide when null). */
+  onSelectLayers?: (ids: string[], parent: string | null) => void;
+  onHoverLayer?: (id: string | null) => void;
+  onLayerMenu?: (at: Point, ids: string[]) => void;
 };
 
 const PRESET_LABELS: Record<PresetId, [DeckStringKey, DeckStringKey]> = {
@@ -112,11 +123,13 @@ export function PropertiesPanel(props: Props) {
   const tabs: { id: PanelTab; label: string; disabled?: boolean }[] = [
     { id: "element", label: t("tabElement"), disabled: selection.length === 0 },
     { id: "slide", label: t("tabSlide") },
+    { id: "layers", label: t("tabLayers") },
     { id: "deck", label: t("tabDeck") },
   ];
   const active = tab === "element" && selection.length === 0 ? "slide" : tab;
   return (
     <aside className="de-panel" aria-label={t("properties")}>
+      <div className="de-panel-head">
       <div className="de-tabs" role="tablist">
         {tabs.map((item) => (
           <button
@@ -132,8 +145,31 @@ export function PropertiesPanel(props: Props) {
           </button>
         ))}
       </div>
+      {props.onCollapse ? (
+        <button type="button" className="de-icon-button de-panel-collapse" onClick={props.onCollapse} aria-label={t("panelCollapse")} title={t("panelCollapse")}>
+          <PanelRightClose size={15} aria-hidden />
+        </button>
+      ) : null}
+      </div>
       <div className="de-panel-body" role="tabpanel">
-        {active === "element" ? <ElementPanel {...props} /> : active === "slide" ? <SlidePanel {...props} /> : <DeckPanel {...props} />}
+        {active === "element" ? (
+          <ElementPanel {...props} />
+        ) : active === "slide" ? (
+          <SlidePanel {...props} />
+        ) : active === "layers" ? (
+          <LayersPanel
+            slide={props.slide}
+            selection={selection}
+            readOnly={props.readOnly}
+            run={props.run}
+            onSelect={props.onSelectLayers ?? ((ids) => props.onSelect(ids))}
+            onHover={props.onHoverLayer}
+            onMenu={props.onLayerMenu}
+            t={t}
+          />
+        ) : (
+          <DeckPanel {...props} />
+        )}
       </div>
     </aside>
   );
@@ -618,24 +654,6 @@ function SlidePanel(props: Props) {
           ))}
         </div>
       </Section>
-      <Section title={t("layers")}>
-        {slide.elements.length === 0 ? (
-          <p className="de-hint">{t("noElements")}</p>
-        ) : (
-          <ul className="de-layers">
-            {[...paintOrder(slide.elements)].reverse().map((el) => (
-              <li key={el.id}>
-                <button type="button" className={props.selection.includes(el.id) ? "is-active" : ""} onClick={() => props.onSelect([el.id])}>
-                  <span className="de-layer-type">{el.type}</span>
-                  <span className="de-layer-name">{elementLabel(el)}</span>
-                  {el.locked ? <Lock size={12} aria-hidden /> : null}
-                  {el.hidden ? <EyeOff size={12} aria-hidden /> : null}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Section>
     </>
   );
 }
@@ -681,6 +699,7 @@ function DeckPanel(props: Props) {
         <p className="de-hint">{t("formatHint")}</p>
       </Section>
       <Section title={t("theme")}>
+        {props.designSystem}
         <p className="de-hint">{t("themeHint", { file: themeFile })}</p>
         <h4 className="de-subhead">{t("tokenColors")}</h4>
         <ul className="de-tokens">

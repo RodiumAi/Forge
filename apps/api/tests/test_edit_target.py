@@ -161,8 +161,39 @@ class TestResolveTarget:
         resolved = resolve_target(MessageTarget(filePath="src/pages/About.tsx", restrict=True), list_files(project))
         assert resolved is not None and resolved.allowed_paths == ["src/pages/About.tsx"]
 
+    def test_pages_from_the_rail_focus_their_files(self, project):
+        _site(project)
+        target = MessageTarget(route="/", pages=["/", "a-propos", "/a-propos/", "/missing", "*"], restrict=True)
+        resolved = resolve_target(target, list_files(project))
+        assert resolved is not None and not resolved.scoped
+        assert resolved.pages == [
+            ("/", "src/pages/Home.tsx"),
+            ("/a-propos", "src/pages/About.tsx"),
+            ("/missing", None),
+        ]
+        assert resolved.focus_paths == ["src/pages/Home.tsx", "src/pages/About.tsx"]
+        hint = target_instruction(resolved) or ""
+        assert "Pages selected by the user" in hint
+        assert "`/a-propos` (`src/pages/About.tsx`)" in hint and "`/missing`" in hint
+
+    def test_pages_alone_are_a_target(self, project):
+        _site(project)
+        resolved = resolve_target(MessageTarget(pages=["/a-propos"]), list_files(project))
+        assert resolved is not None and resolved.route is None
+        assert resolved.focus_paths == ["src/pages/About.tsx"]
+
 
 class TestTargetPayload:
+    def test_pages_are_clipped_and_deduplicated(self):
+        body = SendMessageRequest.model_validate(
+            {"content": "x", "mode": "agent", "target": {"pages": ["/", " /", "", "/carte"]}}
+        )
+        assert body.target is not None and body.target.pages == ["/", "/carte"]
+        with pytest.raises(ValueError):
+            SendMessageRequest.model_validate(
+                {"content": "x", "mode": "agent", "target": {"pages": [f"/p{i}" for i in range(41)]}}
+            )
+
     def test_slides_payload_is_unchanged(self):
         body = SendMessageRequest.model_validate(
             {

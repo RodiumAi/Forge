@@ -29,6 +29,16 @@ _LOCKED_BRAND_RE = re.compile(
     r"^(DESIGN\.md|public/logo(?:\.(?:png|jpe?g|webp|gif))?)$",
     re.IGNORECASE,
 )
+# AI_RULES.md is read as project law on every turn, so a write to it outlives
+# the turn: an instruction smuggled in a file or attachment would persist. The
+# agent only writes it when the user's own message asks to change the rules.
+_LOCKED_RULES_RE = re.compile(r"^AI_RULES\.md$", re.IGNORECASE)
+_RULES_CHANGE_RE = re.compile(
+    r"\bai[_ ]rules(?:\.md)?\b|"
+    r"\b(?:project|coding|standing)\s+(?:rules|conventions)\b|"
+    r"\b(?:r[èe]gles|conventions)\s+(?:du|de\s+ce|de\s+mon|de\s+notre)\s+projet\b",
+    re.IGNORECASE,
+)
 _CSS_MERGE_MIN_EXISTING = 400
 # The foundation stylesheet is shared by every page: a full rewrite of it that
 # drops rules is almost always a rewrite from memory, not a deliberate removal.
@@ -127,6 +137,24 @@ def brand_change_requested(text: str) -> bool:
             continue
         return True
     return False
+
+
+def rules_change_requested(text: str) -> bool:
+    """True when the user's message names the project rules (AI_RULES.md).
+
+    A negated mention ("don't touch AI_RULES.md") keeps the lock.
+    """
+    body = text or ""
+    for match in _RULES_CHANGE_RE.finditer(body):
+        if _NEGATION_BEFORE_RE.search(body[max(0, match.start() - 40) : match.start()]):
+            continue
+        return True
+    return False
+
+
+def is_locked_rules_path(path: str) -> bool:
+    rel = (path or "").strip().lstrip("/").replace("\\", "/")
+    return bool(_LOCKED_RULES_RE.match(rel))
 
 
 def is_locked_brand_path(path: str) -> bool:
@@ -257,6 +285,7 @@ def apply_validated_writes(
     writes: list[Any],
     *,
     allow_brand_writes: bool = False,
+    allow_rules_writes: bool = False,
     snapshot_label: str | None = None,
     allowed_paths: Collection[str] | None = None,
 ) -> tuple[list[dict], list[dict]]:
@@ -304,6 +333,19 @@ def apply_validated_writes(
                     "message": (
                         f"Skipped write to `{path}` — brand assets are locked. "
                         "Change the brand via Design charter, or ask explicitly to update it."
+                    ),
+                }
+            )
+            continue
+        if not allow_rules_writes and is_locked_rules_path(path):
+            violations.append(
+                {
+                    "code": "RULES_LOCKED",
+                    "path": path,
+                    "specifier": "",
+                    "message": (
+                        f"Skipped write to `{path}`: the project rules are locked. "
+                        "Ask explicitly to change the project rules (AI_RULES.md)."
                     ),
                 }
             )
@@ -359,6 +401,7 @@ async def apply_validated_writes_async(
     writes: list[Any],
     *,
     allow_brand_writes: bool = False,
+    allow_rules_writes: bool = False,
     snapshot_label: str | None = None,
     allowed_paths: Collection[str] | None = None,
 ) -> tuple[list[dict], list[dict]]:
@@ -374,6 +417,7 @@ async def apply_validated_writes_async(
         project_id,
         writes,
         allow_brand_writes=allow_brand_writes,
+        allow_rules_writes=allow_rules_writes,
         snapshot_label=snapshot_label,
         allowed_paths=allowed_paths,
     )

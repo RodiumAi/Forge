@@ -28,7 +28,13 @@ export type DesignSystemItem = {
   preview: DesignSystemPreview;
 };
 
-export type DesignSystemList = { items: DesignSystemItem[]; default_id: string | null };
+export type DesignSystemList = {
+  items: DesignSystemItem[];
+  default_id: string | null;
+  /** False below the Builder plan: shown locked, the API refuses to link one. Missing reads as allowed. */
+  allowed?: boolean;
+  required_plan?: string;
+};
 
 export type TokenChange = { name: string; from: string | null; to: string };
 export type SyncChange = { path: string; action: "write"; tokens: TokenChange[] };
@@ -87,7 +93,7 @@ export async function saveDocument(
   return { doc: (await res.json()) as DesignSystemDoc, etag: etagOf(res) };
 }
 
-export async function uploadLogo(projectId: string, file: File, variant: "light" | "dark"): Promise<DesignSystemDoc> {
+export async function uploadLogo(projectId: string, file: File, variant: "light" | "dark" | "icon"): Promise<DesignSystemDoc> {
   const form = new FormData();
   form.append("file", file);
   const res = await authFetch(`/projects/${projectId}/design-system/logo?variant=${variant}`, {

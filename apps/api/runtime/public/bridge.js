@@ -572,6 +572,82 @@
     home: 1,
   };
 
+  /**
+   * A hash that names an element on the page (`#features` next to
+   * `<section id="features">`) is an in-page link, not a page: reporting it
+   * as one added a fake page to the rail and sent the preview to a route
+   * that does not exist, so it never scrolled to the section.
+   */
+  function isSectionHash(hash) {
+    var key = String(hash || "");
+    if (!key) return false;
+    if (SECTION_HASHES[key.toLowerCase()]) return true;
+    try {
+      key = decodeURIComponent(key);
+    } catch (e) {
+      /* keep the raw value */
+    }
+    if (document.getElementById(key)) return true;
+    try {
+      return Boolean(document.getElementsByName(key).length);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function findSection(key) {
+    var id = String(key || "");
+    try {
+      id = decodeURIComponent(id);
+    } catch (e) {
+      /* keep the raw value */
+    }
+    if (!id) return null;
+    var el = document.getElementById(id);
+    if (el) return el;
+    var named = document.getElementsByName(id);
+    return named.length ? named[0] : null;
+  }
+
+  /**
+   * Scroll to a section of the home page, the way `/#tarifs` does on a live
+   * site. The preview lives under /runner/, so letting the browser follow the
+   * link would leave the shell; and treating it as a route made it a page.
+   */
+  function goToSection(key) {
+    function scroll() {
+      var el = findSection(key);
+      if (!el) return false;
+      try {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      } catch (e) {
+        el.scrollIntoView();
+      }
+      return true;
+    }
+    if (scroll()) {
+      // Keep the address in sync without a navigation (no jump, no reload).
+      try {
+        window.history.replaceState(
+          window.history.state,
+          "",
+          window.location.pathname + (window.location.search || "") + "#" + key,
+        );
+      } catch (e) {
+        /* ignore */
+      }
+      reportPreviewPath("/");
+      return;
+    }
+    // On another page: go home first, then scroll once it has rendered.
+    navigatePreviewPath("/");
+    var tries = 0;
+    var retry = setInterval(function () {
+      tries += 1;
+      if (scroll() || tries > 20) clearInterval(retry);
+    }, 100);
+  }
+
   function reportPreviewPath(path) {
     if (!PARENT_ORIGIN) return;
     var normalized = (path || "/").replace(/\/+$/, "") || "/";
@@ -637,7 +713,7 @@
 
     var hash = (window.location.hash || "").replace(/^#/, "").split(/[/?]/)[0];
     if (hash) {
-      if (SECTION_HASHES[hash.toLowerCase()]) return "/";
+      if (isSectionHash(hash)) return "/";
       return "/" + hash.toLowerCase();
     }
     var pathname = window.location.pathname || "/";
@@ -947,6 +1023,12 @@
    * then in-page controls, then a runner-scoped History API update.
    */
   function navigatePreviewPath(path) {
+    // `/#tarifs` (or `#tarifs`) is a section of the home page, not a page.
+    var sectionTarget = String(path || "").match(/^\/?#(.+)$/);
+    if (sectionTarget) {
+      goToSection(sectionTarget[1]);
+      return;
+    }
     var normalized = (path || "/").replace(/\/+$/, "") || "/";
     var pageKey = normalized === "/" ? "" : normalized.replace(/^\//, "");
     var targetHash = pageKey ? "#" + pageKey : "";
@@ -1060,6 +1142,13 @@
       var link = ev.target && ev.target.closest ? ev.target.closest("a[href]") : null;
       if (!link) return;
       var href = (link.getAttribute("href") || "").trim();
+      var rootSection = href.match(/^\/#(.+)$/);
+      if (rootSection) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        goToSection(rootSection[1]);
+        return;
+      }
       if (!href || href.startsWith("#") || href.startsWith("mailto:") || /^https?:/i.test(href)) return;
       if (!href.startsWith("/")) return;
       var normalizedHref = href.replace(/\/+$/, "") || "/";

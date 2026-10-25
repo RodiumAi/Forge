@@ -32,7 +32,7 @@ from app.config import get_settings
 from app.errors import SitesError
 from app.services.codelab import files as codelab_files
 from app.services.codelab import store
-from app.services.codelab.outline import Outline, check_outline, plan_tasks
+from app.services.codelab.outline import Outline, check_outline, clean_section, plan_tasks
 from app.services.codelab.prompts import (
     CHECK_SYSTEM,
     CODELAB_EDIT_SYSTEM,
@@ -351,7 +351,11 @@ def new_codelab(outline: Outline, previous: dict[str, Any]) -> dict[str, Any]:
         for index, step in enumerate(outline.steps, start=1)
     ]
     document = {
-        **{k: v for k, v in previous.items() if k in ("author", "repoUrl", "theme", "downloads")},
+        **{
+            k: v
+            for k, v in previous.items()
+            if k in ("author", "repoUrl", "theme", "downloads", "cover", "presenter", "setup", "pages")
+        },
         "version": 1,
         "title": (outline.title or previous.get("title") or "Codelab")[:200],
         "summary": outline.summary,
@@ -362,6 +366,10 @@ def new_codelab(outline: Outline, previous: dict[str, Any]) -> dict[str, Any]:
         "steps": steps,
     }
     document.setdefault("downloads", [])
+    for key in ("cover", "presenter", "setup"):
+        section = getattr(outline, key, None)
+        if section:
+            document[key] = section
     return document
 
 
@@ -669,7 +677,7 @@ class CodelabEdit:
     meta: dict[str, Any]
 
 
-_META_KEYS = ("title", "summary", "level", "prerequisites", "learn")
+_META_KEYS = ("title", "summary", "level", "prerequisites", "learn", "cover", "presenter", "setup")
 
 
 def check_codelab_edit(data: dict[str, Any], existing: set[str]) -> CodelabEdit:
@@ -717,6 +725,12 @@ def _apply_meta(codelab: dict[str, Any], meta: dict[str, Any]) -> None:
     for key in ("prerequisites", "learn"):
         if isinstance(meta.get(key), list):
             codelab[key] = [str(item).strip()[:300] for item in meta[key] if str(item).strip()][:30]
+    for key in ("cover", "presenter", "setup"):
+        if key in meta:
+            # A section the contract refuses is ignored rather than failing the edit.
+            section = clean_section(key, meta[key])
+            if section:
+                codelab[key] = section
 
 
 async def _codelab_edit(ctx: CodelabContext) -> AsyncIterator[Event]:

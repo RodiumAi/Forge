@@ -122,6 +122,64 @@ export const CODELAB_CSS = String.raw`
 .fcl-card ul { margin: 0; padding-left: 20px; }
 .fcl-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 
+/* Cover, presenter and setup pages */
+.fcl-accent { color: var(--fcl-accent); }
+.fcl-kicker { margin: 0 0 12px; font-size: 12.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--fcl-accent); }
+.fcl-cover { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; align-items: center; margin: 0 0 28px; padding: clamp(22px, 4vw, 40px); border: 1px solid var(--fcl-border); border-radius: 22px; background: radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--fcl-accent) 12%, transparent), transparent 60%), var(--fcl-surface); }
+.fcl-cover[data-has-qr] { grid-template-columns: minmax(0, 1fr) minmax(180px, 240px); }
+.fcl-cover-main > :last-child { margin-bottom: 0; }
+.fcl-cover h1 { font-size: clamp(32px, 4.6vw, 52px); letter-spacing: -.01em; }
+.fcl-presented { display: flex; gap: 14px; align-items: flex-start; margin: 0 0 20px; }
+.fcl-presented p { margin: 0; }
+.fcl-presented-label { font-size: 11.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--fcl-muted); }
+.fcl-presented-name { font-family: var(--fcl-font-display); font-weight: 700; font-size: 19px; line-height: 1.3; }
+.fcl-presented-name a { color: inherit; text-decoration: none; }
+.fcl-presented-role { color: var(--fcl-muted); font-size: 15px; margin: 2px 0 0; }
+.fcl-presented-role .fcl-accent { font-weight: 600; }
+.fcl-avatar { flex-shrink: 0; border-radius: 50%; object-fit: cover; display: grid; place-items: center; background: color-mix(in srgb, var(--fcl-accent) 18%, var(--fcl-bg)); color: var(--fcl-accent); font-weight: 700; border: 2px solid color-mix(in srgb, var(--fcl-accent) 40%, var(--fcl-border)); }
+.fcl-avatar[data-size="sm"] { width: 56px; height: 56px; font-size: 18px; }
+.fcl-avatar[data-size="lg"] { width: 148px; height: 148px; font-size: 42px; }
+.fcl-chips { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.fcl-chip { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border: 1px solid var(--fcl-border); border-radius: 99px; background: var(--fcl-bg); font-size: 13px; text-decoration: none; color: var(--fcl-fg) !important; }
+.fcl-chip:hover { border-color: var(--fcl-accent); }
+.fcl-chip svg { color: var(--fcl-muted); }
+.fcl-highlights { list-style: none; margin: 0 0 20px; padding: 0; display: grid; gap: 6px; }
+.fcl-highlights li { display: flex; gap: 8px; align-items: baseline; }
+.fcl-highlights svg { color: var(--fcl-accent); flex-shrink: 0; transform: translateY(2px); }
+.fcl-cover .fcl-facts { margin-bottom: 0; }
+.fcl-qr-card { margin: 0; display: grid; gap: 10px; justify-items: center; text-align: center; padding: 16px; border-radius: 18px; background: #fff; color: #1c1f26; box-shadow: 0 10px 30px rgba(0,0,0,.12); }
+.fcl-qr { width: 100%; max-width: 208px; height: auto; display: block; }
+.fcl-qr-card figcaption { display: grid; gap: 2px; font-size: 13px; line-height: 1.35; }
+.fcl-qr-card figcaption a { color: #5b6170; font-size: 12px; word-break: break-all; text-decoration: none; }
+.fcl-qr-pending { background: transparent; color: var(--fcl-muted); border: 1.5px dashed var(--fcl-border); box-shadow: none; min-height: 180px; align-content: center; font-size: 13px; }
+.fcl-page h1 { margin-bottom: 10px; }
+.fcl-person { display: flex; gap: 32px; align-items: flex-start; margin-top: 8px; }
+.fcl-person-text { min-width: 0; }
+.fcl-person-text h1 { margin-bottom: 4px; }
+.fcl-bio { margin: 14px 0 0; white-space: pre-line; }
+.fcl-section-title { display: flex; align-items: center; gap: 8px; font-family: var(--fcl-font-display); font-size: 19px; margin: 26px 0 12px; }
+.fcl-section-title svg { color: var(--fcl-accent); }
+.fcl-tools { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.fcl-tools li { display: inline-flex; align-items: baseline; gap: 8px; border: 1px solid var(--fcl-border); border-radius: 10px; padding: 7px 12px; background: var(--fcl-surface); font-weight: 600; font-size: 14.5px; }
+.fcl-tools small { font-weight: 400; color: var(--fcl-muted); font-family: var(--fcl-font-mono); font-size: 12px; }
+.fcl-setup-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin: 26px 0 8px; }
+.fcl-setup-group h2 { color: var(--fcl-fg); letter-spacing: .02em; }
+.fcl-setup-group ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.fcl-setup-group li { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 10px; align-items: start; font-size: 15px; line-height: 1.45; }
+.fcl-setup-group .fcl-step-num { border-color: var(--fcl-accent); color: var(--fcl-accent); }
+.fcl-setup-item { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; padding-top: 1px; }
+.fcl-code-chip { display: inline-flex; align-items: center; gap: 6px; border: 1px dashed color-mix(in srgb, var(--fcl-accent) 60%, var(--fcl-border)); background: color-mix(in srgb, var(--fcl-accent) 10%, var(--fcl-bg)); color: var(--fcl-fg); border-radius: 8px; padding: 3px 9px; cursor: pointer; font-size: 13px; }
+.fcl-code-chip code { font-family: var(--fcl-font-mono); font-weight: 700; letter-spacing: .04em; color: var(--fcl-accent); }
+.fcl-code-chip[data-state="copied"] svg { color: var(--fcl-add-fg); }
+.fcl-promo { display: flex; gap: 14px; align-items: center; margin: 4px 0 8px; padding: 14px 18px; border-radius: 14px; border: 1px solid color-mix(in srgb, var(--fcl-accent) 45%, var(--fcl-border)); background: color-mix(in srgb, var(--fcl-accent) 9%, var(--fcl-bg)); }
+.fcl-promo > svg { color: var(--fcl-accent); flex-shrink: 0; }
+.fcl-promo-label { margin: 0 0 6px; font-weight: 600; }
+.fcl-promo-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: 14px; }
+.fcl-promo .fcl-code-chip { font-size: 16px; padding: 5px 12px; }
+.fcl-command-label { margin: 0 0 6px; font-size: 13.5px; font-weight: 600; color: var(--fcl-muted); }
+.fcl-intro-links { margin-bottom: 4px; padding-bottom: 6px; border-bottom: 1px solid var(--fcl-border); }
+.fcl-intro-links .fcl-step-num { color: var(--fcl-accent); }
+
 /* Markdown */
 .fcl-md { overflow-wrap: anywhere; }
 .fcl-md h1, .fcl-md h2, .fcl-md h3, .fcl-md h4 { font-family: var(--fcl-font-display); line-height: 1.25; margin: 1.6em 0 .6em; }
@@ -199,7 +257,7 @@ export const CODELAB_CSS = String.raw`
 .fcl-download-meta { font-size: 12px; color: var(--fcl-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Badge */
-.fcl-badge { position: fixed; right: 14px; bottom: 14px; z-index: 20; font-size: 12px; padding: 6px 10px; border-radius: 99px; background: var(--fcl-fg); color: var(--fcl-bg) !important; text-decoration: none; opacity: .88; }
+.fcl-badge { position: fixed; right: 14px; bottom: 14px; z-index: 20; display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 9px 0 6px; border-radius: 99px; background: #1C1F26; color: #fff !important; border: 1px solid rgba(255,255,255,.14); font-size: 11.5px; font-weight: 600; white-space: nowrap; text-decoration: none; }
 .fcl-root[data-embedded] .fcl-badge { position: absolute; }
 
 /* Small screens: the step menu becomes a drawer. */
@@ -212,6 +270,10 @@ export const CODELAB_CSS = String.raw`
   .fcl-nav { padding: 16px 16px 32px; }
   .fcl-code-lang { display: none; }
   .fcl-code-actions .fcl-btn span { display: none; }
+  .fcl-cover, .fcl-cover[data-has-qr] { grid-template-columns: minmax(0, 1fr); border-radius: 16px; }
+  .fcl-qr-card { justify-self: start; width: min(240px, 100%); }
+  .fcl-person { flex-direction: column; gap: 18px; }
+  .fcl-avatar[data-size="lg"] { width: 112px; height: 112px; font-size: 32px; }
 }
 
 /* Print: every step, one after the other, no chrome. */
@@ -225,7 +287,9 @@ export const CODELAB_CSS = String.raw`
   .fcl-code-body[data-collapsed]::after { display: none; }
   .fcl-pre { white-space: pre-wrap; word-break: break-word; }
   .fcl-pre code { min-width: 0; }
-  .fcl-code, .fcl-callout, .fcl-download { break-inside: avoid; }
+  .fcl-code, .fcl-callout, .fcl-download, .fcl-cover, .fcl-setup-group, .fcl-promo { break-inside: avoid; }
+  .fcl-cover { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .fcl-qr-card { box-shadow: none; border: 1px solid #d0d4dc; }
   .fcl-tabpanel[hidden] { display: block !important; }
   .fcl-tablist { display: none; }
 }

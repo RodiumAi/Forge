@@ -21,7 +21,7 @@ describe("Next security headers", () => {
       "X-Content-Type-Options": "nosniff",
       "Referrer-Policy": "strict-origin-when-cross-origin",
       "Permissions-Policy":
-        "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(self), payment=(), usb=()",
       "X-Frame-Options": "DENY",
     });
     expect(headers["Strict-Transport-Security"]).not.toContain("includeSubDomains");

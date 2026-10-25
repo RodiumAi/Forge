@@ -1,0 +1,53 @@
+/* Trips tab: trip hero, boarding pass, itinerary timeline. Scoped under .trips-screen. */
+.trips-screen .segmented { display: flex; padding: .3rem; border-radius: 999px; background: var(--surface-2); }
+.trips-screen .segmented button { appearance: none; flex: 1; border: 0; min-height: 2.75rem; border-radius: 999px; background: transparent; font-weight: 700; font-size: .88rem; color: var(--muted); }
+.trips-screen .segmented button.on { background: var(--surface); color: var(--fg); box-shadow: 0 4px 14px -6px rgba(14, 26, 34, .25); }
+
+.trips-screen .trip-hero { position: relative; display: block; height: 12rem; border-radius: 1.9rem; overflow: hidden; color: #fff; text-decoration: none; box-shadow: var(--shadow); }
+.trips-screen .trip-hero img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.trips-screen .trip-hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 35%, rgba(14, 26, 34, .75)); }
+.trips-screen .trip-badge { position: absolute; z-index: 1; top: .9rem; left: .9rem; display: inline-flex; align-items: center; gap: .3rem; padding: .35rem .7rem; border-radius: 999px; background: var(--sun); color: var(--fg); font-size: .75rem; font-weight: 800; }
+.trips-screen .trip-text { position: absolute; z-index: 1; left: 1.1rem; bottom: 1rem; display: grid; gap: .25rem; }
+.trips-screen .trip-name { font-family: var(--font-display); font-size: 2.6rem; line-height: .95; }
+.trips-screen .trip-dates { display: inline-flex; align-items: center; gap: .35rem; font-size: .8rem; font-weight: 600; }
+
+/* Boarding pass: gradient top edge, notched tear line, QR, CSS barcode */
+.trips-screen .pass { position: relative; background: var(--surface); border-radius: 1.6rem; padding: 1.25rem 1.2rem 1.1rem; box-shadow: 0 1px 0 var(--line), var(--shadow); overflow: hidden; }
+.trips-screen .pass::before { content: ""; position: absolute; inset: 0 0 auto; height: .3rem; background: linear-gradient(90deg, var(--accent), #5aa2ff 60%, var(--sun)); }
+.trips-screen .pass-top { display: flex; justify-content: space-between; font-size: .72rem; font-weight: 700; color: var(--muted); letter-spacing: .1em; text-transform: uppercase; }
+.trips-screen .pass-airline { color: var(--accent); }
+.trips-screen .route { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: .7rem; margin-top: .8rem; }
+.trips-screen .route > div:not(.route-line) { display: grid; gap: .1rem; }
+.trips-screen .route .to { text-align: right; }
+.trips-screen .route strong { font-family: var(--font-display); font-size: 2.7rem; font-weight: 400; line-height: 1; }
+.trips-screen .route span { font-size: .76rem; color: var(--muted); font-weight: 600; }
+.trips-screen .route em { font-style: normal; font-weight: 800; font-size: .95rem; }
+.trips-screen .route-line { display: flex; align-items: center; gap: .35rem; color: var(--accent); }
+.trips-screen .route-line i { flex: 1; height: 0; border-top: 2px dashed color-mix(in srgb, var(--accent) 45%, transparent); }
+.trips-screen .tear { position: relative; margin: 1.05rem -1.2rem; border-top: 2px dashed var(--line); }
+.trips-screen .tear::before, .trips-screen .tear::after { content: ""; position: absolute; top: -.8rem; width: 1.5rem; height: 1.5rem; border-radius: 999px; background: var(--bg); }
+.trips-screen .tear::before { left: -.75rem; }
+.trips-screen .tear::after { right: -.75rem; }
+.trips-screen .pass-grid { display: grid; grid-template-columns: repeat(3, 1fr) auto; align-items: center; gap: .6rem; }
+.trips-screen .pass-grid div { display: grid; gap: .15rem; }
+.trips-screen .pass-grid span { font-size: .68rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+.trips-screen .pass-grid strong { font-size: 1.05rem; font-weight: 800; }
+.trips-screen .qr { width: 3.2rem; height: 3.2rem; border-radius: .9rem; display: grid; place-items: center; background: var(--surface-2); color: var(--fg); }
+.trips-screen .barcode { height: 2.6rem; margin-top: 1rem; border-radius: .3rem; opacity: .85; background: repeating-linear-gradient(90deg, var(--fg) 0 2px, transparent 2px 4px, var(--fg) 4px 5px, transparent 5px 8px, var(--fg) 8px 11px, transparent 11px 13px); }
+
+/* Itinerary timeline */
+.trips-screen .timeline { list-style: none; margin: 0; padding: 0; display: grid; }
+.trips-screen .timeline li { display: grid; grid-template-columns: 3.6rem 1.4rem 1fr; gap: .5rem; position: relative; padding-bottom: 1rem; }
+.trips-screen .timeline li:not(:last-child)::before { content: ""; position: absolute; left: calc(4.8rem - 1px); top: 1.2rem; bottom: -.2rem; width: 2px; background: var(--surface-2); }
+.trips-screen .t-when { display: grid; align-content: start; padding-top: .55rem; font-size: .7rem; color: var(--muted); font-weight: 600; }
+.trips-screen .t-when strong { font-size: .95rem; color: var(--fg); font-weight: 800; }
+.trips-screen .t-dot { width: .95rem; height: .95rem; margin: .8rem auto 0; border-radius: 999px; background: var(--surface); border: 3px solid #cfd8de; position: relative; z-index: 1; }
+.trips-screen .next .t-dot { border-color: var(--accent); box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 16%, transparent); }
+.trips-screen .t-body { display: grid; gap: .15rem; padding: .75rem .95rem; border-radius: 1.1rem; background: var(--surface); box-shadow: 0 1px 0 var(--line); }
+.trips-screen .t-body strong { font-size: .92rem; font-weight: 700; }
+.trips-screen .t-body span { font-size: .78rem; color: var(--muted); }
+.trips-screen .next .t-body { background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
+
+.trips-screen .past { padding-block: .3rem; }
+.trips-screen .rated { display: flex; align-items: center; gap: .25rem; color: var(--sun); }
+.trips-screen .rated strong { color: var(--fg); }

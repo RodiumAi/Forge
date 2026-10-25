@@ -35,6 +35,7 @@ import { absoluteBox, locate, outermost, removeElements, scaleChildren } from ".
 import { patchElements } from "./ops";
 import type { EditorAction } from "./state";
 import type { DeckT } from "./strings";
+import { useLongPress } from "@/components/ui/ContextMenu";
 
 type Gesture =
   | { kind: "move"; start: Point; ids: string[]; rect: Rect; others: Rect[]; moved: boolean }
@@ -58,6 +59,14 @@ export type CanvasProps = {
   t: DeckT;
   /** Inline text editor for the element being edited, in canvas coordinates. */
   textEditor?: ReactNode;
+  /**
+   * Right click or long press on the slide. `ids` is the selection the menu
+   * acts on (already selected here), empty on the bare slide; `point` is in
+   * slide coordinates.
+   */
+  onContextMenu?: (request: { x: number; y: number; point: Point; ids: string[] }) => void;
+  /** An element to outline as if hovered (a hovered row of the layers panel). */
+  highlight?: string | null;
 };
 
 const PADDING = 32;
@@ -118,7 +127,44 @@ export function EditorCanvas(props: CanvasProps) {
 
   const slideId = slide.id;
 
+  // Selects what is under the pointer (keeping a selection that contains it)
+  // and asks the editor for the menu.
+  function openMenu(client: { clientX: number; clientY: number }) {
+    if (!props.onContextMenu) return;
+    const p = toCanvas(client);
+    if (editingText) dispatch({ type: "editText", id: null });
+    const hit = hitTest(scopeItems(slide, groupScope), p);
+    let ids: string[] = [];
+    if (hit) {
+      ids = selection.includes(hit.id) ? selection : [hit.id];
+      if (!selection.includes(hit.id)) dispatch({ type: "select", ids });
+    } else if (selection.length) {
+      dispatch({ type: "select", ids: [] });
+    }
+    props.onContextMenu({ x: client.clientX, y: client.clientY, point: p, ids });
+  }
+
+  const longPress = useLongPress((at) => {
+    // The finger stays down: drop the drag or marquee it started.
+    gesture.current = null;
+    setMarquee(null);
+    setGuides([]);
+    openMenu({ clientX: at.x, clientY: at.y });
+  });
+
+  function onContextMenu(e: React.MouseEvent<HTMLDivElement>) {
+    // Shift keeps the browser's own menu (inspect, save image).
+    if (e.shiftKey || !props.onContextMenu) return;
+    e.preventDefault();
+    if (longPress.justFired()) return;
+    longPress.cancel();
+    gesture.current = null;
+    setMarquee(null);
+    openMenu(e);
+  }
+
   function onPointerDown(e: ReactPointerEvent<HTMLDivElement>) {
+    if (props.onContextMenu) longPress.onPointerDown(e);
     if (e.button !== 0) return;
     const p = toCanvas(e);
     const handle = (e.target as HTMLElement).closest<HTMLElement>("[data-handle]")?.dataset.handle;
@@ -173,6 +219,7 @@ export function EditorCanvas(props: CanvasProps) {
   }
 
   function onPointerMove(e: ReactPointerEvent<HTMLDivElement>) {
+    longPress.onPointerMove(e);
     const p = toCanvas(e);
     const g = gesture.current;
     if (!g) {
@@ -253,6 +300,7 @@ export function EditorCanvas(props: CanvasProps) {
   }
 
   function onPointerUp(e: ReactPointerEvent<HTMLDivElement>) {
+    longPress.cancel();
     overlayRef.current?.releasePointerCapture?.(e.pointerId);
     const g = gesture.current;
     gesture.current = null;
@@ -288,7 +336,8 @@ export function EditorCanvas(props: CanvasProps) {
     .filter((x): x is { id: string; box: Box; locked: boolean } => !!x);
   const single = selected.length === 1 ? selected[0] : null;
   const multiBounds = selected.length > 1 ? unionRect(selected.map((s) => aabb(s.box))) : null;
-  const hoverBox = hover && !selection.includes(hover) ? absoluteBox(slide, hover) : null;
+  const outlined = props.highlight ?? hover;
+  const hoverBox = outlined && !selection.includes(outlined) ? absoluteBox(slide, outlined) : null;
   const scopeBox = groupScope ? absoluteBox(slide, groupScope) : null;
   const slideNotices = props.notices.filter((n) => n.slideId === slide.id);
 
@@ -316,6 +365,7 @@ export function EditorCanvas(props: CanvasProps) {
           onPointerCancel={onPointerUp}
           onPointerLeave={() => setHover(null)}
           onDoubleClick={onDoubleClick}
+          onContextMenu={onContextMenu}
           data-testid="deck-canvas-overlay"
         >
           {scopeBox ? <div className="de-scope" style={boxStyle(scopeBox)} /> : null}

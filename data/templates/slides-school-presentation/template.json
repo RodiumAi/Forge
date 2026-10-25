@@ -1,6 +1,7 @@
 {
   "kind": "slides",
   "id": "slides-school-presentation",
+  "free": true,
   "title": {
     "fr": "Exposé scolaire",
     "en": "School presentation"

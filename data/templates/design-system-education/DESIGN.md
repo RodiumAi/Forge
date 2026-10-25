@@ -84,6 +84,7 @@ Encourageant et concret. L'erreur est une étape.
 
 ## Logo
 - File: /brand/logo.svg
+- On dark backgrounds: /brand/logo-dark.svg
 - Clear space: La moitié de la hauteur du logo
 - Minimum size: 28px
 - Couleur sur fond clair

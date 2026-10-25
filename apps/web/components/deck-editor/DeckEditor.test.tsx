@@ -68,6 +68,12 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+/** Opens the Layers tab and clicks a row. */
+function pickLayer(name: string) {
+  fireEvent.click(screen.getByRole("tab", { name: t("tabLayers") }));
+  fireEvent.click(screen.getByRole("button", { name }));
+}
+
 describe("DeckEditor", () => {
   it("loads the deck and shows its slides and notes", async () => {
     setup();
@@ -80,7 +86,7 @@ describe("DeckEditor", () => {
   it("selects from the layers, nudges with the keyboard, undoes, and autosaves the slide", async () => {
     const server = setup();
     await screen.findByText("Test deck");
-    fireEvent.click(screen.getByRole("button", { name: /shape\s*box/ }));
+    pickLayer("box");
     fireEvent.keyDown(window, { key: "ArrowRight", shiftKey: true });
     fireEvent.keyDown(window, { key: "ArrowDown" });
     await wait(AUTOSAVE_DELAY_MS + 200);
@@ -96,7 +102,7 @@ describe("DeckEditor", () => {
   it("deletes the selection with the Delete key", async () => {
     const server = setup();
     await screen.findByText("Test deck");
-    fireEvent.click(screen.getByRole("button", { name: /shape\s*box/ }));
+    pickLayer("box");
     fireEvent.keyDown(window, { key: "Delete" });
     await wait(AUTOSAVE_DELAY_MS + 200);
     expect(server.slides.get("s1")!.value.elements.map((e) => e.id)).toEqual(["title"]);
@@ -136,7 +142,7 @@ describe("DeckEditor", () => {
     const server = setup(chat);
     await screen.findByText("Test deck");
     // A local edit on s1, not yet saved.
-    fireEvent.click(screen.getByRole("button", { name: /shape\s*box/ }));
+    pickLayer("box");
     fireEvent.keyDown(window, { key: "ArrowLeft" });
     // The AI rewrites s2 meanwhile.
     fireEvent.change(screen.getByLabelText(t("chatPlaceholder")), { target: { value: "Remplis la slide 2" } });
@@ -173,7 +179,7 @@ describe("DeckEditor", () => {
     };
     ref.server = setup(null, publisher);
     await screen.findByText("Test deck");
-    fireEvent.click(screen.getByRole("button", { name: /shape\s*box/ }));
+    pickLayer("box");
     fireEvent.keyDown(window, { key: "ArrowRight" });
     fireEvent.click(screen.getByRole("button", { name: t("publish") }));
     const dialog = screen.getByRole("dialog", { name: t("publishTitle") });

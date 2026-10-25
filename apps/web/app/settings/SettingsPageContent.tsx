@@ -216,7 +216,7 @@ export default function SettingsPageContent() {
                   }
                 >
                   <div className="f-profile-head">
-                    <Avatar name={profile?.name || profile?.email} src={profile?.avatar_url} size="lg" />
+                    <Avatar name={profile?.name || profile?.email} src={profile?.avatar_url} size="lg" glyph />
                     <div style={{ minWidth: 0, flex: "1 1 200px" }}>
                       <b style={{ display: "block", fontSize: 18, overflowWrap: "anywhere" }}>
                         {profile?.name || profile?.email}

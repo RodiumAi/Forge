@@ -4,7 +4,17 @@ import { beforeEach, describe, expect, it } from "vitest";
 import type { Codelab } from "@/lib/contracts/forge-design";
 
 import { CodelabPlayer } from "./CodelabPlayer";
-import { fold, hashOfView, nextView, previousView, progressPercent, searchCodelab, viewFromHash } from "./navigation";
+import {
+  fold,
+  hashOfView,
+  introPages,
+  nextView,
+  presenterOf,
+  previousView,
+  progressPercent,
+  searchCodelab,
+  viewFromHash,
+} from "./navigation";
 import { codelabTokens, schemeOf } from "./theme";
 
 const codelab: Codelab = {
@@ -155,11 +165,103 @@ describe("CodelabPlayer", () => {
 
   it("shows the badge only when asked", () => {
     const { rerender } = renderPlayer();
-    expect(screen.queryByText("Made with Forge")).toBeNull();
+    expect(screen.queryByLabelText("Made with Forge")).toBeNull();
     rerender(
       <CodelabPlayer codelab={codelab} steps={steps} tokens={tokens} assetUrl={(p) => p} storageKey="b" badge />,
     );
-    expect(screen.getByText("Made with Forge")).toBeInTheDocument();
+    expect(screen.getByLabelText("Made with Forge")).toHaveTextContent("By Forge");
+  });
+});
+
+const rich: Codelab = {
+  ...codelab,
+  author: { name: "Ada Lovelace", url: "https://ada.example" },
+  cover: { eyebrow: "Workshop pratique", highlights: ["Next.js 16", "Gemini via RodiumAi"] },
+  presenter: {
+    role: "Développeuse",
+    company: "RodiumAi",
+    photo: "public/images/ada.webp",
+    bio: "Construit des outils.",
+    links: [{ label: "GitHub", url: "https://github.com/ada" }],
+  },
+  setup: {
+    intro: "Installez tout avant de commencer.",
+    tools: [{ name: "Node.js", version: "22+", url: "https://nodejs.org" }],
+    groups: [{ title: "RodiumAi", items: [{ text: "Créer un compte", url: "https://rodiumai.io" }] }],
+    promo: { code: "EXAMPLE10", label: "300 RODI offerts" },
+    commands: [{ label: "Installer", language: "bash", code: "npm install" }],
+  },
+};
+
+describe("cover, presenter and setup pages", () => {
+  beforeEach(() => {
+    window.history.replaceState(null, "", "/");
+  });
+
+  it("orders the intro pages before step 1 and keeps old codelabs as they were", () => {
+    expect(introPages(codelab)).toEqual([]);
+    expect(introPages(rich)).toEqual(["presenter", "setup"]);
+    expect(introPages({ ...rich, pages: { presenter: false } })).toEqual(["setup"]);
+    expect(nextView({ kind: "home" }, rich)).toEqual({ kind: "presenter" });
+    expect(nextView({ kind: "presenter" }, rich)).toEqual({ kind: "setup" });
+    expect(nextView({ kind: "setup" }, rich)).toEqual({ kind: "step", index: 0 });
+    expect(previousView({ kind: "step", index: 0 }, rich)).toEqual({ kind: "setup" });
+    expect(previousView({ kind: "presenter" }, rich)).toEqual({ kind: "home" });
+    expect(viewFromHash("#_setup", rich)).toEqual({ kind: "setup" });
+    expect(viewFromHash("#_setup", codelab)).toEqual({ kind: "home" });
+    expect(hashOfView({ kind: "presenter" }, rich)).toBe("#_presenter");
+    // The presenter's name falls back to the author.
+    expect(presenterOf(rich)?.name).toBe("Ada Lovelace");
+  });
+
+  it("shows the presenter and a QR code of the public URL on the cover", () => {
+    const { container } = renderPlayer({ codelab: rich, publicUrl: "https://lab.example/" });
+    expect(screen.getByText("Workshop pratique")).toBeInTheDocument();
+    expect(screen.getByText("Présenté par")).toBeInTheDocument();
+    expect(screen.getAllByText("Ada Lovelace").length).toBeGreaterThan(0);
+    expect(screen.getByText("Gemini via RodiumAi")).toBeInTheDocument();
+    expect(container.querySelector("svg[data-qr='https://lab.example/']")).not.toBeNull();
+    expect(screen.getByText("lab.example")).toBeInTheDocument();
+    expect(container.querySelector("img.fcl-avatar")).toHaveAttribute("src", "/a/public/images/ada.webp");
+  });
+
+  it("shows a placeholder instead of the QR code in the editor before publishing", () => {
+    const { container } = renderPlayer({ codelab: rich, embedded: true });
+    expect(container.querySelector("svg[data-qr]")).toBeNull();
+    expect(screen.getByText("QR code disponible une fois publié")).toBeInTheDocument();
+  });
+
+  it("hides the QR code when the author turns it off", () => {
+    const { container } = renderPlayer({ codelab: { ...rich, cover: { showQr: false } }, publicUrl: "https://lab.example/" });
+    expect(container.querySelector("svg[data-qr]")).toBeNull();
+  });
+
+  it("walks through the presenter and setup pages", () => {
+    renderPlayer({ codelab: rich });
+    fireEvent.click(screen.getByRole("button", { name: /commencer/i }));
+    expect(window.location.hash).toBe("#_presenter");
+    expect(screen.getByText("Construit des outils.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /GitHub/ })).toHaveAttribute("href", "https://github.com/ada");
+    fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
+    expect(window.location.hash).toBe("#_setup");
+    expect(screen.getByRole("heading", { level: 1, name: "Préparez votre environnement" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Code promo EXAMPLE10/ })).toBeInTheDocument();
+    expect(screen.getByText("300 RODI offerts")).toBeInTheDocument();
+    expect(screen.getByText("Node.js")).toBeInTheDocument();
+    expect(screen.getByText("npm install")).toBeInTheDocument();
+    expect(screen.getByText("Installer")).toBeInTheDocument();
+    // Prerequisites move to the setup page.
+    expect(screen.getByText("Python 3.12")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
+    expect(window.location.hash).toBe("#intro");
+  });
+
+  it("prints the cover, the intro pages and the steps", () => {
+    const { container } = renderPlayer({ codelab: rich, mode: "print", publicUrl: "https://lab.example/" });
+    expect(container.querySelector("svg[data-qr]")).not.toBeNull();
+    expect(container.querySelector("[data-page='presenter']")).not.toBeNull();
+    expect(container.querySelector("[data-page='setup']")).not.toBeNull();
+    expect(container.querySelectorAll("[data-step-id]")).toHaveLength(3);
   });
 });
 

@@ -38,6 +38,14 @@ def start_message(
     event_stream: Callable[[Any], Any],
     anchor: Message | None = None,
 ):
+    # The plan is checked on every turn, not only at creation: a plan that no
+    # longer includes design systems stops their generation too. The owner's
+    # plan, since the owner pays for the project.
+    from app.services.design_system.gating import require_design_systems
+
+    owner = user if project.user_id == user.id else (db.get(User, project.user_id) or user)
+    require_design_systems(db, owner)
+
     target = getattr(body, "target", None)
     section = getattr(target, "section", None) if target else None
     writing, editing = deck_routes()

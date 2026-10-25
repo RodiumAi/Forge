@@ -415,6 +415,58 @@ export const codelabDownloadSchema = z.strictObject({
   zip: z.boolean().optional(),
 });
 
+export const codelabLinkSchema = z.strictObject({
+  label: z.string().min(1).max(60),
+  url: httpsUrl,
+});
+
+export const codelabCoverSchema = z.strictObject({
+  eyebrow: z.string().max(160).optional(),
+  highlights: z.array(z.string().min(1).max(200)).max(8).optional(),
+  showQr: z.boolean().optional(),
+});
+
+export const codelabPresenterSchema = z.strictObject({
+  name: z.string().max(120).optional(),
+  role: z.string().max(120).optional(),
+  company: z.string().max(120).optional(),
+  photo: assetPath.optional(),
+  bio: z.string().max(1500).optional(),
+  links: z.array(codelabLinkSchema).max(6).optional(),
+});
+
+export const codelabSetupSchema = z.strictObject({
+  intro: z.string().max(1000).optional(),
+  tools: z
+    .array(z.strictObject({ name: z.string().min(1).max(80), version: z.string().max(40).optional(), url: httpsUrl.optional() }))
+    .max(20)
+    .optional(),
+  groups: z
+    .array(
+      z.strictObject({
+        title: z.string().min(1).max(120),
+        items: z
+          .array(z.strictObject({ text: line300, url: httpsUrl.optional(), code: z.string().max(200).optional() }))
+          .max(12),
+      }),
+    )
+    .max(6)
+    .optional(),
+  promo: z
+    .strictObject({ code: z.string().min(1).max(64), label: z.string().max(200).optional(), url: httpsUrl.optional() })
+    .optional(),
+  commands: z
+    .array(
+      z.strictObject({
+        label: z.string().max(120).optional(),
+        language: z.string().regex(re(PATTERNS.LANGUAGE)).optional(),
+        code: z.string().min(1).max(4000),
+      }),
+    )
+    .max(12)
+    .optional(),
+});
+
 export const codelabSchema = z
   .strictObject({
     version: z.literal(1),
@@ -429,6 +481,10 @@ export const codelabSchema = z
     theme: themeSchema.optional(),
     steps: z.array(codelabStepSchema).max(200),
     downloads: z.array(codelabDownloadSchema).max(50).optional(),
+    cover: codelabCoverSchema.optional(),
+    presenter: codelabPresenterSchema.optional(),
+    setup: codelabSetupSchema.optional(),
+    pages: z.strictObject({ presenter: z.boolean().optional(), setup: z.boolean().optional() }).optional(),
   })
   .superRefine((codelab, ctx) => {
     uniqueIds(ctx, codelab.steps.map((step) => step.id), "step id");
@@ -499,10 +555,19 @@ export const designSystemSchema = z
     name: z.string().min(1).max(120),
     description: z.string().max(2000).optional(),
     tokens: z.record(z.string(), z.unknown()),
+    brand: z
+      .strictObject({
+        tagline: z.string().max(160).optional(),
+        website: z.string().max(300).regex(re(PATTERNS.HTTPS)).optional(),
+        audience: z.string().max(300).optional(),
+      })
+      .optional(),
     logo: z
       .strictObject({
         src: assetPath,
         darkSrc: assetPath.optional(),
+        /** Square mark without the name: app icon and favicon. */
+        iconSrc: assetPath.optional(),
         minSizePx: int(8, 2000).optional(),
         clearSpace: z.string().max(200).optional(),
         usage: lines.optional(),

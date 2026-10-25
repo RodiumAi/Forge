@@ -29,7 +29,7 @@ class VisualOutcome:
     slide: dict[str, Any]
     path: str | None = None
     credit: dict[str, Any] | None = None
-    #: "stock", "generated" or "removed".
+    #: "stock", "generated", "upload" or "removed".
     source: str = "removed"
     error: str | None = None
 
@@ -94,6 +94,9 @@ def _set_image(slide: dict[str, Any], element_id: str, src: str, alt: str, credi
     return {**slide, "elements": walk(slide.get("elements") or [])}
 
 
+set_image = _set_image
+
+
 async def _stock(project_id: str, visual: Visual, element: dict[str, Any], lang: str):
     result = await asyncio.to_thread(
         image_bank.search,
@@ -146,11 +149,23 @@ async def fill_visual(
     auth: Any = None,
     lang: str = "en",
     locale: str = "fr",
+    user_image: str | None = None,
 ) -> VisualOutcome:
-    """Import (or generate) the picture of ``visual`` into ``slide``."""
+    """Import (or generate) the picture of ``visual`` into ``slide``.
+
+    ``user_image`` is a project image the user attached to the message: it is
+    used as is, before any stock or generated picture.
+    """
     element = find_element(slide.get("elements") or [], visual.element_id)
     if element is None or element.get("type") != "image":
         return VisualOutcome(slide=slide, error="no image element")
+    if user_image:
+        return VisualOutcome(
+            slide=_set_image(slide, visual.element_id, user_image, visual.query, {"source": "upload"}),
+            path=None,
+            credit={"source": "upload"},
+            source="upload",
+        )
     try:
         if generate and auth is not None:
             found = await _generated(project_id, visual, element, auth, locale)

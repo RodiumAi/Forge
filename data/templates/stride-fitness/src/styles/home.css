@@ -1,0 +1,32 @@
+/* Today tab. Scoped under .home-screen. */
+.home-screen .rings-card {
+  display: flex; align-items: center; gap: 1.1rem; padding: 1.15rem 1.1rem; border-radius: 1.6rem;
+  background: radial-gradient(90% 120% at 0% 0%, rgba(255, 90, 31, .22), transparent 60%), var(--surface);
+  border: 1px solid var(--line);
+}
+.home-screen .rings { flex-shrink: 0; }
+.home-screen .legend { list-style: none; margin: 0; padding: 0; display: grid; gap: .7rem; }
+.home-screen .legend .num { margin: .1rem 0 0; font-size: 2.25rem; }
+.home-screen .legend small { font-size: .95rem; font-weight: 600; color: var(--muted); margin-left: .15rem; }
+.home-screen .legend .move .kicker { color: var(--ring-move); }
+.home-screen .legend .exercise .kicker { color: var(--ring-exercise); }
+.home-screen .legend .stand .kicker { color: var(--ring-stand); }
+
+.home-screen .week-head { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: .9rem; }
+.home-screen .week-head h2 { font-size: 1.45rem; }
+.home-screen .week-km { margin: 0; font-size: 2.6rem; color: var(--volt); }
+.home-screen .week-km small { font-size: 1rem; color: var(--muted); margin-left: .2rem; }
+.home-screen .days { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(7, 1fr); gap: .35rem; }
+.home-screen .days li { display: grid; justify-items: center; gap: .35rem; }
+.home-screen .day-dot {
+  width: 2.6rem; height: 2.6rem; border-radius: 999px; display: grid; place-items: center;
+  border: 1.5px dashed color-mix(in srgb, var(--fg) 18%, transparent); font-family: var(--font-display); font-weight: 700; font-size: 1.15rem;
+}
+.home-screen .days .ran .day-dot { border: 0; background: var(--surface-2); color: var(--fg); }
+.home-screen .days .today .day-dot { background: var(--accent); color: var(--on-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
+.home-screen .days small { font-size: .7rem; font-weight: 600; color: var(--muted); }
+.home-screen .days .today small { color: var(--accent); }
+
+.home-screen .recent { padding-bottom: .3rem; }
+.home-screen .runs { list-style: none; margin: 0; padding: 0; }
+.home-screen .link { display: inline-flex; align-items: center; gap: .2rem; }

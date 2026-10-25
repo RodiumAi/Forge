@@ -6,6 +6,8 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useSta
 import { Icon } from "@/components/ui/icon";
 import { api, readApiError } from "@/lib/api";
 import { useI18n } from "@/lib/i18n/I18nProvider";
+import { useSpeechInput } from "@/lib/speech-input";
+import { VoiceButton, VoiceStatus } from "@/components/composer/VoiceInput";
 import { readSseStream } from "@/lib/sse";
 import { authFetch } from "./api";
 import { SECTIONS, type DesignSystemDoc, type SectionId } from "./tokens";
@@ -21,20 +23,34 @@ type Props = {
   disabled?: boolean;
   /** A document written by the AI (``design_system.document``). */
   onDocument: (doc: DesignSystemDoc) => void;
+  /** The prompt typed on the home page: sent once, only when the conversation is empty. */
+  initialPrompt?: string | null;
+  /** Called once the history is read, whether the prompt was sent or not (clear it then). */
+  onInitialPromptUsed?: () => void;
+  /** The first generation from `initialPrompt` ended; `ok` false when it failed. */
+  onInitialPromptDone?: (ok: boolean) => void;
 };
 
 /** Chat with the design system AI, optionally targeting the open section. */
 export const DesignSystemChat = forwardRef<DesignSystemChatHandle, Props>(function DesignSystemChat(
-  { projectId, section, disabled, onDocument },
+  { projectId, section, disabled, onDocument, initialPrompt, onInitialPromptUsed, onInitialPromptDone },
   ref,
 ) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [chatId, setChatId] = useState<string | null>(null);
   const [lines, setLines] = useState<ChatLine[]>([]);
   const [input, setInput] = useState("");
+  const voice = useSpeechInput({ value: input, onChange: setInput, locale });
   const [targeted, setTargeted] = useState(false);
   const [busy, setBusy] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
+  // Set once the history is read: whether the conversation already has messages.
+  const [started, setStarted] = useState<boolean | null>(null);
+  const bootSentRef = useRef(false);
+  const usedRef = useRef(onInitialPromptUsed);
+  usedRef.current = onInitialPromptUsed;
+  const doneRef = useRef(onInitialPromptDone);
+  doneRef.current = onInitialPromptDone;
 
   useEffect(() => {
     let alive = true;
@@ -42,10 +58,15 @@ export const DesignSystemChat = forwardRef<DesignSystemChatHandle, Props>(functi
       try {
         const chats = await api<{ id: string }[]>(`/projects/${projectId}/chats`);
         const main = chats[0];
-        if (!main || !alive) return;
+        if (!alive) return;
+        if (!main) {
+          setStarted(true);
+          return;
+        }
         setChatId(main.id);
         const messages = await api<ApiMessage[]>(`/projects/${projectId}/chats/${main.id}/messages`);
         if (!alive) return;
+        setStarted(messages.length > 0);
         setLines(
           messages
             .filter((m) => m.role === "user" || m.role === "assistant")
@@ -53,6 +74,7 @@ export const DesignSystemChat = forwardRef<DesignSystemChatHandle, Props>(functi
         );
       } catch {
         /* the chat stays usable once a message is sent */
+        if (alive) setStarted(true);
       }
     })();
     return () => {
@@ -61,7 +83,7 @@ export const DesignSystemChat = forwardRef<DesignSystemChatHandle, Props>(functi
   }, [projectId]);
 
   useEffect(() => {
-    listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
+    listRef.current?.scrollTo?.({ top: listRef.current.scrollHeight });
   }, [lines]);
 
   const push = useCallback((line: Omit<ChatLine, "id">) => {
@@ -69,9 +91,10 @@ export const DesignSystemChat = forwardRef<DesignSystemChatHandle, Props>(functi
   }, []);
 
   const send = useCallback(
-    async (content: string, target: SectionId | null) => {
+    async (content: string, target: SectionId | null): Promise<boolean> => {
       const text = content.trim();
-      if (!text || busy || !chatId) return;
+      if (!text || busy || !chatId) return false;
+      let ok = true;
       setBusy(true);
       push({ role: "user", text });
       try {
@@ -85,17 +108,33 @@ export const DesignSystemChat = forwardRef<DesignSystemChatHandle, Props>(functi
           if (type === "step" && event.status === "running") push({ role: "status", text: String(event.label ?? "") });
           else if (type === "warning") push({ role: "status", text: String(event.message ?? "") });
           else if (type === "design_system.document" && event.document) onDocument(event.document as DesignSystemDoc);
-          else if (type === "error") push({ role: "error", text: String(event.message ?? t("dsChatFailed")) });
+          else if (type === "error") {
+            ok = false;
+            push({ role: "error", text: String(event.message ?? t("dsChatFailed")) });
+          }
           else if (type === "done") push({ role: "assistant", text: String(event.summary ?? "") });
         });
       } catch (err) {
+        ok = false;
         push({ role: "error", text: err instanceof Error ? err.message : t("dsChatFailed") });
       } finally {
         setBusy(false);
       }
+      return ok;
     },
     [busy, chatId, onDocument, projectId, push, t],
   );
+
+  // The home page prompt: wait for the history, send once, only into an empty conversation.
+  useEffect(() => {
+    const prompt = initialPrompt?.trim();
+    if (started === null || bootSentRef.current || !prompt || disabled) return;
+    if (!started && !chatId) return;
+    bootSentRef.current = true;
+    usedRef.current?.();
+    if (started) return;
+    void send(prompt, null).then((ok) => doneRef.current?.(ok));
+  }, [started, chatId, initialPrompt, disabled, send]);
 
   useImperativeHandle(ref, () => ({ ask: (prompt, target = null) => void send(prompt, target) }), [send]);
 
@@ -117,6 +156,7 @@ export const DesignSystemChat = forwardRef<DesignSystemChatHandle, Props>(functi
         className="dse-chat-form"
         onSubmit={(event) => {
           event.preventDefault();
+          if (voice.listening) return;
           const value = input;
           setInput("");
           void send(value, targeted ? section : null);
@@ -132,6 +172,7 @@ export const DesignSystemChat = forwardRef<DesignSystemChatHandle, Props>(functi
           rows={3}
           value={input}
           disabled={disabled || busy}
+          readOnly={voice.listening}
           placeholder={t("dsChatPlaceholder")}
           onChange={(event) => setInput(event.target.value)}
           onKeyDown={(event) => {
@@ -141,9 +182,13 @@ export const DesignSystemChat = forwardRef<DesignSystemChatHandle, Props>(functi
             }
           }}
         />
-        <button type="submit" className="dse-btn" disabled={disabled || busy || !input.trim() || !chatId}>
-          <Icon icon={Send} className="ui-icon-sm" /> {busy ? t("dsChatWorking") : t("dsChatSend")}
-        </button>
+        <VoiceStatus voice={voice} compact surface />
+        <div className="dse-chat-send">
+          <VoiceButton voice={voice} disabled={disabled || busy} className="f-mic" size="sm" />
+          <button type="submit" className="dse-btn" disabled={disabled || busy || voice.listening || !input.trim() || !chatId}>
+            <Icon icon={Send} className="ui-icon-sm" /> {busy ? t("dsChatWorking") : t("dsChatSend")}
+          </button>
+        </div>
       </form>
     </aside>
   );

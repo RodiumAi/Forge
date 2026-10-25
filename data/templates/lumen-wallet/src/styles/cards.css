@@ -1,0 +1,45 @@
+/* Cards tab. Scoped under .cards-screen. */
+.cards-screen .segmented { display: grid; grid-template-columns: 1fr 1fr; padding: .3rem; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); }
+.cards-screen .segmented button { appearance: none; border: 0; background: transparent; color: var(--muted); min-height: 2.75rem; border-radius: 999px; font-weight: 600; font-size: .88rem; }
+.cards-screen .segmented button.on { background: var(--surface-2); color: var(--fg); }
+
+.cards-screen .pay-card {
+  position: relative; overflow: hidden; aspect-ratio: 1.586; border-radius: 1.6rem; padding: 1.25rem 1.3rem;
+  display: flex; flex-direction: column; justify-content: space-between; transition: filter .3s ease;
+  box-shadow: 0 26px 50px rgba(0, 0, 0, .45);
+}
+.cards-screen .pay-card.dark {
+  background:
+    radial-gradient(80% 90% at 100% 0%, color-mix(in srgb, var(--accent) 40%, transparent), transparent 60%),
+    linear-gradient(150deg, #262a33, #101115);
+  border: 1px solid var(--line);
+}
+.cards-screen .pay-card.lime { background: linear-gradient(140deg, var(--accent), #8fbf1a); color: var(--on-accent); }
+.cards-screen .pay-card.frozen { filter: grayscale(.9) brightness(.7); }
+.cards-screen .pc-top { display: flex; justify-content: space-between; align-items: center; }
+.cards-screen .pc-brand { font-family: var(--font-display); font-weight: 700; font-size: 1.15rem; }
+.cards-screen .pc-chip { width: 2.6rem; height: 1.9rem; border-radius: .45rem; background: linear-gradient(135deg, #f5e7a8, #c9a74e); }
+.cards-screen .pc-number { margin: 0; font-family: var(--font-display); font-size: 1.15rem; letter-spacing: .12em; font-variant-numeric: tabular-nums; }
+.cards-screen .pc-bottom { display: flex; align-items: flex-end; gap: 1.4rem; }
+.cards-screen .pc-bottom div { display: grid; gap: .1rem; }
+.cards-screen .pc-bottom small { font-size: .62rem; text-transform: uppercase; letter-spacing: .1em; opacity: .65; }
+.cards-screen .pc-bottom span { font-size: .85rem; font-weight: 600; }
+.cards-screen .pc-net { margin-left: auto; display: flex; }
+.cards-screen .pc-net i { width: 1.7rem; height: 1.7rem; border-radius: 999px; background: #ff5f45; opacity: .9; }
+.cards-screen .pc-net i + i { margin-left: -.65rem; background: #ffb43a; }
+.cards-screen .pc-frozen { position: absolute; inset: 50% auto auto 50%; transform: translate(-50%, -50%); display: inline-flex; align-items: center; gap: .4rem; padding: .5rem .9rem; border-radius: 999px; background: rgba(14, 15, 19, .8); color: #fff; font-weight: 600; font-size: .85rem; }
+
+.cards-screen .limit { display: grid; gap: .65rem; }
+.cards-screen .limit-row { display: flex; justify-content: space-between; gap: .5rem; font-size: .85rem; color: var(--muted); }
+.cards-screen .limit-row strong { color: var(--fg); font-weight: 600; font-variant-numeric: tabular-nums; }
+.cards-screen .bar { height: .55rem; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+.cards-screen .bar i { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
+
+.cards-screen .settings { padding-block: .35rem; }
+.cards-screen .setting { display: flex; align-items: center; gap: .85rem; width: 100%; min-height: 4rem; padding: .55rem 0; border-bottom: 1px solid var(--line); text-align: left; }
+.cards-screen .setting:last-child { border-bottom: 0; }
+.cards-screen .link-row { appearance: none; background: none; border-inline: 0; border-top: 0; color: var(--fg); }
+.cards-screen .s-icon { width: 2.6rem; height: 2.6rem; border-radius: .95rem; display: grid; place-items: center; background: var(--surface-2); flex-shrink: 0; }
+.cards-screen .s-text { flex: 1; display: grid; gap: .1rem; }
+.cards-screen .s-text strong { font-size: .93rem; font-weight: 600; }
+.cards-screen .s-text span { font-size: .76rem; color: var(--muted); }

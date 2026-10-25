@@ -4,6 +4,7 @@ import { useState } from "react";
 import { FileText } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import { FileTypeIcon } from "@/components/builder/file-icons";
+import { pageLabel } from "@/components/builder/page-rail-model";
 import { assetContentUrl, isPrivateUploadUrl, projectPublicUrl } from "@/lib/asset-url";
 import { useMediaToken } from "@/lib/media-token";
 import { useI18n } from "@/lib/i18n/I18nProvider";
@@ -156,6 +157,25 @@ export function UserMessageBody({ content, attachments, previewBase, projectId }
           <span>
             {t("selectionMarker")}
             {` · ${selectionChipLabel(parsed.selection)}`}
+          </span>
+        </div>
+      ) : null}
+      {parsed.pages.length ? (
+        <div className="builder-msg-selection builder-msg-pages" title={parsed.pages.join(", ")}>
+          <span className="builder-msg-selection-count">{parsed.pages.length}</span>
+          <span>
+            {t("bdPagesChip").replace(
+              "{pages}",
+              parsed.pages.map((p) => pageLabel(p, t("bdPagesHome"))).join(", "),
+            )}
+          </span>
+        </div>
+      ) : null}
+      {parsed.integrations.length ? (
+        <div className="builder-msg-selection builder-msg-integrations" title={parsed.integrations.map((i) => i.name).join(", ")}>
+          <span className="builder-msg-selection-count">{parsed.integrations.length}</span>
+          <span>
+            {t("bdIntegChip").replace("{names}", parsed.integrations.map((i) => i.name).join(", "))}
           </span>
         </div>
       ) : null}

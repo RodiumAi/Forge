@@ -3,17 +3,15 @@
 import {
   ArrowLeft,
   ArrowRight,
-  BarChart3,
   BookOpen,
   Clock,
-  ExternalLink,
-  GitBranch,
-  ListOrdered,
   Menu,
   MessageSquare,
   Printer,
   RotateCcw,
   Search,
+  UserRound,
+  Wrench,
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
@@ -22,11 +20,13 @@ import type { Codelab } from "@/lib/contracts/forge-design";
 
 import type { ThemeTokens } from "../deck-player/types";
 import { downloadsOf, RenderEnvProvider, type DownloadInfo, type RenderEnv } from "./context";
+import { Cover, PresenterPage, SetupPage } from "./CoverPages";
 import { firstHeading } from "./markdown/blocks";
 import { CodelabMarkdown, DownloadCards } from "./markdown/Markdown";
 import {
   clearProgress,
   hashOfView,
+  introPages,
   loadProgress,
   nextView,
   previousView,
@@ -36,8 +36,9 @@ import {
   viewFromHash,
   type View,
 } from "./navigation";
-import { resolveCodelabLocale, translator, type CodelabLocale, type StringKey } from "./strings";
+import { resolveCodelabLocale, translator, type CodelabLocale } from "./strings";
 import { CODELAB_CSS } from "./styles";
+import { ForgeMark } from "../ForgeMark";
 import { schemeOf, type ColorScheme } from "./theme";
 
 export const BADGE_URL = "https://forge.rodiumai.io";
@@ -58,6 +59,8 @@ export type CodelabPlayerProps = {
   /** "Made with Forge" badge. */
   badge?: boolean;
   feedbackUrl?: string;
+  /** Public URL of the published codelab, shown as a QR code on the cover. */
+  publicUrl?: string;
   /** `print` renders every step one after the other (PDF export). */
   mode?: "interactive" | "print";
   /** Inside the editor: no URL hash, no fixed elements, keys only when focused. */
@@ -65,12 +68,6 @@ export type CodelabPlayerProps = {
   /** Embedded only: the view to show. */
   view?: View;
   onViewChange?: (view: View) => void;
-};
-
-const LEVEL_KEYS: Record<Codelab["level"], StringKey> = {
-  beginner: "levelBeginner",
-  intermediate: "levelIntermediate",
-  advanced: "levelAdvanced",
 };
 
 export function stepTitle(codelab: Codelab, steps: Record<string, string>, index: number): string {
@@ -195,6 +192,7 @@ export function CodelabPlayer(props: CodelabPlayerProps) {
 
   const titles = useMemo(() => codelab.steps.map((_, i) => stepTitle(codelab, steps, i)), [codelab, steps]);
   const hits = useMemo(() => searchCodelab(query, codelab, steps, (i) => titles[i]), [query, codelab, steps, titles]);
+  const intro = useMemo(() => introPages(codelab), [codelab]);
   const percent = progressPercent(codelab, visited);
   const lastIndex = useMemo(() => {
     const last = loadProgressSafe(storageKey);
@@ -220,7 +218,19 @@ export function CodelabPlayer(props: CodelabPlayerProps) {
         <style>{CODELAB_CSS}</style>
         <RenderEnvProvider value={env}>
           <main className="fcl-content">
-            <Home codelab={codelab} titles={titles} downloads={downloads} t={t} />
+            <Cover
+              codelab={codelab}
+              titles={titles}
+              downloads={downloads}
+              publicUrl={props.publicUrl}
+              hidePrerequisites={intro.includes("setup")}
+              t={t}
+            />
+            {intro.map((page) => (
+              <section key={page} className="fcl-print-step" data-page={page}>
+                {page === "presenter" ? <PresenterPage codelab={codelab} t={t} /> : <SetupPage codelab={codelab} t={t} />}
+              </section>
+            ))}
             {codelab.steps.map((step, index) => (
               <section key={step.id} className="fcl-print-step" data-step-id={step.id}>
                 <p className="fcl-step-meta">
@@ -237,6 +247,8 @@ export function CodelabPlayer(props: CodelabPlayerProps) {
 
   const current = view.kind === "step" ? codelab.steps[view.index] : null;
   const isLast = view.kind === "step" && view.index === codelab.steps.length - 1;
+  const paged = view.kind === "step" || view.kind === "presenter" || view.kind === "setup";
+  const introLabel = (page: "presenter" | "setup") => (page === "presenter" ? t("presenter") : t("setupMenu"));
 
   return (
     <div {...rootProps}>
@@ -313,6 +325,26 @@ export function CodelabPlayer(props: CodelabPlayerProps) {
                 )}
               </ul>
             ) : (
+              <>
+              {intro.length ? (
+                <ul className="fcl-steps fcl-intro-links" aria-label={t("beforeStart")}>
+                  {intro.map((page) => (
+                    <li key={page}>
+                      <button
+                        type="button"
+                        aria-current={view.kind === page ? "step" : undefined}
+                        onClick={() => go({ kind: page })}
+                      >
+                        <span className="fcl-step-num">
+                          {page === "presenter" ? <UserRound size={13} aria-hidden /> : <Wrench size={13} aria-hidden />}
+                        </span>
+                        <span>{introLabel(page)}</span>
+                        <span />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
               <ol className="fcl-steps" aria-label={t("steps")}>
                 {codelab.steps.map((step, index) => (
                   <li key={step.id}>
@@ -329,6 +361,7 @@ export function CodelabPlayer(props: CodelabPlayerProps) {
                   </li>
                 ))}
               </ol>
+              </>
             )}
             <div className="fcl-side-foot">
               <button type="button" className="fcl-btn fcl-btn-ghost" onClick={() => setPrinting(true)}>
@@ -344,13 +377,25 @@ export function CodelabPlayer(props: CodelabPlayerProps) {
                 <Menu size={16} aria-hidden />
               </button>
               <span className="fcl-topbar-title">
-                {view.kind === "step" ? `${view.index + 1}. ${titles[view.index]}` : codelab.title}
+                {view.kind === "step"
+                  ? `${view.index + 1}. ${titles[view.index]}`
+                  : view.kind === "presenter" || view.kind === "setup"
+                    ? introLabel(view.kind)
+                    : codelab.title}
               </span>
             </header>
             <main className="fcl-content" ref={contentRef} aria-live="polite">
               {view.kind === "home" ? (
                 <>
-                  <Home codelab={codelab} titles={titles} downloads={downloads} t={t} />
+                  <Cover
+                    codelab={codelab}
+                    titles={titles}
+                    downloads={downloads}
+                    publicUrl={props.publicUrl}
+                    showQrPlaceholder={embedded}
+                    hidePrerequisites={intro.includes("setup")}
+                    t={t}
+                  />
                   <div className="fcl-actions">
                     {lastIndex > 0 ? (
                       <>
@@ -379,7 +424,7 @@ export function CodelabPlayer(props: CodelabPlayerProps) {
                       <button
                         type="button"
                         className="fcl-btn fcl-btn-primary"
-                        disabled={!codelab.steps.length}
+                        disabled={!codelab.steps.length && !intro.length}
                         onClick={() => go(nextView({ kind: "home" }, codelab))}
                       >
                         <span>{t("start")}</span>
@@ -388,6 +433,10 @@ export function CodelabPlayer(props: CodelabPlayerProps) {
                     )}
                   </div>
                 </>
+              ) : view.kind === "presenter" ? (
+                <PresenterPage codelab={codelab} t={t} />
+              ) : view.kind === "setup" ? (
+                <SetupPage codelab={codelab} t={t} />
               ) : view.kind === "end" ? (
                 <End
                   codelab={codelab}
@@ -414,11 +463,11 @@ export function CodelabPlayer(props: CodelabPlayerProps) {
                 </article>
               ) : null}
             </main>
-            {view.kind === "step" ? (
+            {paged ? (
               <div className="fcl-nav">
                 <button type="button" className="fcl-btn" onClick={() => go(previousView(view, codelab))}>
                   <ArrowLeft size={16} aria-hidden />
-                  <span>{view.index === 0 ? t("home") : t("previous")}</span>
+                  <span>{previousView(view, codelab).kind === "home" ? t("home") : t("previous")}</span>
                 </button>
                 <button type="button" className="fcl-btn fcl-btn-primary" onClick={() => go(nextView(view, codelab))}>
                   <span>{isLast ? t("finish") : t("next")}</span>
@@ -429,8 +478,9 @@ export function CodelabPlayer(props: CodelabPlayerProps) {
           </div>
         </div>
         {badge ? (
-          <a className="fcl-badge" href={BADGE_URL} target="_blank" rel="noopener noreferrer">
-            {t("madeWith")}
+          <a className="fcl-badge" href={BADGE_URL} target="_blank" rel="noopener noreferrer" aria-label={t("madeWith")}>
+            <ForgeMark />
+            By Forge
           </a>
         ) : null}
       </RenderEnvProvider>
@@ -444,93 +494,6 @@ function loadProgressSafe(storageKey: string): string | undefined {
 }
 
 type Translate = ReturnType<typeof translator>;
-
-function Home({
-  codelab,
-  titles,
-  downloads,
-  t,
-}: {
-  codelab: Codelab;
-  titles: string[];
-  downloads: DownloadInfo[];
-  t: Translate;
-}) {
-  const prerequisites = codelab.prerequisites ?? [];
-  const learn = codelab.learn ?? [];
-  return (
-    <section className="fcl-hero">
-      <h1>{codelab.title}</h1>
-      {codelab.summary ? <p className="fcl-lead">{codelab.summary}</p> : null}
-      <ul className="fcl-facts">
-        <li>
-          <Clock size={14} aria-hidden />
-          {t("duration")} : {t("minutes", { n: codelab.durationMinutes })}
-        </li>
-        <li>
-          <BarChart3 size={14} aria-hidden />
-          {t("level")} : {t(LEVEL_KEYS[codelab.level])}
-        </li>
-        <li>
-          <ListOrdered size={14} aria-hidden />
-          {t("steps")} : {titles.length}
-        </li>
-        {codelab.author ? (
-          <li>
-            {t("author")} :{" "}
-            {codelab.author.url ? (
-              <a href={codelab.author.url} target="_blank" rel="noopener noreferrer">
-                {codelab.author.name}
-              </a>
-            ) : (
-              codelab.author.name
-            )}
-          </li>
-        ) : null}
-      </ul>
-      {prerequisites.length || learn.length ? (
-        <div className="fcl-cards">
-          {learn.length ? (
-            <div className="fcl-card">
-              <h2>{t("learn")}</h2>
-              <ul>
-                {learn.map((item, i) => (
-                  <li key={i}>{item}</li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-          {prerequisites.length ? (
-            <div className="fcl-card">
-              <h2>{t("prerequisites")}</h2>
-              <ul>
-                {prerequisites.map((item, i) => (
-                  <li key={i}>{item}</li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-      {downloads.length ? (
-        <>
-          <h2 className="fcl-card-title" style={{ fontSize: 18 }}>
-            {t("downloads")}
-          </h2>
-          <DownloadCards items={downloads} />
-        </>
-      ) : null}
-      {codelab.repoUrl ? (
-        <p>
-          <a href={codelab.repoUrl} target="_blank" rel="noopener noreferrer">
-            <GitBranch size={14} aria-hidden style={{ verticalAlign: "-2px" }} /> {t("openRepo")}{" "}
-            <ExternalLink size={12} aria-hidden />
-          </a>
-        </p>
-      ) : null}
-    </section>
-  );
-}
 
 function End({
   codelab,

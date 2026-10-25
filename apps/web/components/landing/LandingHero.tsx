@@ -17,11 +17,9 @@ import { useEffect, useMemo, useState } from "react";
 import { Composer, type ComposerDesignSystem } from "@/components/composer/Composer";
 import { listDesignSystems } from "@/components/design-system/api";
 import { buildCreateRequest, getTile, type HomeTileId } from "@/components/home/home-kinds";
-import { GITHUB_URL } from "@/components/shell/nav";
-import { SiteThumb } from "@/components/SiteThumb";
+import { TemplateThumb } from "@/components/templates/TemplateThumb";
 import { DeckThumb } from "@/components/templates/DeckThumb";
 import type { GalleryTemplate } from "@/components/TemplateGallery";
-import { Glyph } from "@/components/ui/glyph";
 import { getToken } from "@/lib/api";
 import {
   PENDING_PROMPT_KEY,
@@ -45,7 +43,7 @@ export const STEPS_PATH = "M0 0H1000V1000H740V785H525V735H475V525H260V475H215V26
 /** The mockup's ribbon picks, in order; missing ids are skipped. */
 const RIBBON_IDS = [
   "slides-product-launch",
-  "nova-bank",
+  "lumen-wallet",
   "aurora-ai",
   "slides-travel",
   "design-system-luxe",
@@ -53,7 +51,7 @@ const RIBBON_IDS = [
   "glacier-travel",
   "codelab-rodiumai-sdk",
   "slides-fundraising",
-  "echo-music",
+  "vinyl-music",
   "lumen-architecture",
   "slides-dev-keynote",
 ];
@@ -73,13 +71,7 @@ function RibbonItem({ tpl, index, hidden }: { tpl: GalleryTemplate; index: numbe
       {deck && !missing ? (
         <DeckThumb templateId={tpl.id} playing={false} onMissing={() => setMissing(true)} />
       ) : (
-        <SiteThumb
-          src={tpl.preview_url || `/templates/${tpl.id}/preview`}
-          viewportWidth={480}
-          viewportHeight={270}
-          title={tpl.title}
-          className="f-thumb-site"
-        />
+        <TemplateThumb template={tpl} viewportWidth={480} viewportHeight={270} className="f-thumb-site" />
       )}
     </Link>
   );
@@ -167,7 +159,7 @@ export function LandingHero({ templates }: { templates: GalleryTemplate[] }) {
     router.push(authed ? "/dashboard" : "/login");
   }
 
-  function addFiles(list: FileList) {
+  function addFiles(list: File[]) {
     setFiles((prev) => {
       const { next, rejected } = mergePromptAttachments(prev, list);
       setFileError(rejected.length ? t("promptFileTypeError") : null);
@@ -198,11 +190,6 @@ export function LandingHero({ templates }: { templates: GalleryTemplate[] }) {
       </div>
       <div className="f-wrap">
         <div className="f-lp-hero-top">
-          <a className="f-lp-news" href="#whats-new">
-            <b>{t("lndNewsTag")}</b>
-            <span>{t("lndNewsText")}</span>
-            <Glyph name="chevron-right" size="sm" />
-          </a>
           <h1>
             <span>{t("lndHeroTitle1")}</span> <span className="line2">{t("lndHeroTitle2")}</span>
           </h1>
@@ -237,13 +224,6 @@ export function LandingHero({ templates }: { templates: GalleryTemplate[] }) {
             variant="hero"
           />
         </div>
-        <p className="f-lp-oss">
-          <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
-            <Glyph name="github" size="sm" />
-            <span>{t("lndOssLine")}</span>
-            <b>RodiumAi/Forge</b>
-          </a>
-        </p>
       </div>
       <LandingRibbon templates={templates} />
     </section>

@@ -12,11 +12,13 @@ import { TemplateCard } from "@/components/templates/TemplateCard";
 import { FilterChip } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { SearchInput } from "@/components/ui/Input";
+import { Segmented } from "@/components/ui/Tabs";
 import { getToken } from "@/lib/api";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { kindStyle } from "@/lib/kind-style";
 import { normalizeKind, useEnabledKinds, type ProjectKindId } from "@/lib/kinds";
 import { ensureTemplates, getCachedTemplates } from "@/lib/lists-cache";
+import { isPremiumTemplate } from "@/lib/template-access";
 
 const STEP = 12;
 const KIND_ORDER: ProjectKindId[] = ["slides", "web", "mobile", "codelab", "design_system"];
@@ -27,6 +29,12 @@ function mixTemplates(templates: GalleryTemplate[], kinds: readonly ProjectKindI
     templates.filter((tpl) => normalizeKind(tpl.kind) === k),
   );
   return [...byKind.flatMap((list) => list.slice(0, 6)), ...byKind.flatMap((list) => list.slice(6))];
+}
+
+type Access = "all" | "free" | "premium";
+
+function accessFromParam(raw: string | null): Access {
+  return raw === "free" || raw === "premium" ? raw : "all";
 }
 
 function kindFromParam(raw: string | null): ProjectKindId | "all" {
@@ -41,6 +49,7 @@ function TemplatesInner() {
   const [templates, setTemplates] = useState<GalleryTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [kind, setKind] = useState<ProjectKindId | "all">(() => kindFromParam(params.get("kind")));
+  const [access, setAccess] = useState<Access>(() => accessFromParam(params.get("access")));
   const [query, setQuery] = useState("");
   const [limit, setLimit] = useState(STEP);
 
@@ -64,17 +73,41 @@ function TemplatesInner() {
     };
   }, [locale, router]);
 
-  useEffect(() => setKind(kindFromParam(params.get("kind"))), [params]);
-  useEffect(() => setLimit(STEP), [kind, query]);
+  useEffect(() => {
+    setKind(kindFromParam(params.get("kind")));
+    setAccess(accessFromParam(params.get("access")));
+  }, [params]);
+  useEffect(() => setLimit(STEP), [kind, query, access]);
+
+  function syncUrl(nextKind: ProjectKindId | "all", nextAccess: Access) {
+    const q = new URLSearchParams();
+    if (nextKind !== "all") q.set("kind", nextKind);
+    if (nextAccess !== "all") q.set("access", nextAccess);
+    const qs = q.toString();
+    router.replace(qs ? `${APP_ROUTES.templates}?${qs}` : APP_ROUTES.templates, { scroll: false });
+  }
 
   function chooseKind(next: ProjectKindId | "all") {
     setKind(next);
-    router.replace(next === "all" ? APP_ROUTES.templates : `${APP_ROUTES.templates}?kind=${next}`, { scroll: false });
+    syncUrl(next, access);
   }
 
-  const available = useMemo(
+  function chooseAccess(next: Access) {
+    setAccess(next);
+    syncUrl(kind, next);
+  }
+
+  const enabled = useMemo(
     () => templates.filter((tpl) => enabledKinds.includes(normalizeKind(tpl.kind))),
     [templates, enabledKinds],
+  );
+  const accessCounts = useMemo(() => {
+    const premium = enabled.filter(isPremiumTemplate).length;
+    return { all: enabled.length, free: enabled.length - premium, premium };
+  }, [enabled]);
+  const available = useMemo(
+    () => (access === "all" ? enabled : enabled.filter((tpl) => isPremiumTemplate(tpl) === (access === "premium"))),
+    [enabled, access],
   );
   const counts = useMemo(() => {
     const out: Partial<Record<ProjectKindId, number>> = {};
@@ -108,6 +141,16 @@ function TemplatesInner() {
           ))}
         </div>
         <span className="f-toolbar-spacer" />
+        <Segmented<Access>
+          label={t("apFilterAccess")}
+          value={access}
+          onChange={chooseAccess}
+          items={[
+            { id: "all", label: t("apAll") },
+            { id: "free", label: `${t("apAccessFree")} · ${accessCounts.free}` },
+            { id: "premium", label: `${t("apAccessPremium")} · ${accessCounts.premium}` },
+          ]}
+        />
         <SearchInput
           label={t("apSearchTemplates")}
           placeholder={t("apSearchTemplates")}

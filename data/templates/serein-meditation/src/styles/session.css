@@ -1,0 +1,59 @@
+/* Session player (stack screen, no tab bar). Scoped under .session-screen. */
+.session-screen {
+  position: relative; isolation: isolate; overflow: hidden; color: #fffaf5;
+  padding: calc(.9rem + var(--safe-top)) 1.25rem calc(1.6rem + var(--safe-bottom));
+  justify-content: space-between; gap: 1.2rem; background: var(--night);
+}
+.session-screen .ambient { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; transform: scale(1.08); filter: saturate(1.05); }
+.session-screen .veil {
+  position: absolute; inset: 0; z-index: -1;
+  background: linear-gradient(180deg, rgba(38, 26, 22, .35) 0%, rgba(38, 26, 22, .2) 30%, rgba(38, 26, 22, .78) 70%, rgba(30, 22, 20, .94) 100%);
+}
+
+.session-screen .session-bar { display: flex; align-items: center; justify-content: space-between; }
+.session-screen .session-cat { font-size: .74rem; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; opacity: .9; }
+.session-screen .glass-btn {
+  appearance: none; width: 2.75rem; height: 2.75rem; border-radius: 999px; display: grid; place-items: center;
+  border: 1px solid rgba(255, 250, 245, .25); background: rgba(255, 250, 245, .14); backdrop-filter: blur(12px); color: #fffaf5;
+}
+.session-screen .glass-btn.on { background: #fffaf5; color: var(--accent); }
+.session-screen .glass-btn.lg { width: 3.4rem; height: 3.4rem; }
+
+.session-screen .dial { position: relative; width: min(17.5rem, 78vw); aspect-ratio: 1; margin: .5rem auto 0; display: grid; place-items: center; }
+.session-screen .dial svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+.session-screen .dial circle { fill: none; stroke-width: 6; }
+.session-screen .dial .track { stroke: rgba(255, 250, 245, .18); }
+.session-screen .dial .progress { stroke: url(#ring-grad); stroke-linecap: round; transition: stroke-dashoffset 1s linear; }
+.session-screen .dial-core {
+  width: 74%; aspect-ratio: 1; border-radius: 999px; display: grid; place-content: center; justify-items: center; gap: .2rem;
+  background: radial-gradient(circle at 35% 30%, rgba(255, 243, 232, .35), rgba(224, 122, 95, .22) 60%, rgba(224, 122, 95, .08));
+  border: 1px solid rgba(255, 250, 245, .2); backdrop-filter: blur(6px);
+}
+.session-screen .dial-core.breathing { animation: breathe 8s ease-in-out infinite; }
+.session-screen .time { font-family: var(--font-display); font-size: 3.2rem; font-weight: 400; letter-spacing: -.02em; line-height: 1; font-variant-numeric: tabular-nums; }
+.session-screen .of { font-size: .82rem; opacity: .75; }
+
+.session-screen .session-info { text-align: center; display: grid; gap: .35rem; }
+.session-screen .session-info h1 { font-size: 2.1rem; font-weight: 500; }
+.session-screen .session-info p { margin: 0; font-size: .88rem; opacity: .8; }
+.session-screen .session-info .blurb { max-width: 30ch; margin: .3rem auto 0; line-height: 1.5; opacity: .7; }
+
+.session-screen .controls { display: flex; align-items: center; justify-content: center; gap: 1.6rem; }
+.session-screen .play {
+  appearance: none; border: 0; width: 5rem; height: 5rem; border-radius: 999px; display: grid; place-items: center;
+  background: var(--accent); color: var(--on-accent); box-shadow: 0 0 0 10px rgba(224, 122, 95, .22), 0 20px 40px -12px rgba(0, 0, 0, .6);
+}
+.session-screen .play:active { transform: scale(.96); }
+
+.session-screen.done { justify-content: flex-start; }
+.session-screen .complete { flex: 1; display: grid; place-content: center; justify-items: center; text-align: center; gap: .7rem; padding-inline: .6rem; }
+.session-screen .complete-mark {
+  width: 5.4rem; height: 5.4rem; border-radius: 999px; display: grid; place-items: center; margin-bottom: .6rem;
+  background: var(--sage); color: #fffaf5; box-shadow: 0 0 0 14px rgba(163, 177, 138, .25);
+}
+.session-screen .complete .kicker { color: var(--peach); }
+.session-screen .complete h1 { font-size: 2.4rem; font-weight: 500; line-height: 1.05; }
+.session-screen .complete em { color: var(--peach); }
+.session-screen .complete-meta { margin: 0; font-size: .9rem; opacity: .8; }
+.session-screen .complete-actions { width: min(100%, 20rem); display: grid; gap: .3rem; margin-top: 1.4rem; }
+.session-screen .complete .btn-ghost { color: rgba(255, 250, 245, .75); }

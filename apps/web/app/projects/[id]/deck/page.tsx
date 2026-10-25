@@ -19,6 +19,7 @@ import type { DeckPublisher } from "@/components/deck-editor/PublishMenu";
 import { rodiumUpgradeUrl } from "@/lib/constants/rodium-links";
 import { badgeRemovable, presenterUrl, publishDeck } from "@/lib/deck-exports";
 import { useForgeStatus } from "@/lib/forge-status";
+import { clearBootPrompt, peekBootPrompt } from "@/lib/create-project";
 import { editorHref, type ProjectKindId } from "@/lib/kinds";
 import { useMediaToken } from "@/lib/media-token";
 
@@ -33,6 +34,8 @@ export default function DeckEditorPage() {
   const [error, setError] = useState<string | null>(null);
   const status = useForgeStatus();
   const mediaToken = useMediaToken();
+  // Brief typed on the home composer; the assistant sends it once on a new deck.
+  const [bootPrompt] = useState(() => (typeof window === "undefined" ? null : peekBootPrompt(projectId)));
 
   useEffect(() => {
     if (!getToken()) {
@@ -111,6 +114,8 @@ export default function DeckEditorPage() {
       publisher={project.access_role === "viewer" ? null : publisher}
       readOnly={project.access_role === "viewer"}
       backHref="/dashboard"
+      initialPrompt={bootPrompt}
+      onInitialPromptUsed={() => clearBootPrompt(projectId)}
     />
   );
 }

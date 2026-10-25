@@ -469,6 +469,35 @@ class TestRateLimit:
             monkeypatch.delenv("TRUSTED_PROXY_HOPS", raising=False)
             clear_settings_cache()
 
+    def test_per_ip_keeps_a_stranger_from_spending_the_owner_budget(self):
+        bucket = f"test-{uuid.uuid4()}"
+        email = "victim@example.com"
+        attacker = self._request("198.51.100.66")
+        rate_limit.enforce(attacker, bucket, limit=1, window_seconds=60, subject=email, per_ip=True)
+        with pytest.raises(HTTPException):
+            rate_limit.enforce(attacker, bucket, limit=1, window_seconds=60, subject=email, per_ip=True)
+        # The owner, from their own address, still has their whole budget.
+        rate_limit.enforce(self._request("203.0.113.10"), bucket, limit=1, window_seconds=60, subject=email, per_ip=True)
+
+    def test_refunded_hits_do_not_count(self):
+        bucket = f"test-{uuid.uuid4()}"
+        request = self._request()
+        for _ in range(5):
+            rate_limit.enforce(request, bucket, limit=2, window_seconds=60, subject="a@example.com")
+            rate_limit.refund(request, bucket, subject="a@example.com")
+        rate_limit.enforce(request, bucket, limit=2, window_seconds=60, subject="a@example.com")
+        rate_limit.enforce(request, bucket, limit=2, window_seconds=60, subject="a@example.com")
+        with pytest.raises(HTTPException) as exc:
+            rate_limit.enforce(request, bucket, limit=2, window_seconds=60, subject="a@example.com")
+        assert exc.value.status_code == 429
+
+    def test_allow_turns_false_past_the_limit_without_raising(self):
+        bucket = f"test-{uuid.uuid4()}"
+        request = self._request()
+        assert rate_limit.allow(request, bucket, limit=2, window_seconds=60, subject="u1")
+        assert rate_limit.allow(request, bucket, limit=2, window_seconds=60, subject="u1")
+        assert not rate_limit.allow(request, bucket, limit=2, window_seconds=60, subject="u1")
+
     def test_login_account_bucket_blocks_rotating_xff(self, monkeypatch):
         """Same email, rotating spoofed XFF → login-account 429 (IP spray useless)."""
         monkeypatch.setattr(rate_limit, "_incr_redis", lambda *_a, **_k: None)

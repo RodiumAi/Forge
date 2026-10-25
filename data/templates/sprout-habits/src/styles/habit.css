@@ -1,0 +1,46 @@
+/* Habit detail (stack screen, no tab bar). Scoped under .habit-screen.
+   The habit's pastel fills the top of the page behind the photo. */
+.habit-screen { padding: calc(.8rem + var(--safe-top)) 1.2rem calc(1.6rem + var(--safe-bottom)); gap: 1rem; }
+.habit-screen .habit-bar { display: flex; align-items: center; justify-content: space-between; }
+.habit-screen .hb-title { font-weight: 700; font-size: .95rem; }
+.habit-screen .bar-space { width: 2.75rem; }
+
+.habit-screen .habit-hero { position: relative; margin-bottom: 1.2rem; }
+.habit-screen .habit-hero img, .habit-screen .habit-hero .ph { width: 100%; aspect-ratio: 1.6; object-fit: cover; border-radius: 1.9rem; box-shadow: 0 22px 40px -22px rgba(28, 36, 32, .5); }
+.habit-screen .badge { position: absolute; left: 1.1rem; bottom: -1.4rem; width: 4rem; height: 4rem; border-radius: 1.4rem; display: grid; place-items: center; background: var(--surface); box-shadow: 0 10px 24px -8px rgba(28, 36, 32, .35); }
+
+.habit-screen .habit-body { display: grid; gap: 1.2rem; }
+.habit-screen .title h1 { font-size: 1.9rem; margin-bottom: .6rem; }
+.habit-screen .meta { display: flex; flex-wrap: wrap; gap: .4rem; }
+.habit-screen .meta span { display: inline-flex; align-items: center; gap: .3rem; padding: .4rem .7rem; border-radius: 999px; background: var(--surface); font-size: .78rem; font-weight: 700; box-shadow: var(--shadow); }
+
+.habit-screen .streaks { display: grid; grid-template-columns: 1.3fr 1fr; gap: .6rem; }
+.habit-screen .flame { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: .8rem; align-items: center; padding: 1rem; border-radius: 1.5rem; background: linear-gradient(135deg, #ff9a56, var(--flame)); color: #fff; box-shadow: 0 16px 30px -16px rgba(242, 118, 46, .9); }
+.habit-screen .flame span { grid-row: span 2; width: 3.2rem; height: 3.2rem; border-radius: 999px; display: grid; place-items: center; background: rgba(255, 255, 255, .22); }
+.habit-screen .flame strong { font-family: var(--font-display); font-size: 2.3rem; font-weight: 800; line-height: 1; letter-spacing: -.04em; }
+.habit-screen .flame small { font-size: .78rem; font-weight: 700; opacity: .9; }
+.habit-screen .best { display: grid; gap: .15rem; align-content: center; padding: 1rem; border-radius: 1.5rem; background: var(--surface); box-shadow: var(--shadow); color: #a37a00; }
+.habit-screen .best strong { font-family: var(--font-display); font-size: 1.3rem; font-weight: 800; color: var(--fg); }
+.habit-screen .best small { font-size: .75rem; color: var(--muted); font-weight: 600; }
+
+.habit-screen .mark {
+  appearance: none; display: flex; align-items: center; justify-content: center; gap: .7rem; min-height: 3.6rem; border-radius: 999px;
+  border: 2px solid var(--accent); background: var(--surface); color: var(--accent-deep); font-weight: 800; font-size: 1rem; transition: background .25s ease, color .25s ease;
+}
+.habit-screen .m-check { width: 2rem; height: 2rem; border-radius: 999px; display: grid; place-items: center; border: 2px solid currentColor; color: transparent; transition: background .25s ease, color .25s ease; }
+.habit-screen .mark .m-check { color: color-mix(in srgb, var(--accent) 40%, transparent); }
+.habit-screen .mark.done { background: var(--accent); color: #fff; box-shadow: 0 14px 28px -12px rgba(58, 157, 93, .85); }
+.habit-screen .mark.done .m-check { background: #fff; border-color: #fff; color: var(--accent); }
+
+.habit-screen .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: .35rem; }
+.habit-screen .days button { appearance: none; min-height: 3.6rem; border-radius: 1rem; border: 1.5px solid var(--line); background: var(--surface-2); display: grid; justify-items: center; align-content: center; gap: .1rem; color: var(--muted); }
+.habit-screen .days small { font-size: .66rem; font-weight: 700; }
+.habit-screen .days strong { font-size: .95rem; font-weight: 800; color: var(--fg); }
+.habit-screen .days .on { color: rgba(255, 255, 255, .8); }
+.habit-screen .days .on strong { color: #fff; }
+
+.habit-screen .history { display: grid; grid-template-columns: repeat(7, 1fr); gap: .35rem; }
+.habit-screen .history i { aspect-ratio: 1.6; border-radius: .45rem; }
+
+.habit-screen .notes textarea { width: 100%; resize: none; border: 1.5px solid var(--line); border-radius: 1.1rem; padding: .8rem .9rem; background: var(--bg); font-size: .9rem; line-height: 1.5; font-weight: 500; }
+.habit-screen .notes textarea:focus { outline: none; border-color: var(--accent); }

@@ -20,9 +20,17 @@ export {
   progressPercent,
   searchCodelab,
   stepText,
+  introPages,
+  presenterOf,
+  setupFilled,
+  viewSequence,
   END_HASH,
+  PRESENTER_HASH,
+  SETUP_HASH,
+  type IntroPage,
   type View,
 } from "./navigation";
+export { Cover, PresenterPage, SetupPage, QrCode } from "./CoverPages";
 export { codelabTokens, schemeOf, luminance, type ColorScheme } from "./theme";
 export { translator, resolveCodelabLocale, type CodelabLocale } from "./strings";
 export { CODELAB_CSS } from "./styles";

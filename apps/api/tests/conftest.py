@@ -15,6 +15,8 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 os.environ.setdefault("ENVIRONMENT", "test")
+# No headless Chromium behind project listings in tests.
+os.environ.setdefault("FORGE_THUMBNAILS", "off")
 
 
 @pytest.fixture(autouse=True)
@@ -30,6 +32,7 @@ def isolated_rate_limits(monkeypatch):
     from app.services import rate_limit
 
     monkeypatch.setattr(rate_limit, "_incr_redis", lambda *_a, **_k: None)
+    monkeypatch.setattr(rate_limit, "_decr_redis", lambda *_a, **_k: False)
     rate_limit._local_hits.clear()
     yield
     rate_limit._local_hits.clear()

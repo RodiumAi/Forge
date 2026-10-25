@@ -108,20 +108,20 @@ La section `## Colors` doit lister les quatre mêmes variables que `template.jso
 `apps/api/app/services/template_contract.py` est le contrat sous forme de code ; `test_templates.py` l'applique à chaque kit.
 
 1. **`src/main.tsx` utilise `import { createRoot } from "react-dom/client"`** (jamais l'import par défaut `ReactDOM`).
-2. **Imports :** `react`, `react-dom/client` (main.tsx), `lucide-react` et fichiers locaux uniquement. Les kits tournent toujours sans installation.
+2. **Imports :** `react`, `react-dom/client` (main.tsx), `react-router-dom` (les pages et écrans d'app sont des routes), `lucide-react` et fichiers locaux uniquement.
 3. **Les icônes sont des icônes `lucide-react`** (noms existant en 0.468.0). Pas d'emoji ni de glyphe utilisé comme icône, pas de SVG d'icône dessiné à la main.
 4. **Fichiers séparés :** sections (web) ou écrans (mobile) dans `src/components/` / `src/screens/` ; `App.tsx` ne fait que les composer.
 5. **Propriété du CSS :** `src/index.css` est la fondation (tokens, reset, typographie de base, shell, nav/footer ou shell d'app, boutons et éléments partagés). Les règles de section ou d'écran vivent dans `src/styles/<page>.css`, importé par le fichier qui les utilise et scopé sous une classe racine (`.home-screen .hero`).
 6. **Mobile-first :** pas de `@media (max-width: …)` ; les règles de base sont la mise en page téléphone, les mises en page plus larges utilisent `min-width`.
-7. **Pas d'`@import`** dans les feuilles de style (piles de polices système, animations CSS pures).
+7. **Un seul `@import` au plus :** la ligne Google Fonts donnée par `DESIGN.md`, en toute première ligne de `src/index.css`. Aucun autre `@import`.
 8. **`package.json` :** `lucide-react` en dependencies ; devDependencies alignées sur la chaîne d'export (`vite ^5.4.21`, `@vitejs/plugin-react ^4.3.4`, `typescript ^5.6.3`, `@types/react ^18.3.12`, `@types/react-dom ^18.3.1`).
 9. **`DESIGN.md`** contient `## Colors` (les 4 variables de template.json), `## Typography` et `## Tone`.
-10. **`preview.html` sans script**, avec pour seule origine externe `https://images.unsplash.com/`.
+10. **`preview.html` sans script**, avec pour seules origines externes `https://images.unsplash.com/` et Google Fonts.
 11. Un manifest vit dans `public/manifest.webmanifest`, jamais à la racine du kit.
 
-## `preview.html` — la vignette de la galerie
+## `preview.html` : la vignette de la galerie
 
-`preview.html` est une mini-maquette statique autonome du hero du kit, rendue à environ **480×300** comme vignette de carte dans la galerie de modèles. Styles inline, poids minimal, réutiliser la palette du kit et reproduire la signature visuelle du hero (dégradés, layout, une image au plus).
+`preview.html` est une mini-maquette statique autonome rendue en **480×270** (16:9) comme vignette de carte dans la galerie de modèles. Styles inline, poids minimal, palette et polices du kit. Les kits web reproduisent la signature visuelle du hero (dégradés, layout, une image au plus). Les kits mobiles montrent deux ou trois téléphones avec de vrais écrans sur un fond aux couleurs du kit ; ne jamais nommer une classe `phone` (une ancienne règle de la galerie cible `.phone {` et la recadre).
 
 ## Checklist de validation locale
 

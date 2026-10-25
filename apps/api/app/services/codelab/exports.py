@@ -22,6 +22,7 @@ from app.services.codelab.files import zip_all_files
 from app.services.codelab.markdown_io import export_markdown
 from app.services.codelab.store import read_all_steps, read_codelab, slugify
 from app.services.entitlements import entitlements_apply, get_entitlements
+from app.services.exports.gating import plan_reaches
 from app.services.filesystem import read_file, write_file
 
 ExportFormat = Literal["md", "zip", "pdf"]
@@ -35,7 +36,7 @@ def require_codelab_export(db: Session, user: User, fmt: ExportFormat) -> None:
     slug = (row.plan_slug if row is not None else "free").strip().lower()
     if row is None or slug == "free":
         raise SitesError(403, "FEATURE_NOT_IN_PLAN", "Codelab exports start with the Starter plan.")
-    if fmt == "pdf" and not bool(row.export_pdf):
+    if fmt == "pdf" and not (bool(row.export_pdf) or plan_reaches(slug, "starter")):
         raise SitesError(403, "FEATURE_NOT_IN_PLAN", "PDF export is not included in the current Forge plan.")
 
 

@@ -2,14 +2,15 @@
 
 /**
  * Codelab metadata (title, summary, level, prerequisites, objectives,
- * author, repository, feedback link), declared downloads, import, exports
- * and publishing.
+ * author, repository, feedback link), declared downloads, import and
+ * exports. Publishing lives in the top bar (PublishMenu).
  */
 
 import { useRef, useState } from "react";
-import { Download, ExternalLink, FileUp, Loader2, Send, Trash2 } from "lucide-react";
+import { Download, FileUp, Loader2, Trash2 } from "lucide-react";
 import { CODELAB_LEVELS, type Codelab } from "@/lib/contracts/forge-design";
 import { downloadFrom, importClaat } from "./api";
+import { CoverSections } from "./CoverSections";
 import { linesOf, removeDownload } from "./model";
 import type { CodelabEditorKey, Translate } from "./strings";
 
@@ -33,10 +34,13 @@ export type DetailsPanelProps = {
   onFeedbackUrl: (url: string) => void;
   /** Called after an import replaced the steps on the server. */
   onImported: () => void;
-  publisher: CodelabPublisher | null;
   readOnly?: boolean;
+  /** Deletes the project (owner only); absent hides the danger zone. */
+  onDelete?: () => Promise<void>;
   t: Translate;
   onError: (message: string) => void;
+  /** URL of a project file, for the presenter photo preview. */
+  assetUrl?: (path: string) => string;
 };
 
 /** Draft value kept while typing so a half-typed URL is not dropped by the schema. */
@@ -56,17 +60,17 @@ function httpsOrUndefined(value: string): string | undefined {
 }
 
 export function DetailsPanel(props: DetailsPanelProps) {
-  const { projectId, projectName, codelab, onChange, readOnly, t, onError, publisher } = props;
+  const { projectId, projectName, codelab, onChange, readOnly, t, onError } = props;
   const [prereq, setPrereq] = useDraft((codelab.prerequisites ?? []).join("\n"));
   const [learn, setLearn] = useDraft((codelab.learn ?? []).join("\n"));
   const [authorUrl, setAuthorUrl] = useDraft(codelab.author?.url ?? "");
   const [repoUrl, setRepoUrl] = useDraft(codelab.repoUrl ?? "");
   const [feedback, setFeedback] = useDraft(props.feedbackUrl);
   const [busy, setBusy] = useState<string | null>(null);
-  const [badge, setBadge] = useState(true);
-  const [published, setPublished] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const importRef = useRef<HTMLInputElement | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const deleteName = (projectName || codelab.title || "").trim();
 
   const patch = (next: Partial<Codelab>) => onChange({ ...codelab, ...next });
 
@@ -185,6 +189,16 @@ export function DetailsPanel(props: DetailsPanelProps) {
         />
       </label>
 
+      <CoverSections
+        projectId={projectId}
+        codelab={codelab}
+        onChange={onChange}
+        assetUrl={props.assetUrl}
+        readOnly={readOnly}
+        t={t}
+        onError={onError}
+      />
+
       <h3>{t("downloads")}</h3>
       {(codelab.downloads ?? []).length === 0 ? <p className="cle-hint">{t("noFiles")}</p> : null}
       <ul className="cle-file-list">
@@ -250,36 +264,30 @@ export function DetailsPanel(props: DetailsPanelProps) {
         ) : null}
       </div>
 
-      {publisher && !readOnly ? (
-        <>
-          <h3>{t("publish")}</h3>
-          <label className="cle-check-row">
-            <input type="checkbox" checked={badge || !publisher.badgeRemovable} disabled={!publisher.badgeRemovable} onChange={(e) => setBadge(e.target.checked)} />
-            {t("publishBadge")}
+      {notice ? <p className="cle-notice" role="status">{notice}</p> : null}
+
+      {props.onDelete && !readOnly ? (
+        <section className="cle-danger" aria-labelledby="cle-danger-title">
+          <h3 id="cle-danger-title">{t("deleteTitle")}</h3>
+          <p className="cle-hint">{t("deleteHelp")}</p>
+          <label>
+            {t("deleteConfirm").replace("{name}", deleteName)}
+            <input value={deleteConfirm} onChange={(e) => setDeleteConfirm(e.target.value)} placeholder={deleteName} autoComplete="off" />
           </label>
-          {!publisher.badgeRemovable ? <p className="cle-hint">{t("publishBadgeLocked")}</p> : null}
           <button
             type="button"
-            className="cle-primary"
-            disabled={!!busy}
-            onClick={() =>
-              void task("publish", async () => {
-                const result = await publisher.publish({ badge: badge || !publisher.badgeRemovable });
-                setPublished(result.public_url);
-                setNotice(t("publishDone"));
-              })
-            }
+            className="cle-danger-btn"
+            disabled={!!busy || deleteConfirm.trim() !== deleteName}
+            onClick={() => {
+              const remove = props.onDelete;
+              if (remove) void task("delete", remove);
+            }}
           >
-            {busy === "publish" ? <Loader2 size={14} className="cle-spin" /> : <Send size={14} />} {busy === "publish" ? t("publishing") : t("publish")}
+            {busy === "delete" ? <Loader2 size={14} className="cle-spin" /> : <Trash2 size={14} />}{" "}
+            {busy === "delete" ? t("deleting") : t("deleteAction")}
           </button>
-          {published ? (
-            <a className="cle-link" href={published} target="_blank" rel="noopener noreferrer">
-              <ExternalLink size={14} /> {t("publishOpen")}
-            </a>
-          ) : null}
-        </>
+        </section>
       ) : null}
-      {notice ? <p className="cle-notice" role="status">{notice}</p> : null}
     </div>
   );
 }

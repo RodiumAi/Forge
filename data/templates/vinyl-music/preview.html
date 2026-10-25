@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Vinyl preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700&family=Syne:wght@700;800&display=swap" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 480px; height: 270px; overflow: hidden; position: relative;
+    background: radial-gradient(45% 70% at 30% 105%, rgba(255,61,127,.45), transparent 70%), radial-gradient(45% 70% at 72% -5%, rgba(123,92,255,.45), transparent 70%), #08070c;
+    font-family: "Inter", system-ui, sans-serif; color: #f7f4fa;
+  }
+  .rings { position: absolute; left: 50%; top: 52%; width: 520px; height: 520px; transform: translate(-50%, -50%); border-radius: 999px; background: repeating-radial-gradient(circle, transparent 0 13px, rgba(255,255,255,.035) 13px 14px); mask-image: radial-gradient(circle, #000 30%, transparent 70%); }
+  .syne { font-family: "Syne", sans-serif; letter-spacing: -.02em; }
+  .mu { color: #8e879a; }
+  .dev { position: absolute; width: 128px; height: 268px; border-radius: 22px; background: #0d0b12; border: 3px solid #2a2433; overflow: hidden; box-shadow: 0 24px 50px rgba(0,0,0,.6); }
+  .dev::before { content: ""; position: absolute; top: 6px; left: 50%; transform: translateX(-50%); width: 34px; height: 9px; border-radius: 99px; background: #000; z-index: 6; }
+  .l { left: 56px; top: 44px; transform: rotate(-8deg); }
+  .r { right: 56px; top: 44px; transform: rotate(8deg); }
+  .c { left: 50%; top: 14px; width: 144px; height: 298px; transform: translateX(-50%); z-index: 2; border-color: #3a3146; }
+  .s { padding: 22px 9px 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 7px; }
+
+  /* home */
+  .top { display: flex; align-items: center; gap: 5px; }
+  .av { width: 17px; height: 17px; border-radius: 99px; padding: 1.2px; background: linear-gradient(135deg,#ff3d7f,#7b5cff); }
+  .av i { display: block; width: 100%; height: 100%; border-radius: 99px; border: 1px solid #0d0b12; background: url("https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=80&q=60") center/cover; }
+  .top b { font-size: 7.5px; display: block; } .top small { font-size: 4.8px; }
+  .ic { margin-left: auto; width: 15px; height: 15px; border-radius: 99px; background: #17141f; border: 1px solid #262130; }
+  .feat { position: relative; overflow: hidden; border-radius: 12px; height: 68px; min-width: 0; max-width: 110px; padding: 7px; display: flex; gap: 7px; background: #1a1222; isolation: isolate; }
+  .feat .bg { position: absolute; inset: -20%; background: url("https://images.unsplash.com/photo-1504898770365-14faca6a7320?auto=format&fit=crop&w=200&q=50") center/cover; filter: blur(12px) saturate(1.5); opacity: .75; z-index: -1; }
+  .feat .cv { width: 40px; height: 40px; border-radius: 7px; background: url("https://images.unsplash.com/photo-1504898770365-14faca6a7320?auto=format&fit=crop&w=160&q=60") center/cover; transform: rotate(-4deg); box-shadow: 0 8px 14px -6px rgba(0,0,0,.8); flex-shrink: 0; }
+  .feat small { display: inline-block; font-size: 3.8px; font-weight: 700; letter-spacing: .12em; background: rgba(255,255,255,.16); padding: 1.5px 3px; border-radius: 99px; }
+  .feat h4 { font-size: 6.3px; line-height: 1.02; margin-top: 3px; font-weight: 800; }
+  .feat > div { min-width: 0; padding-right: 4px; }
+  .feat p { font-size: 4.5px; opacity: .75; margin-top: 2px; }
+  .pb { position: absolute; right: 7px; bottom: 7px; width: 19px; height: 19px; border-radius: 99px; background: linear-gradient(135deg,#ff3d7f,#7b5cff); box-shadow: 0 5px 10px -4px #ff3d7f; display: grid; place-items: center; }
+  .pb::before { content: ""; border-left: 5.5px solid #fff; border-top: 3.5px solid transparent; border-bottom: 3.5px solid transparent; margin-left: 1.5px; }
+  .jump { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; }
+  .jump span { display: flex; align-items: center; gap: 3px; height: 15px; background: #17141f; border-radius: 4px; overflow: hidden; font-size: 4.3px; font-weight: 600; }
+  .jump span i { width: 15px; height: 15px; background-size: cover; background-position: center; flex-shrink: 0; }
+  .h { font-size: 7.5px; font-weight: 800; }
+  .covers { display: flex; gap: 5px; }
+  .covers div { width: 44px; flex-shrink: 0; }
+  .covers i { display: block; width: 44px; height: 44px; border-radius: 7px; background-size: cover; background-position: center; }
+  .covers b { display: block; font-size: 4.5px; margin-top: 3px; } .covers small { font-size: 4px; }
+  .mini { position: absolute; left: 5px; right: 5px; bottom: 30px; height: 22px; border-radius: 7px; display: flex; align-items: center; gap: 4px; padding: 0 4px; background: linear-gradient(110deg, #4a2034, #1d1826 60%); border: 1px solid #2c2535; }
+  .mini i { width: 15px; height: 15px; border-radius: 99px; background: url("https://images.unsplash.com/photo-1504898770365-14faca6a7320?auto=format&fit=crop&w=80&q=50") center/cover; }
+  .mini b { font-size: 5px; display: block; } .mini small { font-size: 4px; }
+  .mini em { margin-left: auto; width: 13px; height: 13px; border-radius: 99px; background: #fff; display: grid; place-items: center; }
+  .mini em::before { content: ""; width: 1.4px; height: 5px; border-left: 1.4px solid #0d0b12; border-right: 1.4px solid #0d0b12; padding-left: 1.4px; box-sizing: content-box; }
+  .mini::after { content: ""; position: absolute; left: 6px; bottom: 0; width: 34%; height: 1px; background: linear-gradient(90deg,#ff3d7f,#7b5cff); }
+  .tab { position: absolute; left: 0; right: 0; bottom: 0; height: 27px; background: rgba(13,11,18,.95); border-top: 1px solid #221d2c; display: grid; grid-template-columns: repeat(4,1fr); padding-top: 5px; }
+  .tab span { display: grid; justify-items: center; gap: 2px; font-size: 3.8px; color: #8e879a; font-weight: 600; }
+  .tab span i { width: 7px; height: 7px; border: 1.2px solid currentColor; border-radius: 2px; }
+  .tab span.on { color: #ff3d7f; } .tab span.on i { box-shadow: 0 0 6px #ff3d7f; }
+
+  /* now playing */
+  .np { position: absolute; inset: 0; overflow: hidden; isolation: isolate; padding: 22px 10px 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 7px; align-content: start; }
+  .np .bg { position: absolute; left: -30%; top: -20%; width: 160%; height: 70%; background: url("https://images.unsplash.com/photo-1504898770365-14faca6a7320?auto=format&fit=crop&w=200&q=50") center/cover; filter: blur(22px) saturate(1.6); opacity: .6; z-index: -2; }
+  .np::before { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, transparent, #0d0b12 62%); }
+  .bar { display: flex; align-items: center; justify-content: space-between; }
+  .bar i { width: 14px; height: 14px; border-radius: 99px; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.14); }
+  .bar p { text-align: center; font-size: 3.6px; letter-spacing: .12em; color: #b9b1c4; font-weight: 600; } .bar p b { display: block; font-size: 5px; letter-spacing: 0; color: #f7f4fa; }
+  .stage { position: relative; width: 104px; height: 104px; margin: 3px auto 0; }
+  .disc { position: absolute; inset: 0; border-radius: 999px; display: grid; place-items: center; background: conic-gradient(from 30deg, transparent 0 8%, rgba(255,255,255,.16) 12%, transparent 18% 52%, rgba(255,255,255,.12) 58%, transparent 64%), repeating-radial-gradient(circle, #0b0a0e 0 1px, #1a1820 1px 1.6px, #0d0c11 1.6px 2.5px); box-shadow: 0 16px 30px -8px rgba(0,0,0,.9), 0 0 30px -4px rgba(255,61,127,.55); }
+  .disc i { width: 42px; height: 42px; border-radius: 99px; background: url("https://images.unsplash.com/photo-1504898770365-14faca6a7320?auto=format&fit=crop&w=120&q=60") center/cover; box-shadow: 0 0 0 2.5px #0d0c11, 0 0 0 3px rgba(255,255,255,.12); position: relative; }
+  .disc i::after { content: ""; position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px; border-radius: 99px; background: #e9e6ee; }
+  .arm { position: absolute; top: -5px; right: -3px; width: 30px; height: 64px; transform-origin: 78% 8%; transform: rotate(4deg); }
+  .arm::before { content: ""; position: absolute; top: 0; right: 3px; width: 9px; height: 9px; border-radius: 99px; background: radial-gradient(circle, #f2eff6 30%, #8e879a 32% 60%, #3b3644 62%); }
+  .arm i { position: absolute; top: 4px; right: 7px; width: 1.6px; height: 52px; background: #ddd8e3; transform: rotate(14deg); transform-origin: top; border-radius: 2px; }
+  .arm i::after { content: ""; position: absolute; bottom: -3px; left: -2.5px; width: 6.5px; height: 8px; border-radius: 1.5px; background: #ff3d7f; }
+  .tt { display: flex; align-items: center; }
+  .tt h4 { font-size: 11px; font-weight: 800; line-height: 1; } .tt p { font-size: 5px; margin-top: 2px; }
+  .tt span { margin-left: auto; width: 9px; height: 8px; position: relative; }
+  .tt span::before, .tt span::after { content: ""; position: absolute; top: 0; width: 5px; height: 8px; background: #ff3d7f; border-radius: 5px 5px 0 0; }
+  .tt span::before { left: 4.5px; transform: rotate(-45deg); transform-origin: 0 100%; } .tt span::after { left: -.5px; transform: rotate(45deg); transform-origin: 100% 100%; }
+  .scrub { height: 2.5px; border-radius: 99px; background: rgba(255,255,255,.16); position: relative; margin-top: 2px; }
+  .scrub i { position: absolute; left: 0; top: 0; bottom: 0; width: 33%; border-radius: 99px; background: linear-gradient(90deg,#ff3d7f,#7b5cff); }
+  .scrub i::after { content: ""; position: absolute; right: -3px; top: -2px; width: 6.5px; height: 6.5px; border-radius: 99px; background: #fff; }
+  .times { display: flex; justify-content: space-between; font-size: 4px; color: #8e879a; margin-top: -3px; }
+  .ctl { display: flex; align-items: center; justify-content: space-between; padding: 0 3px; }
+  .ctl i { width: 8px; height: 8px; border: 1.3px solid #f7f4fa; border-radius: 99px; border-right-color: transparent; } .ctl i.pk { border-color: #ff3d7f; border-right-color: transparent; }
+  .ctl b { width: 0; height: 0; border-top: 4.5px solid transparent; border-bottom: 4.5px solid transparent; }
+  .ctl b.p { border-right: 7px solid #f7f4fa; } .ctl b.n { border-left: 7px solid #f7f4fa; }
+  .ctl em { width: 30px; height: 30px; border-radius: 99px; background: linear-gradient(135deg,#ff3d7f,#7b5cff); box-shadow: 0 8px 14px -6px #ff3d7f; display: grid; place-items: center; }
+  .ctl em::before { content: ""; width: 2.5px; height: 9px; border-left: 2.5px solid #fff; border-right: 2.5px solid #fff; padding-left: 2.5px; box-sizing: content-box; }
+  .lyr { border-radius: 9px; padding: 7px 8px; background: linear-gradient(150deg, #7a2a4e, #241d30); display: grid; gap: 2px; }
+  .lyr small { font-size: 3.8px; letter-spacing: .12em; font-weight: 700; opacity: .85; }
+  .lyr p { font-family: "Syne"; font-weight: 700; font-size: 6px; line-height: 1.25; color: rgba(255,255,255,.45); } .lyr p.on { color: #fff; } .lyr p.past { color: rgba(255,255,255,.7); }
+
+  /* search */
+  .sf { height: 17px; border-radius: 6px; background: #f7f4fa; color: #6e6878; font-size: 5px; display: flex; align-items: center; padding-left: 7px; font-weight: 500; }
+  .rec { display: flex; flex-wrap: wrap; gap: 3px; } .rec span { font-size: 4.3px; border: 1px solid #2a2433; background: #17141f; border-radius: 99px; padding: 3px 5px; }
+  .gen { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+  .gen div { position: relative; overflow: hidden; height: 34px; border-radius: 6px; padding: 4px 5px; font-family: "Syne"; font-weight: 700; font-size: 5.2px; }
+  .gen div i { position: absolute; right: -5px; bottom: -4px; width: 22px; height: 22px; border-radius: 3px; background-size: cover; background-position: center; transform: rotate(22deg); box-shadow: -2px 3px 6px rgba(0,0,0,.35); }
+</style>
+</head>
+<body>
+  <div class="rings"></div>
+
+  <div class="dev l">
+    <div class="s">
+      <div class="top"><span class="av"><i></i></span><div><small class="mu">Good evening</small><b class="syne">Kemi</b></div><span class="ic"></span></div>
+      <div class="feat"><span class="bg"></span><span class="cv"></span><div><small>NEW ALBUM</small><h4 class="syne">Midnight Harmattan</h4><p>Ayra Sol · 5 songs</p></div><span class="pb"></span></div>
+      <div class="jump">
+        <span><i style="background-image:url('https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=60&q=50')"></i>Afro Chill Mix</span>
+        <span><i style="background-image:url('https://images.unsplash.com/photo-1539375665275-f9de415ef9ac?auto=format&fit=crop&w=60&q=50')"></i>Late Night Drive</span>
+        <span><i style="background-image:url('https://images.unsplash.com/photo-1520523839897-bd0b52f945a0?auto=format&fit=crop&w=60&q=50')"></i>Focus Flow</span>
+        <span><i style="background-image:url('https://images.unsplash.com/photo-1459749411175-04bf5292ceea?auto=format&fit=crop&w=60&q=50')"></i>Sunday Highlife</span>
+      </div>
+      <p class="h syne">Made for Kemi</p>
+      <div class="covers">
+        <div><i style="background-image:url('https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=120&q=60')"></i><b>Neon Lagoon</b><small class="mu">Kofi Blaze</small></div>
+        <div><i style="background-image:url('https://images.unsplash.com/photo-1541701494587-cb58502866ab?auto=format&fit=crop&w=120&q=60')"></i><b>Velvet Static</b><small class="mu">Lune Moreau</small></div>
+      </div>
+    </div>
+    <div class="mini"><i></i><div><b>Slow Burn Lagos</b><small class="mu">Ayra Sol</small></div><em></em></div>
+    <div class="tab"><span class="on"><i></i>Home</span><span><i></i>Search</span><span><i></i>Library</span><span><i></i>Profile</span></div>
+  </div>
+
+  <div class="dev r">
+    <div class="s">
+      <b class="syne" style="font-size:12px">Search</b>
+      <div class="sf">Artists, songs or podcasts</div>
+      <p class="h syne">Recent</p>
+      <div class="rec"><span>Ayra Sol</span><span>amapiano 2026</span><span>Neon Lagoon</span></div>
+      <p class="h syne">Browse all</p>
+      <div class="gen">
+        <div style="background:linear-gradient(135deg,#ff3d7f,#ff8a3d)">Afrobeats<i style="background-image:url('https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=80&q=50')"></i></div>
+        <div style="background:linear-gradient(135deg,#7b5cff,#3d8bff)">Amapiano<i style="background-image:url('https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=80&q=50')"></i></div>
+        <div style="background:linear-gradient(135deg,#c2185b,#6a1b9a)">R&amp;B<i style="background-image:url('https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=80&q=50')"></i></div>
+        <div style="background:linear-gradient(135deg,#ffb23e,#d9480f)">Jazz<i style="background-image:url('https://images.unsplash.com/photo-1415201364774-f6f0bb35f28f?auto=format&fit=crop&w=80&q=50')"></i></div>
+        <div style="background:linear-gradient(135deg,#2bb5a0,#2d6cdf)">Lo-fi<i style="background-image:url('https://images.unsplash.com/photo-1494232410401-ad00d5433cfa?auto=format&fit=crop&w=80&q=50')"></i></div>
+        <div style="background:linear-gradient(135deg,#8f6bff,#ff3d7f)">Electronic<i style="background-image:url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=80&q=50')"></i></div>
+      </div>
+    </div>
+    <div class="mini"><i></i><div><b>Slow Burn Lagos</b><small class="mu">Ayra Sol</small></div><em></em></div>
+    <div class="tab"><span><i></i>Home</span><span class="on"><i></i>Search</span><span><i></i>Library</span><span><i></i>Profile</span></div>
+  </div>
+
+  <div class="dev c">
+    <div class="np">
+      <span class="bg"></span>
+      <div class="bar"><i></i><p>PLAYING FROM ALBUM<b>Midnight Harmattan</b></p><i></i></div>
+      <div class="stage"><div class="disc"><i></i></div><span class="arm"><i></i></span></div>
+      <div class="tt"><div><h4 class="syne">Slow Burn Lagos</h4><p class="mu">Ayra Sol</p></div><span></span></div>
+      <div class="scrub"><i></i></div>
+      <div class="times"><span>1:11</span><span>-2:23</span></div>
+      <div class="ctl"><i></i><b class="p"></b><em></em><b class="n"></b><i class="pk"></i></div>
+      <div class="lyr"><small>LYRICS</small><p class="past">Streetlights humming on the bridge tonight</p><p class="on">You said the city sleeps, it never does</p><p>Slow burn, Lagos, keep me in your light</p></div>
+    </div>
+  </div>
+</body>
+</html>

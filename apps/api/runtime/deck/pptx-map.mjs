@@ -168,7 +168,21 @@ const ALIGN = { left: "left", center: "center", right: "right", justify: "justif
  */
 export function paragraphsToText(paras, opacity = 1) {
   const out = [];
+  // Running number per list level. Each numbered paragraph carries its own
+  // start value: with startAt="1" on every line, LibreOffice, Keynote and
+  // Google Slides restart each item at 1.
+  const counters = [];
   paras.forEach((para, i) => {
+    const level = para.level ?? 0;
+    let number = 0;
+    if (para.bullet === "number") {
+      counters.length = level + 1;
+      number = (counters[level] ?? 0) + 1;
+      counters[level] = number;
+    } else {
+      counters.length = para.bullet ? level + 1 : 0;
+      if (para.bullet) counters[level] = 0;
+    }
     const runs = para.runs.length ? para.runs : [{ text: "", size: 32, color: { hex: "000000", alpha: 1 } }];
     runs.forEach((run, j) => {
       const options = runOptions(run, opacity);
@@ -179,8 +193,8 @@ export function paragraphsToText(paras, opacity = 1) {
         if (para.lineHeightPx) options.lineSpacing = pxToPt(para.lineHeightPx);
         else if (para.lineHeight) options.lineSpacingMultiple = Math.max(0.5, Math.min(9.99, para.lineHeight / 1.2));
         if (para.bullet) {
-          options.bullet = para.bullet === "number" ? { type: "number" } : true;
-          options.indentLevel = para.level ?? 0;
+          options.bullet = para.bullet === "number" ? { type: "number", numberStartAt: number } : true;
+          options.indentLevel = level;
         }
       }
       // A <br> inside a paragraph is a soft break (shift+enter) before the next run.

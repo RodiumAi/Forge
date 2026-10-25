@@ -1,0 +1,28 @@
+/* Explore tab. Scoped under .home-screen. */
+.home-screen .hello { display: grid; gap: 1.1rem; }
+.home-screen .hello h2 { font-size: 2.75rem; line-height: .98; max-width: 11ch; }
+.home-screen .hello em { color: var(--accent); }
+
+.home-screen .search { display: flex; gap: .6rem; }
+.home-screen .search-field {
+  flex: 1; display: flex; align-items: center; gap: .65rem; min-height: 3.3rem; padding: 0 1.1rem;
+  border-radius: 999px; background: var(--surface); box-shadow: 0 1px 0 var(--line), var(--shadow); color: var(--muted);
+}
+.home-screen .search-field input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font: inherit; font-size: .92rem; color: var(--fg); }
+.home-screen .search-field input::placeholder { color: var(--muted); }
+.home-screen .filter-btn { appearance: none; border: 0; width: 3.3rem; height: 3.3rem; border-radius: 999px; display: grid; place-items: center; background: var(--fg); color: var(--bg); flex-shrink: 0; }
+
+.home-screen .count { font-size: .8rem; color: var(--muted); font-weight: 600; }
+.home-screen .empty { padding: 2rem 0; text-align: center; }
+
+.home-screen .promo {
+  display: flex; align-items: stretch; gap: .9rem; padding: 1.05rem; border-radius: 1.75rem; text-decoration: none;
+  background: linear-gradient(135deg, #e8f1ff, #fff3df); color: var(--fg); box-shadow: 0 1px 0 var(--line);
+}
+.home-screen .promo > div { flex: 1; display: grid; gap: .5rem; align-content: center; }
+.home-screen .promo h3 { font-size: 1.55rem; line-height: 1.02; }
+.home-screen .promo h3 em { color: var(--accent); }
+.home-screen .promo-cta { display: inline-flex; align-items: center; gap: .25rem; font-size: .8rem; font-weight: 700; }
+.home-screen .promo img { width: 6.4rem; border-radius: 1.2rem; object-fit: cover; }
+
+.home-screen .escapes { padding-block: .35rem; }

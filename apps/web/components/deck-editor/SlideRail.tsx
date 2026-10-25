@@ -7,12 +7,13 @@
  */
 
 import { memo, useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent } from "react";
-import { AlertTriangle, Copy, EyeOff, Eye, MoreHorizontal, Plus, Trash2, ArrowUp, ArrowDown } from "lucide-react";
+import { AlertTriangle, Copy, EyeOff, Eye, MoreHorizontal, PanelBottom, PanelLeft, Plus, Trash2, ArrowUp, ArrowDown } from "lucide-react";
 import { canvasSize, SlideView, type AssetUrl, type ThemeTokens } from "@/components/deck-player";
 import type { Deck, Slide } from "@/lib/contracts/forge-design";
 import type { SlideNotice } from "./ai";
 import { LAYOUT_NAMES, slideFromLayout, type LayoutName } from "./layouts";
 import { copyFor, LAYOUT_LABEL, type DeckLocale, type DeckT } from "./strings";
+import { centerOf, isContextMenuKey, useLongPress, type Point } from "@/components/ui/ContextMenu";
 
 const THUMB_WIDTH = 168;
 
@@ -43,14 +44,18 @@ export function LayoutPicker({
     [deck.format.ratio, locale],
   );
   const ref = useRef<HTMLDivElement | null>(null);
+  // One listener for the picker's life: re-adding it on each render could
+  // drop the Escape that another listener's re-render interrupted.
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
   useEffect(() => {
     ref.current?.querySelector<HTMLButtonElement>("button")?.focus();
     const onKey = (e: globalThis.KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") closeRef.current();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, []);
   const size = canvasSize(deck);
   return (
     <div className="de-layout-picker" role="dialog" aria-label={t("chooseLayout")} ref={ref}>
@@ -90,6 +95,11 @@ export function SlideRail({
   onDelete,
   onToggleHidden,
   onAdd,
+  orientation = "vertical",
+  onOrientation,
+  onSlideContextMenu,
+  pickerAt,
+  onPickerAtDone,
 }: {
   deck: Deck;
   slides: Record<string, Slide>;
@@ -107,13 +117,41 @@ export function SlideRail({
   onDelete: (id: string) => void;
   onToggleHidden: (id: string) => void;
   onAdd: (layout: LayoutName | null, index: number) => void;
+  /** `horizontal` = a strip under the canvas. */
+  orientation?: "vertical" | "horizontal";
+  onOrientation?: (next: "vertical" | "horizontal") => void;
+  /** Right click, long press or the Menu key on a thumbnail. */
+  onSlideContextMenu?: (id: string, at: Point) => void;
+  /** Opens the layout picker to add a slide at this index (from the menu). */
+  pickerAt?: { index: number; nonce: number } | null;
+  /** Called once `pickerAt` opened the picker, so a remount does not open it again. */
+  onPickerAtDone?: () => void;
 }) {
+  const horizontal = orientation === "horizontal";
   const [drag, setDrag] = useState<{ from: number; over: number } | null>(null);
   const [menu, setMenu] = useState<string | null>(null);
-  const [picker, setPicker] = useState(false);
+  // Index the picked layout is inserted at; null when the picker is closed.
+  const [picker, setPicker] = useState<number | null>(null);
   const currentIndex = deck.slides.findIndex((ref) => ref.id === currentId);
+  const pickerDone = useRef(onPickerAtDone);
+  pickerDone.current = onPickerAtDone;
+  useEffect(() => {
+    if (!pickerAt) return;
+    setPicker(pickerAt.index);
+    pickerDone.current?.();
+  }, [pickerAt]);
+  const pressed = useRef<string | null>(null);
+  const longPress = useLongPress((at) => {
+    if (pressed.current) onSlideContextMenu?.(pressed.current, at);
+  });
 
   const onKey = (e: KeyboardEvent<HTMLButtonElement>, index: number, id: string) => {
+    if (onSlideContextMenu && isContextMenuKey(e)) {
+      e.preventDefault();
+      const at = centerOf(e.currentTarget);
+      if (at) onSlideContextMenu(id, at);
+      return;
+    }
     if (readOnly) return;
     if (e.altKey && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
       e.preventDefault();
@@ -121,9 +159,11 @@ export function SlideRail({
       if (to >= 0 && to < deck.slides.length) onMove(index, to);
       return;
     }
-    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    const next = horizontal ? ["ArrowRight", "ArrowDown"] : ["ArrowDown"];
+    const prev = horizontal ? ["ArrowLeft", "ArrowUp"] : ["ArrowUp"];
+    if (next.includes(e.key) || prev.includes(e.key)) {
       e.preventDefault();
-      const to = Math.max(0, Math.min(deck.slides.length - 1, index + (e.key === "ArrowDown" ? 1 : -1)));
+      const to = Math.max(0, Math.min(deck.slides.length - 1, index + (next.includes(e.key) ? 1 : -1)));
       onSelect(deck.slides[to].id);
       requestAnimationFrame(() => document.querySelector<HTMLButtonElement>(`[data-rail-slide="${deck.slides[to].id}"]`)?.focus());
     }
@@ -134,7 +174,23 @@ export function SlideRail({
   };
 
   return (
-    <nav className="de-rail" aria-label={t("slides")}>
+    <nav className={`de-rail${horizontal ? " is-horizontal" : ""}`} aria-label={t("slides")}>
+      <div className="de-rail-head">
+        <span className="de-rail-title">
+          {t("slides")} <span className="de-rail-count">{deck.slides.length}</span>
+        </span>
+        {onOrientation ? (
+          <button
+            type="button"
+            className="de-icon-button de-rail-orient"
+            onClick={() => onOrientation(horizontal ? "vertical" : "horizontal")}
+            aria-label={horizontal ? t("railToLeft") : t("railToBottom")}
+            title={horizontal ? t("railToLeft") : t("railToBottom")}
+          >
+            {horizontal ? <PanelLeft size={15} aria-hidden /> : <PanelBottom size={15} aria-hidden />}
+          </button>
+        ) : null}
+      </div>
       <ol className="de-rail-list">
         {deck.slides.map((ref, index) => {
           const slide = slides[ref.id];
@@ -155,7 +211,8 @@ export function SlideRail({
                 if (!drag) return;
                 e.preventDefault();
                 const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                const over = e.clientY > rect.top + rect.height / 2 ? index + 1 : index;
+                const after = horizontal ? e.clientX > rect.left + rect.width / 2 : e.clientY > rect.top + rect.height / 2;
+                const over = after ? index + 1 : index;
                 if (over !== drag.over) setDrag({ ...drag, over });
               }}
               onDrop={(e: DragEvent) => {
@@ -177,6 +234,20 @@ export function SlideRail({
                 aria-label={`${t("slideN", { n: index + 1 })}${ref.hidden ? ` (${t("hidden")})` : ""}`}
                 onClick={() => onSelect(ref.id)}
                 onKeyDown={(e) => onKey(e, index, ref.id)}
+                onContextMenu={(e) => {
+                  if (!onSlideContextMenu || e.shiftKey) return;
+                  e.preventDefault();
+                  if (longPress.justFired()) return;
+                  longPress.cancel();
+                  onSlideContextMenu(ref.id, { x: e.clientX, y: e.clientY });
+                }}
+                onPointerDown={(e) => {
+                  pressed.current = ref.id;
+                  longPress.onPointerDown(e);
+                }}
+                onPointerMove={longPress.onPointerMove}
+                onPointerUp={longPress.onPointerUp}
+                onPointerCancel={longPress.onPointerCancel}
               >
                 {slide ? <Thumb slide={slide} deck={deck} tokens={tokens} assetUrl={assetUrl} /> : null}
                 {ref.hidden ? <EyeOff className="de-rail-flag" size={14} aria-hidden /> : null}
@@ -189,8 +260,17 @@ export function SlideRail({
                     className="de-icon-button"
                     aria-label={t("slideActions")}
                     title={t("slideActions")}
+                    aria-haspopup="menu"
                     aria-expanded={menu === ref.id}
-                    onClick={() => setMenu(menu === ref.id ? null : ref.id)}
+                    onClick={(e) => {
+                      // The same menu as a right click, opened under the button.
+                      if (onSlideContextMenu) {
+                        const box = e.currentTarget.getBoundingClientRect();
+                        onSlideContextMenu(ref.id, { x: box.left, y: box.bottom + 4 });
+                        return;
+                      }
+                      setMenu(menu === ref.id ? null : ref.id);
+                    }}
                   >
                     <MoreHorizontal size={14} aria-hidden />
                   </button>
@@ -227,10 +307,18 @@ export function SlideRail({
       </ol>
       {!readOnly ? (
         <div className="de-rail-add">
-          <button type="button" className="de-button" onClick={() => setPicker(true)} aria-haspopup="dialog" aria-expanded={picker}>
-            <Plus size={16} aria-hidden /> {t("addSlide")}
-          </button>
-          {picker ? (
+          {!readOnly ? (
+            <button
+              type="button"
+              className="de-button"
+              onClick={() => setPicker(currentIndex >= 0 ? currentIndex + 1 : deck.slides.length)}
+              aria-haspopup="dialog"
+              aria-expanded={picker !== null}
+            >
+              <Plus size={16} aria-hidden /> <span className="de-rail-add-label">{t("addSlide")}</span>
+            </button>
+          ) : null}
+          {picker !== null ? (
             <LayoutPicker
               deck={deck}
               tokens={tokens}
@@ -238,10 +326,11 @@ export function SlideRail({
               locale={locale}
               t={t}
               onPick={(layout) => {
-                setPicker(false);
-                onAdd(layout, currentIndex >= 0 ? currentIndex + 1 : deck.slides.length);
+                const at = Math.min(picker, deck.slides.length);
+                setPicker(null);
+                onAdd(layout, at);
               }}
-              onClose={() => setPicker(false)}
+              onClose={() => setPicker(null)}
             />
           ) : null}
         </div>

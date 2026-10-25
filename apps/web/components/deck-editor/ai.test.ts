@@ -7,8 +7,10 @@ import {
   noticeFromWarning,
   parseDeckEvent,
   quickActionBody,
+  splitImages,
   targetFor,
   tasksFromPlan,
+  withImages,
 } from "./ai";
 import type { Doc } from "./model";
 
@@ -145,5 +147,18 @@ describe("outline confirm", () => {
         { id: "new-1", title: "Thanks", detail: "", layout: "thanks", visual: false, status: "pending" },
       ],
     });
+  });
+});
+
+describe("attached images", () => {
+  it("adds one marker line and reads it back", () => {
+    const content = withImages("Une deck sur Lomé", ["public/images/a.webp", "public/images/b.png"]);
+    expect(content).toBe("Une deck sur Lomé\n\n[Images: public/images/a.webp, public/images/b.png]");
+    expect(splitImages(content)).toEqual({ text: "Une deck sur Lomé", images: ["public/images/a.webp", "public/images/b.png"] });
+  });
+
+  it("leaves a message without images untouched", () => {
+    expect(withImages("Bonjour", [])).toBe("Bonjour");
+    expect(splitImages("Bonjour [Images] ok")).toEqual({ text: "Bonjour [Images] ok", images: [] });
   });
 });

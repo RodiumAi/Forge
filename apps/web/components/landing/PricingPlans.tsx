@@ -267,10 +267,6 @@ export function PricingPlans({ hideFree = false, compare = true }: { hideFree?: 
       <div className="f-pr-meta">
         <CountryPicker value={country.iso2} countries={countries} onChange={(iso) => select(iso)} />
         <span>
-          <Glyph name="phone" size="sm" />
-          {t("lndPayMeta")}
-        </span>
-        <span>
           <span className="f-legend both">{t("lndLegendBoth")}</span>
           <span className="f-legend forge">{t("lndLegendForge")}</span>
         </span>

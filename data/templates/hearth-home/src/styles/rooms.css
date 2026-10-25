@@ -1,0 +1,17 @@
+/* Rooms tab. Scoped under .rooms-screen. Photo cards with a dark fade and glass labels. */
+.rooms-screen .intro { margin-top: -.6rem; }
+.rooms-screen .room-card { position: relative; display: block; overflow: hidden; border-radius: 1.6rem; color: #fff; text-decoration: none; aspect-ratio: .82; background: var(--surface); }
+.rooms-screen .room-card.big { aspect-ratio: 1.35; border-radius: 1.9rem; }
+.rooms-screen .room-card img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform .4s ease; }
+.rooms-screen .room-card:active img { transform: scale(1.04); }
+.rooms-screen .room-card::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0, 0, 0, .05) 30%, rgba(12, 13, 15, .85)); }
+.rooms-screen .rc-body { position: absolute; inset: 0; z-index: 1; padding: .9rem; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; }
+.rooms-screen .rc-count { padding: .4rem .75rem; border-radius: 999px; font-size: .76rem; font-weight: 500; color: var(--accent); }
+.rooms-screen .rc-foot { display: flex; justify-content: space-between; align-items: flex-end; width: 100%; gap: .5rem; }
+.rooms-screen .rc-foot h2 { font-size: 1.05rem; font-weight: 500; }
+.rooms-screen .big .rc-foot h2 { font-size: 1.5rem; }
+.rooms-screen .rc-foot p { margin: .25rem 0 0; display: flex; align-items: center; gap: .3rem; font-size: .78rem; color: rgba(255, 255, 255, .78); }
+.rooms-screen .rc-go { width: 2.75rem; height: 2.75rem; border-radius: 999px; display: grid; place-items: center; background: var(--accent); color: var(--on-accent); flex-shrink: 0; }
+.rooms-screen .rc-dot { width: .65rem; height: .65rem; border-radius: 999px; background: rgba(255, 255, 255, .35); }
+.rooms-screen .rc-dot.on { background: var(--accent); box-shadow: 0 0 12px var(--accent); }
+.rooms-screen .room-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }

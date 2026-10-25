@@ -112,13 +112,18 @@ def _validated(fn, data: Any, relative: str) -> dict[str, Any]:
 
 
 def asset_file(project_id: str, relative: str) -> Path | None:
-    """The project file for an asset path, or None when absent or outside the project."""
+    """The project file for an asset path, or None when absent or outside ``public/``.
+
+    Exports copy these files into what they publish, so only the project's
+    public folder is reachable: never notes, sources or ``.forge`` state.
+    """
     root = project_dir(project_id).resolve()
+    public = root / "public"
     try:
         path = (root / relative).resolve()
     except OSError:
         return None
-    if root not in path.parents or not path.is_file():
+    if public not in path.parents or not path.is_file():
         return None
     return path
 

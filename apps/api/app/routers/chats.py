@@ -23,6 +23,7 @@ from app.schemas import (
 from app.services.apply_writes import (
     apply_validated_writes_async,
     brand_change_requested,
+    rules_change_requested,
     split_deletes_in_scope,
 )
 from app.services.attachments import extract_image_urls
@@ -76,14 +77,20 @@ router = APIRouter(tags=["chats"])
 logger = logging.getLogger(__name__)
 
 
-def _can_access_project(db: Session, user: User, project: Project) -> bool:
-    """Owner, or an invited collaborator on a shared project (Canva-style)."""
+def _can_access_project(db: Session, user: User, project: Project, *, require_edit: bool = False) -> bool:
+    """Owner, or an invited collaborator on a shared project (Canva-style).
+
+    ``require_edit`` reserves the turns that make the agent write (and bill the
+    owner) for the owner and editors; viewers keep read access to the chat.
+    """
     if project.user_id == user.id:
         return True
     from app.models import ProjectCollaborator
 
     row = db.get(ProjectCollaborator, (project.id, user.id))
-    return row is not None and row.accepted_at is not None
+    if row is None or row.accepted_at is None:
+        return False
+    return not require_edit or row.role == "editor"
 
 
 def _apply_tier_entitlements(route, cached):
@@ -142,9 +149,11 @@ def _owned_chat(
     project_id: UUID,
     chat_id: UUID,
     locale: str,
+    *,
+    require_edit: bool = False,
 ) -> tuple[Project, Chat]:
     project = db.get(Project, project_id)
-    if project is None or not _can_access_project(db, user, project):
+    if project is None or not _can_access_project(db, user, project, require_edit=require_edit):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=t("project_not_found", locale),  # type: ignore[arg-type]
@@ -165,8 +174,10 @@ def _owned_run(
     chat_id: UUID,
     run_id: UUID,
     locale: str,
+    *,
+    require_edit: bool = False,
 ) -> tuple[Project, Chat, AgentRun]:
-    project, chat = _owned_chat(db, user, project_id, chat_id, locale)
+    project, chat = _owned_chat(db, user, project_id, chat_id, locale, require_edit=require_edit)
     run = db.get(AgentRun, run_id)
     if run is None or run.chat_id != chat.id or run.user_id != user.id:
         raise HTTPException(status_code=404, detail=t("run_not_found", locale))  # type: ignore[arg-type]
@@ -323,6 +334,7 @@ def _target_event(resolved: ResolvedTarget | None) -> dict | None:
         "file": resolved.element.path if resolved.element else resolved.file_path,
         "restrict": resolved.scoped,
         "scope": list(resolved.allowed_paths) if resolved.scoped else [],
+        "pages": [route for route, _ in resolved.pages],
     }
 
 
@@ -849,11 +861,13 @@ async def _iter_single_pass(
         yield push_step("generate", t("step_generate_code", locale), "done")
 
     allow_brand = brand_change_requested(user_content)
+    allow_rules = rules_change_requested(user_content)
     written, violations = await apply_validated_writes_async(
         project_id_str,
         writes,
         snapshot_label="before edit",
         allow_brand_writes=allow_brand,
+        allow_rules_writes=allow_rules,
         allowed_paths=allowed_paths,
     )
     deletes, scope_refused = split_deletes_in_scope(deletes, allowed_paths)
@@ -927,6 +941,7 @@ async def _iter_single_pass(
                 fix_writes,
                 snapshot_label="before edit retry",
                 allow_brand_writes=allow_brand,
+                allow_rules_writes=allow_rules,
                 allowed_paths=allowed_paths,
             )
             applied.extend(fixed)
@@ -1097,7 +1112,7 @@ async def send_message(
     db: Session = Depends(get_db),
 ) -> StreamingResponse:
     locale = resolve_locale(request)
-    project, chat = _owned_chat(db, user, project_id, chat_id, locale)
+    project, chat = _owned_chat(db, user, project_id, chat_id, locale, require_edit=True)
     # Ownership and wallet stay here: both are fast reads, and both need to be a
     # real HTTP status (404 / 402) so the client can act on them before a stream
     # even exists. Generation auth does NOT — see `_generation_auth_resolver`.
@@ -1529,7 +1544,7 @@ async def submit_clarify(
     db: Session = Depends(get_db),
 ) -> StreamingResponse:
     locale = resolve_locale(request)
-    project, chat, run = _owned_run(db, user, project_id, chat_id, run_id, locale)
+    project, chat, run = _owned_run(db, user, project_id, chat_id, run_id, locale, require_edit=True)
     if run.status != "awaiting_clarify":
         raise HTTPException(status_code=400, detail=t("run_invalid_state", locale))  # type: ignore[arg-type]
     require_rodi_for_paid_capability(user, db)
@@ -1665,7 +1680,7 @@ async def confirm_plan(
     db: Session = Depends(get_db),
 ) -> StreamingResponse:
     locale = resolve_locale(request)
-    project, chat, run = _owned_run(db, user, project_id, chat_id, run_id, locale)
+    project, chat, run = _owned_run(db, user, project_id, chat_id, run_id, locale, require_edit=True)
     if codelab_chat.is_codelab_outline_run(run):
         await resolve_generation_auth(db, user)
         return codelab_chat.confirm_codelab_outline(
@@ -1803,7 +1818,7 @@ async def branch_messages(
 ) -> StreamingResponse:
     """Truncate chat after a message and send a revised prompt."""
     locale = resolve_locale(request)
-    project, chat = _owned_chat(db, user, project_id, chat_id, locale)
+    project, chat = _owned_chat(db, user, project_id, chat_id, locale, require_edit=True)
     require_rodi_for_paid_capability(user, db)
 
     anchor = db.get(Message, body.from_message_id)

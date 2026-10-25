@@ -196,6 +196,35 @@ export function moveZ(elements: SlideElement[], ids: string[], move: ZMove): Sli
   return walk(elements);
 }
 
+/**
+ * Put sibling elements at a stacking position: `slot` counts the other
+ * siblings that stay behind them (0 = at the back). Ids must share a parent.
+ */
+export function placeZ(elements: SlideElement[], ids: string[], slot: number): SlideElement[] {
+  const set = new Set(ids);
+  const walk = (list: SlideElement[]): SlideElement[] => {
+    if (list.some((e) => set.has(e.id))) {
+      const order = paintOrder(list);
+      const moving = order.filter((e) => set.has(e.id));
+      const rest = order.filter((e) => !set.has(e.id));
+      const at = Math.max(0, Math.min(rest.length, slot));
+      const next = [...rest.slice(0, at), ...moving, ...rest.slice(at)];
+      if (next.every((e, i) => e === list[i] && e.z === i)) return list;
+      return next.map((element, index) => (element.z === index ? element : { ...element, z: index }));
+    }
+    let changed = false;
+    const next = list.map((element) => {
+      if (element.type !== "group") return element;
+      const children = walk(element.children);
+      if (children === element.children) return element;
+      changed = true;
+      return { ...element, children };
+    });
+    return changed ? next : list;
+  };
+  return walk(elements);
+}
+
 // ── groups ──────────────────────────────────────────────────────────────────
 
 /**

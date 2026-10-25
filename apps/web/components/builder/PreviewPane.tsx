@@ -44,6 +44,11 @@ type Props = {
   onImageSelect?: (sel: ImageSelection) => void;
   /** Fired when the preview app navigates (hash / history) so the page picker can sync. */
   onPreviewPathChange?: (path: string) => void;
+  /**
+   * Pages rail: receives a small picture of the page on screen once it has
+   * settled (after a load, a navigation or a re-render). Omit to capture nothing.
+   */
+  onPageSnapshot?: (path: string, dataUrl: string) => void;
   sidePanel?: ReactNode;
   /**
    * While the agent is generating / repairing, hide the blocking Babel overlay
@@ -62,6 +67,8 @@ const WIDTH: Record<ViewportMode, string> = {
 const TOOL_RETRY_DELAYS_MS = [50, 150, 400, 800, 1600, 3200];
 const NAV_RETRY_DELAYS_MS = [0, 120, 350, 700, 1400, 2800];
 const MAX_BRIDGE_PINGS = 8;
+/** Settle time before the pages rail snapshot (fonts, images, entrance animations). */
+const PAGE_CAPTURE_DELAY_MS = 1400;
 
 /**
  * Origin of the preview iframe, or null when it cannot be determined.
@@ -99,6 +106,7 @@ export function PreviewPane({
   onCommentAnchor,
   onImageSelect,
   onPreviewPathChange,
+  onPageSnapshot,
   sidePanel,
   suppressErrorOverlay = false,
 }: Props) {
@@ -119,6 +127,12 @@ export function PreviewPane({
   const onCommentAnchorRef = useRef(onCommentAnchor);
   const onImageSelectRef = useRef(onImageSelect);
   const onPreviewPathChangeRef = useRef(onPreviewPathChange);
+  const onPageSnapshotRef = useRef(onPageSnapshot);
+  const viewportRef = useRef(viewport);
+  const previewToolRef = useRef(previewTool);
+  const pageCaptureTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pageCaptureReqRef = useRef<{ id: string; path: string } | null>(null);
+  const pageCaptureSeqRef = useRef(0);
   const previewPathRef = useRef(previewPath);
   const suppressErrorOverlayRef = useRef(suppressErrorOverlay);
   const pendingThumbRef = useRef(false);
@@ -132,6 +146,9 @@ export function PreviewPane({
   onCommentAnchorRef.current = onCommentAnchor;
   onImageSelectRef.current = onImageSelect;
   onPreviewPathChangeRef.current = onPreviewPathChange;
+  onPageSnapshotRef.current = onPageSnapshot;
+  viewportRef.current = viewport;
+  previewToolRef.current = previewTool;
   previewPathRef.current = previewPath;
   suppressErrorOverlayRef.current = suppressErrorOverlay;
   desiredToolRef.current = previewTool;
@@ -155,6 +172,50 @@ export function PreviewPane({
       /* ignore */
     }
   }
+
+  /**
+   * Pages rail: ask the runner for a snapshot of the page on screen once it
+   * settled. Debounced; skipped mid-run (half-written bundle) and while a
+   * tool overlay is active. The reply is filed under the route asked for,
+   * and dropped if the preview moved to another page meanwhile.
+   */
+  function schedulePageCapture(delay = PAGE_CAPTURE_DELAY_MS) {
+    if (!onPageSnapshotRef.current) return;
+    if (pageCaptureTimerRef.current) clearTimeout(pageCaptureTimerRef.current);
+    pageCaptureTimerRef.current = setTimeout(() => {
+      pageCaptureTimerRef.current = null;
+      if (!onPageSnapshotRef.current || !appMountedRef.current) return;
+      if (suppressErrorOverlayRef.current || previewToolRef.current) return;
+      const win = frameRef.current?.contentWindow;
+      const target = previewOrigin(previewSrc);
+      if (!win || !target) return;
+      pageCaptureSeqRef.current += 1;
+      const req = { id: `page-${pageCaptureSeqRef.current}`, path: previewPathRef.current || "/" };
+      pageCaptureReqRef.current = req;
+      try {
+        win.postMessage(
+          { type: "forge:capture-page", requestId: req.id, width: viewportRef.current === "phone" ? 240 : 320 },
+          target,
+        );
+      } catch {
+        /* iframe reloading: the next mount schedules another capture */
+      }
+    }, delay);
+  }
+
+  useEffect(
+    () => () => {
+      if (pageCaptureTimerRef.current) clearTimeout(pageCaptureTimerRef.current);
+    },
+    [],
+  );
+
+  // A new page on screen, the end of a run, or a tool closed: snapshot again.
+  useEffect(() => {
+    if (!previewSrc || suppressErrorOverlay || previewTool) return;
+    schedulePageCapture();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- capture reads refs at call time
+  }, [previewPath, previewSrc, suppressErrorOverlay, previewTool, Boolean(onPageSnapshot)]);
 
   // After an agent run (working → idle), ask the runner for a JPEG and persist it.
   useEffect(() => {
@@ -236,6 +297,14 @@ export function PreviewPane({
         setLoadError(false);
         setBabelError(null);
         if (pendingThumbRef.current) requestThumbCapture();
+        schedulePageCapture();
+      }
+      if (data.type === "forge:page-snapshot") {
+        const req = pageCaptureReqRef.current;
+        if (!req || data.requestId !== req.id) return;
+        pageCaptureReqRef.current = null;
+        if (typeof data.dataUrl !== "string" || req.path !== previewPathRef.current) return;
+        onPageSnapshotRef.current?.(req.path, data.dataUrl);
       }
       if (
         data.type === "forge:thumb-snapshot" &&
@@ -527,8 +596,11 @@ export function PreviewPane({
       }
 
       if (type === "forge-preview-location") {
-        const path = typeof data.path === "string" ? data.path : "";
-        if (!path) return;
+        const raw = typeof data.path === "string" ? data.path : "";
+        if (!raw) return;
+        // `/#tarifs` is a section of the page on screen, never a page of its
+        // own: an older bridge reported it as one and it filled the rail.
+        const path = raw.includes("#") ? raw.split("#")[0] || "/" : raw;
         if (path === previewPathRef.current) return;
         onPreviewPathChangeRef.current?.(path);
       }

@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Voyage preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@500;600;700;800&display=swap" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 480px; height: 270px; overflow: hidden; position: relative;
+    background: radial-gradient(55% 75% at 92% 8%, #ffe1b0, transparent 70%), radial-gradient(60% 80% at 5% 95%, #cfe0ff, transparent 70%), linear-gradient(180deg, #f7f9fa, #eef3f6);
+    font-family: "Manrope", system-ui, sans-serif; color: #0e1a22;
+  }
+  .serif { font-family: "Instrument Serif", Georgia, serif; font-weight: 400; }
+  .mark { position: absolute; left: 20px; top: 8px; font-family: "Instrument Serif", serif; font-style: italic; font-size: 26px; color: #0e1a22; opacity: .9; }
+  .sun { position: absolute; right: 26px; top: 22px; width: 54px; height: 54px; border-radius: 99px; background: linear-gradient(180deg, #ffb547, #ff8a5c); opacity: .55; filter: blur(.5px); }
+  .dev { position: absolute; width: 128px; height: 268px; border-radius: 22px; background: #f5f7f8; border: 3px solid #0e1a22; overflow: hidden; box-shadow: 0 26px 46px -14px rgba(14,26,34,.45); }
+  .dev::before { content: ""; position: absolute; top: 6px; left: 50%; transform: translateX(-50%); width: 34px; height: 9px; border-radius: 99px; background: #0e1a22; z-index: 5; }
+  .l { left: 54px; top: 44px; transform: rotate(-8deg); }
+  .r { right: 54px; top: 44px; transform: rotate(8deg); }
+  .c { left: 50%; top: 12px; width: 144px; height: 298px; transform: translateX(-50%); z-index: 2; }
+  .mu { color: #6b7a86; }
+  .s { padding: 22px 9px 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 7px; }
+
+  /* explore */
+  .top { display: flex; align-items: center; gap: 4px; margin-top: -2px; }
+  .top small { font-size: 4.5px; display: block; } .top b { font-size: 6px; font-weight: 800; }
+  .pin { width: 4px; height: 5px; border-radius: 99px 99px 99px 0; background: #1f6feb; transform: rotate(-45deg); display: inline-block; margin-right: 2px; }
+  .av { margin-left: auto; width: 15px; height: 15px; border-radius: 99px; background: url("https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=80&q=60") center/cover; }
+  .bell { margin-left: auto; width: 15px; height: 15px; border-radius: 99px; background: #fff; border: 1px solid #e3e8eb; }
+  .bell + .av { margin-left: 3px; flex-shrink: 0; } .bell { flex-shrink: 0; }
+  .hi { font-size: 15.5px; line-height: .95; max-width: 110px; }
+  .hi i { color: #1f6feb; }
+  .sr { display: flex; gap: 4px; }
+  .sr span { flex: 1; height: 17px; border-radius: 99px; background: #fff; box-shadow: 0 6px 12px -8px rgba(14,26,34,.4); font-size: 4.8px; color: #6b7a86; display: flex; align-items: center; padding-left: 7px; }
+  .sr i { width: 17px; height: 17px; border-radius: 99px; background: #0e1a22; }
+  .chips { display: flex; gap: 3px; }
+  .chips span { font-size: 4.8px; font-weight: 700; padding: 3.5px 6px; border-radius: 99px; background: #fff; border: 1px solid #e3e8eb; }
+  .chips span.on { background: #0e1a22; color: #f5f7f8; border-color: #0e1a22; }
+  .h { font-size: 11px; display: flex; justify-content: space-between; align-items: baseline; } .h small { font-family: "Manrope"; font-size: 4.5px; color: #6b7a86; font-weight: 700; }
+  .rail { display: flex; gap: 5px; margin-right: -9px; overflow: hidden; }
+  .tc { position: relative; flex-shrink: 0; width: 78px; height: 96px; border-radius: 12px; overflow: hidden; background-size: cover; background-position: center; color: #fff; box-shadow: 0 10px 18px -10px rgba(14,26,34,.6); }
+  .tc::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 45%, rgba(14,26,34,.8)); }
+  .tc .rt { position: absolute; z-index: 1; top: 5px; left: 5px; font-size: 4.5px; font-weight: 800; padding: 1.5px 4px; border-radius: 99px; background: rgba(255,255,255,.3); }
+  .tc .ht { position: absolute; z-index: 1; top: 4px; right: 4px; width: 12px; height: 12px; border-radius: 99px; background: #fff; display: grid; place-items: center; }
+  .hrt { position: relative; display: block; width: 6px; height: 5.4px; }
+  .hrt::before, .hrt::after { content: ""; position: absolute; top: 0; width: 3.2px; height: 5px; background: #e8475f; border-radius: 3px 3px 0 0; }
+  .hrt::before { left: 3px; transform: rotate(-45deg); transform-origin: 0 100%; }
+  .hrt::after { left: 0; transform: rotate(45deg); transform-origin: 100% 100%; }
+  .tc .ht.off { background: rgba(255,255,255,.3); } .tc .ht.off .hrt::before, .tc .ht.off .hrt::after { background: #fff; }
+  .tc .nm { position: absolute; z-index: 1; left: 6px; bottom: 13px; font-size: 14px; line-height: 1; }
+  .tc .ct { position: absolute; z-index: 1; left: 6px; bottom: 6px; font-size: 4.5px; font-weight: 600; }
+  .tc .pr { position: absolute; z-index: 1; right: 5px; bottom: 5px; font-size: 4.5px; font-weight: 800; background: #ffb547; color: #0e1a22; padding: 1.5px 3.5px; border-radius: 99px; }
+  .tab { position: absolute; left: 0; right: 0; bottom: 0; height: 26px; border-radius: 13px 13px 0 0; background: rgba(255,255,255,.82); border-top: 1px solid #fff; box-shadow: 0 -6px 14px -8px rgba(14,26,34,.25); display: flex; justify-content: space-around; align-items: center; }
+  .tab i { width: 8px; height: 8px; border-radius: 3px; border: 1.3px solid #6b7a86; }
+  .tab i.on { width: 17px; height: 17px; border-radius: 99px; border: 0; background: #1f6feb; box-shadow: 0 5px 9px -4px #1f6feb; position: relative; }
+  .tab i.on::after { content: ""; position: absolute; inset: 5px; border: 1.3px solid #fff; border-radius: 99px; }
+
+  /* destination */
+  .hero { height: 168px; position: relative; background: url("https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?auto=format&fit=crop&w=400&q=60") center/cover; color: #fff; }
+  .hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(14,26,34,.3), transparent 30%, transparent 50%, rgba(14,26,34,.7)); }
+  .gb { position: absolute; z-index: 1; top: 20px; width: 16px; height: 16px; border-radius: 99px; background: rgba(255,255,255,.3); border: 1px solid rgba(255,255,255,.5); }
+  .gb.a { left: 8px; } .gb.b { right: 8px; background: #fff; display: grid; place-items: center; }
+  .hero .ct2 { position: absolute; z-index: 1; left: 9px; bottom: 34px; font-size: 5px; font-weight: 700; }
+  .hero .big { position: absolute; z-index: 1; left: 9px; bottom: 14px; font-size: 26px; line-height: .9; letter-spacing: -.02em; }
+  .sheet { position: relative; z-index: 2; margin-top: -10px; background: #f5f7f8; border-radius: 12px 12px 0 0; padding: 9px 9px 0; display: grid; gap: 6px; }
+  .facts { display: flex; gap: 6px; font-size: 4.5px; font-weight: 700; color: #6b7a86; } .facts b { color: #0e1a22; } .facts .st { color: #ffb547; }
+  .story { font-size: 4.8px; line-height: 1.5; }
+  .hl { display: flex; flex-wrap: wrap; gap: 3px; } .hl span { font-size: 4.5px; font-weight: 800; color: #1f6feb; background: #e6eefc; padding: 2.5px 5px; border-radius: 99px; }
+  .gal { display: flex; gap: 3px; } .gal i { width: 30px; height: 36px; border-radius: 6px; background-size: cover; background-position: center; flex-shrink: 0; }
+  .bb { position: absolute; left: 0; right: 0; bottom: 0; height: 30px; background: rgba(255,255,255,.9); border-top: 1px solid #e6eaed; display: flex; align-items: center; gap: 7px; padding: 0 8px; }
+  .bb p { font-size: 13px; line-height: .9; } .bb p small { display: block; font-family: "Manrope"; font-size: 4px; color: #6b7a86; font-weight: 700; }
+  .bb span { flex: 1; height: 17px; border-radius: 99px; background: #1f6feb; color: #fff; font-size: 5.5px; font-weight: 800; display: grid; place-items: center; box-shadow: 0 6px 10px -6px #1f6feb; }
+
+  /* trips */
+  .seg { display: flex; background: #eaeef1; border-radius: 99px; padding: 2px; font-size: 5px; font-weight: 800; }
+  .seg span { flex: 1; text-align: center; padding: 4px 0; border-radius: 99px; color: #6b7a86; } .seg span.on { background: #fff; color: #0e1a22; }
+  .th { position: relative; height: 54px; border-radius: 11px; overflow: hidden; background: url("https://images.unsplash.com/photo-1533105079780-92b9be482077?auto=format&fit=crop&w=300&q=60") center/cover; color: #fff; }
+  .th::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 35%, rgba(14,26,34,.75)); }
+  .th span { position: absolute; z-index: 1; top: 5px; left: 5px; font-size: 4.3px; font-weight: 800; background: #ffb547; color: #0e1a22; padding: 1.5px 4px; border-radius: 99px; }
+  .th b { position: absolute; z-index: 1; left: 6px; bottom: 5px; font-family: "Instrument Serif"; font-weight: 400; font-size: 14px; }
+  .bp { position: relative; background: #fff; border-radius: 10px; padding: 8px 7px 6px; overflow: hidden; box-shadow: 0 10px 18px -12px rgba(14,26,34,.5); }
+  .bp::before { content: ""; position: absolute; inset: 0 0 auto; height: 2px; background: linear-gradient(90deg, #1f6feb, #5aa2ff 60%, #ffb547); }
+  .bp .tp { display: flex; justify-content: space-between; font-size: 4px; font-weight: 800; letter-spacing: .1em; color: #6b7a86; } .bp .tp b { color: #1f6feb; }
+  .rt2 { display: flex; align-items: center; gap: 4px; margin-top: 4px; }
+  .rt2 div { display: grid; } .rt2 div.e { text-align: right; }
+  .rt2 strong { font-family: "Instrument Serif"; font-weight: 400; font-size: 17px; line-height: 1; } .rt2 small { font-size: 4px; color: #6b7a86; font-weight: 700; }
+  .rt2 .ln { flex: 1; border-top: 1px dashed #8fb3f3; position: relative; } .rt2 .ln::after { content: ""; position: absolute; left: 50%; top: -3px; width: 5px; height: 5px; border-radius: 1px; background: #1f6feb; transform: translateX(-50%) rotate(45deg); }
+  .tear { margin: 6px -7px; border-top: 1px dashed #dfe5e9; }
+  .pg { display: flex; justify-content: space-between; font-size: 3.8px; font-weight: 800; color: #6b7a86; } .pg b { display: block; font-size: 6.5px; color: #0e1a22; }
+  .bc { height: 13px; margin-top: 5px; background: repeating-linear-gradient(90deg, #0e1a22 0 1px, transparent 1px 2px, #0e1a22 2px 3.5px, transparent 3.5px 5px); opacity: .85; }
+  .tl { display: grid; gap: 4px; }
+  .tl div { display: flex; gap: 5px; align-items: center; }
+  .tl small { width: 16px; font-size: 4.5px; font-weight: 800; }
+  .tl i { width: 5px; height: 5px; border-radius: 99px; border: 1.3px solid #cfd8de; background: #fff; flex-shrink: 0; } .tl i.on { border-color: #1f6feb; box-shadow: 0 0 0 2px #dbe7fc; }
+  .tl span { flex: 1; background: #fff; border-radius: 6px; padding: 4px 5px; font-size: 4.8px; font-weight: 800; } .tl span em { display: block; font-style: normal; font-weight: 600; font-size: 3.8px; color: #6b7a86; }
+  .tl .on + span { background: #eef4fe; }
+</style>
+</head>
+<body>
+  <div class="sun"></div>
+  <p class="mark">Voyage</p>
+
+  <div class="dev l">
+    <div class="hero">
+      <span class="gb a"></span><span class="gb b"><i class="hrt"></i></span>
+      <p class="ct2">GREECE</p>
+      <p class="big serif">Santorini</p>
+    </div>
+    <div class="sheet">
+      <div class="facts"><span><b>4.9</b> 2,148 reviews</span><span>6h 40m</span></div>
+      <p class="story">Whitewashed cliffs above a flooded caldera, sunsets that stop conversations.</p>
+      <div class="hl"><span>Oia sunset</span><span>Caldera sail</span><span>Wine tasting</span></div>
+      <div class="gal">
+        <i style="background-image:url('https://images.unsplash.com/photo-1533105079780-92b9be482077?auto=format&fit=crop&w=120&q=60')"></i>
+        <i style="background-image:url('https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&w=120&q=60')"></i>
+        <i style="background-image:url('https://images.unsplash.com/photo-1519046904884-53103b34b206?auto=format&fit=crop&w=120&q=60')"></i>
+      </div>
+    </div>
+    <div class="bb"><p class="serif">&euro;184<small>per night</small></p><span>Book now</span></div>
+  </div>
+
+  <div class="dev r">
+    <div class="s">
+      <b class="serif" style="font-size:16px;line-height:1">Trips</b>
+      <div class="seg"><span class="on">Upcoming</span><span>Past</span></div>
+      <div class="th"><span>In 12 days</span><b>Santorini</b></div>
+      <div class="bp">
+        <div class="tp"><b>AF 1832</b><span>ECONOMY</span></div>
+        <div class="rt2"><div><strong>COO</strong><small>07:40</small></div><span class="ln"></span><div class="e"><strong>JTR</strong><small>16:20</small></div></div>
+        <div class="tear"></div>
+        <div class="pg"><span>GATE<b>B12</b></span><span>SEAT<b>14A</b></span><span>BOARDS<b>07:05</b></span></div>
+        <div class="bc"></div>
+      </div>
+      <div class="tl">
+        <div><small>16:20</small><i class="on"></i><span>Land in Santorini<em>Private transfer to Oia</em></span></div>
+        <div><small>19:30</small><i></i><span>Check in at Kima<em>Cave suite, plunge pool</em></span></div>
+      </div>
+    </div>
+    <div class="tab"><i></i><i></i><i class="on"></i><i></i></div>
+  </div>
+
+  <div class="dev c">
+    <div class="s">
+      <div class="top"><div><small class="mu">Current location</small><b><span class="pin"></span>Cotonou, Benin</b></div><span class="bell"></span><span class="av"></span></div>
+      <p class="hi serif">Where to <i>next</i>, Adjoa?</p>
+      <div class="sr"><span>Search places, islands, cities</span><i></i></div>
+      <div class="chips"><span class="on">All</span><span>Beaches</span><span>Mountains</span><span>Cities</span></div>
+      <p class="h serif">Trending <small>8 places</small></p>
+      <div class="rail">
+        <div class="tc" style="background-image:url('https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?auto=format&fit=crop&w=300&q=60')"><span class="rt">4.9</span><span class="ht"><i class="hrt"></i></span><span class="nm serif">Santorini</span><span class="ct">Greece</span><span class="pr">&euro;184</span></div>
+        <div class="tc" style="background-image:url('https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=300&q=60')"><span class="rt">4.8</span><span class="ht"><i class="hrt"></i></span><span class="nm serif">Kyoto</span><span class="ct">Japan</span><span class="pr">&euro;142</span></div>
+      </div>
+    </div>
+    <div class="tab"><i class="on"></i><i></i><i></i><i></i></div>
+  </div>
+</body>
+</html>

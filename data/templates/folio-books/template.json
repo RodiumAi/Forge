@@ -1,0 +1,33 @@
+{
+  "kind": "mobile",
+  "id": "folio-books",
+  "title": {
+    "en": "Folio",
+    "fr": "Folio"
+  },
+  "description": {
+    "en": "Ebook and audiobook app: continue-reading hero with progress and quote of the day, discover with genres, charts and editors' picks, a library shelf, yearly goal profile, book details and a reader with font size and themes, in a paper and ink shell with bottom tabs.",
+    "fr": "App de livres numériques et audio : héro « Reprendre la lecture » avec progression et citation du jour, découverte par genres, classements et choix de la rédaction, bibliothèque, profil avec objectif annuel, fiche livre et liseuse avec taille de texte et thèmes, dans un shell papier et encre avec onglets."
+  },
+  "tags": [
+    "mobile",
+    "books",
+    "reading",
+    "audiobooks",
+    "ebooks"
+  ],
+  "preview": "preview.html",
+  "bootHint": {
+    "en": "Adapt folio-books: store name, books (titles, authors, covers, synopses), reader text, genres, goal and reading stats.",
+    "fr": "Adapte folio-books : nom de la librairie, livres (titres, auteurs, couvertures, résumés), texte de la liseuse, genres, objectif et statistiques de lecture."
+  },
+  "accent": "#9c3d2e",
+  "bg": "#f7f1e6",
+  "fg": "#231c16",
+  "muted": "#8a7d6e",
+  "tone": "literary, calm, warm and unhurried",
+  "fonts": {
+    "display": "Newsreader",
+    "body": "Inter"
+  }
+}

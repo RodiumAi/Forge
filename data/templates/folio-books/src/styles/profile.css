@@ -1,0 +1,43 @@
+/* Profile tab. Scoped under .profile-screen. */
+.profile-screen .me { display: flex; align-items: center; gap: 1rem; }
+.profile-screen .me img { width: 4.4rem; height: 4.4rem; border-radius: 999px; object-fit: cover; box-shadow: 0 0 0 3px var(--bg), 0 0 0 4.5px var(--gold); }
+.profile-screen .me div { flex: 1; min-width: 0; }
+.profile-screen .me h2 { font-size: 1.6rem; }
+
+/* Goal: the ring is the hero of the screen */
+.profile-screen .goal {
+  display: grid; grid-template-columns: auto 1fr; gap: 1.1rem 1.15rem; align-items: center;
+  padding: 1.25rem 1.2rem 1.1rem; border-radius: 1.6rem;
+  background: radial-gradient(80% 90% at 0% 0%, color-mix(in srgb, var(--gold) 22%, transparent), transparent 70%), var(--surface);
+  border: 1px solid var(--line); box-shadow: var(--shadow);
+}
+.profile-screen .ring { position: relative; width: 7.4rem; height: 7.4rem; }
+.profile-screen .ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.profile-screen .ring circle { fill: none; stroke-width: 9; }
+.profile-screen .ring .track { stroke: color-mix(in srgb, var(--gold) 26%, transparent); }
+.profile-screen .ring .arc { stroke: var(--accent); stroke-linecap: round; transition: stroke-dashoffset .6s ease; }
+.profile-screen .ring-num { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+.profile-screen .ring-num strong { font-family: var(--font-display); font-weight: 500; font-size: 2.5rem; line-height: .9; }
+.profile-screen .ring-num small { font-size: .72rem; color: var(--muted); font-weight: 600; }
+.profile-screen .goal-text { display: grid; gap: .3rem; }
+.profile-screen .goal-text h3 { font-size: 1.45rem; font-weight: 500; line-height: 1.1; }
+.profile-screen .months { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(12, 1fr); gap: .35rem; height: 3.6rem; padding-top: .7rem; border-top: 1px solid var(--line); }
+.profile-screen .months span { display: grid; grid-template-rows: 1fr auto; gap: .25rem; justify-items: center; }
+.profile-screen .months i { align-self: end; width: 100%; max-width: .9rem; min-height: .2rem; border-radius: .25rem; background: color-mix(in srgb, var(--gold) 60%, transparent); }
+.profile-screen .months .now i { background: var(--accent); }
+.profile-screen .months small { font-size: .6rem; font-weight: 600; color: var(--muted); }
+
+.profile-screen .stats { display: grid; grid-template-columns: 1fr 1fr; gap: .65rem; }
+.profile-screen .stat { display: grid; gap: .15rem; padding: .95rem 1rem; border-radius: 1.1rem; background: var(--surface); border: 1px solid var(--line); }
+.profile-screen .stat strong { font-family: var(--font-display); font-weight: 500; font-size: 1.85rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.profile-screen .stat span { font-size: .76rem; color: var(--muted); font-weight: 500; }
+
+.profile-screen .list { padding-block: .3rem; }
+.profile-screen .item { display: flex; align-items: center; gap: .85rem; width: 100%; min-height: 3.7rem; padding: .45rem 0; border: 0; border-bottom: 1px solid var(--line); background: none; text-align: left; color: var(--fg); }
+.profile-screen .item:last-child { border-bottom: 0; }
+.profile-screen .i-icon { width: 2.5rem; height: 2.5rem; border-radius: .85rem; display: grid; place-items: center; background: var(--surface-2); color: var(--accent); flex-shrink: 0; }
+.profile-screen .i-label { flex: 1; display: grid; gap: .1rem; font-size: .93rem; font-weight: 500; }
+.profile-screen .i-label small { font-size: .74rem; color: var(--muted); font-weight: 400; }
+.profile-screen .item > svg:last-child { color: var(--muted); }
+
+.profile-screen .sign-out { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 30%, transparent); }

@@ -70,64 +70,53 @@ EXPECTED_CODELAB_IDS = {
     "codelab-rodiumai-sdk",
 }
 
+EXPECTED_MOBILE_IDS = {
+    "folio-books",
+    "hearth-home",
+    "kin-care",
+    "lumen-wallet",
+    "maison-shop",
+    "mesa-eats",
+    "nova-assistant",
+    "serein-meditation",
+    "sprout-habits",
+    "stride-fitness",
+    "vinyl-music",
+    "voyage-trips",
+}
+
 EXPECTED_IDS = (
     EXPECTED_SLIDES_IDS
     | EXPECTED_CODELAB_IDS
     | EXPECTED_DESIGN_SYSTEM_IDS
+    | EXPECTED_MOBILE_IDS
     | {
         "astroship-startup",
         "atelier-mode",
         "aurora-ai",
-        "ava-assistant",
         "bloom-wellness",
         "brutalist-studio",
-        "calm-space",
-        "echo-music",
-        "fern-plants",
         "forge-devtools",
-        "frame-social",
         "gallery-photos",
         "glacier-travel",
         "holo-portfolio",
         "kinetic-conf",
-        "kobo-budget",
         "logsfolio-portfolio",
-        "loop-habit",
         "lumen-architecture",
         "mono-journal",
         "nexora-agency",
-        "nova-bank",
         "orbit-dashboard",
         "origami-3d",
         "podux-podcast",
         "pulse-fitness",
         "quantum-consult",
-        "rida-ride",
-        "sabor-recipes",
         "synthwave-music",
         "tailnext-saas",
         "tailstore-shop",
-        "tempo-run",
         "terra-eco",
-        "trove-market",
         "vertex-crypto",
     }
 )
-
-EXPECTED_MOBILE_IDS = {
-    "ava-assistant",
-    "calm-space",
-    "echo-music",
-    "fern-plants",
-    "frame-social",
-    "kobo-budget",
-    "loop-habit",
-    "nova-bank",
-    "rida-ride",
-    "sabor-recipes",
-    "tempo-run",
-    "trove-market",
-}
 
 EXPECTED_WEB_IDS = (
     EXPECTED_IDS
@@ -208,10 +197,12 @@ class TestCatalog:
 
     def test_previews_are_static_and_single_origin(self):
         # Card thumbnails must stay script-free; the only allowed remote
-        # dependency is the Unsplash CDN already used by the kits themselves.
+        # dependencies are the Unsplash CDN already used by the kits themselves
+        # and the Google Fonts their DESIGN.md names.
         for template in list_templates():
             preview = (template.path / "preview.html").read_text(encoding="utf-8")
             assert "<script" not in preview.lower(), template.id
             urls = re.findall(r"https?://[^\s\"')]+", preview)
-            offsite = [u for u in urls if not u.startswith("https://images.unsplash.com/")]
+            allowed = ("https://images.unsplash.com/", "https://fonts.googleapis.com/", "https://fonts.gstatic.com")
+            offsite = [u for u in urls if not u.startswith(allowed)]
             assert offsite == [], f"{template.id} references {offsite}"

@@ -16,12 +16,15 @@ import { useToast } from "@/components/app/useToast";
 import { VerifyEmailBanner } from "@/components/auth/VerifyEmailBanner";
 import { Composer, type ComposerDesignSystem, type ComposerHandle } from "@/components/composer/Composer";
 import { listDesignSystems, type DesignSystemList } from "@/components/design-system/api";
+import type { IntakeFields } from "@/components/design-system/intake/brand-intake";
+import { BrandIntakeDialog } from "@/components/design-system/intake/BrandIntakeDialog";
+import { submitBrandIntake } from "@/components/design-system/intake/submit";
 import { buildCreateRequest, getTile, type HomeTile, type HomeTileId } from "@/components/home/home-kinds";
 import { kindOf } from "@/components/home/projects";
 import { planDisplayName } from "@/components/RodiumWalletBadge";
 import { AppShell } from "@/components/shell/AppShell";
 import { daysUntil, formatCount } from "@/components/shell/FrodiCard";
-import { APP_ROUTES, GITHUB_URL } from "@/components/shell/nav";
+import { APP_ROUTES } from "@/components/shell/nav";
 import { invalidateThumbCache } from "@/components/SiteThumb";
 import type { GalleryTemplate } from "@/components/TemplateGallery";
 import { TeamInviteNotice } from "@/components/TeamInviteNotice";
@@ -67,6 +70,7 @@ import {
   subscribeProjects,
 } from "@/lib/lists-cache";
 import { useMediaToken } from "@/lib/media-token";
+import { clearPromptDraft, type PromptDraft, usePromptDraft } from "@/lib/prompt-draft";
 import {
   PromptAttachment,
   createPromptAttachment,
@@ -77,6 +81,7 @@ import {
 import { getSessionSnapshot, subscribeSession, type SessionProfile } from "@/lib/session-cache";
 import { topProgressDone, topProgressStart } from "@/lib/top-progress";
 import { refreshWorkspaceActivity, useWorkspaceActivity, type ActiveRun } from "@/lib/workspace-activity";
+import { refusedPlan, TEMPLATE_PLAN_NAMES } from "@/lib/template-access";
 
 const DESIGN_SYSTEM_KEY = "forge_home_design_system";
 
@@ -295,10 +300,42 @@ function DashboardInner() {
   const [mounted, setMounted] = useState(false);
   const [profile, setProfile] = useState<SessionProfile | null>(null);
   const [toast, notify] = useToast(10000);
+  // "Créer une charte graphique": a design system starts from the brand intake, not a free prompt.
+  const [intakeOpen, setIntakeOpen] = useState(false);
 
   const promptRef = useRef<ComposerHandle>(null);
   const tile = getTile(tileId);
   const busy = creating || Boolean(forkingId);
+
+  // Prompt draft: what the user was typing survives a reload. The ?prompt= seed
+  // and the pending (signed-out) prompt win over it, since they only fill an
+  // empty field. Paused while a project is being created.
+  const draftPausedRef = useRef(false);
+  draftPausedRef.current = creating;
+  usePromptDraft({
+    key: "home",
+    pausedRef: draftPausedRef,
+    draft: {
+      text: prompt,
+      extras: {
+        tile: tileId === "blank" ? null : tileId,
+        // A local file cannot come back after a reload; only its name is kept.
+        localFiles: files.flatMap((f) => (f.source === "local" ? [f.file.name] : [])),
+      },
+    },
+    onRestore: (draft: PromptDraft) => restoreDraft(draft),
+  });
+
+  function restoreDraft(draft: PromptDraft) {
+    const extras = draft.extras || {};
+    setPrompt((prev) => (prev.trim() ? prev : draft.text));
+    const savedTile = typeof extras.tile === "string" ? (extras.tile as HomeTileId) : null;
+    if (savedTile && getTile(savedTile).id === savedTile) {
+      setTileId((prev) => (prev === "blank" ? savedTile : prev));
+    }
+    const lost = Array.isArray(extras.localFiles) ? (extras.localFiles as string[]) : [];
+    if (lost.length) setFileError(t("draftFilesLost").replace("{files}", lost.join(", ")));
+  }
 
   const { actions, dialogs } = useProjectActions((change) => {
     if (change.removed) setProjects((prev) => prev.filter((p) => p.id !== change.removed));
@@ -322,6 +359,16 @@ function DashboardInner() {
   useEffect(() => {
     const target = legacyTabTarget(searchParams.get("tab"));
     if (target) router.replace(target);
+  }, [router, searchParams]);
+
+  // ?create=design_system (from an editor's "Create a design system") selects that tile
+  // and opens the brand intake.
+  useEffect(() => {
+    if (searchParams.get("create") !== "design_system") return;
+    setTileId("design_system");
+    router.replace("/dashboard#create", { scroll: false });
+    setError(null);
+    setIntakeOpen(true);
   }, [router, searchParams]);
 
   // ?prompt= prefills the composer (integration pages, links from the site).
@@ -467,6 +514,7 @@ function DashboardInner() {
     if (err instanceof PromptTooLongError) setError(t("promptTooLong"));
     else if (err instanceof ApiError && err.code === "project_quota_exceeded") notify(t("projectQuotaReached"), "alert");
     else if (err instanceof ApiError && err.code === "INSUFFICIENT_RODI") setError(t("createNeedsRodi"));
+    else if (refusedPlan(err)) notify(t("apTplLockedTitle").replace("{plan}", TEMPLATE_PLAN_NAMES[refusedPlan(err)!]), "alert");
     else setError(err instanceof Error ? err.message : t("errorGeneric"));
   }
 
@@ -498,6 +546,7 @@ function DashboardInner() {
       );
       attachmentList.forEach(revokePromptAttachment);
       setFiles([]);
+      clearPromptDraft("home");
       opened(project);
     } catch (err) {
       createFailed(err);
@@ -514,7 +563,46 @@ function DashboardInner() {
       shortcutLabel: t(chosen.labelKey),
       shortcutTemplate: t("homeShortcutPrompt"),
     });
+    // A design system (the tile, or a brief that reads as one) asks for the brand first.
+    // The Palette shortcut keeps its one-line prompt.
+    if (request.platform === "design_system" && chosen.id !== "palette") {
+      openIntake();
+      return;
+    }
     await createFromPrompt(request.prompt, files, request.platform, request.options);
+  }
+
+  function openIntake() {
+    if (busy) return;
+    setError(null);
+    setIntakeOpen(true);
+  }
+
+  async function submitIntake(fields: IntakeFields) {
+    if (busy) return;
+    setCreating(true);
+    setError(null);
+    try {
+      if (!(await passGates())) {
+        setCreating(false);
+        return;
+      }
+      const project = await submitBrandIntake({
+        fields,
+        nameFallback: t("newProject"),
+        labels: promptLabels(),
+        locale,
+        options: effectiveDesignSystemId ? { designSystemId: effectiveDesignSystemId } : null,
+      });
+      files.forEach(revokePromptAttachment);
+      setFiles([]);
+      clearPromptDraft("home");
+      setIntakeOpen(false);
+      opened(project);
+    } catch (err) {
+      createFailed(err);
+      setCreating(false);
+    }
   }
 
   async function forkTemplate(tpl: GalleryTemplate) {
@@ -557,7 +645,7 @@ function DashboardInner() {
     setDeckFormat(undefined);
   }
 
-  function addFiles(list: FileList) {
+  function addFiles(list: File[]) {
     setFiles((prev) => {
       const { next, rejected } = mergePromptAttachments(prev, list);
       setFileError(rejected.length ? t("promptFileTypeError") : null);
@@ -636,6 +724,20 @@ function DashboardInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- boot once on mount/locale
   }, [locale, router, t]);
 
+  // The API renders site and app cards in the background after this listing:
+  // re-read the list a couple of times so new images show up (cheap, no polling loop).
+  useEffect(() => {
+    const timers = [25_000, 70_000].map((delay) =>
+      window.setTimeout(() => {
+        if (document.visibilityState !== "visible") return;
+        void ensureProjects(locale, { force: true })
+          .then((fresh) => setProjects(fresh as AppProject[]))
+          .catch(() => undefined);
+      }, delay),
+    );
+    return () => timers.forEach((id) => window.clearTimeout(id));
+  }, [locale]);
+
   const suggestions = suggestionsFor(tile.kind, enabledKinds).map((item) => ({
     label: t(item.label),
     prompt: t(item.prompt),
@@ -681,6 +783,11 @@ function DashboardInner() {
             deckFormat={deckFormat}
             onDeckFormatChange={setDeckFormat}
             manageDesignSystemsHref={`${APP_ROUTES.projects}?kind=design_system`}
+            designSystemsLocked={dsList?.allowed === false}
+            onCreateDesignSystem={() => {
+              selectTile("design_system");
+              openIntake();
+            }}
             kindsDefaultOpen={false}
             designSystems={designSystems}
             designSystemId={effectiveDesignSystemId}
@@ -713,12 +820,6 @@ function DashboardInner() {
               ) : null
             }
           />
-          <div className="f-ov-under">
-            <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
-              <Glyph name="github" size="sm" />
-              {t("apOpenSource")}
-            </a>
-          </div>
         </div>
       </section>
       <TeamInviteNotice />
@@ -774,7 +875,12 @@ function DashboardInner() {
         {enabledKinds.map((kind) => {
           const style = kindStyle(kind);
           return (
-            <button key={kind} type="button" disabled={busy} onClick={() => void startBlank(kind)}>
+            <button
+              key={kind}
+              type="button"
+              disabled={busy}
+              onClick={() => (kind === "design_system" ? openIntake() : void startBlank(kind))}
+            >
               <span className="k" style={{ background: style.color }}>
                 <Glyph name={style.glyph} />
               </span>
@@ -830,6 +936,15 @@ function DashboardInner() {
         </>
       ) : null}
       {dialogs}
+      <BrandIntakeDialog
+        open={intakeOpen}
+        onClose={() => setIntakeOpen(false)}
+        initialText={prompt}
+        initialLogo={files.flatMap((f) => (f.source === "local" && f.kind === "image" ? [f.file] : []))[0] ?? null}
+        busy={creating}
+        error={intakeOpen ? error : null}
+        onSubmit={(fields) => void submitIntake(fields)}
+      />
     </AppShell>
   );
 }

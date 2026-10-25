@@ -43,6 +43,14 @@ describe("chat target", () => {
     expect(buildChatTarget({ route: "", selection: { forgeId: "nope" }, restrict: false })).toBeUndefined();
   });
 
+  it("carries the pages picked in the rail, normalized and deduplicated", () => {
+    expect(buildChatTarget({ route: "/", selection: null, pages: ["/", "carte", "/carte", " "] })).toEqual({
+      route: "/",
+      pages: ["/", "/carte"],
+    });
+    expect(buildChatTarget({ route: "", selection: null, pages: [] })).toBeUndefined();
+  });
+
   it("keeps the selection marker format unchanged", () => {
     const marker = formatElementSelectionMarker({ tag: "h1", selector: "body > h1", text: "Hi" }, "Sélection");
     expect(marker).toBe('[Sélection: h1 | selector:body > h1 | text:"Hi"]');

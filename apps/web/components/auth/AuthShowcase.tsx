@@ -14,7 +14,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { STEPS_PATH } from "@/components/landing/LandingHero";
-import { SiteThumb } from "@/components/SiteThumb";
+import { TemplateThumb } from "@/components/templates/TemplateThumb";
 import type { GalleryTemplate } from "@/components/TemplateGallery";
 import { DeckThumb } from "@/components/templates/DeckThumb";
 import { IconButton } from "@/components/ui/Button";
@@ -28,13 +28,13 @@ import { kindOf, usePublicTemplates } from "@/lib/public-templates";
 /** Order of the showcase: a deck, a site, a deck, an app... Missing ids are skipped. */
 const SHOWCASE_IDS = [
   "slides-product-launch",
-  "nova-bank",
+  "lumen-wallet",
   "slides-travel",
   "aurora-ai",
   "slides-fundraising",
   "glacier-travel",
   "slides-annual-report",
-  "echo-music",
+  "vinyl-music",
 ];
 
 /** How long each template stays in front. */
@@ -60,13 +60,7 @@ function Shot({ tpl, playing }: { tpl: GalleryTemplate; playing: boolean }) {
     return <DeckThumb templateId={tpl.id} playing={playing} onMissing={() => setMissing(true)} />;
   }
   return (
-    <SiteThumb
-      src={tpl.preview_url || `/templates/${tpl.id}/preview`}
-      viewportWidth={480}
-      viewportHeight={270}
-      title={tpl.title}
-      className="f-thumb-site"
-    />
+    <TemplateThumb template={tpl} viewportWidth={480} viewportHeight={270} className="f-thumb-site" />
   );
 }
 

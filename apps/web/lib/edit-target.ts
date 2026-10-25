@@ -14,6 +14,8 @@ export type ChatTarget = {
   forgeId?: string;
   filePath?: string;
   restrict?: boolean;
+  /** Pages picked in the pages rail: the request applies to them (a focus, not a write limit). */
+  pages?: string[];
 };
 
 export type ForgeLocation = { file: string; line: number; col: number };
@@ -46,6 +48,7 @@ export function buildChatTarget(input: {
   route?: string | null;
   selection?: { forgeId?: string | null } | null;
   restrict?: boolean;
+  pages?: readonly string[] | null;
 }): ChatTarget | undefined {
   const target: ChatTarget = {};
   const route = (input.route || "").trim();
@@ -53,6 +56,14 @@ export function buildChatTarget(input: {
   const forgeId = parseForgeId(input.selection?.forgeId) ? String(input.selection?.forgeId).trim() : "";
   if (forgeId) target.forgeId = forgeId;
   if (input.selection && input.restrict) target.restrict = true;
+  const pages: string[] = [];
+  for (const raw of input.pages ?? []) {
+    const p = (raw || "").trim();
+    if (!p) continue;
+    const path = p.startsWith("/") ? p : `/${p}`;
+    if (!pages.includes(path) && pages.length < 40) pages.push(path);
+  }
+  if (pages.length) target.pages = pages;
   return Object.keys(target).length ? target : undefined;
 }
 

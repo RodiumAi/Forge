@@ -24,6 +24,8 @@ type PublishedData = {
   feedbackUrl?: string | null;
   badge?: boolean;
   locale?: string;
+  /** Public URL of the codelab (QR code on the cover); absent when unknown. */
+  publicUrl?: string | null;
 };
 
 function relativeAsset(path: string): string {
@@ -50,6 +52,7 @@ async function main() {
       assetUrl={relativeAsset}
       downloads={data.downloads}
       feedbackUrl={data.feedbackUrl ?? undefined}
+      publicUrl={data.publicUrl ?? undefined}
       badge={!!data.badge && !print}
       locale={data.locale}
       storageKey={`forge-codelab:${window.location.host}${window.location.pathname}`}

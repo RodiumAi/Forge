@@ -1,11 +1,13 @@
-"""Design system exports: tokens.json (W3C), CSS variables, Tailwind, DESIGN.md, PDF.
+"""Design system exports: tokens.json (W3C), CSS variables, Tailwind, brand guidelines (MD, PDF).
 
 Rights follow the Forge Design plan (section 8): Free exports nothing; the
 text exports open from Starter; the PDF needs ``export_pdf``. Open-source and
 BYOK installs have no plan and stay unrestricted.
 
-The PDF is the brand guidelines page printed by Chromium. The page is built
-from the tokens with every asset inlined, and the browser may only fetch the
+The Markdown and the PDF are the brand guidelines (``guide``), not DESIGN.md:
+DESIGN.md is what the AI reads and stays an internal file. The PDF is the
+guide printed by Chromium (A4 landscape, page size from its CSS), built from
+the tokens with every asset inlined, and the browser may only fetch the
 Google Fonts stylesheet and font files: any other request is aborted, so the
 export cannot be turned into a way to reach the network.
 """
@@ -22,8 +24,9 @@ from sqlalchemy.orm import Session
 
 from app.errors import SitesError
 from app.models import User
-from app.services.design_system.render import design_md, tailwind_config, tokens_json
-from app.services.design_system.site import brand_site_html, local_asset_url
+from app.services.design_system.guide import brand_guide_html, brand_guide_md
+from app.services.design_system.render import tailwind_config, tokens_json
+from app.services.design_system.site import local_asset_url
 from app.services.design_system.tokens import css_text
 
 FORMATS = ("tokens", "css", "tailwind", "md", "pdf")
@@ -64,7 +67,7 @@ def _slug(name: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", (name or "design-system").lower()).strip("-")[:60] or "design-system"
 
 
-def text_export(document: dict[str, Any], fmt: str) -> ExportFile:
+def text_export(document: dict[str, Any], fmt: str, *, lang: str = "fr") -> ExportFile:
     base = _slug(str(document.get("name") or ""))
     if fmt == "tokens":
         return ExportFile(f"{base}.tokens.json", "application/json", tokens_json(document).encode("utf-8"))
@@ -75,7 +78,11 @@ def text_export(document: dict[str, Any], fmt: str) -> ExportFile:
             "tailwind.config.js", "text/javascript; charset=utf-8", tailwind_config(document).encode("utf-8")
         )
     if fmt == "md":
-        return ExportFile("DESIGN.md", "text/markdown; charset=utf-8", design_md(document).encode("utf-8"))
+        return ExportFile(
+            f"{base}-brand-guidelines.md",
+            "text/markdown; charset=utf-8",
+            brand_guide_md(document, lang).encode("utf-8"),
+        )
     raise SitesError(400, "INVALID_FORMAT", f"Unknown export format {fmt!r}.")
 
 
@@ -102,7 +109,9 @@ def _print_pdf(html: str) -> bytes:
                 page.set_content(html, wait_until="load", timeout=30_000)
                 with contextlib.suppress(Exception):
                     page.wait_for_load_state("networkidle", timeout=8_000)
-                return page.pdf(format="A4", print_background=True, margin={"top": "12mm", "bottom": "12mm"})
+                return page.pdf(
+                    print_background=True, prefer_css_page_size=True, margin={"top": "0", "bottom": "0"}
+                )
             finally:
                 context.close()
         finally:
@@ -110,11 +119,13 @@ def _print_pdf(html: str) -> bytes:
 
 
 async def pdf_export(project_id: str, document: dict[str, Any], *, lang: str, badge: bool) -> ExportFile:
-    html = brand_site_html(document, asset_url=local_asset_url(project_id), lang=lang, badge=badge)
+    html = brand_guide_html(document, asset_url=local_asset_url(project_id), lang=lang, badge=badge)
     try:
         body = await asyncio.wait_for(asyncio.to_thread(_print_pdf, html), timeout=_PDF_TIMEOUT_S)
     except ImportError as exc:
         raise SitesError(503, "PDF_UNAVAILABLE", "PDF export needs Playwright on the Forge API.") from exc
     except TimeoutError as exc:
         raise SitesError(504, "PDF_TIMEOUT", "The PDF took too long to render.") from exc
-    return ExportFile(f"{_slug(str(document.get('name') or ''))}-guidelines.pdf", "application/pdf", body)
+    return ExportFile(
+        f"{_slug(str(document.get('name') or ''))}-brand-guidelines.pdf", "application/pdf", body
+    )

@@ -86,6 +86,7 @@ Peu de mots, choisis. On évoque, on ne vend pas.
 
 ## Logo
 - File: /brand/logo.svg
+- On dark backgrounds: /brand/logo-dark.svg
 - Clear space: La hauteur totale du logo de chaque côté
 - Minimum size: 48px
 - Or sur noir

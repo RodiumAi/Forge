@@ -239,9 +239,17 @@ export async function createProjectWithAttachments(
       ...createOptionsBody(normalizePlatform(platform), options),
     }),
   });
-  const uploaded = attachments.length
-    ? await uploadPromptAttachments(project.id, attachments, locale)
-    : [];
+  let uploaded: PromptAttachment[] = [];
+  if (attachments.length) {
+    try {
+      uploaded = await uploadPromptAttachments(project.id, attachments, locale);
+    } catch (err) {
+      // The project exists only to hold these files: without them it is an
+      // empty orphan in the list. Remove it, then report the upload failure.
+      await api(`/projects/${project.id}`, { method: "DELETE" }).catch(() => undefined);
+      throw err;
+    }
+  }
   const payload = await buildPromptWithAttachments(trimmed, uploaded, labels);
   if (payload) setBootPrompt(project.id, payload);
   await clearPendingFiles();

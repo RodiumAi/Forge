@@ -10,6 +10,34 @@ import { ANIMATION_TYPES, DIRECTIONS, TRANSITION_TYPES, type Animation, type Tra
 import { Field, NumberField, SelectField } from "./fields";
 import type { DeckLocale, DeckT } from "./strings";
 
+/** A slide in miniature: a picture and "ABC", like Canva's tiles. */
+function MiniSlide({ className, style }: { className: string; style?: CSSProperties }) {
+  return (
+    <span className={className} style={style}>
+      <span className="de-mini-pic" />
+      <span className="de-mini-abc">ABC</span>
+    </span>
+  );
+}
+
+/** Direction hint drawn over a tile (only where the move has one). */
+const TILE_MARKS: Record<string, string> = {
+  "t-push": "←",
+  "t-slide": "←",
+  "t-wipe": "→",
+  "t-zoom-in": "⤢",
+  "t-zoom-out": "⤡",
+  "t-curtain": "↔",
+  "a-rise": "↑",
+  "a-drop": "↓",
+  "a-slide": "→",
+};
+
+function TileMark({ preview }: { preview: string }) {
+  const mark = TILE_MARKS[preview];
+  return mark ? <span className="de-mini-mark">{mark}</span> : null;
+}
+
 const TRANSITION_LABELS: Record<DeckLocale, Record<(typeof TRANSITION_TYPES)[number], string>> = {
   fr: {
     none: "Aucune",
@@ -113,8 +141,9 @@ export function TransitionPicker({
             data-preview={`t-${type}`}
           >
             <span className="de-tile-preview" aria-hidden>
-              <span className="de-mini de-mini-a" />
-              <span className="de-mini de-mini-b" style={{ "--de-dir": value?.direction ?? "left" } as CSSProperties} />
+              <MiniSlide className="de-mini de-mini-a" />
+              <MiniSlide className="de-mini de-mini-b" style={{ "--de-dir": value?.direction ?? "left" } as CSSProperties} />
+              <TileMark preview={`t-${type}`} />
             </span>
             <span className="de-tile-label">{TRANSITION_LABELS[locale][type]}</span>
           </button>
@@ -168,7 +197,7 @@ export function AnimationPicker({
           data-preview="a-none"
         >
           <span className="de-tile-preview" aria-hidden>
-            <span className="de-mini de-mini-el" />
+            <MiniSlide className="de-mini de-mini-el" />
           </span>
           <span className="de-tile-label">{t("animationNone")}</span>
         </button>
@@ -184,7 +213,8 @@ export function AnimationPicker({
             data-preview={`a-${type}`}
           >
             <span className="de-tile-preview" aria-hidden>
-              <span className="de-mini de-mini-el" />
+              <MiniSlide className="de-mini de-mini-el" />
+              <TileMark preview={`a-${type}`} />
             </span>
             <span className="de-tile-label">{ANIMATION_LABELS[locale][type]}</span>
           </button>

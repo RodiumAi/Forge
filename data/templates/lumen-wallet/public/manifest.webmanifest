@@ -1,0 +1,16 @@
+{
+  "name": "Lumen Wallet",
+  "short_name": "Lumen",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0e0f13",
+  "theme_color": "#0e0f13",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

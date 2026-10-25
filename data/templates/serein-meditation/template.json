@@ -1,0 +1,33 @@
+{
+  "kind": "mobile",
+  "id": "serein-meditation",
+  "free": true,
+  "title": {
+    "en": "Serein",
+    "fr": "Serein"
+  },
+  "description": {
+    "en": "Meditation and sleep app: breathing orb with today's session, explore by mood with photo cards, sleep stories and soundscapes, a profile with streak calendar and mood check-in, and a full-screen player with a progress ring.",
+    "fr": "App de méditation et de sommeil : orbe de respiration avec la séance du jour, exploration par humeur en cartes photo, histoires pour dormir et ambiances sonores, profil avec calendrier de série et humeur du jour, et lecteur plein écran avec anneau de progression."
+  },
+  "tags": [
+    "mobile",
+    "wellness",
+    "meditation",
+    "sleep"
+  ],
+  "preview": "preview.html",
+  "bootHint": {
+    "en": "Adapt serein-meditation: app name, guides, session titles and lengths, categories, sleep stories and the soundscapes.",
+    "fr": "Adapte serein-meditation : nom de l'app, guides, titres et durées des séances, catégories, histoires pour dormir et ambiances sonores."
+  },
+  "accent": "#e07a5f",
+  "bg": "#fbf5ef",
+  "fg": "#2b2420",
+  "muted": "#8c7f76",
+  "tone": "warm, unhurried, gently encouraging",
+  "fonts": {
+    "display": "Fraunces",
+    "body": "DM Sans"
+  }
+}

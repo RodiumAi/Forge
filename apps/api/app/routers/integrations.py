@@ -6,6 +6,7 @@ from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from app.i18n import resolve_locale
 from app.schemas import IntegrationDetailOut, IntegrationOut
 from app.services.integrations import (
+    embed_hosts,
     get_integration,
     guide_path,
     list_integrations,
@@ -29,6 +30,7 @@ def _to_out(meta, locale: str) -> IntegrationOut:
         badge=meta.badge,
         enabled_hint=meta.enabled_hint,
         logo_url=f"/integrations/{meta.id}/logo",
+        embed_hosts=list(embed_hosts(meta)),
     )
 
 

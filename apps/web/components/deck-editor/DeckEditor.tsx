@@ -7,7 +7,7 @@
  * through adapters so the same editor runs on the API and on fixtures.
  */
 
-import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import Link from "next/link";
 import {
   Code2,
@@ -16,6 +16,8 @@ import {
   Loader2,
   Minus,
   MoveRight,
+  PanelLeftOpen,
+  PanelRightOpen,
   PieChart,
   Plus,
   Smile,
@@ -27,9 +29,11 @@ import {
 import { DEFAULT_TOKENS, themeTokensFromDesign, type AssetUrl, type ThemeTokens } from "@/components/deck-player";
 import type { SlideElement } from "@/lib/contracts/forge-design";
 import { describeTarget, targetFor, type AiTarget } from "./ai";
+import { DeckDesignSystem } from "./DeckDesignSystem";
 import type { DocTransport } from "./autosave";
 import type { ChatClient } from "./chat-client";
-import { DeckChat } from "./DeckChat";
+import { DeckChat, type ChatRequest } from "./DeckChat";
+import { canvasMenu, elementMenu, slideMenu } from "./deck-menus";
 import { DeckImagePanel } from "./DeckImagePanel";
 import { EditorCanvas } from "./EditorCanvas";
 import { FormatToolbar } from "./FormatToolbar";
@@ -46,14 +50,17 @@ import {
   insertSlide,
   locate,
   moveSlide,
+  normalizeAngle,
   parseClipboard,
   pasteElements,
   removeSlide,
   updateRef,
   updateSlide,
   type ClipboardPayload,
+  type ImageElement,
   type TextElement,
 } from "./model";
+import { aabb, unionRect, type Point as SlidePoint } from "./geometry";
 import {
   align,
   deleteElements,
@@ -83,6 +90,7 @@ import type { TextCommands, TextMarks } from "./text-style";
 import { useDeckDocument } from "./useDeckDocument";
 import { WorkspaceBar } from "@/components/builder/WorkspaceBar";
 import { Button, IconButton } from "@/components/ui/Button";
+import { centerOf, ContextMenu, isContextMenuKey, useContextMenu, type ContextMenuEntry, type Point } from "@/components/ui/ContextMenu";
 import "./deck-editor.css";
 
 const TextEditor = lazy(() => import("./TextEditor"));
@@ -104,6 +112,9 @@ export type DeckEditorProps = {
   publisher?: DeckPublisher | null;
   readOnly?: boolean;
   backHref: string;
+  /** Brief from the home composer, handed to the assistant on a new deck. */
+  initialPrompt?: string | null;
+  onInitialPromptUsed?: () => void;
 };
 
 const INSERTS: { kind: InsertKind; label: DeckStringKey; icon: typeof Type }[] = [
@@ -137,6 +148,7 @@ export function DeckEditor(props: DeckEditorProps) {
 
   const [tokens, setTokens] = useState<ThemeTokens>(DEFAULT_TOKENS);
   const [tab, setTab] = useState<PanelTab>("slide");
+  const [layerHover, setLayerHover] = useState<string | null>(null);
   const [imageTarget, setImageTarget] = useState<ImageTarget | null>(null);
   const [presenting, setPresenting] = useState<number | null>(null);
   // Badge shown unless the plan allows removing it and the user turned it off.
@@ -144,13 +156,50 @@ export function DeckEditor(props: DeckEditorProps) {
   const badge = !props.badgeRemovable || keepBadge;
   // Phones open on the canvas; the assistant slides over it on demand.
   const [chatOpen, setChatOpen] = useState(() => typeof window === "undefined" || window.innerWidth > 900);
+  // Assistant width (drag handle) and slide strip placement, kept per browser.
+  const [chatWidth, setChatWidth] = useState(() => readPref(CHAT_WIDTH_KEY, (v) => clampChat(Number(v)), CHAT_DEFAULT));
+  const [railPos, setRailPos] = useState<"left" | "bottom">(() => readPref(RAIL_POS_KEY, (v) => (v === "bottom" ? "bottom" : "left"), "left"));
+  const [panelOpen, setPanelOpen] = useState(() => readPref(PANEL_OPEN_KEY, (v) => v !== "0", true));
+  const togglePanel = (open: boolean) => {
+    setPanelOpen(open);
+    writePref(PANEL_OPEN_KEY, open ? "1" : "0");
+  };
+  const changeRailPos = (pos: "left" | "bottom") => {
+    setRailPos(pos);
+    writePref(RAIL_POS_KEY, pos);
+  };
+  const resizeChat = (width: number) => {
+    const next = clampChat(width);
+    setChatWidth(next);
+    writePref(CHAT_WIDTH_KEY, String(next));
+  };
+  const onChatHandleDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const start = chatWidth;
+    const move = (ev: PointerEvent) => setChatWidth(clampChat(start + ev.clientX - startX));
+    const up = (ev: PointerEvent) => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      document.body.classList.remove("de-resizing");
+      resizeChat(start + ev.clientX - startX);
+    };
+    document.body.classList.add("de-resizing");
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  };
   const [insertOpen, setInsertOpen] = useState(false);
   const [emptyPicker, setEmptyPicker] = useState(false);
   const [commands, setCommands] = useState<TextCommands | null>(null);
   const [marks, setMarks] = useState<TextMarks | null>(null);
   const clipboard = useRef<ClipboardPayload | null>(null);
+  const menu = useContextMenu();
+  // Hand-offs from the right-click menu to the chat and the slide rail.
+  const [chatRequest, setChatRequest] = useState<ChatRequest | null>(null);
+  const [pickerAt, setPickerAt] = useState<{ index: number; nonce: number } | null>(null);
 
   const themeFile = doc?.deck.theme.tokens ?? "DESIGN.md";
+  const [themeNonce, setThemeNonce] = useState(0);
   useEffect(() => {
     if (load.status !== "ready") return;
     let alive = true;
@@ -162,12 +211,22 @@ export function DeckEditor(props: DeckEditorProps) {
       alive = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reload only when the theme file changes
-  }, [load.status, themeFile]);
+  }, [load.status, themeFile, themeNonce]);
+
+  // A design system was applied: DESIGN.md changed on the server, and
+  // deck.json now names it (taken as the remote version, no conflict).
+  const designSystemApplied = (paths: string[], designSystemId: string | null) => {
+    setThemeNonce((n) => n + 1);
+    const current = docState.state.doc;
+    if (current && designSystemId && paths.some((p) => p.endsWith("deck.json"))) {
+      docState.applyEvent({ type: "deck.deck", deck: { ...current.deck, theme: { ...current.deck.theme, designSystem: designSystemId } } });
+    }
+  };
 
   // The element tab follows the selection.
   const selectionCount = state.selection.length;
   useEffect(() => {
-    if (selectionCount > 0) setTab((current) => (current === "deck" ? current : "element"));
+    if (selectionCount > 0) setTab((current) => (current === "deck" || current === "layers" ? current : "element"));
     else setTab((current) => (current === "element" ? "slide" : current));
   }, [selectionCount]);
 
@@ -257,7 +316,12 @@ export function DeckEditor(props: DeckEditorProps) {
   useEffect(() => {
     if (readOnly) return;
     const onKey = (e: KeyboardEvent) => {
-      if (presenting !== null || isTyping(e.target)) return;
+      if (presenting !== null || isTyping(e.target) || e.defaultPrevented) return;
+      if (isContextMenuKey(e)) {
+        e.preventDefault();
+        menuKeyRef.current();
+        return;
+      }
       const s = stateRef.current;
       const d = s.doc;
       const current = d && s.slideId ? d.slides[s.slideId] : undefined;
@@ -365,6 +429,244 @@ export function DeckEditor(props: DeckEditorProps) {
     };
   }, [dispatch, presenting, readOnly, duplicateSelection, groupSelection, ungroupSelection]);
 
+  // ── right-click menus ─────────────────────────────────────────────────────
+
+  const askChat = (request: ChatRequest) => {
+    setChatOpen(true);
+    setChatRequest(request);
+  };
+
+  /** Opens the properties panel on a field (by its label) or a section (by its title). */
+  const reveal = (panelTab: PanelTab, label: string, section = false) => {
+    setImageTarget(null);
+    togglePanel(true);
+    setTab(panelTab);
+    window.setTimeout(() => {
+      const root = document.querySelector(".de-panel");
+      if (!root) return;
+      const box = section
+        ? Array.from(root.querySelectorAll(".de-section-head h3")).find((h) => h.textContent === label)?.closest(".de-section")
+        : Array.from(root.querySelectorAll(".de-field")).find((f) => f.querySelector(".de-field-label")?.textContent === label);
+      if (!box) return;
+      box.scrollIntoView({ block: "nearest" });
+      box.querySelector<HTMLElement>("input, textarea, select, button")?.focus({ preventScroll: true });
+    }, 80);
+  };
+
+  const copyIds = (ids: string[], cut: boolean) => {
+    const current = stateRef.current.doc && sid ? stateRef.current.doc.slides[sid] : undefined;
+    if (!current || !ids.length) return;
+    const payload = copyElements(current, ids);
+    clipboard.current = payload;
+    void navigator.clipboard?.writeText(JSON.stringify(payload)).catch(() => undefined);
+    if (cut) dispatch({ type: "edit", recipe: deleteElements(current.id, ids), select: [] });
+  };
+
+  /** Pastes what was copied here first, else what the system clipboard holds; `at` puts it under the pointer. */
+  const pasteFromMenu = async (at?: SlidePoint) => {
+    let payload = clipboard.current;
+    if (!payload) {
+      try {
+        payload = parseClipboard((await navigator.clipboard?.readText()) ?? "");
+      } catch {
+        payload = null;
+      }
+    }
+    const s = stateRef.current;
+    const current = s.doc && s.slideId ? s.doc.slides[s.slideId] : undefined;
+    if (!payload || !current) return;
+    const { slide: next, ids } = pasteElements(current, payload);
+    const put = (d: Parameters<typeof updateSlide>[0]) => updateSlide(d, current.id, () => next);
+    const bounds = at ? unionRect(ids.map((id) => absoluteBox(next, id)).filter((b): b is NonNullable<typeof b> => !!b).map(aabb)) : null;
+    // Top-left corner under the pointer, kept inside the slide when it fits.
+    const fmt = s.doc?.deck.format;
+    const target = bounds && at && fmt ? { x: Math.max(0, Math.min(at.x, fmt.width - bounds.w)), y: Math.max(0, Math.min(at.y, fmt.height - bounds.h)) } : null;
+    const recipe = bounds && target ? (d: Parameters<typeof updateSlide>[0]) => moveBy(current.id, ids, target.x - bounds.x, target.y - bounds.y, next)(put(d)) : put;
+    dispatch({ type: "edit", recipe, select: ids });
+  };
+
+  const canPaste = () => !!clipboard.current || typeof navigator === "undefined" || typeof navigator.clipboard?.readText === "function";
+  const aiReady = !!props.chat && !readOnly;
+
+  const insertAt = (kind: InsertKind, at: SlidePoint) => {
+    if (!slide || !doc) return;
+    const element = newElement(kind, slide, doc.deck, { text: t("newText"), series: copyFor(locale).series });
+    const x = Math.round(Math.min(Math.max(0, at.x - element.w / 2), Math.max(0, doc.deck.format.width - element.w)));
+    const y = Math.round(Math.min(Math.max(0, at.y - element.h / 2), Math.max(0, doc.deck.format.height - element.h)));
+    const placed = { ...element, x, y } as SlideElement;
+    dispatch({ type: "edit", recipe: insertElement(sid, placed), select: [placed.id] });
+  };
+
+  const restoreRatio = (el: ImageElement) => {
+    const img = new window.Image();
+    img.onload = () => {
+      if (!img.naturalWidth || !img.naturalHeight) return;
+      run(setFields(sid, [el.id], { h: Math.max(1, Math.round((el.w * img.naturalHeight) / img.naturalWidth)) }));
+    };
+    img.src = assetUrl(el.src);
+  };
+
+  const openCanvasMenu = (at: Point, point: SlidePoint, ids: string[]) => {
+    if (!slide || !doc) return;
+    const current = slide;
+    const ro = !!readOnly;
+    if (!ids.length) {
+      menu.open(
+        at,
+        canvasMenu({
+          t,
+          readOnly: ro,
+          canPaste: canPaste(),
+          hasElements: current.elements.length > 0,
+          hasBackgroundImage: current.background?.type === "image",
+          aiReady,
+          inserts: INSERTS.map(({ kind, label }) => ({ kind, label })),
+          do: {
+            paste: () => void pasteFromMenu(),
+            pasteHere: () => void pasteFromMenu(point),
+            selectAll: () => {
+              const scope = state.groupScope ? locate(current.elements, state.groupScope)?.element : null;
+              const list = scope && scope.type === "group" ? scope.children : current.elements;
+              dispatch({ type: "select", ids: list.map((el) => el.id) });
+            },
+            insert: (kind) => insertAt(kind, point),
+            insertImage: () => setImageTarget({ kind: "new" }),
+            background: () => reveal("slide", t("background"), true),
+            backgroundImage: () => setImageTarget({ kind: "background" }),
+            removeBackgroundImage: () =>
+              run((d) =>
+                updateSlide(d, current.id, (sl) => {
+                  const next = { ...sl };
+                  delete next.background;
+                  return next;
+                }),
+              ),
+            changeLayout: () => askChat({ nonce: Date.now(), kind: "form", action: "change_layout" }),
+            transition: () => reveal("slide", t("transition"), true),
+            askAi: () => {
+              dispatch({ type: "selectSlide", id: current.id, focus: true });
+              askChat({ nonce: Date.now(), kind: "focus" });
+            },
+            present: () => {
+              dispatch({ type: "editText", id: null });
+              setPresenting(presentIndex(doc.deck, current.id));
+            },
+          },
+        }),
+        t("ctxCanvas"),
+      );
+      return;
+    }
+    const els = ids.map((id) => findElement(current, id)).filter((el): el is SlideElement => !!el);
+    const single = els.length === 1 ? els[0] : null;
+    const items: ContextMenuEntry[] = elementMenu({
+      t,
+      readOnly: ro,
+      single,
+      count: els.length,
+      anyLocked: els.some((el) => el.locked),
+      allLocked: els.length > 0 && els.every((el) => el.locked),
+      canPaste: canPaste(),
+      aiReady,
+      rotation: single?.rotation ?? 0,
+      do: {
+        replaceImage: () => single && setImageTarget({ kind: "element", id: single.id }),
+        fit: (fit) => single && run(setFields(current.id, [single.id], { fit: fit === "cover" ? undefined : fit })),
+        restoreRatio: () => single?.type === "image" && restoreRatio(single),
+        alt: () => reveal("element", t("alt")),
+        editText: () => single && dispatch({ type: "editText", id: single.id }),
+        ai: (action) => askChat(action === "translate" ? { nonce: Date.now(), kind: "form", action } : { nonce: Date.now(), kind: "quick", action }),
+        fillWithImage: () => single && setImageTarget({ kind: "fill", id: single.id }),
+        enterGroup: () => single && dispatch({ type: "enterGroup", id: single.id }),
+        ungroup: () => single && ungroupSelection(single.id),
+        group: () => {
+          const id = freshId("group", allElementIds(current.elements));
+          dispatch({ type: "edit", recipe: group(current.id, ids, id), select: [id] });
+        },
+        cut: () => copyIds(ids, true),
+        copy: () => copyIds(ids, false),
+        paste: () => void pasteFromMenu(),
+        duplicate: () => {
+          const result = duplicateElements(current, ids);
+          dispatch({ type: "edit", recipe: (d) => updateSlide(d, current.id, () => result.slide), select: result.ids });
+        },
+        z: (move) => run(zOrder(current.id, ids, move)),
+        align: (how) => run(align(current.id, current, doc.deck, ids, how)),
+        distribute: (axis) => run(distribute(current.id, current, ids, axis)),
+        rotate: (by) =>
+          single &&
+          run(
+            patchElements(current.id, [single.id], (el) => {
+              const next = { ...el };
+              const angle = by === null ? 0 : normalizeAngle((el.rotation ?? 0) + by);
+              if (angle) next.rotation = angle;
+              else delete next.rotation;
+              return next;
+            }),
+          ),
+        lock: (locked) => run(setFields(current.id, ids, { locked: locked ? true : undefined })),
+        link: () => reveal("element", t("link")),
+        animation: () => reveal("element", t("animation"), true),
+        askAi: () => askChat({ nonce: Date.now(), kind: "focus" }),
+        remove: () => dispatch({ type: "edit", recipe: deleteElements(current.id, ids), select: [] }),
+      },
+    });
+    menu.open(at, items, t("ctxElement"));
+  };
+
+  const openSlideMenu = (id: string, at: Point) => {
+    if (!doc) return;
+    const index = doc.deck.slides.findIndex((r) => r.id === id);
+    const ref = doc.deck.slides[index];
+    if (!ref) return;
+    dispatch({ type: "selectSlide", id, focus: true });
+    menu.open(
+      at,
+      slideMenu({
+        t,
+        readOnly: !!readOnly,
+        index,
+        total: doc.deck.slides.length,
+        hidden: !!ref.hidden,
+        aiReady,
+        do: {
+          addBefore: () => setPickerAt({ index, nonce: Date.now() }),
+          addAfter: () => setPickerAt({ index: index + 1, nonce: Date.now() }),
+          duplicate: () => {
+            const result = duplicateSlide(doc, id);
+            dispatch({ type: "edit", recipe: () => result.doc, slideId: result.id, select: [] });
+          },
+          toggleHidden: () => run((d) => updateRef(d, id, (r) => (r.hidden ? withoutHidden(r) : { ...r, hidden: true }))),
+          move: (by) => run((d) => ({ ...d, deck: moveSlide(d.deck, index, index + by) })),
+          present: () => {
+            dispatch({ type: "editText", id: null });
+            setPresenting(presentIndex(doc.deck, id));
+          },
+          askAi: () => askChat({ nonce: Date.now(), kind: "focus" }),
+          remove: () => {
+            if (window.confirm(t("confirmDeleteSlide"))) deleteSlide(id);
+          },
+        },
+      }),
+      t("ctxSlide"),
+    );
+  };
+
+  // Menu key or Shift+F10 on the canvas: over the selection, else mid-slide.
+  const menuKeyRef = useRef<() => void>(() => undefined);
+  menuKeyRef.current = () => {
+    if (!slide || !doc) return;
+    const selectedBox = document.querySelector("[data-selected]");
+    if (selection.length && selectedBox) {
+      const at = centerOf(selectedBox);
+      const box = absoluteBox(slide, selection[0]);
+      if (at && box) openCanvasMenu(at, { x: box.x, y: box.y }, selection);
+      return;
+    }
+    const at = centerOf(document.querySelector("[data-testid='deck-canvas-overlay']"));
+    if (at) openCanvasMenu(at, { x: doc.deck.format.width / 2, y: doc.deck.format.height / 2 }, []);
+  };
+
   // ── AI target ─────────────────────────────────────────────────────────────
 
   const target: AiTarget | undefined = targetFor({ slideId: state.slideId, slideSelected: state.slideSelected, selection });
@@ -409,8 +711,42 @@ export function DeckEditor(props: DeckEditorProps) {
   const frame = imageTarget && slide && (imageTarget.kind === "element" || imageTarget.kind === "fill") ? (findElement(slide, imageTarget.id) ?? { w: 1600, h: 900 }) : { w: doc.deck.format.width, h: doc.deck.format.height };
   const visibleCount = doc.deck.slides.filter((r) => !r.hidden).length;
 
+  const rail = (
+    <SlideRail
+      orientation={railPos === "bottom" ? "horizontal" : "vertical"}
+      onOrientation={(o) => changeRailPos(o === "horizontal" ? "bottom" : "left")}
+      deck={doc.deck}
+      slides={doc.slides}
+      currentId={state.slideId}
+      slideSelected={state.slideSelected}
+      tokens={tokens}
+      assetUrl={assetUrl}
+      notices={docState.notices}
+      readOnly={readOnly}
+      locale={locale}
+      t={t}
+      onSelect={(id) => dispatch({ type: "selectSlide", id, focus: true })}
+      onMove={(from, to) => run((d) => ({ ...d, deck: moveSlide(d.deck, from, to) }))}
+      onDuplicate={(id) => {
+        const result = duplicateSlide(doc, id);
+        dispatch({ type: "edit", recipe: () => result.doc, slideId: result.id, select: [] });
+      }}
+      onDelete={(id) => {
+        if (window.confirm(t("confirmDeleteSlide"))) deleteSlide(id);
+      }}
+      onToggleHidden={(id) => run((d) => updateRef(d, id, (ref) => (ref.hidden ? withoutHidden(ref) : { ...ref, hidden: true })))}
+      onAdd={addSlide}
+      onSlideContextMenu={openSlideMenu}
+      pickerAt={pickerAt}
+      onPickerAtDone={() => setPickerAt(null)}
+    />
+  );
+
   return (
-    <div className={`de-root${chatOpen ? "" : " chat-closed"}`}>
+    <div
+      className={`de-root${chatOpen ? "" : " chat-closed"}${railPos === "bottom" ? " rail-bottom" : ""}`}
+      style={{ "--de-chat-w": `${chatWidth}px` } as CSSProperties}
+    >
       <WorkspaceBar
         kind="slides"
         name={doc.deck.title || props.projectName || t("untitled")}
@@ -449,6 +785,18 @@ export function DeckEditor(props: DeckEditorProps) {
                 </div>
               ) : null}
             </div>
+            <IconButton
+              icon="layers"
+              size="sm"
+              plain
+              onClick={() => {
+                setImageTarget(null);
+                togglePanel(true);
+                setTab("layers");
+              }}
+              aria-pressed={panelOpen && !imageTarget && tab === "layers"}
+              label={t("layers")}
+            />
             <IconButton icon="layout" size="sm" plain onClick={() => setTab("deck")} label={t("deckSettings")} />
           </div>
         }
@@ -503,32 +851,47 @@ export function DeckEditor(props: DeckEditorProps) {
             t={t}
             locale={locale}
             readOnly={readOnly}
+            initialPrompt={props.initialPrompt}
+            onInitialPromptUsed={props.onInitialPromptUsed}
+            onCollapse={() => setChatOpen(false)}
+            uploadImage={props.images ? props.images.upload : undefined}
+            assetUrl={assetUrl}
+            request={chatRequest}
+            onRequestDone={() => setChatRequest(null)}
+          />
+        ) : null}
+        {chatOpen ? (
+          <div
+            className="de-chat-resize"
+            role="separator"
+            aria-orientation="vertical"
+            aria-label={t("chatResize")}
+            aria-valuemin={CHAT_MIN}
+            aria-valuemax={CHAT_MAX}
+            aria-valuenow={chatWidth}
+            tabIndex={0}
+            onPointerDown={onChatHandleDown}
+            onDoubleClick={() => resizeChat(CHAT_DEFAULT)}
+            onKeyDown={(e) => {
+              if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+                e.preventDefault();
+                resizeChat(chatWidth + (e.key === "ArrowRight" ? 24 : -24));
+              }
+            }}
           />
         ) : null}
 
-        <SlideRail
-          deck={doc.deck}
-          slides={doc.slides}
-          currentId={state.slideId}
-          slideSelected={state.slideSelected}
-          tokens={tokens}
-          assetUrl={assetUrl}
-          notices={docState.notices}
-          readOnly={readOnly}
-          locale={locale}
-          t={t}
-          onSelect={(id) => dispatch({ type: "selectSlide", id, focus: true })}
-          onMove={(from, to) => run((d) => ({ ...d, deck: moveSlide(d.deck, from, to) }))}
-          onDuplicate={(id) => {
-            const result = duplicateSlide(doc, id);
-            dispatch({ type: "edit", recipe: () => result.doc, slideId: result.id, select: [] });
-          }}
-          onDelete={(id) => {
-            if (window.confirm(t("confirmDeleteSlide"))) deleteSlide(id);
-          }}
-          onToggleHidden={(id) => run((d) => updateRef(d, id, (ref) => (ref.hidden ? withoutHidden(ref) : { ...ref, hidden: true })))}
-          onAdd={addSlide}
-        />
+        {!chatOpen ? (
+          <button type="button" className="de-chat-reopen" onClick={() => setChatOpen(true)} aria-label={t("chatOpen")} title={t("chatOpen")}>
+            <PanelLeftOpen size={16} aria-hidden />
+            <span>{t("chatTitle")}</span>
+          </button>
+        ) : null}
+
+        {railPos === "left" ? rail : null}
+
+        <div className="de-workarea">
+
 
         <main className="de-main">
           {textSelected && slide ? (
@@ -573,6 +936,8 @@ export function DeckEditor(props: DeckEditorProps) {
                 notices={docState.notices}
                 onDismissNotice={docState.dismissNotice}
                 t={t}
+                onContextMenu={({ x, y, point, ids }) => openCanvasMenu({ x, y }, point, ids)}
+                highlight={layerHover}
                 textEditor={
                   editingEl && editingEl.type === "text" && editingBox ? (
                     <Suspense fallback={null}>
@@ -630,6 +995,8 @@ export function DeckEditor(props: DeckEditorProps) {
             </label>
           ) : null}
         </main>
+        {railPos === "bottom" ? rail : null}
+        </div>
 
         {imageTarget && slide ? (
           <DeckImagePanel
@@ -643,8 +1010,17 @@ export function DeckEditor(props: DeckEditorProps) {
             onClose={() => setImageTarget(null)}
             t={t}
           />
+        ) : !panelOpen ? (
+          <button type="button" className="de-panel-reopen" onClick={() => togglePanel(true)} aria-label={t("panelOpen")} title={t("panelOpen")}>
+            <PanelRightOpen size={16} aria-hidden />
+            <span>{t("properties")}</span>
+          </button>
         ) : slide && slideRef ? (
           <PropertiesPanel
+            onCollapse={() => togglePanel(false)}
+            designSystem={
+              props.projectId ? <DeckDesignSystem projectId={props.projectId} t={t} readOnly={readOnly} onApplied={designSystemApplied} /> : null
+            }
             doc={doc}
             slide={slide}
             slideRef={slideRef}
@@ -655,6 +1031,12 @@ export function DeckEditor(props: DeckEditorProps) {
             onTab={setTab}
             run={run}
             onSelect={(ids) => dispatch({ type: "select", ids })}
+            onSelectLayers={(ids, parent) => {
+              if (state.groupScope !== parent) dispatch({ type: "enterGroup", id: parent });
+              dispatch({ type: "select", ids });
+            }}
+            onHoverLayer={setLayerHover}
+            onLayerMenu={(at, ids) => openCanvasMenu(at, { x: 0, y: 0 }, ids)}
             onImage={setImageTarget}
             onGroup={groupSelection}
             onUngroup={ungroupSelection}
@@ -690,6 +1072,8 @@ export function DeckEditor(props: DeckEditorProps) {
           </div>
         </div>
       ) : null}
+
+      <ContextMenu request={menu.request} onClose={menu.close} />
 
       {presenting !== null ? (
         <PresentOverlay
@@ -747,4 +1131,32 @@ function imageQuery(slide: { elements: SlideElement[] }, target: ImageTarget): s
     return text.slice(0, 100);
   }
   return "";
+}
+
+const CHAT_WIDTH_KEY = "forge_deck_chat_width";
+const RAIL_POS_KEY = "forge_deck_rail_pos";
+const PANEL_OPEN_KEY = "forge_deck_panel_open";
+const CHAT_DEFAULT = 320;
+const CHAT_MIN = 260;
+const CHAT_MAX = 640;
+
+function clampChat(width: number): number {
+  return Number.isFinite(width) ? Math.round(Math.min(CHAT_MAX, Math.max(CHAT_MIN, width))) : CHAT_DEFAULT;
+}
+
+function readPref<T>(key: string, parse: (raw: string) => T, fallback: T): T {
+  try {
+    const raw = typeof window === "undefined" ? null : localStorage.getItem(key);
+    return raw === null ? fallback : parse(raw);
+  } catch {
+    return fallback;
+  }
+}
+
+function writePref(key: string, value: string) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // Private mode: the preference only lasts for this page.
+  }
 }

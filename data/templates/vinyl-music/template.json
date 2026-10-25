@@ -1,0 +1,32 @@
+{
+  "kind": "mobile",
+  "id": "vinyl-music",
+  "title": {
+    "en": "Vinyl",
+    "fr": "Vinyl"
+  },
+  "description": {
+    "en": "Music streaming app: new release hero and mixes, search with genre tiles, a library of playlists, albums and artists, a profile, an album page and a Now Playing screen with a spinning vinyl, plus a persistent mini player, in a dark vivid phone shell.",
+    "fr": "App de streaming musical : sortie à la une et mixes, recherche avec tuiles de genres, bibliothèque de playlists, albums et artistes, profil, page album et écran de lecture avec vinyle qui tourne, plus un mini lecteur permanent, dans un shell sombre et vif."
+  },
+  "tags": [
+    "mobile",
+    "music",
+    "streaming",
+    "entertainment"
+  ],
+  "preview": "preview.html",
+  "bootHint": {
+    "en": "Adapt vinyl-music: service name, albums and covers, artists, playlists, lyrics and the listening stats.",
+    "fr": "Adapte vinyl-music : nom du service, albums et pochettes, artistes, playlists, paroles et statistiques d'écoute."
+  },
+  "accent": "#ff3d7f",
+  "bg": "#0d0b12",
+  "fg": "#f7f4fa",
+  "muted": "#8e879a",
+  "tone": "vivid, nocturnal, playful",
+  "fonts": {
+    "display": "Syne",
+    "body": "Inter"
+  }
+}

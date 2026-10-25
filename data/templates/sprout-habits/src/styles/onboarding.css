@@ -1,0 +1,34 @@
+/* Onboarding (first launch). Scoped under .onboarding-screen. Arched photo,
+   pastel blobs and two floating habit cards. */
+.onboarding-screen { min-height: 100dvh; padding: calc(1rem + var(--safe-top)) 1.4rem calc(1.4rem + var(--safe-bottom)); gap: 1.4rem; justify-content: space-between; overflow: hidden; }
+.onboarding-screen .onboard-top { display: flex; align-items: center; justify-content: space-between; min-height: 2.75rem; }
+.onboarding-screen .brand { display: inline-flex; align-items: center; gap: .5rem; font-family: var(--font-display); font-weight: 800; font-size: 1.2rem; letter-spacing: -.02em; }
+.onboarding-screen .brand i { width: 2rem; height: 2rem; border-radius: .7rem; display: grid; place-items: center; background: var(--accent); color: #fff; }
+.onboarding-screen .skip { appearance: none; border: 0; background: transparent; color: var(--muted); font-weight: 700; min-height: 2.75rem; padding: 0 .4rem; }
+
+.onboarding-screen .onboard-art { position: relative; height: 44vh; min-height: 290px; max-height: 380px; display: grid; place-items: center; }
+.onboarding-screen .blob { position: absolute; border-radius: 999px; }
+.onboarding-screen .blob.a { width: 11rem; height: 11rem; background: var(--peach); top: 2%; left: -6%; }
+.onboarding-screen .blob.b { width: 9rem; height: 9rem; background: var(--lilac); bottom: 0; right: -4%; }
+.onboarding-screen .arch { position: relative; width: 62%; max-width: 230px; aspect-ratio: .78; border-radius: 999px 999px 2rem 2rem; overflow: hidden; box-shadow: 0 30px 50px -24px rgba(28, 36, 32, .55); border: 6px solid var(--surface); }
+.onboarding-screen .arch img { width: 100%; height: 100%; object-fit: cover; }
+.onboarding-screen .mini { position: absolute; display: flex; align-items: center; gap: .5rem; padding: .5rem .55rem .5rem .5rem; border-radius: 1.1rem; font-size: .8rem; box-shadow: 0 16px 30px -14px rgba(28, 36, 32, .45); transition: transform .6s cubic-bezier(.2, .8, .2, 1); }
+.onboarding-screen .mini span { width: 2rem; height: 2rem; border-radius: .7rem; display: grid; place-items: center; background: rgba(255, 255, 255, .8); }
+.onboarding-screen .mini b { font-weight: 700; }
+.onboarding-screen .mini em { width: 1.6rem; height: 1.6rem; border-radius: 999px; border: 2px solid rgba(28, 36, 32, .2); display: grid; place-items: center; }
+.onboarding-screen .mini em.ok { background: var(--accent); border-color: var(--accent); color: #fff; }
+.onboarding-screen .mini.sky { background: var(--sky); color: #3b67c4; top: 14%; right: 0; transform: rotate(4deg); }
+.onboarding-screen .mini.butter { background: var(--butter); color: #a37a00; bottom: 14%; left: 0; transform: rotate(-4deg); }
+.onboarding-screen .mini b { color: var(--fg); }
+.onboarding-screen .flame { position: absolute; bottom: 2%; right: 14%; display: inline-flex; align-items: center; gap: .3rem; padding: .5rem .8rem; border-radius: 999px; background: var(--surface); color: var(--flame); font-weight: 800; font-size: .82rem; box-shadow: 0 12px 24px -12px rgba(28, 36, 32, .4); }
+.onboarding-screen .step-1 .mini.sky { transform: rotate(-3deg) translateY(1.5rem); }
+.onboarding-screen .step-1 .flame { transform: scale(1.2) translateY(-.6rem); }
+.onboarding-screen .step-2 .mini.butter { transform: rotate(3deg) translateY(-1.4rem); }
+
+.onboarding-screen .kicker { margin: 0 0 .6rem; color: var(--accent-deep); font-size: .76rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.onboarding-screen .onboard-body h2 { font-size: 2.15rem; line-height: 1.05; margin-bottom: .7rem; }
+.onboarding-screen .onboard-body .muted { font-size: .95rem; max-width: 32ch; }
+.onboarding-screen .onboard-actions { display: grid; gap: 1.1rem; }
+.onboarding-screen .dots { display: flex; gap: .4rem; }
+.onboarding-screen .dots i { width: .5rem; height: .5rem; border-radius: 999px; background: #dfe3d9; transition: width .3s ease, background .3s ease; }
+.onboarding-screen .dots i.on { width: 1.6rem; background: var(--accent); }

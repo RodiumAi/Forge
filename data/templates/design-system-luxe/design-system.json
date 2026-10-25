@@ -664,6 +664,8 @@
   },
   "logo": {
     "src": "public/brand/logo.svg",
+    "darkSrc": "public/brand/logo-dark.svg",
+    "iconSrc": "public/brand/icon.svg",
     "minSizePx": 48,
     "clearSpace": "La hauteur totale du logo de chaque côté",
     "usage": [

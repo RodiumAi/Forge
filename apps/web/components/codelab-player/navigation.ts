@@ -7,15 +7,89 @@ import type { Codelab } from "@/lib/contracts/forge-design";
 
 import { parseBlocks, walkBlocks } from "./markdown/blocks";
 
-/** Home page (no hash), a step (`#<stepId>`), or the end page (`#_end`, never a step id). */
-export type View = { kind: "home" } | { kind: "step"; index: number } | { kind: "end" };
+/**
+ * Home page (no hash), the optional presenter (`#_presenter`) and setup
+ * (`#_setup`) pages, a step (`#<stepId>`), or the end page (`#_end`).
+ * Reserved hashes start with "_", which a step id never does.
+ */
+export type View =
+  | { kind: "home" }
+  | { kind: "presenter" }
+  | { kind: "setup" }
+  | { kind: "step"; index: number }
+  | { kind: "end" };
+
+export type IntroPage = "presenter" | "setup";
 
 export const END_HASH = "_end";
+export const PRESENTER_HASH = "_presenter";
+export const SETUP_HASH = "_setup";
+
+const filled = (value: string | undefined | null) => !!value && !!value.trim();
+
+/** The presenter, falling back to the author for the name (old codelabs only have `author`). */
+export function presenterOf(codelab: Codelab): {
+  name: string;
+  url?: string;
+  role?: string;
+  company?: string;
+  photo?: string;
+  bio?: string;
+  links: { label: string; url: string }[];
+} | null {
+  const p = codelab.presenter;
+  const name = (p?.name?.trim() || codelab.author?.name?.trim() || "").trim();
+  const links = (p?.links ?? []).filter((link) => filled(link.label) && filled(link.url));
+  if (!name && !filled(p?.role) && !filled(p?.company) && !p?.photo && !filled(p?.bio) && !links.length) return null;
+  return {
+    name,
+    url: codelab.author?.url,
+    role: p?.role?.trim() || undefined,
+    company: p?.company?.trim() || undefined,
+    photo: p?.photo || undefined,
+    bio: p?.bio?.trim() || undefined,
+    links,
+  };
+}
+
+/** True when the setup page has something of its own to show. */
+export function setupFilled(codelab: Codelab): boolean {
+  const s = codelab.setup;
+  if (!s) return false;
+  return (
+    filled(s.intro) ||
+    !!s.tools?.length ||
+    !!s.groups?.some((group) => group.items.length || filled(group.title)) ||
+    !!s.promo?.code ||
+    !!s.commands?.length
+  );
+}
+
+/**
+ * Pages shown between the cover and step 1. `pages.x === false` hides one;
+ * otherwise it shows when filled (the setup page also when forced on and
+ * there are prerequisites to list).
+ */
+export function introPages(codelab: Codelab): IntroPage[] {
+  const pages: IntroPage[] = [];
+  const flags = codelab.pages ?? {};
+  const presenter = presenterOf(codelab);
+  const presenterOwn = !!codelab.presenter && !!presenter;
+  if (flags.presenter !== false && (presenterOwn || (flags.presenter === true && presenter))) pages.push("presenter");
+  if (flags.setup !== false && (setupFilled(codelab) || (flags.setup === true && !!codelab.prerequisites?.length))) {
+    pages.push("setup");
+  }
+  return pages;
+}
 
 export function viewFromHash(hash: string, codelab: Codelab): View {
   const raw = decodeURIComponent((hash || "").replace(/^#/, "")).trim();
   if (!raw) return { kind: "home" };
   if (raw === END_HASH) return { kind: "end" };
+  if (raw === PRESENTER_HASH || raw === SETUP_HASH) {
+    const kind = raw === PRESENTER_HASH ? "presenter" : "setup";
+    return introPages(codelab).includes(kind) ? { kind } : { kind: "home" };
+  }
   const index = codelab.steps.findIndex((step) => step.id === raw);
   return index >= 0 ? { kind: "step", index } : { kind: "home" };
 }
@@ -23,24 +97,38 @@ export function viewFromHash(hash: string, codelab: Codelab): View {
 export function hashOfView(view: View, codelab: Codelab): string {
   if (view.kind === "home") return "";
   if (view.kind === "end") return `#${END_HASH}`;
+  if (view.kind === "presenter") return `#${PRESENTER_HASH}`;
+  if (view.kind === "setup") return `#${SETUP_HASH}`;
   const step = codelab.steps[view.index];
   return step ? `#${encodeURIComponent(step.id)}` : "";
 }
 
+/** Every view in reading order: cover, intro pages, steps, end. */
+export function viewSequence(codelab: Codelab): View[] {
+  return [
+    { kind: "home" },
+    ...introPages(codelab).map((kind) => ({ kind }) as View),
+    ...codelab.steps.map((_, index) => ({ kind: "step", index }) as View),
+    { kind: "end" },
+  ];
+}
+
+export function sameView(a: View, b: View): boolean {
+  return a.kind === b.kind && (a.kind !== "step" || (b.kind === "step" && a.index === b.index));
+}
+
 export function nextView(view: View, codelab: Codelab): View {
-  const count = codelab.steps.length;
-  if (view.kind === "home") return count ? { kind: "step", index: 0 } : { kind: "end" };
-  if (view.kind === "step") return view.index + 1 < count ? { kind: "step", index: view.index + 1 } : { kind: "end" };
-  return view;
+  const sequence = viewSequence(codelab);
+  const at = sequence.findIndex((item) => sameView(item, view));
+  if (at < 0 || view.kind === "end") return view;
+  return sequence[at + 1] ?? view;
 }
 
 export function previousView(view: View, codelab: Codelab): View {
-  if (view.kind === "step") return view.index > 0 ? { kind: "step", index: view.index - 1 } : { kind: "home" };
-  if (view.kind === "end") {
-    const count = codelab.steps.length;
-    return count ? { kind: "step", index: count - 1 } : { kind: "home" };
-  }
-  return view;
+  if (view.kind === "home") return view;
+  const sequence = viewSequence(codelab);
+  const at = sequence.findIndex((item) => sameView(item, view));
+  return at > 0 ? sequence[at - 1] : { kind: "home" };
 }
 
 /** Share of the codelab's minutes covered by visited steps (0 to 100). */

@@ -665,8 +665,10 @@
   },
   "logo": {
     "src": "public/brand/logo.svg",
+    "darkSrc": "public/brand/logo-dark.svg",
+    "iconSrc": "public/brand/icon.svg",
     "minSizePx": 40,
-    "clearSpace": "Deux fois l'épaisseur du trait du O",
+    "clearSpace": "La hauteur de la vague tout autour",
     "usage": [
       "Noir sur papier",
       "Blanc sur le rose",

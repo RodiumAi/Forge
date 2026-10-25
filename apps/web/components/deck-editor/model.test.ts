@@ -9,6 +9,7 @@ import {
   groupElements,
   moveSlide,
   moveZ,
+  placeZ,
   outermost,
   paintOrder,
   parseClipboard,
@@ -105,6 +106,20 @@ describe("stacking order", () => {
   it("brings to front and sends to back", () => {
     expect(order(moveZ(s.elements, ["a"], "front"))).toEqual(["b", "c", "a"]);
     expect(order(moveZ(s.elements, ["c"], "back"))).toEqual(["c", "a", "b"]);
+  });
+
+  it("places elements at a slot among the others, as a layer drag does", () => {
+    expect(order(placeZ(s.elements, ["c"], 1))).toEqual(["a", "c", "b"]);
+    expect(order(placeZ(s.elements, ["a", "b"], 1))).toEqual(["c", "a", "b"]);
+    expect(order(placeZ(s.elements, ["a"], 99))).toEqual(["b", "c", "a"]);
+    expect(placeZ(s.elements, ["a"], 0)).toBe(s.elements);
+  });
+
+  it("keeps the others in place when z values tie", () => {
+    const tied = slide([rect("bar", 0, 0, 1, 1, { z: 2 }), rect("label", 0, 0, 1, 1, { z: 3 }), rect("title", 0, 0, 1, 1, { z: 3 }), rect("meta", 0, 0, 1, 1, { z: 3 })]);
+    const once = placeZ(tied.elements, ["bar"], 3);
+    expect(order(once)).toEqual(["label", "title", "meta", "bar"]);
+    expect(order(moveZ(once, ["bar"], "back"))).toEqual(["bar", "label", "title", "meta"]);
   });
 });
 

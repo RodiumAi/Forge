@@ -8,7 +8,8 @@ import { api, apiBase, getToken, logoutToHome, readApiError } from "@/lib/api";
 import { readSseStream } from "@/lib/sse";
 import type { MessageBody, OutlineTask } from "./ai";
 
-export type ChatMessage = { id: string; role: string; content: string };
+/** `tag` is the target label ("Slide 6") shown on a message sent from this tab. */
+export type ChatMessage = { id: string; role: string; content: string; tag?: string };
 export type ActiveRun = {
   id: string;
   status: string;

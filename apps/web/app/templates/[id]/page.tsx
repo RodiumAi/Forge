@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "@/styles/forge/pages.css";
 
 import { useForkTemplate } from "@/components/app/useForkTemplate";
+import { TEMPLATE_PLAN_NAMES, useTemplateLock } from "@/lib/template-access";
 import { useToast } from "@/components/app/useToast";
 import { SlideView } from "@/components/deck-player";
 import { AppShell } from "@/components/shell/AppShell";
@@ -128,7 +129,7 @@ export default function AppTemplatePage() {
   const [loading, setLoading] = useState(true);
   const [deck, setDeck] = useState<TemplateDeck | null>(null);
   const [favs, setFavs] = useState<Set<string>>(new Set());
-  const { fork, busyId, error } = useForkTemplate();
+  const { fork, busyId, error, needPlan } = useForkTemplate();
   const [toast, notify] = useToast();
 
   useEffect(() => {
@@ -154,6 +155,8 @@ export default function AppTemplatePage() {
   }, [id, locale, router]);
 
   const tpl = templates.find((x) => x.id === id) ?? null;
+  // A refused fork also locks the page, in case the catalogue copy was stale.
+  const locked = useTemplateLock(tpl) ?? needPlan;
   const kind = normalizeKind(tpl?.kind);
   const isDeck = kind === "slides";
 
@@ -276,11 +279,11 @@ export default function AppTemplatePage() {
             <div className="f-td-author">
               <img src="/brand/forge/forge-app-icon-dark.svg" alt="" width={28} height={28} />
               <span>
-                {t("apTdBy")} <b>{t("apTdForgeTeam")}</b> · {t("apTdFree")}
+                {t("apTdBy")} <b>{t("apTdForgeTeam")}</b> · {locked ? t("apTdFromPlan").replace("{plan}", TEMPLATE_PLAN_NAMES[locked]) : t("apTdFree")}
               </span>
             </div>
             <div className="f-actions-row">
-              <Button icon="wand" loading={busyId === tpl.id} onClick={() => void fork(tpl)}>
+              <Button icon={locked ? "lock" : "wand"} disabled={!!locked} loading={busyId === tpl.id} onClick={() => void fork(tpl)}>
                 {busyId === tpl.id ? t("uiForking") : t("uiUseTemplate")}
               </Button>
               <IconButton
@@ -302,7 +305,17 @@ export default function AppTemplatePage() {
                 )}
               </Popover>
             </div>
-            {error ? (
+            {locked ? (
+              <div className="f-td-lock" role="alert">
+                <Glyph name="lock" size="sm" />
+                <div>
+                  <b>{t("apTplLockedTitle").replace("{plan}", TEMPLATE_PLAN_NAMES[locked])}</b>
+                  <span>{t("apTdLockedNote").replace("{plan}", TEMPLATE_PLAN_NAMES[locked])}</span>
+                  <Link href={APP_ROUTES.billing}>{t("apTdUpgradeTo").replace("{plan}", TEMPLATE_PLAN_NAMES[locked])}</Link>
+                </div>
+              </div>
+            ) : null}
+            {error && !needPlan ? (
               <p className="f-error" role="alert">
                 {error}{" "}
                 {gateNeedsKey ? <Link href={`${APP_ROUTES.settings}#rodiumai`}>{t("openSettings")}</Link> : null}
@@ -331,10 +344,12 @@ export default function AppTemplatePage() {
                 ))}
               </div>
             ) : null}
-            <div className="f-td-plan">
-              <Glyph name="lock" size="sm" />
-              <span>{t("apTdPlanNote")}</span>
-            </div>
+            {locked ? null : (
+              <div className="f-td-plan">
+                <Glyph name="lock" size="sm" />
+                <span>{t("apTdPlanNote")}</span>
+              </div>
+            )}
           </aside>
         </div>
       )}

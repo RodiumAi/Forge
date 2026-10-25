@@ -1,0 +1,16 @@
+{
+  "name": "Maison",
+  "short_name": "Maison",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f3efe8",
+  "theme_color": "#f3efe8",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

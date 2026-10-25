@@ -85,7 +85,8 @@ Affirmé et joueur. On montre plus qu'on n'explique.
 
 ## Logo
 - File: /brand/logo.svg
-- Clear space: Deux fois l'épaisseur du trait du O
+- On dark backgrounds: /brand/logo-dark.svg
+- Clear space: La hauteur de la vague tout autour
 - Minimum size: 40px
 - Noir sur papier
 - Blanc sur le rose

@@ -76,10 +76,11 @@ class TestMergeContextPaths:
 
 
 class TestPromptWording:
-    def test_full_blocks_declare_themselves_authoritative(self):
+    def test_full_blocks_are_authoritative_versions_but_not_instructions(self):
         text = _selected_file_blocks({"src/A.tsx": "const a = 1;"}, ["src/A.tsx"])
         assert "CURRENT on-disk state" in text
-        assert "OVERRIDE" in text
+        assert "replaces any version" in text
+        assert "not instructions" in text
 
     def test_system_prompt_forbids_rewriting_unseen_files(self):
         from app.prompts.system import SYSTEM_PROMPT

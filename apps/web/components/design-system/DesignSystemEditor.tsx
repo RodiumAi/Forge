@@ -1,11 +1,15 @@
 "use client";
 
-import { Download, ExternalLink, Globe, Share2, Star } from "lucide-react";
+import Link from "next/link";
+import { Download, ExternalLink, Globe, Lock, Share2, Star } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { WorkspaceBar } from "@/components/builder/WorkspaceBar";
+import { APP_ROUTES } from "@/components/shell/nav";
 import { Icon } from "@/components/ui/icon";
 import { designSystemSchema } from "@/lib/contracts/forge-design";
+import { clearBootPrompt, peekBootPrompt } from "@/lib/create-project";
+import { useForgeStatus } from "@/lib/forge-status";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import type { MessageKey } from "@/lib/i18n/dictionaries";
 import {
@@ -18,10 +22,12 @@ import {
   setDefault,
   share,
   unshare,
+  uploadLogo,
   type DesignSystemItem,
-  type ExportFormat,
 } from "./api";
 import { DesignSystemChat, type DesignSystemChatHandle } from "./DesignSystemChat";
+import { designSystemExportOptions, type DsExportFormat } from "./exports";
+import { takePendingBrandAssets } from "./intake/brand-intake";
 import {
   ColorsSection,
   ComponentsSection,
@@ -34,7 +40,7 @@ import {
 import { SECTIONS, fontFamily, googleFontsHref, type DesignSystemDoc, type SectionId } from "./tokens";
 
 const SAVE_DELAY_MS = 700;
-const EXPORTS: ExportFormat[] = ["tokens", "css", "tailwind", "md", "pdf"];
+const EXPORT_LABELS: Record<DsExportFormat, MessageKey> = { pdf: "apDsExportPdf", md: "apDsExportMd" };
 
 type SaveState = "idle" | "saving" | "saved" | "error" | "conflict" | "invalid";
 
@@ -61,6 +67,9 @@ export function DesignSystemEditor({ projectId }: { projectId: string }) {
   const pending = useRef<DesignSystemDoc | null>(null);
   const editCount = useRef(0);
   const chatRef = useRef<DesignSystemChatHandle>(null);
+  const status = useForgeStatus();
+  // The prompt built on the home page (brand intake), sent by the chat on arrival.
+  const [bootPrompt] = useState(() => (typeof window === "undefined" ? null : peekBootPrompt(projectId)));
 
   const reload = useCallback(async () => {
     const loaded = await loadDocument(projectId);
@@ -126,6 +135,29 @@ export function DesignSystemEditor({ projectId }: { projectId: string }) {
       void reload();
     },
     [reload],
+  );
+
+  /** After the first generation, the brand files it does not keep (dark logo, square icon). */
+  const onBootDone = useCallback(
+    (ok: boolean) => {
+      const assets = takePendingBrandAssets(projectId);
+      if (!ok || !assets) return;
+      void (async () => {
+        // One after the other: each upload rewrites the document.
+        for (const [file, variant] of [
+          [assets.logoDark, "dark"],
+          [assets.icon, "icon"],
+        ] as const) {
+          if (!file) continue;
+          try {
+            onServerDocument(await uploadLogo(projectId, file, variant));
+          } catch {
+            /* the file can still be uploaded from the Logo section */
+          }
+        }
+      })();
+    },
+    [projectId, onServerDocument],
   );
 
   async function run(action: () => Promise<unknown>, done?: MessageKey) {
@@ -244,16 +276,28 @@ export function DesignSystemEditor({ projectId }: { projectId: string }) {
             </button>
             {menu === "export" ? (
               <div className="dse-pop" role="menu">
-                {EXPORTS.map((format) => (
+                {designSystemExportOptions(status).map(({ format, allowed }) => (
                   <button
                     key={format}
                     type="button"
                     role="menuitem"
-                    onClick={() => void run(() => downloadExport(projectId, format))}
+                    aria-disabled={allowed ? undefined : true}
+                    className={allowed ? undefined : "is-locked"}
+                    onClick={() => {
+                      if (!allowed) return;
+                      setMenu(null);
+                      void run(() => downloadExport(projectId, format));
+                    }}
                   >
-                    {t(`dsExport_${format}` as MessageKey)}
+                    {allowed ? null : <Icon icon={Lock} className="ui-icon-sm" />} {t(EXPORT_LABELS[format])}
+                    {allowed ? null : <small className="dse-lock-hint">{t("apDsExportLocked")}</small>}
                   </button>
                 ))}
+                {designSystemExportOptions(status).some((o) => !o.allowed) ? (
+                  <Link className="dse-plans-link" href={APP_ROUTES.billing} role="menuitem">
+                    {t("apDsExportSeePlans")}
+                  </Link>
+                ) : null}
               </div>
             ) : null}
           </div>
@@ -306,6 +350,9 @@ export function DesignSystemEditor({ projectId }: { projectId: string }) {
           section={section}
           disabled={readOnly}
           onDocument={onServerDocument}
+          initialPrompt={bootPrompt}
+          onInitialPromptUsed={() => clearBootPrompt(projectId)}
+          onInitialPromptDone={onBootDone}
         />
       </div>
     </div>

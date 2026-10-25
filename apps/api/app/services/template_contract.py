@@ -12,7 +12,11 @@ import json
 import re
 from pathlib import Path
 
-ALLOWED_BARE_IMPORTS = frozenset({"react", "react-dom/client", "lucide-react"})
+# react-router-dom: every page or app screen is a route (prompts/system.py).
+ALLOWED_BARE_IMPORTS = frozenset({"react", "react-dom/client", "react-router-dom", "lucide-react"})
+# The one @import a kit may have: its Google Fonts, first line of src/index.css,
+# which is where the agent is told to load fonts too.
+_FONT_IMPORT_RE = re.compile(r"""\A@import url\(["']https://fonts\.googleapis\.com/css2\?[^"')\s]+["']\);[ \t]*\r?\n""")
 TOOLCHAIN = {
     "vite": "^5.4.21",
     "@vitejs/plugin-react": "^4.3.4",
@@ -64,6 +68,8 @@ def kit_violations(kit: Path, kind: str = "web") -> list[str]:
         for match in _LUCIDE_IMPORT_RE.finditer(text):
             for raw in match.group(1).split(","):
                 name = raw.strip().split(" as ")[0].strip()
+                if name.startswith("type "):
+                    continue  # type-only import (LucideIcon, LucideProps), not an icon
                 if name and name not in lucide:
                     problems.append(f"{rel} imports unknown lucide icon {name!r}")
         glyphs = sorted(set(_ICON_GLYPH_RE.findall(text)))
@@ -81,8 +87,10 @@ def kit_violations(kit: Path, kind: str = "web") -> list[str]:
             continue
         rel = css.relative_to(kit).as_posix()
         text = css.read_text(encoding="utf-8")
+        if css.name == "index.css" and css.parent == src:
+            text = _FONT_IMPORT_RE.sub("", text, count=1)
         if "@import" in text:
-            problems.append(f"{rel} must not use @import")
+            problems.append(f"{rel} must not use @import (only the Google Fonts line at the top of src/index.css)")
         if _MAX_WIDTH_MEDIA_RE.search(text):
             problems.append(f"{rel} has max-width media queries (write mobile-first min-width)")
     all_tsx = "\n".join(p.read_text(encoding="utf-8") for p in sources)

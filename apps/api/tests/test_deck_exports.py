@@ -103,8 +103,15 @@ def test_starter_gets_pdf_and_png_only(monkeypatch):
         assert err.value.detail["requiredPlan"] == "builder"
 
 
-def test_builder_needs_the_flags_it_was_sold(monkeypatch):
-    _cloud(monkeypatch, "builder", export_pdf=True, export_html=True, export_pptx=False)
+def test_a_plan_gets_a_format_from_its_rank_upward(monkeypatch):
+    _cloud(monkeypatch, "builder", export_pdf=True, export_html=False, export_pptx=False)
+    gating.require_export(None, SimpleNamespace(), "pptx")
+    _cloud(monkeypatch, "pro")
+    gating.require_export(None, SimpleNamespace(), "html")
+
+
+def test_an_unknown_plan_needs_the_flag(monkeypatch):
+    _cloud(monkeypatch, "custom", export_pdf=True, export_html=True, export_pptx=False)
     gating.require_export(None, SimpleNamespace(), "html")
     with pytest.raises(SitesError):
         gating.require_export(None, SimpleNamespace(), "pptx")
@@ -419,3 +426,17 @@ def test_fixture_images_exist(deck_project):
 
     root: Path = get_settings().projects_path / deck_project
     assert (root / "public" / "images" / "bg.webp").stat().st_size > 0
+
+
+def test_asset_file_only_reaches_the_public_folder(tmp_path, monkeypatch):
+    from app.services.exports import deck_source
+
+    monkeypatch.setattr(deck_source, "project_dir", lambda _pid: tmp_path)
+    (tmp_path / "public").mkdir()
+    (tmp_path / "public" / "a.png").write_bytes(b"x")
+    (tmp_path / "notes").mkdir()
+    (tmp_path / "notes" / "s1.md").write_text("private", encoding="utf-8")
+
+    assert deck_source.asset_file("p", "public/a.png") == (tmp_path / "public" / "a.png").resolve()
+    assert deck_source.asset_file("p", "notes/s1.md") is None
+    assert deck_source.asset_file("p", "public/../notes/s1.md") is None

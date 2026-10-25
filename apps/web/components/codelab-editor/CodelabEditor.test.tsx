@@ -60,11 +60,11 @@ function chatClient(events: Record<string, unknown>[] = []): CodelabChatClient &
   };
 }
 
-function setup(chat = chatClient()) {
+function setup(chat = chatClient(), extra: Partial<Parameters<typeof CodelabEditor>[0]> = {}) {
   localStorage.setItem("forge_locale", "fr");
   render(
     <I18nProvider>
-      <CodelabEditor projectId="p1" projectName="Demo" chat={chat} assetUrl={(p) => p} publisher={null} backHref="/dashboard" />
+      <CodelabEditor projectId="p1" projectName="Demo" chat={chat} assetUrl={(p) => p} publisher={null} backHref="/dashboard" {...extra} />
     </I18nProvider>,
   );
   return chat;
@@ -156,6 +156,71 @@ describe("CodelabEditor", () => {
     await waitFor(() => expect(screen.getByTestId("codelab-check").textContent).toContain("Aucun problème trouvé."));
     expect(chat.sent[0]).toEqual({ content: "Vérifier le code", mode: "agent", action: "check_code" });
   });
+
+  it("sends the prompt typed on the home page once, without a step target", async () => {
+    const used = vi.fn();
+    const chat = setup(chatClient([{ type: "done" }]), { initialPrompt: "Un codelab sur FastAPI", onInitialPromptUsed: used });
+    await waitFor(() => expect(chat.sent).toEqual([{ content: "Un codelab sur FastAPI", mode: "agent" }]));
+    expect(used).toHaveBeenCalledTimes(1);
+    expect(await screen.findByText("Un codelab sur FastAPI")).toBeTruthy();
+  });
+
+  it("does not resend the home prompt on a codelab that already has a conversation", async () => {
+    const used = vi.fn();
+    const chat = chatClient();
+    chat.messages = (async () => [{ id: "m1", role: "user", content: "Bonjour" }]) as unknown as CodelabChatClient["messages"];
+    setup(chat, { initialPrompt: "Un codelab sur FastAPI", onInitialPromptUsed: used });
+    await waitFor(() => expect(used).toHaveBeenCalledTimes(1));
+    expect(chat.sent).toEqual([]);
+  });
+
+  it("deletes the codelab once its name is typed", async () => {
+    const onDelete = vi.fn(async () => undefined);
+    setup(chatClient(), { onDelete });
+    fireEvent.click(await screen.findByRole("tab", { name: /Infos/ }));
+    const button = await screen.findByRole("button", { name: /Supprimer définitivement/ });
+    expect(button).toBeDisabled();
+    fireEvent.change(screen.getByPlaceholderText("Demo"), { target: { value: "Demo" } });
+    expect(button).not.toBeDisabled();
+    fireEvent.click(button);
+    await waitFor(() => expect(onDelete).toHaveBeenCalledTimes(1));
+  });
+
+  it("hides the delete zone when the user cannot delete", async () => {
+    setup();
+    fireEvent.click(await screen.findByRole("tab", { name: /Infos/ }));
+    await screen.findByDisplayValue("API REST");
+    expect(screen.queryByRole("button", { name: /Supprimer définitivement/ })).toBeNull();
+  });
+
+  it("saves the presenter and the setup page into codelab.json", async () => {
+    setup();
+    fireEvent.click(await screen.findByRole("tab", { name: /Infos/ }));
+    fireEvent.click(await screen.findByText("Présentateur"));
+    fireEvent.change(screen.getByLabelText("Nom (sinon celui de l'auteur)"), { target: { value: "Ada Lovelace" } });
+    fireEvent.change(screen.getByLabelText("Entreprise"), { target: { value: "RodiumAi" } });
+    fireEvent.click(screen.getByRole("button", { name: /Ajouter un lien/ }));
+    fireEvent.change(screen.getByLabelText("Libellé"), { target: { value: "GitHub" } });
+    // A half-typed link stays in the form but never reaches codelab.json.
+    fireEvent.change(screen.getByLabelText("URL"), { target: { value: "https:" } });
+    await waitFor(() => expect(server.codelab.presenter).toEqual({ name: "Ada Lovelace", company: "RodiumAi" }), { timeout: 2000 });
+    fireEvent.change(screen.getByLabelText("URL"), { target: { value: "https://github.com/ada" } });
+    await waitFor(
+      () =>
+        expect(server.codelab.presenter).toEqual({
+          name: "Ada Lovelace",
+          company: "RodiumAi",
+          links: [{ label: "GitHub", url: "https://github.com/ada" }],
+        }),
+      { timeout: 2000 },
+    );
+
+    fireEvent.click(screen.getByText("Outils et installation"));
+    fireEvent.change(screen.getByLabelText("Code"), { target: { value: "EXAMPLE10" } });
+    await waitFor(() => expect(server.codelab.setup).toEqual({ promo: { code: "EXAMPLE10" } }), { timeout: 2000 });
+    expect(server.puts.filter((p) => p.kind === "codelab").every((p) => p.etag !== null)).toBe(true);
+    // The Infos tab also renders the live cover preview, which makes this one slower.
+  }, 20000);
 
   it("offers a project file as a download", async () => {
     setup();

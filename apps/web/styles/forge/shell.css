@@ -33,10 +33,9 @@
 .f-side-collapse svg { transition: transform .3s var(--f-ease); }
 .f-side-new {
   margin: 6px 0 10px; height: 46px; border-radius: 14px; display: flex; align-items: center; gap: 10px; padding: 0 14px;
-  background: var(--f-orange); color: #fff !important; font-weight: 600; font-size: 15px; white-space: nowrap;
-  box-shadow: 0 10px 24px -12px rgba(235, 97, 24, .9); transition: transform .2s var(--f-ease), box-shadow .2s, background-color .2s;
+  background: var(--f-orange); color: #fff !important; font-weight: 600; font-size: 15px; white-space: nowrap; transition: transform .2s var(--f-ease), box-shadow .2s, background-color .2s;
 }
-.f-side-new:hover { transform: translateY(-1px); background: var(--f-orange-hover); box-shadow: 0 14px 30px -12px rgba(235, 97, 24, 1); }
+.f-side-new:hover { transform: translateY(-1px); background: var(--f-orange-hover); }
 .f-side-new kbd { margin-left: auto; font-family: var(--f-font); font-size: 11.5px; padding: 2px 6px; border-radius: 6px; background: rgba(255, 255, 255, .2); }
 .f-side-nav { display: grid; gap: 2px; overflow-y: auto; scrollbar-width: none; }
 .f-side-nav::-webkit-scrollbar { display: none; }
@@ -137,7 +136,7 @@
   .f-bnav [aria-current="page"] { color: var(--f-accent-text); }
   .f-bnav .f-fab {
     width: 52px; height: 52px; border-radius: 18px; background: var(--f-orange); color: #fff; display: grid; place-items: center;
-    min-width: 0; margin-top: -26px; box-shadow: 0 12px 26px -10px rgba(235, 97, 24, .9);
+    min-width: 0; margin-top: -26px;
   }
 }
 /* The drawer reuses the sidebar inside a left sheet. */

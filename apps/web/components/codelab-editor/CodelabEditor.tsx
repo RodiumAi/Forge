@@ -26,6 +26,9 @@ import {
   Terminal as TerminalIcon,
   Trash2,
   Files,
+  ImagePlay,
+  UserRound,
+  Wrench,
 } from "lucide-react";
 import type { Codelab } from "@/lib/contracts/forge-design";
 import {
@@ -36,6 +39,7 @@ import {
   codelabTokens,
   defaultEnv,
   downloadsOf,
+  introPages,
   translator,
   type View,
 } from "../codelab-player";
@@ -54,6 +58,7 @@ import type { EditorEffect } from "./ai";
 import { ChatPanel } from "./ChatPanel";
 import { DetailsPanel, type CodelabPublisher } from "./DetailsPanel";
 import { FilesPanel } from "./FilesPanel";
+import { PublishMenu } from "./PublishMenu";
 import { addDownload, addStep, insertBlock, moveStep, removeStep, snippet, totalMinutes, updateStep, type SnippetKind } from "./model";
 import { useCodelabStrings, type CodelabEditorKey } from "./strings";
 import { WorkspaceBar } from "@/components/builder/WorkspaceBar";
@@ -68,10 +73,19 @@ export type CodelabEditorProps = {
   publisher: CodelabPublisher | null;
   readOnly?: boolean;
   backHref: string;
+  /** Prompt typed on the home page, sent to the assistant on arrival. */
+  initialPrompt?: string | null;
+  onInitialPromptUsed?: () => void;
+  /** Deletes the project (owner only); absent hides the action. */
+  onDelete?: () => Promise<void>;
+  /** Public URL of the published codelab (QR code of the cover), when published. */
+  publicUrl?: string;
 };
 
 type SaveState = "saved" | "pending" | "saving" | "error" | "conflict";
 type Side = "details" | "files" | "ai";
+/** A page before the steps, previewed live in place of the Markdown editor. */
+type IntroPage = "home" | "presenter" | "setup";
 
 const TOOLBAR: { kind: SnippetKind; key: CodelabEditorKey; icon: typeof Code2 }[] = [
   { kind: "code", key: "insertCode", icon: Code2 },
@@ -87,14 +101,27 @@ const TOOLBAR: { kind: SnippetKind; key: CodelabEditorKey; icon: typeof Code2 }[
 const CODELAB_DELAY = 500;
 const STEP_DELAY = 800;
 
-export function CodelabEditor({ projectId, projectName, chat, assetUrl, publisher, readOnly, backHref }: CodelabEditorProps) {
+export function CodelabEditor({
+  projectId,
+  projectName,
+  chat,
+  assetUrl,
+  publisher,
+  readOnly,
+  backHref,
+  initialPrompt,
+  onInitialPromptUsed,
+  onDelete,
+  publicUrl: initialPublicUrl,
+}: CodelabEditorProps) {
   const { t, locale } = useCodelabStrings();
   const [codelab, setCodelab] = useState<Codelab | null>(null);
   const [steps, setSteps] = useState<Record<string, string>>({});
   const [streams, setStreams] = useState<Record<string, string>>({});
   const [design, setDesign] = useState("");
   const [feedbackUrl, setFeedbackUrl] = useState("");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedIdState] = useState<string | null>(null);
+  const [page, setPage] = useState<IntroPage | null>(null);
   const [mode, setMode] = useState<"edit" | "player">("edit");
   const [side, setSide] = useState<Side>("ai");
   const [saveState, setSaveState] = useState<SaveState>("saved");
@@ -102,6 +129,8 @@ export function CodelabEditor({ projectId, projectName, chat, assetUrl, publishe
   const [notice, setNotice] = useState<string | null>(null);
   const [filesKey, setFilesKey] = useState(0);
   const [view, setView] = useState<View>({ kind: "home" });
+  const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
+  const publicUrl = publishedUrl ?? initialPublicUrl;
 
   const codelabRef = useRef<Codelab | null>(null);
   const codelabEtag = useRef<string | null>(null);
@@ -110,6 +139,12 @@ export function CodelabEditor({ projectId, projectName, chat, assetUrl, publishe
   const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const dirty = useRef<Set<string>>(new Set());
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // Picking a step leaves the page preview.
+  const setSelectedId = useCallback((next: string | null | ((current: string | null) => string | null)) => {
+    setSelectedIdState(next);
+    setPage(null);
+  }, []);
 
   codelabRef.current = codelab;
   stepsRef.current = steps;
@@ -141,7 +176,7 @@ export function CodelabEditor({ projectId, projectName, chat, assetUrl, publishe
       setDesign(charter);
       setFeedbackUrl(settings.feedbackUrl ?? "");
       setSaveState("saved");
-      setSelectedId((current) => (current && doc.data.steps.some((s) => s.id === current) ? current : doc.data.steps[0]?.id ?? null));
+      setSelectedIdState((current) => (current && doc.data.steps.some((s) => s.id === current) ? current : doc.data.steps[0]?.id ?? null));
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : String(error));
     }
@@ -229,6 +264,16 @@ export function CodelabEditor({ projectId, projectName, chat, assetUrl, publishe
     [readOnly, saveStepNow],
   );
 
+  /** Saves every pending edit now (before a publish). */
+  const flush = useCallback(async () => {
+    const keys = [...new Set([...Object.keys(timers.current), ...dirty.current])];
+    for (const key of keys) {
+      clearTimeout(timers.current[key]);
+      if (key === "codelab") await saveCodelabNow();
+      else if (key.startsWith("step:")) await saveStepNow(key.slice(5));
+    }
+  }, [saveCodelabNow, saveStepNow]);
+
   // ── steps list ─────────────────────────────────────────────────────────
 
   const onAddStep = async () => {
@@ -271,7 +316,7 @@ export function CodelabEditor({ projectId, projectName, chat, assetUrl, publishe
       switch (effect.kind) {
         case "delta":
           setStreams((current) => ({ ...current, [effect.stepId]: (current[effect.stepId] ?? "") + effect.text }));
-          setSelectedId((current) => current ?? effect.stepId);
+          setSelectedIdState((current) => current ?? effect.stepId);
           break;
         case "step":
           setSteps((current) => ({ ...current, [effect.step.id]: effect.markdown }));
@@ -290,7 +335,7 @@ export function CodelabEditor({ projectId, projectName, chat, assetUrl, publishe
           break;
         case "codelab":
           setCodelab(effect.codelab);
-          setSelectedId((current) => (current && effect.codelab.steps.some((s) => s.id === current) ? current : effect.codelab.steps[0]?.id ?? null));
+          setSelectedIdState((current) => (current && effect.codelab.steps.some((s) => s.id === current) ? current : effect.codelab.steps[0]?.id ?? null));
           break;
         case "removed":
           setSteps((current) => {
@@ -380,6 +425,17 @@ export function CodelabEditor({ projectId, projectName, chat, assetUrl, publishe
     }
   };
 
+  const pages: { id: IntroPage; key: CodelabEditorKey; icon: typeof Code2 }[] = [
+    { id: "home", key: "pageCover", icon: ImagePlay },
+    ...introPages(codelab).map((p) =>
+      p === "presenter"
+        ? { id: "presenter" as const, key: "pagePresenter" as const, icon: UserRound }
+        : { id: "setup" as const, key: "pageSetup" as const, icon: Wrench },
+    ),
+  ];
+  // A page hidden since (Infos unchecked) falls back to the cover.
+  const shownPage = page && pages.some((p) => p.id === page) ? page : page ? "home" : null;
+
   const saveLabel: Record<SaveState, string> = {
     saved: t("saved"),
     pending: t("pending"),
@@ -411,6 +467,18 @@ export function CodelabEditor({ projectId, projectName, chat, assetUrl, publishe
             ]}
           />
         }
+        actions={
+          publisher && !readOnly ? (
+            <PublishMenu
+              publisher={publisher}
+              beforePublish={flush}
+              publicUrl={publicUrl || undefined}
+              onPublished={setPublishedUrl}
+              disabled={codelab.steps.length === 0}
+              t={t}
+            />
+          ) : null
+        }
       />
 
       {saveState === "conflict" ? (
@@ -438,6 +506,7 @@ export function CodelabEditor({ projectId, projectName, chat, assetUrl, publishe
             locale={locale}
             storageKey={`forge-codelab-editor:${projectId}`}
             feedbackUrl={feedbackUrl || undefined}
+            publicUrl={publicUrl || undefined}
             embedded
             view={view}
             onViewChange={setView}
@@ -450,12 +519,24 @@ export function CodelabEditor({ projectId, projectName, chat, assetUrl, publishe
               <strong>{t("steps")}</strong>
               <span className="cle-hint">{t("total", { n: totalMinutes(codelab) })}</span>
             </div>
+            <ul className="cle-pages" aria-label={t("pages")}>
+              {pages.map(({ id, key, icon: Icon }) => (
+                <li key={id}>
+                  <button type="button" className="cle-page-pick" aria-current={shownPage === id} onClick={() => setPage(id)}>
+                    <span className="cle-page-icon">
+                      <Icon size={13} aria-hidden />
+                    </span>
+                    {t(key)}
+                  </button>
+                </li>
+              ))}
+            </ul>
             {codelab.steps.length === 0 ? <p className="cle-hint">{t("noStep")}</p> : null}
             <ol>
               {codelab.steps.map((step, index) => (
                 <li
                   key={step.id}
-                  data-active={step.id === selectedId || undefined}
+                  data-active={(!shownPage && step.id === selectedId) || undefined}
                   data-streaming={streams[step.id] !== undefined || undefined}
                   draggable={!readOnly}
                   onDragStart={() => setDragFrom(index)}
@@ -501,7 +582,30 @@ export function CodelabEditor({ projectId, projectName, chat, assetUrl, publishe
           </nav>
 
           <section className="cle-main">
-            {selected ? (
+            {shownPage ? (
+              <div className="cle-page-preview">
+                <p className="cle-hint">{t("pagePreviewHint")}</p>
+                <div className="cle-page-frame">
+                  <CodelabPlayer
+                    codelab={codelab}
+                    steps={previewSteps}
+                    tokens={theme.tokens}
+                    scheme={theme.scheme}
+                    assetUrl={assetUrl}
+                    locale={locale}
+                    storageKey={`forge-codelab-editor:${projectId}`}
+                    feedbackUrl={feedbackUrl || undefined}
+                    publicUrl={publicUrl || undefined}
+                    embedded
+                    view={{ kind: shownPage }}
+                    onViewChange={(next) => {
+                      if (next.kind === "home" || next.kind === "presenter" || next.kind === "setup") setPage(next.kind);
+                      else if (next.kind === "step") setSelectedId(codelab.steps[next.index]?.id ?? null);
+                    }}
+                  />
+                </div>
+              </div>
+            ) : selected ? (
               <>
                 <div className="cle-step-meta">
                   <label>
@@ -578,7 +682,12 @@ export function CodelabEditor({ projectId, projectName, chat, assetUrl, publishe
                   ["files", Files, "files"],
                 ] as const
               ).map(([id, Icon, key]) => (
-                <button key={id} type="button" role="tab" aria-selected={side === id} className={side === id ? "cle-active" : ""} onClick={() => setSide(id)}>
+                <button key={id} type="button" role="tab" aria-selected={side === id} className={side === id ? "cle-active" : ""} onClick={() => {
+                    setSide(id);
+                    // The Infos tab edits the intro pages: show them while typing.
+                    if (id === "details" && !page) setPage("home");
+                  }}
+                >
                   <Icon size={14} /> {t(key)}
                 </button>
               ))}
@@ -590,6 +699,8 @@ export function CodelabEditor({ projectId, projectName, chat, assetUrl, publishe
                 onEffect={onEffect}
                 onSelectStep={(id) => setSelectedId(id)}
                 readOnly={readOnly}
+                initialPrompt={initialPrompt}
+                onInitialPromptUsed={onInitialPromptUsed}
                 t={t}
               />
             </div>
@@ -606,10 +717,11 @@ export function CodelabEditor({ projectId, projectName, chat, assetUrl, publishe
                     void putSettings(projectId, { feedbackUrl: url || undefined }).catch((error) => setNotice(String(error?.message ?? error)));
                   }}
                   onImported={() => void load()}
-                  publisher={publisher}
                   readOnly={readOnly}
+                  onDelete={onDelete}
                   t={t}
                   onError={setNotice}
+                  assetUrl={assetUrl}
                 />
               </div>
             ) : null}

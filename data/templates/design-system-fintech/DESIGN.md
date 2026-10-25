@@ -84,6 +84,7 @@ Rassurant et transparent. Chaque frais est annoncé avant l'action.
 
 ## Logo
 - File: /brand/logo.svg
+- On dark backgrounds: /brand/logo-dark.svg
 - Clear space: La moitié de la hauteur du logo
 - Minimum size: 28px
 - Version claire sur le bleu nuit

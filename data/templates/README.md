@@ -22,8 +22,8 @@ data/templates/<id>/
 ├── README.md
 └── src/
     ├── main.tsx
-    ├── App.tsx        # React only — no external imports
-    └── index.css      # self-contained CSS, no @import
+    ├── App.tsx        # routes (react-router-dom); imports: react, react-router-dom, lucide-react, local files
+    └── index.css      # foundation CSS; only @import: the Google Fonts line, first
 ```
 
 ## Slides kits

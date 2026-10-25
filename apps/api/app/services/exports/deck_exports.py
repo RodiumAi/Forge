@@ -36,6 +36,8 @@ MEDIA_TYPES = {
 EXTENSIONS = {"pdf": "pdf", "png": "zip", "html": "html", "pptx": "pptx"}
 # At most two exports at once per API worker: Chromium is the expensive part.
 _export_slots = asyncio.Semaphore(2)
+# Shared with the codelab and design system PDF exports, which also run Chromium.
+chromium_slots = _export_slots
 
 
 @dataclass
