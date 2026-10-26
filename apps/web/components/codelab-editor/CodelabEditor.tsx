@@ -9,7 +9,7 @@
  * debounced. AI events stream into the preview while a step is written.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import {
   ArrowDown,
   ArrowUp,
@@ -61,7 +61,7 @@ import { FilesPanel } from "./FilesPanel";
 import { PublishMenu } from "./PublishMenu";
 import { addDownload, addStep, insertBlock, moveStep, removeStep, snippet, totalMinutes, updateStep, type SnippetKind } from "./model";
 import { useCodelabStrings, type CodelabEditorKey } from "./strings";
-import { WorkspaceBar } from "@/components/builder/WorkspaceBar";
+import { WorkspaceBar, type WorkspacePerson } from "@/components/builder/WorkspaceBar";
 import { Segmented } from "@/components/ui/Tabs";
 import "./codelab-editor.css";
 
@@ -80,6 +80,10 @@ export type CodelabEditorProps = {
   onDelete?: () => Promise<void>;
   /** Public URL of the published codelab (QR code of the cover), when published. */
   publicUrl?: string;
+  /** Share button (owner only), next to Publish. */
+  share?: ReactNode;
+  /** Who else works on the codelab, shown to guests. */
+  people?: WorkspacePerson[];
 };
 
 type SaveState = "saved" | "pending" | "saving" | "error" | "conflict";
@@ -113,6 +117,8 @@ export function CodelabEditor({
   onInitialPromptUsed,
   onDelete,
   publicUrl: initialPublicUrl,
+  share,
+  people,
 }: CodelabEditorProps) {
   const { t, locale } = useCodelabStrings();
   const [codelab, setCodelab] = useState<Codelab | null>(null);
@@ -451,6 +457,7 @@ export function CodelabEditor({
         name={codelab.title || projectName || t("untitled")}
         backHref={backHref}
         className="cle-top"
+        people={people}
         saveStatus={
           <span className="cle-save" data-state={saveState} role="status">
             {readOnly ? t("readOnly") : saveLabel[saveState]}
@@ -468,16 +475,19 @@ export function CodelabEditor({
           />
         }
         actions={
-          publisher && !readOnly ? (
-            <PublishMenu
-              publisher={publisher}
-              beforePublish={flush}
-              publicUrl={publicUrl || undefined}
-              onPublished={setPublishedUrl}
-              disabled={codelab.steps.length === 0}
-              t={t}
-            />
-          ) : null
+          <>
+            {share}
+            {publisher && !readOnly ? (
+              <PublishMenu
+                publisher={publisher}
+                beforePublish={flush}
+                publicUrl={publicUrl || undefined}
+                onPublished={setPublishedUrl}
+                disabled={codelab.steps.length === 0}
+                t={t}
+              />
+            ) : null}
+          </>
         }
       />
 

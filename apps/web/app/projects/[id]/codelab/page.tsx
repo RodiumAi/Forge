@@ -5,6 +5,7 @@
  * kinds go to their own editor.
  */
 
+import { ShareButton } from "@/components/builder/ShareButton";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { CodelabEditor } from "@/components/codelab-editor/CodelabEditor";
@@ -28,6 +29,7 @@ type Project = {
   access_role?: string;
   sites_url?: string | null;
   published_at?: string | null;
+  collaborators?: { name: string | null; email: string; avatar_url: string | null }[];
 };
 
 export default function CodelabEditorPage() {
@@ -112,6 +114,8 @@ export default function CodelabEditorPage() {
       onInitialPromptUsed={() => clearBootPrompt(projectId)}
       onDelete={project.access_role === "owner" ? deleteProject : undefined}
       publicUrl={project.published_at && project.sites_url ? project.sites_url : undefined}
+      share={project.access_role === "owner" ? <ShareButton projectId={projectId} projectName={project.name} /> : undefined}
+      people={project.access_role === "owner" ? undefined : project.collaborators}
     />
   );
 }

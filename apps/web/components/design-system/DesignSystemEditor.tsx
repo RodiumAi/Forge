@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Download, ExternalLink, Globe, Lock, Share2, Star } from "lucide-react";
+import { Download, ExternalLink, Globe, Lock, Share2, Star, UserPlus } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { ShareButton } from "@/components/builder/ShareButton";
 import { WorkspaceBar } from "@/components/builder/WorkspaceBar";
 import { APP_ROUTES } from "@/components/shell/nav";
 import { Icon } from "@/components/ui/icon";
@@ -170,6 +171,9 @@ export function DesignSystemEditor({ projectId }: { projectId: string }) {
     }
   }
 
+  // The owner invites people to edit or view, as on sites and decks.
+  const [inviteRequest, setInviteRequest] = useState(0);
+
   if (loadError) return <div className="dse-page dse-error">{loadError}</div>;
   if (!doc) return <div className="dse-page dse-muted">{t("dsLoading")}</div>;
 
@@ -266,6 +270,18 @@ export function DesignSystemEditor({ projectId }: { projectId: string }) {
                     {item.is_default_team ? t("dsDefaultTeamOff") : t("dsDefaultTeamOn")}
                   </button>
                 ) : null}
+                {item.owner.mine ? (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setMenu(null);
+                      setInviteRequest((n) => n + 1);
+                    }}
+                  >
+                    <Icon icon={UserPlus} className="ui-icon-sm" /> {t("dsInvitePeople")}
+                  </button>
+                ) : null}
                 <p className="dse-muted">{item.visibility === "team" ? t("dsVisibilityTeam") : t("dsVisibilityPrivate")}</p>
               </div>
             ) : null}
@@ -320,6 +336,7 @@ export function DesignSystemEditor({ projectId }: { projectId: string }) {
         </div>
         }
       />
+      {item?.owner.mine ? <ShareButton projectId={projectId} projectName={doc.name} request={inviteRequest} hideButton /> : null}
       {notice ? (
         <p className="dse-notice" role="status">
           {notice}

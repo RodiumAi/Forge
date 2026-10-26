@@ -88,7 +88,7 @@ import { canRedo, canUndo } from "./state";
 import { copyFor, useDeckStrings, type DeckStringKey } from "./strings";
 import type { TextCommands, TextMarks } from "./text-style";
 import { useDeckDocument } from "./useDeckDocument";
-import { WorkspaceBar } from "@/components/builder/WorkspaceBar";
+import { WorkspaceBar, type WorkspacePerson } from "@/components/builder/WorkspaceBar";
 import { Button, IconButton } from "@/components/ui/Button";
 import { centerOf, ContextMenu, isContextMenuKey, useContextMenu, type ContextMenuEntry, type Point } from "@/components/ui/ContextMenu";
 import "./deck-editor.css";
@@ -110,6 +110,10 @@ export type DeckEditorProps = {
   exportMenu?: ReactNode;
   /** Publish action; hidden when absent. */
   publisher?: DeckPublisher | null;
+  /** Share button (owner only), next to Publish. */
+  share?: ReactNode;
+  /** Who else works on the deck, shown to guests. */
+  people?: WorkspacePerson[];
   readOnly?: boolean;
   backHref: string;
   /** Brief from the home composer, handed to the assistant on a new deck. */
@@ -752,6 +756,7 @@ export function DeckEditor(props: DeckEditorProps) {
         name={doc.deck.title || props.projectName || t("untitled")}
         backHref={props.backHref}
         className="de-topbar"
+        people={props.people}
         saveStatus={
           <span className={`de-save is-${docState.save}`} role="status">
             {saveLabel}
@@ -812,6 +817,7 @@ export function DeckEditor(props: DeckEditorProps) {
         }
         actions={
           <>
+            {props.share}
             {props.publisher && !readOnly ? (
               <PublishMenu publisher={props.publisher} badge={keepBadge} onBadgeChange={setKeepBadge} beforePublish={docState.flush} disabled={visibleCount === 0} t={t} />
             ) : null}

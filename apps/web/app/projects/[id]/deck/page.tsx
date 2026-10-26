@@ -5,6 +5,7 @@
  * go back to the builder at `/projects/[id]`.
  */
 
+import { ShareButton } from "@/components/builder/ShareButton";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { DeckEditor } from "@/components/deck-editor/DeckEditor";
@@ -23,7 +24,13 @@ import { clearBootPrompt, peekBootPrompt } from "@/lib/create-project";
 import { editorHref, type ProjectKindId } from "@/lib/kinds";
 import { useMediaToken } from "@/lib/media-token";
 
-type Project = { id: string; name: string; platform?: ProjectKindId; access_role?: string };
+type Project = {
+  id: string;
+  name: string;
+  platform?: ProjectKindId;
+  access_role?: string;
+  collaborators?: { name: string | null; email: string; avatar_url: string | null }[];
+};
 
 export default function DeckEditorPage() {
   const params = useParams<{ id: string }>();
@@ -113,6 +120,8 @@ export default function DeckEditorPage() {
       }
       publisher={project.access_role === "viewer" ? null : publisher}
       readOnly={project.access_role === "viewer"}
+      share={project.access_role === "owner" ? <ShareButton projectId={projectId} projectName={project.name} /> : undefined}
+      people={project.access_role === "owner" ? undefined : project.collaborators}
       backHref="/dashboard"
       initialPrompt={bootPrompt}
       onInitialPromptUsed={() => clearBootPrompt(projectId)}

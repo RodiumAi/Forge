@@ -6,20 +6,18 @@
  * design charter, open in a tab), Share and Publish.
  */
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { api, apiBase } from "@/lib/api";
-import { Button, IconButton } from "@/components/ui/Button";
-import { Glyph } from "@/components/ui/glyph";
+import { IconButton } from "@/components/ui/Button";
 import { MenuItem, MenuSeparator, Popover } from "@/components/ui/Popover";
 import { Tabs } from "@/components/ui/Tabs";
-import { shareSeatLimit, useForgeStatus } from "@/lib/forge-status";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import type { ProjectKindId } from "@/lib/kinds";
 import { sitesUrlForSlug } from "@/lib/sites-url";
 import type { BuilderMode } from "./types";
 import { PublishPopover } from "./PublishPopover";
-import { ShareProjectModal } from "./ShareProjectModal";
+import { ShareButton } from "./ShareButton";
 import { SaveStatus, WorkspaceBar, type WorkspacePerson, type WorkspaceState } from "./WorkspaceBar";
 
 type Props = {
@@ -76,36 +74,10 @@ export function BuilderTopbar({
   shareRequest = 0,
 }: Props) {
   const { t } = useI18n();
-  const shareLimit = shareSeatLimit(useForgeStatus());
-  const shareLocked = shareLimit === 0;
-  const [shareHint, setShareHint] = useState<string | null>(null);
-  const [shareOpen, setShareOpen] = useState(false);
   const [openingDraft, setOpeningDraft] = useState(false);
 
   const published = Boolean(publishedAt);
   const liveSiteUrl = published ? sitesUrl || (slug ? sitesUrlForSlug(slug) : null) : null;
-
-  useEffect(() => {
-    if (!shareHint) return;
-    const timer = window.setTimeout(() => setShareHint(null), 3200);
-    return () => window.clearTimeout(timer);
-  }, [shareHint]);
-
-  function openShare() {
-    if (shareLocked) {
-      setShareOpen(false);
-      setShareHint(t("shareLocked"));
-      return;
-    }
-    setShareHint(null);
-    setShareOpen(true);
-  }
-
-  // The phone tab bar has its own Share button.
-  useEffect(() => {
-    if (shareRequest > 0 && canShare) openShare();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- react to the request counter only
-  }, [shareRequest]);
 
   async function rename(next: string) {
     const res = await api<{ name: string; slug: string; sites_url?: string | null }>(`/projects/${projectId}`, {
@@ -240,19 +212,8 @@ export function BuilderTopbar({
         }
         actions={
           <>
-            {canShare ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                icon="users"
-                className="f-bd-hide-mob"
-                aria-disabled={shareLocked || undefined}
-                onClick={openShare}
-                title={t("shareTitle")}
-              >
-                {t("bdShare")}
-              </Button>
-            ) : null}
+            {/* The phone tab bar has its own Share button: it bumps `shareRequest`. */}
+            {canShare ? <ShareButton projectId={projectId} projectName={projectName} className="f-bd-hide-mob" request={shareRequest} /> : null}
             {canShare ? (
               <PublishPopover
                 projectId={projectId}
@@ -266,19 +227,6 @@ export function BuilderTopbar({
           </>
         }
       />
-      {shareHint ? (
-        <p className="f-toast" role="status">
-          <Glyph name="lock" size="sm" /> {shareHint}
-        </p>
-      ) : null}
-      {canShare && shareOpen ? (
-        <ShareProjectModal
-          projectId={projectId}
-          projectName={projectName}
-          seatLimit={shareLimit}
-          onClose={() => setShareOpen(false)}
-        />
-      ) : null}
     </>
   );
 }
