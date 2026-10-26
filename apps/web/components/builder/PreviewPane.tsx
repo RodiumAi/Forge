@@ -1,12 +1,14 @@
 "use client";
 
 import { ReactNode, useEffect, useRef, useState } from "react";
+import { Copy, ImagePlus, Link2, MessageSquare, PencilLine, RotateCw, Sparkles } from "lucide-react";
 import { api, apiBase } from "@/lib/api";
 import { getMediaToken } from "@/lib/media-token";
 import { uploadProjectThumbnail } from "@/lib/project-thumbnail";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { Button } from "@/components/ui/Button";
 import { Glyph } from "@/components/ui/glyph";
+import { ContextMenu, copyText, useContextMenu, type ContextMenuEntry } from "@/components/ui/ContextMenu";
 import { PreviewToolbar } from "./PreviewToolbar";
 import type {
   ElementSelection,
@@ -115,6 +117,8 @@ export function PreviewPane({
   const [bridgeSynced, setBridgeSynced] = useState(false);
   const [bridgeWarning, setBridgeWarning] = useState(false);
   const [editMissHint, setEditMissHint] = useState<string | null>(null);
+  const menu = useContextMenu();
+  const openMenuRef = useRef<(data: Record<string, unknown>) => void>(() => undefined);
   const frameRef = useRef<HTMLIFrameElement>(null);
   const toolRetryTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const pingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -444,6 +448,82 @@ export function PreviewPane({
     }
   }
 
+  function postAction(action: string) {
+    const win = frameRef.current?.contentWindow;
+    const target = previewOrigin(previewSrc);
+    if (!win || !target) return;
+    try {
+      win.postMessage({ type: "forge-context-action", action }, target);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  /** Right click or long press in the preview: the bridge says what sits under it. */
+  openMenuRef.current = (data) => {
+    const frame = frameRef.current;
+    if (!frame) return;
+    const box = frame.getBoundingClientRect();
+    const scale = frame.offsetWidth ? box.width / frame.offsetWidth : 1;
+    const x = typeof data.x === "number" ? data.x : 0;
+    const y = typeof data.y === "number" ? data.y : 0;
+    const at = { x: Math.round(box.left + x * scale), y: Math.round(box.top + y * scale) };
+    const ico = (Icon: typeof Copy) => <Icon size={16} aria-hidden />;
+    const raw = data.element && typeof data.element === "object" ? (data.element as Record<string, unknown>) : null;
+    const str = (v: unknown) => (typeof v === "string" ? v : null);
+    const element: ElementSelection | null = raw
+      ? {
+          tag: str(raw.tag) || "div",
+          id: str(raw.id),
+          className: str(raw.className),
+          selector: str(raw.selector) || "",
+          text: str(raw.text) || "",
+          forgeId: str(raw.forgeId),
+        }
+      : null;
+    const img = data.image && typeof data.image === "object" ? (data.image as Record<string, unknown>) : null;
+    const image: ImageSelection | null = img
+      ? { src: str(img.src) || "", alt: str(img.alt) || "", selector: str(img.selector) || "", forgeId: str(img.forgeId) }
+      : null;
+    const selection = str(data.selection) || "";
+    const link = str(data.link);
+    const items: ContextMenuEntry[] = [];
+    if (data.editable === true && onVisualEditRef.current) {
+      items.push({ id: "edit-text", label: t("bdMenuEditText"), icon: ico(PencilLine), onSelect: () => postAction("edit-text") });
+    }
+    if (image && onImageSelectRef.current) {
+      items.push({
+        id: "image",
+        label: t("bdMenuReplaceImage"),
+        icon: ico(ImagePlus),
+        onSelect: () => {
+          onPreviewToolChange("image");
+          onImageSelectRef.current?.(image);
+        },
+      });
+    }
+    if (element && onElementSelectRef.current) {
+      items.push({ id: "ask", label: t("bdMenuAskElement"), icon: ico(Sparkles), onSelect: () => onElementSelectRef.current?.(element) });
+    }
+    if (element && onCommentAnchorRef.current) {
+      items.push({
+        id: "comment",
+        label: t("bdMenuComment"),
+        icon: ico(MessageSquare),
+        onSelect: () => {
+          onPreviewToolChange("comment");
+          onCommentAnchorRef.current?.(element);
+        },
+      });
+    }
+    items.push({ type: "separator" });
+    if (selection) items.push({ id: "copy", label: t("bdMenuCopy"), icon: ico(Copy), onSelect: () => copyText(selection) });
+    if (link) items.push({ id: "copy-link", label: t("bdMenuCopyLink"), icon: ico(Link2), onSelect: () => copyText(link) });
+    items.push({ type: "separator" });
+    if (onRefreshPreview) items.push({ id: "reload", label: t("bdMenuReload"), icon: ico(RotateCw), onSelect: onRefreshPreview });
+    menu.open(at, items, t("bdMenuPreview"));
+  };
+
   function postTool(tool: PreviewTool | null) {
     const win = frameRef.current?.contentWindow;
     const target = previewOrigin(previewSrc);
@@ -545,6 +625,11 @@ export function PreviewPane({
         setEditMissHint(t("previewEditMiss"));
         if (editMissTimerRef.current) clearTimeout(editMissTimerRef.current);
         editMissTimerRef.current = setTimeout(() => setEditMissHint(null), 3200);
+        return;
+      }
+
+      if (type === "forge-context-menu") {
+        openMenuRef.current(data as Record<string, unknown>);
         return;
       }
 
@@ -711,6 +796,7 @@ export function PreviewPane({
         ) : null}
       </div>
       {sidePanel ? <aside className="f-bd-side">{sidePanel}</aside> : null}
+      <ContextMenu request={menu.request} onClose={menu.close} />
     </section>
   );
 }

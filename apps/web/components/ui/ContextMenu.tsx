@@ -18,6 +18,7 @@ import {
   useRef,
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
@@ -140,6 +141,82 @@ export function centerOf(el: Element | null | undefined): Point | null {
   if (!el) return null;
   const r = el.getBoundingClientRect();
   return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + Math.min(r.height / 2, 40)) };
+}
+
+type TriggerProps = {
+  onContextMenu: (e: ReactMouseEvent) => void;
+  onKeyDown: (e: ReactKeyboardEvent) => void;
+  onPointerDown: (e: ReactPointerEvent) => void;
+  onPointerMove: (e: ReactPointerEvent) => void;
+  onPointerUp: (e: ReactPointerEvent) => void;
+  onPointerCancel: (e: ReactPointerEvent) => void;
+};
+
+/**
+ * The three ways to ask for a menu on a row (right click, long press, Menu
+ * key or Shift+F10) in one set of handlers: `bind(target)` returns props to
+ * spread on the row. Shift+right click keeps the browser's menu. A row with
+ * its own `onKeyDown` calls `trigger.key(e, target)` from it instead.
+ */
+export function useMenuTrigger<T>(onOpen: (target: T, at: Point) => void) {
+  const pressed = useRef<{ target: T } | null>(null);
+  const open = useRef(onOpen);
+  open.current = onOpen;
+  const longPress = useLongPress((at) => {
+    if (pressed.current) open.current(pressed.current.target, at);
+  });
+
+  const key = useCallback((e: ReactKeyboardEvent, target: T): boolean => {
+    if (!isContextMenuKey(e)) return false;
+    e.preventDefault();
+    e.stopPropagation();
+    const at = centerOf(e.currentTarget);
+    if (at) open.current(target, at);
+    return true;
+  }, []);
+
+  const bind = (target: T): TriggerProps => ({
+    onContextMenu: (e) => {
+      // A text field keeps the browser's menu: paste, spelling.
+      if (e.shiftKey || isTextField(e.target)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      longPress.cancel();
+      if (longPress.justFired()) return;
+      open.current(target, { x: e.clientX, y: e.clientY });
+    },
+    onKeyDown: (e) => void key(e, target),
+    onPointerDown: (e) => {
+      if (isTextField(e.target)) return;
+      pressed.current = { target };
+      longPress.onPointerDown(e);
+    },
+    onPointerMove: longPress.onPointerMove,
+    onPointerUp: longPress.onPointerUp,
+    onPointerCancel: longPress.onPointerCancel,
+  });
+
+  return { bind, key, justFired: longPress.justFired };
+}
+
+function isTextField(target: EventTarget | null): boolean {
+  const el = target as HTMLElement | null;
+  if (!el?.closest) return false;
+  const field = el.closest("input, textarea, select, [contenteditable='true'], [contenteditable='']");
+  if (!field) return false;
+  if (field.tagName !== "INPUT") return true;
+  return !["checkbox", "radio", "button", "submit", "color", "range", "file"].includes((field as HTMLInputElement).type);
+}
+
+/** Copy rows: best effort, a refused clipboard just does nothing. */
+export function copyText(text: string): void {
+  void navigator.clipboard?.writeText(text).catch(() => undefined);
+}
+
+/** Where a "..." button opens the same menu: just under it. */
+export function belowOf(el: Element): Point {
+  const r = el.getBoundingClientRect();
+  return { x: Math.round(r.left), y: Math.round(r.bottom + 4) };
 }
 
 const ROW = ".f-menu-item:not([aria-disabled='true'])";

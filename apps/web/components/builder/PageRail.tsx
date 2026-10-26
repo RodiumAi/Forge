@@ -9,7 +9,25 @@
  */
 
 import { useEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent, type MouseEvent } from "react";
-import { Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, FileText, PanelBottom, PanelLeft, X } from "lucide-react";
+import {
+  Check,
+  CheckSquare,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  Copy,
+  ExternalLink,
+  EyeOff,
+  FileText,
+  ListChecks,
+  PanelBottom,
+  PanelLeft,
+  Square,
+  X,
+} from "lucide-react";
+
+import { ContextMenu, copyText, useContextMenu, useMenuTrigger, type ContextMenuEntry } from "@/components/ui/ContextMenu";
 
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { nextPageSelection, pageLabel, PageThumbCache } from "./page-rail-model";
@@ -66,6 +84,44 @@ export function PageRail({
   const listRef = useRef<HTMLOListElement | null>(null);
   const home = t("bdPagesHome");
   const [focusPath, setFocusPath] = useState<string | null>(null);
+  const menu = useContextMenu();
+  const trigger = useMenuTrigger<string>((path, at) => {
+    const ico = (Icon: typeof Copy) => <Icon size={16} aria-hidden />;
+    const checked = selected.includes(path);
+    const items: ContextMenuEntry[] = [
+      { id: "open", label: t("bdMenuOpenPage"), icon: ico(ExternalLink), onSelect: () => onNavigate(path) },
+      {
+        id: "select",
+        label: checked ? t("bdMenuUnselectPage") : t("bdMenuSelectPage"),
+        icon: ico(checked ? Square : CheckSquare),
+        onSelect: () => {
+          onSelectedChange(nextPageSelection(selected, path, "toggle", pages));
+          anchorRef.current = path;
+        },
+      },
+      {
+        id: "select-all",
+        label: t("bdMenuSelectAllPages"),
+        icon: ico(ListChecks),
+        disabled: selected.length === pages.length,
+        onSelect: () => onSelectedChange([...pages]),
+      },
+      ...(selected.length
+        ? [{ id: "clear", label: t("bdPagesClear"), icon: ico(X), onSelect: () => onSelectedChange([]) }]
+        : []),
+      { type: "separator" },
+      { id: "copy-path", label: t("bdMenuCopyPath"), icon: ico(Copy), onSelect: () => copyText(path) },
+      { type: "separator" },
+      {
+        id: "placement",
+        label: horizontal ? t("bdPagesToLeft") : t("bdPagesToBottom"),
+        icon: ico(horizontal ? PanelLeft : PanelBottom),
+        onSelect: () => onPlacementChange(horizontal ? "left" : "bottom"),
+      },
+      { id: "hide", label: t("bdPagesCollapse"), icon: ico(EyeOff), onSelect: () => onCollapsedChange(true) },
+    ];
+    menu.open(at, items, t("bdMenuPage"));
+  });
 
   // Keep the page on screen visible in a long list.
   useEffect(() => {
@@ -90,6 +146,7 @@ export function PageRail({
   };
 
   const onThumbKey = (e: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    if (trigger.key(e, pages[index])) return;
     const next = horizontal ? ["ArrowRight", "ArrowDown"] : ["ArrowDown"];
     const prev = horizontal ? ["ArrowLeft", "ArrowUp"] : ["ArrowUp"];
     if (next.includes(e.key) || prev.includes(e.key)) {
@@ -195,7 +252,9 @@ export function PageRail({
                     title={`${label} · ${path}`}
                     tabIndex={path === tabStop ? 0 : -1}
                     onFocus={() => setFocusPath(path)}
+                    {...trigger.bind(path)}
                     onClick={(e) => {
+                      if (trigger.justFired()) return;
                       if (pick(path, e)) return;
                       anchorRef.current = path;
                       onNavigate(path);
@@ -238,6 +297,7 @@ export function PageRail({
           </button>
         </div>
       ) : null}
+      <ContextMenu request={menu.request} onClose={menu.close} />
     </nav>
   );
 }

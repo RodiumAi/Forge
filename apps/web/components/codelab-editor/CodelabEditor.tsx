@@ -13,9 +13,12 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, 
 import {
   ArrowDown,
   ArrowUp,
+  ChevronsDown,
+  ChevronsUp,
   Code2,
   Download,
   FileDiff,
+  FileText,
   FolderTree,
   Image as ImageIcon,
   Info,
@@ -30,6 +33,7 @@ import {
   UserRound,
   Wrench,
 } from "lucide-react";
+import { ContextMenu, useContextMenu, useMenuTrigger, type ContextMenuEntry } from "@/components/ui/ContextMenu";
 import type { Codelab } from "@/lib/contracts/forge-design";
 import {
   CODELAB_CSS,
@@ -282,10 +286,10 @@ export function CodelabEditor({
 
   // ── steps list ─────────────────────────────────────────────────────────
 
-  const onAddStep = async () => {
+  const onAddStep = async (afterId: string | null = selectedId) => {
     const doc = codelabRef.current;
     if (!doc) return;
-    const index = doc.steps.findIndex((s) => s.id === selectedId);
+    const index = doc.steps.findIndex((s) => s.id === afterId);
     const { codelab: next, step } = addStep(doc, t("newStepTitle"), index >= 0 ? index : undefined);
     codelabRef.current = next;
     setCodelab(next);
@@ -314,6 +318,34 @@ export function CodelabEditor({
   };
 
   const [dragFrom, setDragFrom] = useState<number | null>(null);
+
+  // Right click, long press or the Menu key on a step.
+  const stepMenu = useContextMenu();
+  const stepTrigger = useMenuTrigger<string>((id, at) => {
+    const doc = codelabRef.current;
+    if (!doc) return;
+    const index = doc.steps.findIndex((s) => s.id === id);
+    if (index < 0) return;
+    const last = doc.steps.length - 1;
+    const move = (to: number) => changeCodelab(moveStep(doc, index, to));
+    const ico = (I: typeof ArrowUp) => <I size={16} aria-hidden />;
+    const items: ContextMenuEntry[] = [
+      { id: "open", label: t("openStep"), icon: ico(FileText), onSelect: () => setSelectedId(id) },
+      ...(readOnly
+        ? []
+        : ([
+            { id: "add", label: t("addStepAfter"), icon: ico(Plus), disabled: doc.steps.length >= 200, onSelect: () => void onAddStep(id) },
+            { type: "separator" },
+            { id: "up", label: t("moveUp"), icon: ico(ArrowUp), disabled: index === 0, onSelect: () => move(index - 1) },
+            { id: "down", label: t("moveDown"), icon: ico(ArrowDown), disabled: index === last, onSelect: () => move(index + 1) },
+            { id: "top", label: t("moveTop"), icon: ico(ChevronsUp), disabled: index === 0, onSelect: () => move(0) },
+            { id: "bottom", label: t("moveBottom"), icon: ico(ChevronsDown), disabled: index === last, onSelect: () => move(last) },
+            { type: "separator" },
+            { id: "delete", label: t("deleteStep"), icon: ico(Trash2), danger: true, onSelect: () => onDeleteStep(id) },
+          ] satisfies ContextMenuEntry[])),
+    ];
+    stepMenu.open(at, items, t("menuStep"));
+  });
 
   // ── AI effects ─────────────────────────────────────────────────────────
 
@@ -556,7 +588,7 @@ export function CodelabEditor({
                     setDragFrom(null);
                   }}
                 >
-                  <button type="button" className="cle-step-pick" onClick={() => setSelectedId(step.id)}>
+                  <button type="button" className="cle-step-pick" {...stepTrigger.bind(step.id)} onClick={() => setSelectedId(step.id)}>
                     <span className="cle-step-n">{index + 1}</span>
                     <span className="cle-step-title">{step.title || step.id}</span>
                   </button>
@@ -590,6 +622,7 @@ export function CodelabEditor({
               </button>
             ) : null}
           </nav>
+          <ContextMenu request={stepMenu.request} onClose={stepMenu.close} />
 
           <section className="cle-main">
             {shownPage ? (

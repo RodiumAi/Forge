@@ -13,7 +13,9 @@ import {
 } from "react";
 import Link from "next/link";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
-import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Copy, PanelLeftClose, PanelLeftOpen, Pencil, RotateCw, TextSelect } from "lucide-react";
+import { ContextMenu, copyText, useContextMenu, useMenuTrigger, type ContextMenuEntry } from "@/components/ui/ContextMenu";
+import { splitMessageSegments } from "@/lib/message-segments";
 import { api, apiBase, ApiError, getToken, logoutToHome, readApiError } from "@/lib/api";
 import {
   classifyChatError,
@@ -2653,6 +2655,38 @@ export default function ProjectPage() {
       ? rodiumRechargeUrl(getSessionSnapshot()?.profile?.rodium_sub, window.location.href)
       : undefined;
 
+  // Right click, long press or the Menu key on a chat message.
+  const chatMenu = useContextMenu();
+  const messageMenu = useMenuTrigger<{ message: Message }>(({ message: m }, at) => {
+    const ico = (I: typeof Copy) => <I size={16} aria-hidden />;
+    const user = m.role === "user";
+    const text = user
+      ? parseUserMessageContent(m.content).text
+      : splitMessageSegments(m.content || "")
+          .flatMap((seg) => (seg.kind === "text" ? [seg.content] : []))
+          .join("\n")
+          .trim();
+    let picked = "";
+    try {
+      picked = String(window.getSelection() || "").trim();
+    } catch {
+      picked = "";
+    }
+    const editable = user && !busy && !m.id.startsWith("local") && m.id !== "boot-user";
+    const items: ContextMenuEntry[] = [
+      ...(picked ? [{ id: "copy-sel", label: t("bdMenuCopySelection"), icon: ico(TextSelect), onSelect: () => copyText(picked) }] : []),
+      { id: "copy", label: t("bdMenuCopyMessage"), icon: ico(Copy), disabled: !text, onSelect: () => copyText(text) },
+      ...(editable
+        ? [
+            { type: "separator" as const },
+            { id: "edit", label: t("editMessage"), icon: ico(Pencil), onSelect: () => startEditMessage(m.id, m.content, m.attachments) },
+            { id: "resend", label: t("resendMessage"), icon: ico(RotateCw), onSelect: () => resendMessage(m.id, m.content, m.attachments) },
+          ]
+        : []),
+    ];
+    chatMenu.open(at, items, t("bdMenuMessage"));
+  });
+
   return (
     <AppShell active={null} chrome="bare">
     <div className="f-bd">
@@ -2783,7 +2817,7 @@ export default function ProjectPage() {
               }
               if (m.role === "user") {
                 return (
-                  <article key={m.id} className="f-bd-msg f-bd-msg-user" aria-label={t("bdYou")}>
+                  <article key={m.id} className="f-bd-msg f-bd-msg-user" aria-label={t("bdYou")} {...messageMenu.bind({ message: m })}>
                     <div className="f-bd-bubble">
                       <UserMessageBody
                         content={m.content}
@@ -2818,7 +2852,7 @@ export default function ProjectPage() {
                 );
               }
               return (
-                <article key={m.id} className="f-bd-msg f-bd-msg-ai">
+                <article key={m.id} className="f-bd-msg f-bd-msg-ai" {...messageMenu.bind({ message: m })}>
                   <ForgeWho right={m.effort_label || undefined} />
                   {msgPlan.length > 0 ? (
                     <PlanPanel
@@ -3730,6 +3764,7 @@ export default function ProjectPage() {
           void forcePreviewRefresh({ softStart: true, remount: true, quiet: true });
         }}
       />
+      <ContextMenu request={chatMenu.request} onClose={chatMenu.close} />
     </div>
     </AppShell>
   );

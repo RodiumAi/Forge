@@ -8,6 +8,7 @@ import { ShareButton } from "@/components/builder/ShareButton";
 import { WorkspaceBar } from "@/components/builder/WorkspaceBar";
 import { APP_ROUTES } from "@/components/shell/nav";
 import { Icon } from "@/components/ui/icon";
+import { ContextMenu, copyText, useContextMenu, useMenuTrigger } from "@/components/ui/ContextMenu";
 import { designSystemSchema } from "@/lib/contracts/forge-design";
 import { clearBootPrompt, peekBootPrompt } from "@/lib/create-project";
 import { useForgeStatus } from "@/lib/forge-status";
@@ -38,7 +39,7 @@ import {
   SpacingSection,
   TypographySection,
 } from "./sections";
-import { SECTIONS, fontFamily, googleFontsHref, type DesignSystemDoc, type SectionId } from "./tokens";
+import { SECTIONS, cssVars, fontFamily, googleFontsHref, type DesignSystemDoc, type SectionId } from "./tokens";
 
 const SAVE_DELAY_MS = 700;
 const EXPORT_LABELS: Record<DsExportFormat, MessageKey> = { pdf: "apDsExportPdf", md: "apDsExportMd" };
@@ -173,6 +174,28 @@ export function DesignSystemEditor({ projectId }: { projectId: string }) {
 
   // The owner invites people to edit or view, as on sites and decks.
   const [inviteRequest, setInviteRequest] = useState(0);
+
+  // Right click, long press or the Menu key on a section of the nav.
+  const sectionMenu = useContextMenu();
+  const navMenu = useMenuTrigger<SectionId>((id, at) => {
+    sectionMenu.open(
+      at,
+      [
+        { id: "open", label: t("dsMenuOpenSection"), onSelect: () => setSection(id) },
+        {
+          id: "copy-vars",
+          label: t("dsMenuCopyAllVars"),
+          disabled: !doc,
+          onSelect: () => {
+            if (!doc) return;
+            const lines = Object.entries(cssVars(doc)).map(([key, value]) => `  ${key}: ${value};`);
+            copyText(`:root {\n${lines.join("\n")}\n}`);
+          },
+        },
+      ],
+      t("dsMenuSection"),
+    );
+  });
 
   if (loadError) return <div className="dse-page dse-error">{loadError}</div>;
   if (!doc) return <div className="dse-page dse-muted">{t("dsLoading")}</div>;
@@ -350,12 +373,14 @@ export function DesignSystemEditor({ projectId }: { projectId: string }) {
               type="button"
               aria-current={section === id ? "page" : undefined}
               className={section === id ? "is-active" : undefined}
+              {...navMenu.bind(id)}
               onClick={() => setSection(id)}
             >
               {t(`dsSection_${id}` as MessageKey)}
             </button>
           ))}
         </nav>
+        <ContextMenu request={sectionMenu.request} onClose={sectionMenu.close} />
         <main className="dse-main">
           <h2 className="dse-h2">{t(`dsSection_${section}` as MessageKey)}</h2>
           {readOnly ? <p className="dse-muted">{t("dsReadOnly")}</p> : null}

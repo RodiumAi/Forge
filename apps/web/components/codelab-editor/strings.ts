@@ -169,6 +169,16 @@ const fr = {
   commandCode: "Commande",
   addCommand: "Ajouter une commande",
   urlOptional: "Lien https (optionnel)",
+  menuStep: "Actions de l'étape",
+  openStep: "Ouvrir l'étape",
+  addStepAfter: "Ajouter une étape après",
+  moveTop: "Mettre en premier",
+  moveBottom: "Mettre en dernier",
+  menuFile: "Actions du fichier",
+  copyPath: "Copier le chemin",
+  menuMessage: "Actions du message",
+  copyMessage: "Copier le message",
+  copySelection: "Copier la sélection",
 } as const;
 
 export type CodelabEditorKey = keyof typeof fr;
@@ -336,6 +346,16 @@ const en: Record<CodelabEditorKey, string> = {
   commandCode: "Command",
   addCommand: "Add a command",
   urlOptional: "https link (optional)",
+  menuStep: "Step actions",
+  openStep: "Open the step",
+  addStepAfter: "Add a step after",
+  moveTop: "Move to the top",
+  moveBottom: "Move to the bottom",
+  menuFile: "File actions",
+  copyPath: "Copy the path",
+  menuMessage: "Message actions",
+  copyMessage: "Copy the message",
+  copySelection: "Copy the selection",
 };
 
 export type Translate = (key: CodelabEditorKey, vars?: Record<string, string | number>) => string;

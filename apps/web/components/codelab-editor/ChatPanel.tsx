@@ -8,7 +8,8 @@
  */
 
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
-import { ArrowDown, ArrowUp, Loader2, Send, Square, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Copy, Loader2, Send, Square, TextSelect, X } from "lucide-react";
+import { ContextMenu, copyText, useContextMenu, useMenuTrigger, type ContextMenuEntry } from "@/components/ui/ContextMenu";
 import type { CodelabChatClient } from "./api";
 import {
   confirmBody,
@@ -191,11 +192,30 @@ export function ChatPanel({ client, selected, onEffect, onSelectStep, readOnly, 
 
   const editOutline = (steps: OutlineStep[]) => dispatch({ type: "outline", steps });
 
+  const menu = useContextMenu();
+  const trigger = useMenuTrigger<string>((text, at) => {
+    let picked = "";
+    try {
+      picked = String(window.getSelection() || "").trim();
+    } catch {
+      picked = "";
+    }
+    const items: ContextMenuEntry[] = [
+      ...(picked ? [{ id: "copy-sel", label: t("copySelection"), icon: <TextSelect size={16} aria-hidden />, onSelect: () => copyText(picked) }] : []),
+      { id: "copy", label: t("copyMessage"), icon: <Copy size={16} aria-hidden />, onSelect: () => copyText(text) },
+    ];
+    menu.open(at, items, t("menuMessage"));
+  });
+
   return (
     <div className="cle-chat">
       <div className="cle-chat-log" ref={listRef} aria-live="polite">
         {state.lines.map((entry) => (
-          <div key={entry.id} className={`cle-msg cle-msg-${entry.role}`}>
+          <div
+            key={entry.id}
+            className={`cle-msg cle-msg-${entry.role}`}
+            {...trigger.bind(entry.text.startsWith("files:") ? t("filesWritten", { n: entry.text.slice(6) }) : entry.text)}
+          >
             <span className="cle-msg-who">{entry.role === "user" ? t("you") : t("assistant")}</span>
             <p>{entry.text.startsWith("files:") ? t("filesWritten", { n: entry.text.slice(6) }) : entry.text}</p>
           </div>
@@ -336,6 +356,7 @@ export function ChatPanel({ client, selected, onEffect, onSelectStep, readOnly, 
           </button>
         )}
       </form>
+      <ContextMenu request={menu.request} onClose={menu.close} />
     </div>
   );
 }

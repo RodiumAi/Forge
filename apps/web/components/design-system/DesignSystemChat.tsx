@@ -4,6 +4,7 @@ import { Send, Sparkles } from "lucide-react";
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 
 import { Icon } from "@/components/ui/icon";
+import { ContextMenu, copyText, useContextMenu, useMenuTrigger, type ContextMenuEntry } from "@/components/ui/ContextMenu";
 import { api, readApiError } from "@/lib/api";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { useSpeechInput } from "@/lib/speech-input";
@@ -138,6 +139,21 @@ export const DesignSystemChat = forwardRef<DesignSystemChatHandle, Props>(functi
 
   useImperativeHandle(ref, () => ({ ask: (prompt, target = null) => void send(prompt, target) }), [send]);
 
+  const menu = useContextMenu();
+  const trigger = useMenuTrigger<string>((text, at) => {
+    let picked = "";
+    try {
+      picked = String(window.getSelection() || "").trim();
+    } catch {
+      picked = "";
+    }
+    const items: ContextMenuEntry[] = [
+      ...(picked ? [{ id: "copy-sel", label: t("dsMenuCopySelection"), onSelect: () => copyText(picked) }] : []),
+      { id: "copy", label: t("dsMenuCopyMessage"), onSelect: () => copyText(text) },
+    ];
+    menu.open(at, items, t("dsMenuMessage"));
+  });
+
   const sectionKey = `dsSection_${section}` as const;
   return (
     <aside className="dse-chat" aria-label={t("dsChatTitle")}>
@@ -147,7 +163,7 @@ export const DesignSystemChat = forwardRef<DesignSystemChatHandle, Props>(functi
       <div className="dse-chat-list" ref={listRef} aria-live="polite">
         {!lines.length ? <p className="dse-muted">{t("dsChatEmpty")}</p> : null}
         {lines.map((line) => (
-          <p key={line.id} className={`dse-chat-line is-${line.role}`}>
+          <p key={line.id} className={`dse-chat-line is-${line.role}`} {...trigger.bind(line.text)}>
             {line.text}
           </p>
         ))}
@@ -190,6 +206,7 @@ export const DesignSystemChat = forwardRef<DesignSystemChatHandle, Props>(functi
           </button>
         </div>
       </form>
+      <ContextMenu request={menu.request} onClose={menu.close} />
     </aside>
   );
 });

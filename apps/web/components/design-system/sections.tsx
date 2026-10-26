@@ -1,9 +1,10 @@
 "use client";
 
-import { Plus, Sparkles, Trash2, Upload } from "lucide-react";
+import { Braces, Copy, Hash, Plus, Sparkles, Tag, Trash2, Type, Upload } from "lucide-react";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 
 import { Icon } from "@/components/ui/icon";
+import { ContextMenu, copyText, useContextMenu, useMenuTrigger, type ContextMenuEntry } from "@/components/ui/ContextMenu";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { assetObjectUrl, uploadLogo } from "./api";
 import { ComponentShowcase } from "./ComponentShowcase";
@@ -42,6 +43,23 @@ export type SectionProps = {
   onChange: (next: DesignSystemDoc) => void;
   readOnly?: boolean;
 };
+
+const ico = (I: typeof Copy) => <I size={16} aria-hidden />;
+
+/** A right-click menu whose rows are given by the row that opens it. */
+function useRowMenu(label: string) {
+  const menu = useContextMenu();
+  const trigger = useMenuTrigger<ContextMenuEntry[]>((items, at) => menu.open(at, items, label));
+  return { bind: trigger.bind, node: <ContextMenu request={menu.request} onClose={menu.close} /> };
+}
+
+/** Rows to copy a token: its value and its CSS variable. */
+function copyRows(t: (key: "dsMenuCopyValue" | "dsMenuCopyVar") => string, value: string, cssVar: string): ContextMenuEntry[] {
+  return [
+    { id: "copy-value", label: t("dsMenuCopyValue"), icon: ico(Copy), onSelect: () => copyText(value) },
+    { id: "copy-var", label: t("dsMenuCopyVar"), icon: ico(Braces), onSelect: () => copyText(`var(${cssVar})`) },
+  ];
+}
 
 /** One line per entry; empty lines are dropped on save. */
 function LinesField({
@@ -103,12 +121,28 @@ export function ColorsSection({ doc, onChange, readOnly }: SectionProps) {
   const [checkBg, setCheckBg] = useState("bg");
   const colors = Object.fromEntries(entries.map((e) => [e.name, e.value]));
   const custom = colors[checkFg] && colors[checkBg] ? contrastRatio(colors[checkFg], colors[checkBg]) : null;
+  const rowMenu = useRowMenu(t("dsMenuColor"));
 
   return (
     <div className="dse-stack">
+      {rowMenu.node}
       <div className="dse-swatches">
         {entries.map((entry) => (
-          <div key={entry.name} className="dse-swatch">
+          <div
+            key={entry.name}
+            className="dse-swatch"
+            {...rowMenu.bind([
+              { id: "copy-hex", label: t("dsMenuCopyHex"), icon: ico(Hash), onSelect: () => copyText(entry.value) },
+              { id: "copy-var", label: t("dsMenuCopyVar"), icon: ico(Braces), onSelect: () => copyText(`var(--${entry.name})`) },
+              { id: "copy-name", label: t("dsMenuCopyName"), icon: ico(Tag), onSelect: () => copyText(entry.name) },
+              ...(!readOnly && !["bg", "fg", "accent"].includes(entry.name)
+                ? [
+                    { type: "separator" as const },
+                    { id: "remove", label: t("dsRemove"), icon: ico(Trash2), danger: true, onSelect: () => onChange(removeColor(doc, entry.name)) },
+                  ]
+                : []),
+            ])}
+          >
             <label className="dse-swatch-chip" style={{ background: entry.value }}>
               <input
                 type="color"
@@ -224,14 +258,23 @@ export function TypographySection({ doc, onChange, readOnly }: SectionProps) {
   const scale = typeScale(doc);
   const sizes = scaleSizes(scale.base, scale.ratio);
   const families = Object.keys(GOOGLE_FONTS);
+  const rowMenu = useRowMenu(t("dsMenuToken"));
   return (
     <div className="dse-stack">
+      {rowMenu.node}
       <div className="dse-grid3">
         {FONT_ROLES.map((role) => {
           const family = fontFamily(doc, role);
           const options = role === "mono" ? families.filter((f) => GOOGLE_FONTS[f][0] === "mono") : families;
           return (
-            <label key={role} className="dse-field">
+            <label
+              key={role}
+              className="dse-field"
+              {...rowMenu.bind([
+                { id: "copy-font", label: t("dsMenuCopyFont"), icon: ico(Type), onSelect: () => copyText(family) },
+                { id: "copy-var", label: t("dsMenuCopyVar"), icon: ico(Braces), onSelect: () => copyText(`var(--font-${role})`) },
+              ])}
+            >
               <span>{t(role === "display" ? "dsFontDisplay" : role === "body" ? "dsFontBody" : "dsFontMono")}</span>
               <select
                 value={family}
@@ -286,7 +329,19 @@ export function TypographySection({ doc, onChange, readOnly }: SectionProps) {
         {(["5xl", "4xl", "3xl", "2xl", "xl", "lg", "base", "sm", "xs"] as const).map((step) => {
           const heading = ["5xl", "4xl", "3xl", "2xl"].includes(step);
           return (
-            <div key={step} className="dse-spec-row">
+            <div
+              key={step}
+              className="dse-spec-row"
+              {...rowMenu.bind([
+                { id: "copy-value", label: t("dsMenuCopyValue"), icon: ico(Copy), onSelect: () => copyText(`${sizes[step]}px`) },
+                {
+                  id: "copy-font",
+                  label: t("dsMenuCopyFont"),
+                  icon: ico(Type),
+                  onSelect: () => copyText(fontFamily(doc, heading ? "display" : "body")),
+                },
+              ])}
+            >
               <span className="dse-muted">
                 {step} · {sizes[step]}px
               </span>
@@ -320,14 +375,16 @@ export function SpacingSection({ doc, onChange, readOnly }: SectionProps) {
   const motion = Object.entries(vars).filter(([key]) => key.startsWith("--motion-") || key.startsWith("--ease-"));
   const editable = (group: string) =>
     dimensionEntries(doc, group).filter((entry) => !(group === "radius" && ["none", "full"].includes(entry.key)));
+  const rowMenu = useRowMenu(t("dsMenuToken"));
   return (
     <div className="dse-stack">
+      {rowMenu.node}
       {(["space", "radius"] as const).map((group) => (
         <div key={group}>
           <h3 className="dse-h3">{t(group === "space" ? "dsSpacing" : "dsRadius")}</h3>
           <div className="dse-dims">
             {editable(group).map((entry) => (
-              <label key={entry.key} className="dse-dim">
+              <label key={entry.key} className="dse-dim" {...rowMenu.bind(copyRows(t, `${entry.px}px`, `--${group}-${entry.key}`))}>
                 <span
                   className={group === "space" ? "dse-dim-bar" : "dse-dim-box"}
                   style={
@@ -354,7 +411,7 @@ export function SpacingSection({ doc, onChange, readOnly }: SectionProps) {
       <h3 className="dse-h3">{t("dsShadows")}</h3>
       <div className="dse-row" style={vars as CSSProperties}>
         {shadows.map((key) => (
-          <div key={key} className="dse-shadow" style={{ boxShadow: `var(${key})` }}>
+          <div key={key} className="dse-shadow" style={{ boxShadow: `var(${key})` }} {...rowMenu.bind(copyRows(t, vars[key], key))}>
             {key.slice(9)}
           </div>
         ))}

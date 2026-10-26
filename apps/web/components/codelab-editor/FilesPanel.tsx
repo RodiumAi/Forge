@@ -6,7 +6,8 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Download, FilePlus2, ImagePlus, Loader2, Package, Trash2 } from "lucide-react";
+import { Copy, Download, FilePlus2, ImagePlus, Loader2, Package, Trash2 } from "lucide-react";
+import { ContextMenu, copyText, useContextMenu, useMenuTrigger, type ContextMenuEntry } from "@/components/ui/ContextMenu";
 import { formatBytes } from "../codelab-player";
 import { deleteFile, downloadFrom, listFiles, uploadFile, type CodelabFile } from "./api";
 import type { Translate } from "./strings";
@@ -78,6 +79,30 @@ export function FilesPanel({ projectId, readOnly, onInsert, onOfferDownload, ref
     void refresh();
   };
 
+  const download = (path: string) =>
+    void downloadFrom(`/projects/${projectId}/codelab/files/raw?path=${encodeURIComponent(path)}`, path.split("/").pop() || "file").catch(
+      (error) => onError(error instanceof Error ? error.message : String(error)),
+    );
+
+  const menu = useContextMenu();
+  const trigger = useMenuTrigger<string>((path, at) => {
+    const ico = (I: typeof Copy) => <I size={16} aria-hidden />;
+    const items: ContextMenuEntry[] = [
+      ...(onInsert && isImage(path) && !readOnly
+        ? [{ id: "insert", label: t("insertInStep"), icon: ico(ImagePlus), onSelect: () => onInsert(`![](${path})\n`) }]
+        : []),
+      ...(path.startsWith("files/") && !readOnly
+        ? [{ id: "offer", label: t("addAsDownload"), icon: ico(Package), onSelect: () => onOfferDownload(path, false) }]
+        : []),
+      { id: "download", label: t("downloadFile"), icon: ico(Download), onSelect: () => download(path) },
+      { id: "copy-path", label: t("copyPath"), icon: ico(Copy), onSelect: () => copyText(path) },
+      ...(!readOnly
+        ? [{ type: "separator" as const }, { id: "delete", label: t("deleteFile"), icon: ico(Trash2), danger: true, onSelect: () => void remove(path) }]
+        : []),
+    ];
+    menu.open(at, items, t("menuFile"));
+  });
+
   const folders = Array.from(
     new Set((files ?? []).filter((f) => f.path.startsWith("files/")).map((f) => f.path.split("/").slice(0, 2).join("/"))),
   );
@@ -123,7 +148,7 @@ export function FilesPanel({ projectId, readOnly, onInsert, onOfferDownload, ref
       ) : (
         <ul className="cle-file-list">
           {files.map((file) => (
-            <li key={file.path}>
+            <li key={file.path} {...trigger.bind(file.path)}>
               <span className="cle-file-path" title={file.path}>
                 {file.path}
               </span>
@@ -143,11 +168,7 @@ export function FilesPanel({ projectId, readOnly, onInsert, onOfferDownload, ref
                   type="button"
                   title={t("downloadFile")}
                   aria-label={t("downloadFile")}
-                  onClick={() =>
-                    void downloadFrom(`/projects/${projectId}/codelab/files/raw?path=${encodeURIComponent(file.path)}`, file.path.split("/").pop() || "file").catch(
-                      (error) => onError(error instanceof Error ? error.message : String(error)),
-                    )
-                  }
+                  onClick={() => download(file.path)}
                 >
                   <Download size={14} />
                 </button>
@@ -161,6 +182,7 @@ export function FilesPanel({ projectId, readOnly, onInsert, onOfferDownload, ref
           ))}
         </ul>
       )}
+      <ContextMenu request={menu.request} onClose={menu.close} />
     </div>
   );
 }

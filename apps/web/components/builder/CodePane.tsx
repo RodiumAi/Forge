@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronDown,
   ChevronRight,
+  Copy,
+  FileCode2,
   FilePlus2,
   Pencil,
   RotateCcw,
@@ -15,6 +17,7 @@ import {
 import { ApiError, api } from "@/lib/api";
 import { projectPublicUrl } from "@/lib/asset-url";
 import { Icon } from "@/components/ui/icon";
+import { ContextMenu, copyText, useContextMenu, useMenuTrigger, type ContextMenuEntry } from "@/components/ui/ContextMenu";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { CodeEditor } from "./CodeEditor";
 import { FileTypeIcon } from "./file-icons";
@@ -60,6 +63,8 @@ function flattenFiles(nodes: FileNode[], acc: string[] = []): string[] {
   return acc;
 }
 
+type MenuBind = ReturnType<typeof useMenuTrigger<FileNode>>["bind"];
+
 function TreeItem({
   node,
   depth,
@@ -67,6 +72,7 @@ function TreeItem({
   onSelect,
   onRename,
   onDelete,
+  bind,
 }: {
   node: FileNode;
   depth: number;
@@ -74,6 +80,7 @@ function TreeItem({
   onSelect: (path: string) => void;
   onRename: (path: string) => void;
   onDelete: (path: string) => void;
+  bind: MenuBind;
 }) {
   const [open, setOpen] = useState(depth < 2);
   const name = node.path.split("/").pop() || node.path;
@@ -90,6 +97,7 @@ function TreeItem({
           aria-level={depth + 1}
           className="f-bd-code-item is-dir"
             style={{ paddingLeft: 8 + depth * 12 }}
+            {...bind(node)}
             onClick={() => setOpen((v) => !v)}
           >
             <Icon
@@ -112,6 +120,7 @@ function TreeItem({
                 onSelect={onSelect}
                 onRename={onRename}
                 onDelete={onDelete}
+                bind={bind}
               />
             ))}
           </ul>
@@ -130,6 +139,7 @@ function TreeItem({
           aria-selected={selected === node.path}
           className={`f-bd-code-item${selected === node.path ? " active" : ""}`}
           style={{ paddingLeft: 8 + depth * 12 }}
+          {...bind(node)}
           onClick={() => onSelect(node.path)}
         >
           <span className="f-bd-code-chev-sp" />
@@ -307,6 +317,22 @@ export function CodePane({
     [t],
   );
 
+  const closeTabs = useCallback(
+    (paths: string[]) => {
+      const gone = new Set(paths);
+      const unsaved = tabsRef.current.some((x) => gone.has(x.path) && x.content !== x.baseline);
+      if (unsaved && !window.confirm(t("codeUnsavedConfirm"))) return;
+      setTabs((prev) => {
+        const next = prev.filter((x) => !gone.has(x.path));
+        if (activeRef.current && gone.has(activeRef.current)) {
+          setActive(next.length ? next[next.length - 1].path : null);
+        }
+        return next;
+      });
+    },
+    [t],
+  );
+
   const updateContent = useCallback((value: string) => {
     setTabs((prev) =>
       prev.map((tab) => (tab.path === activeRef.current ? { ...tab, content: value } : tab)),
@@ -350,8 +376,8 @@ export function CodePane({
     [onSaved, projectId, t],
   );
 
-  const createFile = useCallback(async () => {
-    const raw = window.prompt(t("codeNewFilePrompt"), "src/components/");
+  const createFile = useCallback(async (folder = "src/components/") => {
+    const raw = window.prompt(t("codeNewFilePrompt"), folder);
     const path = (raw || "").trim().replace(/^\/+/, "");
     if (!path || path.endsWith("/")) return;
     if (allFiles.includes(path)) {
@@ -439,6 +465,33 @@ export function CodePane({
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  const menu = useContextMenu();
+  const ico = (I: typeof Copy) => <I size={16} aria-hidden />;
+  const treeMenu = useMenuTrigger<FileNode>((node, at) => {
+    const dir = node.type === "dir";
+    const items: ContextMenuEntry[] = [
+      dir
+        ? { id: "new", label: t("bdMenuNewFileHere"), icon: ico(FilePlus2), onSelect: () => void createFile(`${node.path}/`) }
+        : { id: "open", label: t("bdMenuOpenFile"), icon: ico(FileCode2), onSelect: () => void openFile(node.path) },
+      { id: "rename", label: t("codeRename"), icon: ico(Pencil), onSelect: () => void renameFile(node.path) },
+      { id: "copy-path", label: t("bdMenuCopyPath"), icon: ico(Copy), onSelect: () => copyText(node.path) },
+      { type: "separator" },
+      { id: "delete", label: t("delete"), icon: ico(Trash2), danger: true, onSelect: () => void deleteFile(node.path) },
+    ];
+    menu.open(at, items, t("bdMenuFile"));
+  });
+  const tabMenu = useMenuTrigger<string>((path, at) => {
+    const others = tabsRef.current.map((x) => x.path).filter((p) => p !== path);
+    const items: ContextMenuEntry[] = [
+      { id: "close", label: t("bdMenuCloseTab"), icon: ico(X), onSelect: () => closeTab(path) },
+      { id: "close-others", label: t("bdMenuCloseOthers"), disabled: !others.length, onSelect: () => closeTabs(others) },
+      { id: "close-all", label: t("bdMenuCloseAll"), onSelect: () => closeTabs(tabsRef.current.map((x) => x.path)) },
+      { type: "separator" },
+      { id: "copy-path", label: t("bdMenuCopyPath"), icon: ico(Copy), onSelect: () => copyText(path) },
+    ];
+    menu.open(at, items, t("bdMenuFile"));
+  });
+
   return (
     <section className="f-bd-code">
       <aside className="f-bd-code-tree">
@@ -483,6 +536,7 @@ export function CodePane({
                 onSelect={(p) => void openFile(p)}
                 onRename={(p) => void renameFile(p)}
                 onDelete={(p) => void deleteFile(p)}
+                bind={treeMenu.bind}
               />
             ))}
           </ul>
@@ -505,6 +559,7 @@ export function CodePane({
                     role="tab"
                     aria-selected={tab.path === active}
                     title={tab.path}
+                    {...tabMenu.bind(tab.path)}
                     onClick={() => void openFile(tab.path)}
                   >
                     <FileTypeIcon path={tab.path} />
@@ -606,6 +661,7 @@ export function CodePane({
           void openFile(p);
         }}
       />
+      <ContextMenu request={menu.request} onClose={menu.close} />
     </section>
   );
 }

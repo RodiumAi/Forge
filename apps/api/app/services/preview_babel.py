@@ -101,7 +101,7 @@ def render_runner_shell(
 </head>
 <body>
   <div id="root"></div>
-  <script src="/runner/bridge.js?v=section-hash2"></script>
+  <script src="/runner/bridge.js?v=context-menu1"></script>
   <script type="module" src="/runner/runner.js?v=pages-rail1"></script>
 </body>
 </html>

@@ -87,7 +87,7 @@
       ".forge-sel-label{position:fixed;z-index:2147483646;background:#2563eb;color:#fff;font:11px/1.2 ui-sans-serif,system-ui,sans-serif;padding:2px 6px;border-radius:4px;pointer-events:none;transform:translateY(4px)}" +
       "body.forge-tool-text [data-forge-editable]{cursor:text}" +
       "body.forge-tool-text [data-forge-editable]:hover{outline:1px dashed rgba(242,98,10,.55);outline-offset:2px}" +
-      "body.forge-tool-text [data-forge-editing]{outline:2px solid #f2620a!important;outline-offset:2px;caret-color:currentColor!important}" +
+      "[data-forge-editing]{outline:2px solid #f2620a!important;outline-offset:2px;caret-color:currentColor!important}" +
       "body.forge-tool-image img{cursor:crosshair}";
     document.head.appendChild(s);
   }
@@ -557,6 +557,110 @@
     }
   }, true);
 
+  /* ---------------------------------------------------------- context menu */
+
+  // A right click (or a long press on a touch screen) asks the builder for
+  // its own menu, drawn over the iframe with what sits under the pointer.
+  // Shift+right click keeps the browser's menu, and so does a text edit.
+  var CTX = null;
+  var PRESS = null;
+  var PRESS_MS = 520;
+
+  function openContextMenu(raw, x, y) {
+    if (!PARENT_ORIGIN || EDITING) return false;
+    var el = raw && raw.nodeType === 3 ? raw.parentElement : raw;
+    if (!el || el.nodeType !== 1) return false;
+    if (el.id === "forge-sel-label" || (el.closest && el.closest("#forge-sel-label"))) return false;
+    var element = pickTarget(el, "select");
+    var textHost = isEditableTarget(el);
+    var img = pickTarget(el, "image");
+    var link = el.closest ? el.closest("a[href]") : null;
+    var picked = "";
+    try {
+      picked = String(window.getSelection() || "").trim().slice(0, 5000);
+    } catch (err) {
+      picked = "";
+    }
+    CTX = { text: textHost, x: x, y: y };
+    post({
+      type: "forge-context-menu",
+      x: x,
+      y: y,
+      element: element ? describe(element) : null,
+      editable: Boolean(textHost),
+      image: img
+        ? {
+            src: img.getAttribute("data-forge-src") || img.getAttribute("src") || "",
+            alt: img.getAttribute("alt") || "",
+            selector: buildSelector(img),
+            forgeId: forgeIdOf(img)
+          }
+        : null,
+      link: link ? link.href : null,
+      selection: picked
+    });
+    return true;
+  }
+
+  function contextAction(action) {
+    if (action === "edit-text") {
+      var host = CTX && CTX.text;
+      if (!host || !document.contains(host)) return;
+      ensureStyle();
+      LAST_CLICK = { x: CTX.x, y: CTX.y };
+      startTextEdit(host);
+    }
+  }
+
+  function clearPress() {
+    if (PRESS && PRESS.timer) clearTimeout(PRESS.timer);
+    PRESS = null;
+  }
+
+  document.addEventListener("contextmenu", function (e) {
+    if (e.shiftKey || !PARENT_ORIGIN) return;
+    // Android fires this on a long press too: one menu, not two.
+    if (PRESS) {
+      if (PRESS.timer) clearTimeout(PRESS.timer);
+      PRESS.timer = null;
+      if (PRESS.fired) {
+        e.preventDefault();
+        return;
+      }
+      PRESS.fired = true;
+    }
+    if (openContextMenu(e.target, e.clientX, e.clientY)) e.preventDefault();
+  }, true);
+
+  // iOS never fires `contextmenu`: time the hold ourselves.
+  document.addEventListener("touchstart", function (e) {
+    clearPress();
+    if (!PARENT_ORIGIN || EDITING || !e.touches || e.touches.length !== 1) return;
+    var touch = e.touches[0];
+    var target = e.target;
+    var press = { x: touch.clientX, y: touch.clientY, fired: false, timer: null };
+    press.timer = setTimeout(function () {
+      press.timer = null;
+      if (PRESS !== press || press.fired) return;
+      press.fired = openContextMenu(target, press.x, press.y);
+    }, PRESS_MS);
+    PRESS = press;
+  }, { capture: true, passive: true });
+
+  document.addEventListener("touchmove", function (e) {
+    if (!PRESS || PRESS.fired || !e.touches || !e.touches.length) return;
+    var touch = e.touches[0];
+    if (Math.abs(touch.clientX - PRESS.x) + Math.abs(touch.clientY - PRESS.y) > 10) clearPress();
+  }, { capture: true, passive: true });
+
+  function endPress(e) {
+    // The finger lifted after the menu opened: no click on what sat under it.
+    if (PRESS && PRESS.fired && e.cancelable) e.preventDefault();
+    clearPress();
+  }
+  document.addEventListener("touchend", endPress, { capture: true, passive: false });
+  document.addEventListener("touchcancel", clearPress, { capture: true, passive: true });
+
   var navigatingFromParent = false;
   var lastReportedPath = null;
   var SECTION_HASHES = {
@@ -987,6 +1091,8 @@
       clearPendingEdit();
     } else if (data.type === "forge-visual-edit-failed") {
       revertPendingEdit();
+    } else if (data.type === "forge-context-action") {
+      contextAction(typeof data.action === "string" ? data.action : "");
     } else if (data.type === "forge-tool-ping") {
       notifyReady();
       ackTool(TOOL);
