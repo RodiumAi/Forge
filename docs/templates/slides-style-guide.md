@@ -18,7 +18,7 @@ data/templates/slides-<name>/
 
 - Id: `slides-<name>`, matching `^[a-z0-9][a-z0-9-]{1,62}$`.
 - 8 to 12 slides. Each of the 12 layouts below appears at least once; `template.json` maps every layout to its example slide: `"layouts": { "title": "s1", "section": "s2", ... }`. The current kits have exactly 12 slides, one per layout.
-- The AI and the editor's "add slide" menu do not read these example slides: they use their own layout list (`apps/api/app/services/deck_ai/layouts.py`, mirrored by `apps/web/components/deck-editor/layouts.ts`), which names two layouts differently (`key-numbers`, `thanks`).
+- The AI and the editor's "add slide" menu do not read these example slides: they use their own layout list (`apps/api/app/services/deck_ai/layouts.py`, mirrored by `apps/web/components/deck-editor/layouts.ts`), with the same names.
 - Example content in French, realistic and specific (names, figures, dates). Contact details use the reserved `.example` domain.
 - Every color is a theme token (`--bg`, `--accent`...). Every image, background images included, is credited (`credit.source`, `author`, `url`). Every icon is a lucide name.
 - Kit under 3 MB. No U+2014 long dash anywhere.
@@ -71,12 +71,12 @@ Safe margins 140 px left and right. Content slides share a header: accent bar (8
 | `two-columns` | heading, two columns: icon, subheading, paragraph | columns at x 140 and x 1000, w 780; icon 64 px at y 380, subheading 40 px at y 470, paragraph 30 px `--muted` at y 548; vertical divider at x 950. |
 | `image-text` | photo, kicker, heading, paragraph, 3 bullets | photo x 0 w 880 full height; text column x 1000 w 780. |
 | `quote` | quote mark, quote, author, role | `--surface` background, mark 240 px `--accent`, quote 52 to 72 px display italic at y 370, author 30 px bold at y 820. |
-| `key-figures` | 3 or 4 figures: value, label, detail | cards y 380 h 460, 40 px gap, value 100 px (3 cards) or 76 px (4 cards) `--accent`. Values of 7 characters at most. |
+| `key-numbers` | 3 or 4 figures: value, label, detail | cards y 380 h 460, 40 px gap, value 100 px (3 cards) or 76 px (4 cards) `--accent`. Values of 7 characters at most. |
 | `chart` | editable chart, takeaway, comment | chart x 140 y 350 w 1080 h 600 (bar, line or pie, series in `--accent`, `--accent-2`, `--muted`); takeaway 40 px and comment 26 px at x 1320 w 460. |
 | `table` | header row and 3 to 5 rows | x 140 y 360 w 1640, 28 px, header `--surface`, borders `--border`, relative `columnWidths`. |
 | `team` | 4 people: initials avatar, name, role, one line | 4 columns; ellipse 200 px `--surface` stroked `--accent` with initials (no portrait photos by default); name 32 px, role 24 px `--accent`, bio 22 px `--muted`. |
 | `timeline` | 4 milestones: date, title, one line | line x 140 y 598 w 1640 h 4 `--border`; dots 32 px `--accent`; date 34 px above, title 30 px and line 24 px below. |
-| `thank-you` | closing title, subtitle, 2 contact lines | gradient `--bg` to `--surface` or photo with overlay; title 112 to 180 px at y 300; contacts with lucide icons at y 730 and 810. |
+| `thanks` | closing title, subtitle, 2 contact lines | gradient `--bg` to `--surface` or photo with overlay; title 112 to 180 px at y 300; contacts with lucide icons at y 730 and 810. |
 
 This is the base geometry of `apps/api/scripts/slides_kits/kitlib.py`. Many kits change the decoration on top of it (cover variant, header accent, background pattern, card or circle treatments) through `kitvariants.py` or `kitstyle_f2.py`, keeping the same element ids.
 

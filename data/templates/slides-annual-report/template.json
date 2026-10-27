@@ -36,7 +36,7 @@
     "title": "s1",
     "quote": "s2",
     "section": "s3",
-    "key-figures": "s4",
+    "key-numbers": "s4",
     "chart": "s5",
     "table": "s6",
     "image-text": "s7",
@@ -44,6 +44,6 @@
     "team": "s9",
     "timeline": "s10",
     "text": "s11",
-    "thank-you": "s12"
+    "thanks": "s12"
   }
 }

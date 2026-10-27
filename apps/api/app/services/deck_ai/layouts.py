@@ -98,8 +98,14 @@ def canvas(ratio: str) -> tuple[int, int]:
     return FORMAT_SIZES.get(ratio, FORMAT_SIZES["16:9"])
 
 
+#: Names the slides kits used before they matched this list; decks forked from
+#: those kits still carry them.
+LAYOUT_ALIASES: dict[str, str] = {"key-figures": "key-numbers", "thank-you": "thanks"}
+
+
 def normalize_layout(name: object) -> str:
     value = str(name or "").strip().lower().replace("_", "-").replace(" ", "-")
+    value = LAYOUT_ALIASES.get(value, value)
     return value if value in LAYOUTS else DEFAULT_LAYOUT
 
 

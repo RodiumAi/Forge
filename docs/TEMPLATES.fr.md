@@ -258,8 +258,8 @@ Ce que vérifie `test_template_slides.py` :
   les fichiers de slides et `deck.json` listent les mêmes ids ; chaque slide a
   son `notes/<id>.md` ;
 - les 12 mises en page de `SLIDES_LAYOUTS` (`title`, `section`, `text`,
-  `two-columns`, `image-text`, `quote`, `key-figures`, `chart`, `table`, `team`,
-  `timeline`, `thank-you`) sont toutes utilisées, et `layouts` associe chacune à
+  `two-columns`, `image-text`, `quote`, `key-numbers`, `chart`, `table`, `team`,
+  `timeline`, `thanks`) sont toutes utilisées, et `layouts` associe chacune à
   une slide de cette mise en page ;
 - les images sont des `public/images/*.webp` existants, avec un `credit`
   portant `source` et `author` (images de fond comprises) ; les icônes sont des

@@ -31,7 +31,7 @@ from kitlib import CONTENT_W, H, M, W, anim, color_bg, icon, image, image_bg, sh
 #: Transparent fill for outline-only shapes (the player fills shapes with --accent by default).
 NONE = "#00000000"
 
-CONTENT_LAYOUTS = {"text", "two-columns", "key-figures", "chart", "table", "team", "timeline"}
+CONTENT_LAYOUTS = {"text", "two-columns", "key-numbers", "chart", "table", "team", "timeline"}
 
 
 def _st(t, key, default):
@@ -502,12 +502,12 @@ LAYOUTS = {
     "two-columns": _decorate(two_columns, "two-columns"),
     "image-text": _decorate(image_text, "image-text"),
     "quote": quote,
-    "key-figures": _decorate(key_figures, "key-figures"),
+    "key-numbers": _decorate(key_figures, "key-numbers"),
     "chart": _decorate(chart, "chart"),
     "table": _decorate(kitlib.table, "table"),
     "team": _decorate(team, "team"),
     "timeline": _decorate(timeline, "timeline"),
-    "thank-you": thank_you,
+    "thanks": thank_you,
 }
 
 LAYOUT_NOTES = {
@@ -534,22 +534,22 @@ LAYOUT_NOTES = {
         "center": "centered quote, author and role on --surface",
         "image": "quote over a photo with a strong --bg veil",
     },
-    "key-figures": {
+    "key-numbers": {
         "accent": "heading and figure cards, the first card filled with --accent",
         "plain": "heading and three or four figures under accent rules, no cards",
     },
     "chart": {"right": "heading, takeaway on the left, editable chart on the right"},
     "team": {"cards": "heading and four --surface cards (square initials avatar, name, role, one line)"},
     "timeline": {"cards": "heading and four numbered milestone cards linked by chevrons"},
-    "thank-you": {
+    "thanks": {
         "center": "closing title and subtitle centered, two contacts side by side",
         "split": "closing title, subtitle and contacts on the left, photo on the right",
     },
 }
 
 STYLE_KEYS = {"title": "title", "section": "section", "two-columns": "columns", "image-text": "image_text",
-              "quote": "quote", "key-figures": "figures", "chart": "chart", "team": "team",
-              "timeline": "timeline", "thank-you": "thanks"}
+              "quote": "quote", "key-numbers": "figures", "chart": "chart", "team": "team",
+              "timeline": "timeline", "thanks": "thanks"}
 ACCENT_NOTES = {
     "bar": "an 80 x 8 accent bar above the kicker",
     "rule": "a hairline across the slide top with a short --accent segment",
