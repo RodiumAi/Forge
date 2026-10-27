@@ -1,0 +1,50 @@
+/* Booking flow (stack screen, no tab bar). Scoped under .booking-screen. */
+.booking-screen { min-height: 100dvh; padding: calc(.8rem + var(--safe-top)) 1.25rem calc(1.2rem + var(--safe-bottom)); gap: 1.5rem; }
+.booking-screen .bar { display: flex; align-items: center; justify-content: space-between; }
+.booking-screen .bar h1 { font-size: 1.6rem; }
+.booking-screen .bar-space { width: 2.75rem; }
+.booking-screen h2 { font-size: 1.4rem; margin-bottom: .7rem; }
+
+.booking-screen .summary { display: flex; gap: .9rem; align-items: center; padding: .7rem; border-radius: 1.4rem; background: var(--surface); box-shadow: 0 1px 0 var(--line), var(--shadow); }
+.booking-screen .summary img { width: 5rem; height: 5rem; border-radius: 1rem; object-fit: cover; }
+.booking-screen .summary div { display: grid; gap: .15rem; }
+.booking-screen .summary strong { font-family: var(--font-display); font-size: 1.6rem; font-weight: 400; line-height: 1; }
+.booking-screen .summary span { font-size: .78rem; color: var(--muted); }
+.booking-screen .summary .rate { display: inline-flex; align-items: center; gap: .25rem; color: var(--fg); font-weight: 700; }
+.booking-screen .summary .rate svg { color: var(--sun); }
+
+.booking-screen .dates { display: flex; gap: .55rem; overflow-x: auto; scrollbar-width: none; margin-inline: -1.25rem; padding: .1rem 1.25rem .3rem; }
+.booking-screen .dates::-webkit-scrollbar { display: none; }
+.booking-screen .dates button {
+  appearance: none; flex-shrink: 0; width: 4.1rem; display: grid; justify-items: center; gap: .1rem; padding: .7rem 0;
+  border-radius: 1.2rem; border: 1px solid var(--line); background: var(--surface); transition: background .2s ease, color .2s ease;
+}
+.booking-screen .dates span { font-size: .7rem; font-weight: 600; color: var(--muted); }
+.booking-screen .dates strong { font-family: var(--font-display); font-size: 1.7rem; font-weight: 400; line-height: 1.05; }
+.booking-screen .dates button.on { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 12px 22px -12px var(--accent); }
+.booking-screen .dates button.on span { color: rgba(255, 255, 255, .8); }
+
+.booking-screen .guests { display: grid; gap: .2rem; }
+.booking-screen .stepper { display: flex; align-items: center; gap: .7rem; padding: .55rem 0; border-bottom: 1px solid var(--line); }
+.booking-screen .stepper:last-child { border-bottom: 0; }
+.booking-screen .s-label { flex: 1; display: grid; }
+.booking-screen .s-label strong { font-weight: 700; font-size: .95rem; }
+.booking-screen .s-label span { font-size: .76rem; color: var(--muted); }
+.booking-screen .stepper button { appearance: none; width: 2.75rem; height: 2.75rem; border-radius: 999px; display: grid; place-items: center; border: 1px solid var(--line); background: var(--surface); }
+.booking-screen .stepper button:disabled { opacity: .35; }
+.booking-screen .stepper output { min-width: 1.6rem; text-align: center; font-family: var(--font-display); font-size: 1.6rem; }
+
+.booking-screen .totals { display: grid; gap: .55rem; padding: 1.05rem 1.15rem; border-radius: 1.4rem; background: var(--surface); box-shadow: 0 1px 0 var(--line); font-size: .9rem; }
+.booking-screen .totals div { display: flex; justify-content: space-between; color: var(--muted); }
+.booking-screen .totals .grand { padding-top: .6rem; border-top: 1px dashed var(--line); color: var(--fg); font-weight: 700; align-items: baseline; }
+.booking-screen .totals .grand strong { font-family: var(--font-display); font-size: 2rem; font-weight: 400; }
+.booking-screen .confirm { margin-top: auto; }
+
+/* Success state */
+.booking-screen.done { justify-content: center; align-items: center; text-align: center; gap: .8rem; padding-inline: 1.8rem; overflow: hidden; position: relative; }
+.booking-screen .done-photo { position: absolute; inset: 0 0 auto; width: 100%; height: 42%; object-fit: cover; mask-image: linear-gradient(180deg, #000 30%, transparent); opacity: .9; }
+.booking-screen .done-mark { position: relative; width: 5.5rem; height: 5.5rem; border-radius: 999px; display: grid; place-items: center; background: var(--accent); color: #fff; box-shadow: 0 0 0 12px color-mix(in srgb, var(--accent) 16%, transparent), 0 20px 40px -14px var(--accent); margin: 6rem 0 .8rem; }
+.booking-screen.done h2 { position: relative; font-size: 2.6rem; line-height: 1; margin: 0; }
+.booking-screen.done h2 em { color: var(--accent); }
+.booking-screen.done .muted { max-width: 30ch; }
+.booking-screen .done-actions { width: 100%; max-width: 20rem; display: grid; gap: .3rem; margin-top: 1.2rem; }

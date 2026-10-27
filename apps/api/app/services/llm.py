@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import re
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import Any, Literal
@@ -275,17 +276,37 @@ def _network_rodium_error(exc: BaseException, locale: Locale) -> RodiumError:
     )
 
 
-def _generation_params(temperature: float | None, max_tokens: int | None) -> dict[str, Any]:
+# Claude models that answer 400 to any sampling parameter (Opus 4.7+, Sonnet 5+, Haiku 5+, Fable).
+_CLAUDE_NO_SAMPLING_RE = re.compile(
+    r"claude-(opus-4-[7-9]|opus-[5-9]|sonnet-[5-9]|haiku-[5-9]|fable|mythos)", re.IGNORECASE
+)
+_CLAUDE_RE = re.compile(r"(^|[/.])claude-", re.IGNORECASE)
+EFFORT_LEVELS = ("low", "medium", "high", "xhigh", "max")
+
+
+def _generation_params(
+    temperature: float | None,
+    max_tokens: int | None,
+    *,
+    model: str = "",
+    reasoning_effort: str | None = None,
+) -> dict[str, Any]:
     """Sampling fields for the OpenAI-shaped gateway payloads.
 
     Without `max_tokens` the gateway falls back to a 4096-token output cap for
     Claude and Gemini, which cut multi-file tasks in the middle of a file.
+    Recent Claude models refuse sampling parameters and take an effort level
+    instead (`reasoning_effort`, mapped to Anthropic's effort by the gateway).
+    Other models keep their temperature and get no effort, so a Gemini or
+    OpenAI route behaves as before.
     """
     params: dict[str, Any] = {}
-    if temperature is not None:
+    if temperature is not None and not _CLAUDE_NO_SAMPLING_RE.search(model):
         params["temperature"] = temperature
     if max_tokens:
         params["max_tokens"] = int(max_tokens)
+    if reasoning_effort in EFFORT_LEVELS and _CLAUDE_RE.search(model):
+        params["reasoning_effort"] = reasoning_effort
     return params
 
 
@@ -347,6 +368,7 @@ async def _stream_secret_chat(
     locale: Locale,
     temperature: float | None = None,
     max_tokens: int | None = None,
+    reasoning_effort: str | None = None,
     meta: dict[str, Any] | None = None,
     url: str | None = None,
 ) -> AsyncIterator[StreamChunk]:
@@ -360,7 +382,7 @@ async def _stream_secret_chat(
         "model": model,
         "messages": messages,
         "stream": True,
-        **_generation_params(temperature, max_tokens),
+        **_generation_params(temperature, max_tokens, model=model, reasoning_effort=reasoning_effort),
     }
 
     try:
@@ -458,6 +480,7 @@ async def _stream_frodi_chat(
     forge_context: dict[str, Any] | None = None,
     temperature: float | None = None,
     max_tokens: int | None = None,
+    reasoning_effort: str | None = None,
     meta: dict[str, Any] | None = None,
 ) -> AsyncIterator[StreamChunk]:
     settings = get_settings()
@@ -471,7 +494,7 @@ async def _stream_frodi_chat(
         "model": model,
         "messages": messages,
         "stream": True,
-        **_generation_params(temperature, max_tokens),
+        **_generation_params(temperature, max_tokens, model=model, reasoning_effort=reasoning_effort),
     }
     if actor_uid and actor_uid != billing_uid:
         payload["actor_uid"] = actor_uid
@@ -498,9 +521,13 @@ async def stream_chat_completion(
     locale: Locale = "fr",
     temperature: float | None = None,
     max_tokens: int | None = None,
+    reasoning_effort: str | None = None,
     meta: dict[str, Any] | None = None,
 ) -> AsyncIterator[StreamChunk]:
-    """Stream one completion. ``meta`` (optional) receives ``finish_reason``."""
+    """Stream one completion. ``meta`` (optional) receives ``finish_reason``.
+
+    ``reasoning_effort`` only reaches Claude models (see `_generation_params`).
+    """
     from app.services.orchestration.catalog import is_image_model
 
     settings = get_settings()
@@ -524,6 +551,7 @@ async def stream_chat_completion(
                     locale=locale,
                     temperature=temperature,
                     max_tokens=max_tokens,
+                    reasoning_effort=reasoning_effort,
                     meta=meta,
                     url=settings.rodium_gateway_v1_url + "/chat/completions",
                 )
@@ -550,6 +578,7 @@ async def stream_chat_completion(
                     forge_context=_forge_billing_context(auth),
                     temperature=temperature,
                     max_tokens=max_tokens,
+                    reasoning_effort=reasoning_effort,
                     meta=meta,
                 ):
                     yield chunk
@@ -591,6 +620,7 @@ async def stream_chat_completion(
             locale=locale,
             temperature=temperature,
             max_tokens=max_tokens,
+            reasoning_effort=reasoning_effort,
             meta=meta,
         ):
             yield chunk
@@ -644,6 +674,7 @@ def generation_defaults() -> dict[str, Any]:
     return {
         "temperature": settings.generation_temperature,
         "max_tokens": settings.generation_max_output_tokens or None,
+        "reasoning_effort": settings.generation_effort,
     }
 
 
@@ -735,6 +766,7 @@ async def complete_chat(
     locale: Locale = "fr",
     temperature: float = 0.4,
     max_tokens: int | None = 8192,
+    reasoning_effort: str | None = "low",
 ) -> str:
     """Non-streaming completion used by the planner and the other short calls.
 
@@ -755,6 +787,7 @@ async def complete_chat(
                 locale=locale,
                 temperature=temperature,
                 max_tokens=max_tokens,
+                reasoning_effort=reasoning_effort,
             ):
                 if chunk.kind == "token":
                     parts.append(chunk.content)

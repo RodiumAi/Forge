@@ -1,0 +1,22 @@
+{
+  "name": "@forge/deck-runtime",
+  "private": true,
+  "version": "1.0.0",
+  "license": "MIT",
+  "type": "module",
+  "description": "Published deck player bundle and deck exports (PPTX) for Forge Design. esbuild comes from the parent runtime package.",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "framer-motion": "12.43.0",
+    "jszip": "3.10.1",
+    "lucide-react": "1.52.0",
+    "pptxgenjs": "4.0.1",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "overrides": {
+    "image-size": "2.0.3"
+  }
+}

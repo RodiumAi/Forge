@@ -1,0 +1,35 @@
+{
+  "kind": "codelab",
+  "id": "codelab-devops",
+  "title": {
+    "fr": "Tutoriel DevOps",
+    "en": "DevOps tutorial"
+  },
+  "description": {
+    "fr": "Conteneuriser une API avec Docker puis l'intégrer en continu avec GitHub Actions : image, compose, tests et build automatiques. Thème sombre.",
+    "en": "Containerise an API with Docker then add continuous integration with GitHub Actions: image, compose, automatic tests and builds. Dark theme."
+  },
+  "tags": [
+    "devops",
+    "docker",
+    "ci",
+    "github-actions",
+    "dark"
+  ],
+  "category": "devops",
+  "bootHint": {
+    "fr": "Adapte codelab-devops : application, registre, fournisseur de CI, cible de déploiement.",
+    "en": "Adapt codelab-devops: application, registry, CI provider, deployment target."
+  },
+  "tone": "direct, operational",
+  "preview": "preview.html",
+  "accent": "#3FB950",
+  "bg": "#0F141B",
+  "fg": "#E6EDF3",
+  "muted": "#8B96A5",
+  "fonts": {
+    "display": "Inter",
+    "body": "Inter",
+    "mono": "JetBrains Mono"
+  }
+}

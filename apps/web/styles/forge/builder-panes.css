@@ -1,0 +1,514 @@
+/* Old builder panes (globals.css) mapped onto the Forge tokens. Generated
+   from their colour declarations; layout rules stay in globals.css. */
+
+.f-bd .builder-msg-error-text {
+  color: var(--f-text);
+}
+.f-bd .builder-msg-error.is-warning .builder-msg-error-text {
+  color: var(--f-accent-text);
+}
+.f-bd .builder-msg-error-retry {
+  color: var(--f-text);
+}
+.f-bd .builder-msg-error-action {
+  color: var(--f-text);
+}
+.f-bd .builder-msg-error-link {
+  color: var(--f-info-text);
+}
+.f-bd .builder-msg-error-list {
+  color: var(--f-text);
+}
+.f-bd .builder-empty {
+  color: var(--f-muted);
+}
+.f-bd .builder-msg-assistant {
+  background: var(--f-surface-2);
+}
+.f-bd .builder-msg-head {
+  color: var(--f-muted);
+  border-bottom: 1px solid var(--f-line);
+}
+.f-bd .builder-msg-body {
+  color: var(--f-text);
+}
+.f-bd .builder-msg-selection {
+  color: var(--f-text);
+}
+.f-bd .builder-msg-selection-count {
+  background: var(--f-info);
+  color: var(--f-white);
+}
+.f-bd .builder-msg-attach-thumb {
+  border: 1px solid var(--f-line);
+}
+.f-bd .builder-msg-attach-fallback {
+  border: 1px solid var(--f-line);
+  color: var(--f-muted);
+}
+.f-bd .builder-msg-attach-name {
+  color: var(--f-muted);
+}
+.f-bd .builder-file-ops li {
+  color: var(--f-accent-text);
+}
+.f-bd .builder-files-empty-hint {
+  color: var(--f-muted);
+}
+.f-bd .builder-msg-action {
+  border: 1px solid var(--f-line);
+  color: var(--f-muted);
+}
+.f-bd .builder-msg-action:hover {
+  color: var(--f-text);
+  border-color: var(--f-line);
+}
+.f-bd .builder-msg-edit {
+  border: 1px solid var(--f-line);
+  color: var(--f-muted);
+}
+.f-bd .builder-main-pane {
+  background: var(--f-bg);
+  color: var(--f-text);
+}
+.f-bd .preview-side-panel {
+  border-left: 1px solid var(--f-line);
+  background: var(--f-bg);
+  color: var(--f-text);
+}
+.f-bd .preview-side-panel-head {
+  border-bottom: 1px solid var(--f-line);
+}
+.f-bd .preview-side-panel-close {
+  color: var(--f-muted);
+}
+.f-bd .preview-side-panel-close:hover {
+  color: var(--f-text);
+  background: var(--f-surface-2);
+}
+.f-bd .preview-side-panel-search {
+  border: 1px solid var(--f-line);
+  color: var(--f-text);
+}
+.f-bd .comments-compose {
+  border-bottom: 1px solid var(--f-line);
+}
+.f-bd .comments-compose textarea {
+  border: 1px solid var(--f-line);
+  color: var(--f-text);
+}
+.f-bd .comments-anchor.muted,
+.f-bd .comments-anchor.muted {
+  color: var(--f-muted);
+}
+.f-bd .comments-anchor code {
+  color: var(--f-info-text);
+}
+.f-bd .comments-item {
+  border-bottom: 1px solid var(--f-line);
+}
+.f-bd .comments-item-meta {
+  color: var(--f-muted);
+}
+.f-bd .comments-item-delete {
+  color: var(--f-muted);
+}
+.f-bd .comments-empty {
+  color: var(--f-muted);
+}
+.f-bd .image-panel-preview {
+  background: var(--f-bg);
+}
+.f-bd .image-panel-section-label {
+  color: var(--f-muted);
+}
+.f-bd .image-panel-thumb {
+  border: 1px solid var(--f-line);
+  background: var(--f-surface-2);
+  color: var(--f-text);
+}
+.f-bd .image-panel-thumb img {
+  background: var(--f-bg);
+}
+.f-bd .image-panel-tabs {
+  border: 1px solid var(--f-line);
+}
+.f-bd .image-panel-tab {
+  color: var(--f-muted);
+}
+.f-bd .image-panel-tab.active {
+  background: var(--f-surface-2);
+  color: var(--f-text);
+}
+.f-bd .image-panel-search input,
+.f-bd .image-panel-search select,
+.f-bd .image-panel-ai select,
+.f-bd .image-panel-ai textarea {
+  border: 1px solid var(--f-line);
+  background: var(--f-surface-2);
+  color: var(--f-text);
+}
+.f-bd .image-panel-stock {
+  border: 1px solid var(--f-line);
+  background: var(--f-bg);
+}
+.f-bd .image-panel-credit {
+  color: var(--f-muted);
+}
+.f-bd .image-panel-ai label {
+  color: var(--f-muted);
+}
+.f-bd .builder-pane-head {
+  border-bottom: 1px solid var(--f-line);
+}
+.f-bd .builder-pane-error {
+  color: var(--f-danger-text);
+}
+.f-bd .builder-pane-ok {
+  color: var(--f-ok-text);
+}
+.f-bd .options-toast {
+  color: var(--f-ok-text);
+}
+.f-bd .domain-add-row input {
+  border: 1px solid var(--f-line);
+  background: var(--home-input-bg, var(--f-surface-2));
+}
+.f-bd .domain-card {
+  border: 1px solid var(--f-line);
+}
+.f-bd .domain-badge {
+  border: 1px solid var(--f-line);
+  color: var(--f-muted);
+}
+.f-bd .domain-badge-ok {
+  color: var(--f-ok-text);
+}
+.f-bd .domain-badge-processing {
+  color: var(--f-info-text);
+}
+.f-bd .domain-badge-failed {
+  color: var(--f-danger-text);
+}
+.f-bd .domain-dns-row:not(.domain-dns-head) {
+  background: var(--f-surface-2);
+  border: 1px solid var(--f-line);
+}
+.f-bd .domain-dns-head {
+  color: var(--f-muted);
+}
+.f-bd .domain-dns-copy button {
+  color: var(--f-muted);
+}
+.f-bd .domain-error {
+  color: var(--f-danger-text);
+}
+.f-bd .domain-hint {
+  color: var(--f-accent-text);
+}
+.f-bd .builder-empty {
+  color: var(--f-muted);
+}
+.f-bd .builder-file-thumb {
+  border: 1px solid var(--f-line);
+  background: var(--f-surface);
+}
+.f-bd .builder-files-grid code {
+  color: var(--f-muted);
+}
+.f-bd .builder-files-pane {
+  background: var(--f-bg);
+}
+.f-bd .options-block {
+  border-bottom: 1px solid var(--f-line);
+}
+.f-bd .options-help {
+  color: var(--f-muted);
+}
+.f-bd .options-row input {
+  border: 1px solid var(--f-line);
+  background: var(--f-surface);
+  color: var(--f-text);
+}
+.f-bd .options-env {
+  border: 1px solid var(--f-line);
+}
+.f-bd .options-shell-nav {
+  border-right: 1px solid var(--f-line);
+  background: var(--f-bg);
+}
+.f-bd .options-shell-nav-head p {
+  color: var(--f-muted);
+}
+.f-bd .options-shell-group-label {
+  color: var(--f-muted);
+}
+.f-bd .options-shell-item {
+  color: var(--f-muted);
+}
+.f-bd .options-shell-item:hover,
+.f-bd .options-shell-item.active {
+  background: var(--f-surface-2);
+  color: var(--f-text);
+}
+.f-bd .options-shell-item.active {
+  box-shadow: inset 2px 0 0 var(--f-orange);
+  color: var(--f-text);
+}
+.f-bd .options-shell-item.danger {
+  color: var(--f-danger-text);
+}
+.f-bd .options-shell-item.danger.active {
+  box-shadow: inset 2px 0 0 var(--f-danger);
+}
+.f-bd .options-shell-main {
+  background: var(--f-bg);
+}
+.f-bd .options-panel-head p {
+  color: var(--f-muted);
+}
+.f-bd .options-card {
+  border: 1px solid var(--f-line);
+  background: var(--f-surface);
+}
+.f-bd .options-field input {
+  border: 1px solid var(--f-line);
+  background: var(--f-bg);
+  color: var(--f-text);
+}
+.f-bd .options-slug-row {
+  border: 1px solid var(--f-line);
+  background: var(--f-bg);
+}
+.f-bd .options-slug-prefix,
+.f-bd .options-slug-suffix {
+  color: var(--f-muted);
+  background: var(--f-surface);
+}
+.f-bd .options-env-meta code {
+  color: var(--f-orange);
+}
+.f-bd .options-tips {
+  color: var(--f-muted);
+}
+.f-bd .options-field textarea.options-seo-textarea,
+.f-bd .options-field select {
+  border: 1px solid var(--f-line);
+  background: var(--f-bg);
+  color: var(--f-text);
+}
+.f-bd .options-seo-block {
+  border-top: 1px solid var(--f-line);
+}
+.f-bd .options-seo-fav-previews img {
+  border: 1px solid var(--f-line);
+  background: var(--f-surface);
+}
+.f-bd .options-seo-og-preview {
+  border: 1px solid var(--f-line);
+  background: var(--f-bg);
+}
+.f-bd .seo-crop-modal {
+  background: var(--f-surface);
+  border: 1px solid var(--f-line);
+}
+.f-bd .seo-crop-head {
+  border-bottom: 1px solid var(--f-line);
+}
+.f-bd .seo-crop-stage {
+  background: var(--f-bg);
+}
+.f-bd .seo-crop-controls label {
+  color: var(--f-muted);
+}
+.f-bd .options-stat-row {
+  border-top: 1px solid var(--f-line);
+}
+.f-bd .options-stat-row span {
+  color: var(--f-muted);
+}
+.f-bd .options-stat-row strong.ok {
+  color: var(--f-ok-text);
+}
+.f-bd .options-stat-row strong.muted {
+  color: var(--f-muted);
+}
+.f-bd .options-stat-card {
+  border: 1px solid var(--f-line);
+  background: var(--f-bg);
+}
+.f-bd .options-stat-card p {
+  color: var(--f-muted);
+}
+.f-bd .options-stat-card span {
+  color: var(--f-muted);
+}
+.f-bd .options-danger-banner {
+  color: var(--f-danger-text);
+}
+.f-bd .options-danger-banner strong {
+  color: var(--f-text);
+}
+.f-bd .options-danger-banner p {
+  color: var(--f-danger-text);
+}
+.f-bd .md-link {
+  color: var(--f-accent-text);
+}
+.f-bd .md-link:hover {
+  color: var(--f-orange);
+}
+.f-bd .md-code-inline {
+  background: var(--f-surface-2);
+  color: var(--f-accent-text);
+}
+.f-bd .md-table-wrap th {
+  background: var(--f-surface-2);
+}
+.f-bd .md-code {
+  background: var(--f-bg);
+}
+.f-bd .md-code-head {
+  background: var(--f-surface-2);
+}
+.f-bd .md-code-copy:hover {
+  background: var(--f-surface-2);
+}
+.f-bd .md-caret {
+  background: var(--f-orange);
+}
+.f-bd .builder-sidebar .chat-jump {
+  background: var(--f-surface);
+  color: var(--f-text);
+  border-color: var(--f-line);
+}
+.f-bd .builder-sidebar .chat-jump:hover {
+  background: var(--f-surface-2);
+}
+.f-bd .chat-jump-dot {
+  background: var(--f-orange);
+}
+.f-bd .builder-sidebar .chat-jump-dot {
+  border-color: var(--f-line);
+}
+.f-bd .file-op-block {
+  background: var(--f-surface-2);
+}
+.f-bd .file-op-block.is-open {
+  background: var(--f-surface-2);
+}
+.f-bd .file-op-block-toggle:hover:not(:disabled) {
+  background: var(--f-surface-2);
+}
+.f-bd .file-op-block.is-delete .file-op-block-path {
+  color: var(--f-danger-text);
+}
+.f-bd .file-op-block-code {
+  background: var(--f-bg);
+}
+.f-bd .subscription-plan-badge {
+  color: var(--f-orange);
+}
+.f-bd .subscription-plan-status {
+  color: var(--f-muted);
+}
+.f-bd .share-slideover .options-field input,
+.f-bd .share-slideover .options-field select {
+  background: var(--f-bg);
+  color: var(--f-text);
+  border-color: var(--f-line);
+}
+.f-bd .share-slideover .options-field select option {
+  background: var(--f-surface);
+  color: var(--f-text);
+}
+
+/* Shapes of the redesign for the same panes. */
+.f-bd .builder-main-pane { border-radius: 18px; border: 1px solid var(--f-line); overflow: hidden; }
+.f-bd .builder-pane-head { padding: 12px 16px; min-height: 56px; }
+.f-bd .builder-pane-head h2, .f-bd .options-panel-head h2 { font-size: 18px; letter-spacing: -0.01em; }
+.f-bd .options-shell-nav { padding: 16px 12px; }
+.f-bd .options-shell-item { border-radius: 12px; }
+.f-bd .options-shell-item.active { background: var(--f-surface); box-shadow: inset 0 0 0 1px var(--f-line); }
+.f-bd .options-shell-item.danger.active { box-shadow: inset 0 0 0 1px var(--f-danger); }
+.f-bd .options-shell-group-label { font-size: 11.5px; letter-spacing: 0.1em; }
+.f-bd .options-card { border-radius: 16px; }
+.f-bd .options-field input, .f-bd .options-field select, .f-bd .options-field textarea,
+.f-bd .options-slug-row, .f-bd .options-row input, .f-bd .domain-add-row input { border-radius: 12px; }
+.f-bd .options-field input:focus, .f-bd .options-field select:focus, .f-bd .options-field textarea:focus,
+.f-bd .options-row input:focus, .f-bd .domain-add-row input:focus {
+  outline: 0; border-color: var(--f-orange); box-shadow: 0 0 0 3px var(--f-orange-soft);
+}
+.f-bd .options-shell-item:focus-visible, .f-bd .builder-file-thumb:focus-visible { outline: 2px solid var(--f-orange); outline-offset: 2px; }
+.f-bd .builder-file-thumb { border-radius: 14px; }
+.f-bd .builder-files-grid { gap: 14px; padding: 16px; }
+.f-bd .preview-side-panel { border-radius: 0; }
+.f-bd .preview-side-panel-search, .f-bd .comments-compose textarea { border-radius: 12px; background: var(--f-surface); }
+.f-bd .image-panel-tabs { border-radius: 999px; padding: 3px; background: var(--f-surface-2); border: 0; }
+.f-bd .image-panel-tab { border-radius: 999px; }
+.f-bd .image-panel-tab.active { background: var(--f-surface); }
+.f-bd .image-panel-thumb { border-radius: 12px; }
+.f-bd .file-op-block { border-radius: 14px; }
+.f-bd .md-code { border-radius: 14px; }
+.f-bd .builder-msg-attach-thumb { border-radius: 12px; }
+
+/* Old .btn buttons inside these panes take the Forge button look. */
+.f-bd .btn {
+  height: 40px; padding: 0 18px; border-radius: var(--f-r-pill); font-weight: 600; font-size: 14px;
+  background: var(--f-orange); color: #fff; border: 1px solid transparent; box-shadow: none;
+}
+.f-bd .btn:hover:not(:disabled) { background: var(--f-orange-hover); }
+.f-bd .btn.btn-ghost { background: transparent; color: var(--f-text); border-color: var(--f-line-strong); }
+.f-bd .btn.btn-ghost:hover:not(:disabled) { background: var(--f-surface-2); }
+.f-bd .btn.btn-danger { background: var(--f-danger); color: #fff; }
+.f-bd .btn:focus-visible { outline: 2px solid var(--f-orange); outline-offset: 2px; }
+
+/* ---------- Options refresh: nav with icon chips, roomier panels, card heads ---------- */
+.f-bd .options-shell-nav { padding: 18px 12px; }
+.f-bd .options-shell-nav-head { padding: 0 8px 14px; margin-bottom: 6px; border-bottom: 1px solid var(--f-line); }
+.f-bd .options-shell-nav-head h2 { font-size: 15px; font-weight: 700; }
+.f-bd .options-shell-nav-head p { font-size: 12px; line-height: 1.45; margin-top: 4px; }
+.f-bd .options-shell-group { display: grid; gap: 2px; margin-top: 14px; }
+.f-bd .options-shell-group-label { padding: 0 8px 4px; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; }
+.f-bd .options-shell-item {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 6px 8px; border-radius: 10px;
+  font-size: 13.5px; font-weight: 500; transition: background-color .15s, color .15s;
+}
+.f-bd .options-shell-item-icon {
+  display: grid; place-items: center; width: 28px; height: 28px; flex: none; border-radius: 8px;
+  background: var(--f-surface); color: var(--f-muted); transition: background-color .15s, color .15s;
+}
+.f-bd .options-shell-item:hover { background: var(--f-surface); color: var(--f-text); }
+.f-bd .options-shell-item.active { background: rgba(235, 97, 24, .1); box-shadow: none; color: var(--f-text); font-weight: 600; }
+.f-bd .options-shell-item.active .options-shell-item-icon { background: var(--f-orange); color: #fff; }
+.f-bd .options-shell-item.danger .options-shell-item-icon { color: var(--f-danger-text); }
+.f-bd .options-shell-item.danger.active { background: rgba(239, 68, 68, .1); box-shadow: none; }
+.f-bd .options-shell-item.danger.active .options-shell-item-icon { background: var(--f-danger); color: #fff; }
+.f-bd .options-shell-main { padding: 28px 32px 40px; overflow-y: auto; }
+.f-bd .options-shell-main > * { max-width: 880px; }
+.f-bd .options-panel-head { margin-bottom: 18px; }
+.f-bd .options-panel-head h3 { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
+.f-bd .options-panel-head p { font-size: 13.5px; margin-top: 4px; }
+.f-bd .options-card { padding: 18px 20px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.f-bd .options-card-head { display: flex; align-items: flex-start; gap: 12px; }
+.f-bd .options-card-head h4 { margin: 0; font-size: 14.5px; font-weight: 700; }
+.f-bd .options-card-head p { margin: 3px 0 0; font-size: 12.5px; line-height: 1.45; color: var(--f-muted); }
+.f-bd .options-card-icon {
+  display: grid; place-items: center; width: 32px; height: 32px; flex: none; border-radius: 10px;
+  background: rgba(235, 97, 24, .12); color: var(--f-orange);
+}
+
+/* Marque: design system card, then the charter in place (two columns when wide). */
+.f-bd .options-brand { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.f-bd .options-brand .de-ds, .f-bd .options-brand .de-ds-locked { margin-bottom: 0; max-width: 520px; }
+.f-bd .options-brand-linked { background: var(--f-surface-2); }
+.f-bd .options-brand-linked .options-help { margin: 0; }
+.f-bd .design-charter-editor { display: grid; gap: 14px; align-content: start; }
+.f-bd .options-brand .design-charter-editor { grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 1280px) {
+  .f-bd .options-brand .design-charter-editor { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); align-items: start; }
+  .f-bd .options-brand .design-charter-editor > .builder-error,
+  .f-bd .options-brand .design-charter-editor > .design-saved { grid-column: 1 / -1; }
+}
+/* The "Charte graphique" slide-over is narrow: one column whatever the screen. */
+.f-bd .design-slideover .options-brand .design-charter-editor { grid-template-columns: minmax(0, 1fr); }

@@ -1,0 +1,333 @@
+{
+  "id": "s4",
+  "background": {
+    "type": "color",
+    "token": "--bg"
+  },
+  "elements": [
+    {
+      "id": "s4-ptcol0",
+      "type": "shape",
+      "x": 550,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.6
+    },
+    {
+      "id": "s4-ptcol1",
+      "type": "shape",
+      "x": 960,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.6
+    },
+    {
+      "id": "s4-ptcol2",
+      "type": "shape",
+      "x": 1370,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.6
+    },
+    {
+      "id": "s4-bar",
+      "type": "shape",
+      "x": 140,
+      "y": 96,
+      "w": 1640,
+      "h": 5,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--fg",
+      "radius": 0,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s4-kicker",
+      "type": "text",
+      "role": "label",
+      "x": 140,
+      "y": 124,
+      "w": 1200,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Deux pratiques"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 600,
+        "color": "--accent",
+        "align": "left",
+        "lineHeight": 1.4,
+        "letterSpacing": 3,
+        "uppercase": true
+      }
+    },
+    {
+      "id": "s4-heading",
+      "type": "text",
+      "role": "heading",
+      "x": 140,
+      "y": 172,
+      "w": 1640,
+      "h": 140,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Papier et numérique, côte à côte"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 64,
+        "weight": 500,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.1
+      },
+      "animation": {
+        "type": "mask-reveal",
+        "trigger": "on-enter",
+        "direction": "up",
+        "durationMs": 700
+      }
+    },
+    {
+      "id": "s4-icon1",
+      "type": "icon",
+      "x": 140,
+      "y": 380,
+      "w": 64,
+      "h": 64,
+      "z": 3,
+      "icon": "book",
+      "color": "--accent",
+      "strokeWidth": 1.75,
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "delayMs": 80,
+        "durationMs": 400,
+        "order": 0
+      }
+    },
+    {
+      "id": "s4-col1-title",
+      "type": "text",
+      "role": "heading",
+      "x": 140,
+      "y": 470,
+      "w": 780,
+      "h": 64,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Le papier"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 40,
+        "weight": 500,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.2
+      }
+    },
+    {
+      "id": "s4-col1-body",
+      "type": "text",
+      "role": "body",
+      "x": 140,
+      "y": 548,
+      "w": 760,
+      "h": 320,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Choisi pour la concentration et l'objet : 64 % des répondants le préfèrent pour les romans."
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 30,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.5
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "delayMs": 80,
+        "durationMs": 400,
+        "order": 1
+      }
+    },
+    {
+      "id": "s4-icon2",
+      "type": "icon",
+      "x": 1000,
+      "y": 380,
+      "w": 64,
+      "h": 64,
+      "z": 3,
+      "icon": "tablet",
+      "color": "--accent",
+      "strokeWidth": 1.75,
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "delayMs": 80,
+        "durationMs": 400,
+        "order": 2
+      }
+    },
+    {
+      "id": "s4-col2-title",
+      "type": "text",
+      "role": "heading",
+      "x": 1000,
+      "y": 470,
+      "w": 780,
+      "h": 64,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "La liseuse"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 40,
+        "weight": 500,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.2
+      }
+    },
+    {
+      "id": "s4-col2-body",
+      "type": "text",
+      "role": "body",
+      "x": 1000,
+      "y": 548,
+      "w": 760,
+      "h": 320,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Plébiscitée en voyage et pour les essais : 41 % en possèdent une, contre 23 % en 2020."
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 30,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.5
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "delayMs": 80,
+        "durationMs": 400,
+        "order": 3
+      }
+    },
+    {
+      "id": "s4-divider",
+      "type": "shape",
+      "x": 950,
+      "y": 380,
+      "w": 2,
+      "h": 460,
+      "z": 1,
+      "shape": "rect",
+      "fill": "--border"
+    },
+    {
+      "id": "s4-footer",
+      "type": "text",
+      "role": "caption",
+      "x": 140,
+      "y": 1000,
+      "w": 1100,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Encre, la revue · Dossier lecture · Novembre 2026"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s4-page",
+      "type": "text",
+      "role": "caption",
+      "x": 1660,
+      "y": 1000,
+      "w": 120,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "04"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "right",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s4-bar-thin",
+      "type": "shape",
+      "x": 140,
+      "y": 108,
+      "w": 1640,
+      "h": 1,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--fg"
+    }
+  ]
+}

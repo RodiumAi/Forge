@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronDown,
   ChevronRight,
+  Copy,
+  FileCode2,
   FilePlus2,
   Pencil,
   RotateCcw,
@@ -15,6 +17,7 @@ import {
 import { ApiError, api } from "@/lib/api";
 import { projectPublicUrl } from "@/lib/asset-url";
 import { Icon } from "@/components/ui/icon";
+import { ContextMenu, copyText, useContextMenu, useMenuTrigger, type ContextMenuEntry } from "@/components/ui/ContextMenu";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { CodeEditor } from "./CodeEditor";
 import { FileTypeIcon } from "./file-icons";
@@ -60,6 +63,8 @@ function flattenFiles(nodes: FileNode[], acc: string[] = []): string[] {
   return acc;
 }
 
+type MenuBind = ReturnType<typeof useMenuTrigger<FileNode>>["bind"];
+
 function TreeItem({
   node,
   depth,
@@ -67,6 +72,7 @@ function TreeItem({
   onSelect,
   onRename,
   onDelete,
+  bind,
 }: {
   node: FileNode;
   depth: number;
@@ -74,6 +80,7 @@ function TreeItem({
   onSelect: (path: string) => void;
   onRename: (path: string) => void;
   onDelete: (path: string) => void;
+  bind: MenuBind;
 }) {
   const [open, setOpen] = useState(depth < 2);
   const name = node.path.split("/").pop() || node.path;
@@ -81,23 +88,24 @@ function TreeItem({
   if (node.type === "dir") {
     return (
       <li role="none">
-        <div className="code-tree-row">
+        <div className="f-bd-code-row">
         <button
           type="button"
           role="treeitem"
           aria-expanded={open}
           aria-selected={false}
           aria-level={depth + 1}
-          className="code-tree-dir"
+          className="f-bd-code-item is-dir"
             style={{ paddingLeft: 8 + depth * 12 }}
+            {...bind(node)}
             onClick={() => setOpen((v) => !v)}
           >
             <Icon
               icon={open ? ChevronDown : ChevronRight}
-              className="ui-icon-sm code-tree-chevron"
+              className="ui-icon-sm f-bd-code-chev"
             />
             <FileTypeIcon path={node.path} isDir open={open} />
-            <span className="code-tree-label">{name}</span>
+            <span className="f-bd-code-label">{name}</span>
           </button>
           <TreeActions path={node.path} onRename={onRename} onDelete={onDelete} />
         </div>
@@ -112,6 +120,7 @@ function TreeItem({
                 onSelect={onSelect}
                 onRename={onRename}
                 onDelete={onDelete}
+                bind={bind}
               />
             ))}
           </ul>
@@ -122,19 +131,20 @@ function TreeItem({
 
   return (
     <li role="none">
-      <div className="code-tree-row">
+      <div className="f-bd-code-row">
         <button
           type="button"
           role="treeitem"
           aria-level={depth + 1}
           aria-selected={selected === node.path}
-          className={`code-tree-file${selected === node.path ? " active" : ""}`}
+          className={`f-bd-code-item${selected === node.path ? " active" : ""}`}
           style={{ paddingLeft: 8 + depth * 12 }}
+          {...bind(node)}
           onClick={() => onSelect(node.path)}
         >
-          <span className="code-tree-chevron-spacer" />
+          <span className="f-bd-code-chev-sp" />
           <FileTypeIcon path={node.path} />
-          <span className="code-tree-label">{name}</span>
+          <span className="f-bd-code-label">{name}</span>
         </button>
         <TreeActions path={node.path} onRename={onRename} onDelete={onDelete} />
       </div>
@@ -153,7 +163,7 @@ function TreeActions({
 }) {
   const { t } = useI18n();
   return (
-    <span className="code-tree-actions">
+    <span className="f-bd-code-acts">
       <button type="button" title={t("codeRename")} aria-label={t("codeRename")} onClick={() => onRename(path)}>
         <Icon icon={Pencil} size={12} />
       </button>
@@ -307,6 +317,22 @@ export function CodePane({
     [t],
   );
 
+  const closeTabs = useCallback(
+    (paths: string[]) => {
+      const gone = new Set(paths);
+      const unsaved = tabsRef.current.some((x) => gone.has(x.path) && x.content !== x.baseline);
+      if (unsaved && !window.confirm(t("codeUnsavedConfirm"))) return;
+      setTabs((prev) => {
+        const next = prev.filter((x) => !gone.has(x.path));
+        if (activeRef.current && gone.has(activeRef.current)) {
+          setActive(next.length ? next[next.length - 1].path : null);
+        }
+        return next;
+      });
+    },
+    [t],
+  );
+
   const updateContent = useCallback((value: string) => {
     setTabs((prev) =>
       prev.map((tab) => (tab.path === activeRef.current ? { ...tab, content: value } : tab)),
@@ -350,8 +376,8 @@ export function CodePane({
     [onSaved, projectId, t],
   );
 
-  const createFile = useCallback(async () => {
-    const raw = window.prompt(t("codeNewFilePrompt"), "src/components/");
+  const createFile = useCallback(async (folder = "src/components/") => {
+    const raw = window.prompt(t("codeNewFilePrompt"), folder);
     const path = (raw || "").trim().replace(/^\/+/, "");
     if (!path || path.endsWith("/")) return;
     if (allFiles.includes(path)) {
@@ -439,12 +465,39 @@ export function CodePane({
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  const menu = useContextMenu();
+  const ico = (I: typeof Copy) => <I size={16} aria-hidden />;
+  const treeMenu = useMenuTrigger<FileNode>((node, at) => {
+    const dir = node.type === "dir";
+    const items: ContextMenuEntry[] = [
+      dir
+        ? { id: "new", label: t("bdMenuNewFileHere"), icon: ico(FilePlus2), onSelect: () => void createFile(`${node.path}/`) }
+        : { id: "open", label: t("bdMenuOpenFile"), icon: ico(FileCode2), onSelect: () => void openFile(node.path) },
+      { id: "rename", label: t("codeRename"), icon: ico(Pencil), onSelect: () => void renameFile(node.path) },
+      { id: "copy-path", label: t("bdMenuCopyPath"), icon: ico(Copy), onSelect: () => copyText(node.path) },
+      { type: "separator" },
+      { id: "delete", label: t("delete"), icon: ico(Trash2), danger: true, onSelect: () => void deleteFile(node.path) },
+    ];
+    menu.open(at, items, t("bdMenuFile"));
+  });
+  const tabMenu = useMenuTrigger<string>((path, at) => {
+    const others = tabsRef.current.map((x) => x.path).filter((p) => p !== path);
+    const items: ContextMenuEntry[] = [
+      { id: "close", label: t("bdMenuCloseTab"), icon: ico(X), onSelect: () => closeTab(path) },
+      { id: "close-others", label: t("bdMenuCloseOthers"), disabled: !others.length, onSelect: () => closeTabs(others) },
+      { id: "close-all", label: t("bdMenuCloseAll"), onSelect: () => closeTabs(tabsRef.current.map((x) => x.path)) },
+      { type: "separator" },
+      { id: "copy-path", label: t("bdMenuCopyPath"), icon: ico(Copy), onSelect: () => copyText(path) },
+    ];
+    menu.open(at, items, t("bdMenuFile"));
+  });
+
   return (
-    <section className="builder-code-pane builder-main-pane">
-      <aside className="code-tree">
-        <header className="builder-pane-head">
+    <section className="f-bd-code">
+      <aside className="f-bd-code-tree">
+        <header className="f-bd-code-head">
           <h2>{t("builderModeCode")}</h2>
-          <span className="code-tree-tools">
+          <span className="f-bd-code-tools">
             <button
               type="button"
               title={t("codeQuickOpen")}
@@ -465,15 +518,15 @@ export function CodePane({
         </header>
 
         {treeLoading ? (
-          <ul className="code-tree-skeleton" aria-hidden="true">
+          <ul className="f-bd-code-skel" aria-hidden="true">
             {[0, 1, 2, 3, 4, 5].map((i) => (
               <li key={i} />
             ))}
           </ul>
         ) : tree.length === 0 ? (
-          <p className="builder-empty">{t("codeTreeEmpty")}</p>
+          <p className="f-bd-code-empty">{t("codeTreeEmpty")}</p>
         ) : (
-          <ul className="code-tree-list" role="tree" aria-label={t("builderModeCode")}>
+          <ul className="f-bd-code-list" role="tree" aria-label={t("builderModeCode")}>
             {tree.map((n) => (
               <TreeItem
                 key={n.path}
@@ -483,37 +536,39 @@ export function CodePane({
                 onSelect={(p) => void openFile(p)}
                 onRename={(p) => void renameFile(p)}
                 onDelete={(p) => void deleteFile(p)}
+                bind={treeMenu.bind}
               />
             ))}
           </ul>
         )}
       </aside>
 
-      <div className="code-editor">
+      <div className="f-bd-code-editor">
         {tabs.length > 0 && (
-          <div className="code-tabs" role="tablist" aria-label={t("builderModeCode")}>
+          <div className="f-bd-code-tabs" role="tablist" aria-label={t("builderModeCode")}>
             {tabs.map((tab) => {
               const tabDirty = tab.content !== tab.baseline;
               const name = tab.path.split("/").pop() || tab.path;
               return (
                 <div
                   key={tab.path}
-                  className={`code-tab${tab.path === active ? " active" : ""}`}
+                  className={`f-bd-code-tab${tab.path === active ? " active" : ""}`}
                 >
                   <button
                     type="button"
                     role="tab"
                     aria-selected={tab.path === active}
                     title={tab.path}
+                    {...tabMenu.bind(tab.path)}
                     onClick={() => void openFile(tab.path)}
                   >
                     <FileTypeIcon path={tab.path} />
                     <span>{name}</span>
-                    {tabDirty ? <span className="code-tab-dot" aria-hidden="true" /> : null}
+                    {tabDirty ? <span className="f-bd-code-tabdot" aria-hidden="true" /> : null}
                   </button>
                   <button
                     type="button"
-                    className="code-tab-close"
+                    className="f-bd-code-tabx"
                     aria-label={t("close")}
                     onClick={() => closeTab(tab.path)}
                   >
@@ -525,8 +580,8 @@ export function CodePane({
           </div>
         )}
 
-        <header className="builder-pane-head">
-          <div className="code-editor-path">
+        <header className="f-bd-code-head">
+          <div className="f-bd-code-path">
             {imageView ? (
               <>
                 <FileTypeIcon path={imageView} size="md" />
@@ -537,7 +592,7 @@ export function CodePane({
                 <FileTypeIcon path={active} size="md" />
                 <code>{active}</code>
                 {dirty && (
-                  <span className="code-dirty-dot" role="status" aria-label={t("codeDirty")} />
+                  <span className="f-bd-code-dirty" role="status" aria-label={t("codeDirty")} />
                 )}
               </>
             ) : (
@@ -546,7 +601,7 @@ export function CodePane({
           </div>
           <button
             type="button"
-            className="btn"
+            className="f-btn f-btn-primary f-btn-xs"
             disabled={!dirty || busy || !active || fileLoading}
             onClick={() => void save()}
           >
@@ -556,9 +611,9 @@ export function CodePane({
         </header>
 
         {conflict && active ? (
-          <div className="code-conflict" role="alert">
+          <div className="f-bd-code-conflict" role="alert">
             <p>{error}</p>
-            <div className="code-conflict-actions">
+            <div className="f-bd-code-conflict-acts">
               <button type="button" onClick={() => void openFile(active, { reload: true })}>
                 <Icon icon={RotateCcw} className="ui-icon-sm" />
                 {t("codeConflictReload")}
@@ -569,21 +624,21 @@ export function CodePane({
             </div>
           </div>
         ) : error ? (
-          <p className="builder-pane-error" role="alert">
+          <p className="f-bd-code-error" role="alert">
             {error}
           </p>
         ) : null}
 
         {fileLoading ? (
-          <p className="builder-empty">{t("loading")}</p>
+          <p className="f-bd-code-empty">{t("loading")}</p>
         ) : imageView ? (
-          <div className="code-image-view">
+          <div className="f-bd-code-image">
             { }
             <img
               src={projectPublicUrl(projectId, imageView, filesRevision) ?? undefined}
               alt={imageView}
             />
-            <span className="code-image-name">{imageView.split("/").pop()}</span>
+            <span className="f-bd-code-image-name">{imageView.split("/").pop()}</span>
           </div>
         ) : activeTab ? (
           <CodeEditor
@@ -593,7 +648,7 @@ export function CodePane({
             onSave={() => void save()}
           />
         ) : (
-          <p className="builder-empty">{t("codeSelectFile")}</p>
+          <p className="f-bd-code-empty">{t("codeSelectFile")}</p>
         )}
       </div>
 
@@ -606,6 +661,7 @@ export function CodePane({
           void openFile(p);
         }}
       />
+      <ContextMenu request={menu.request} onClose={menu.close} />
     </section>
   );
 }

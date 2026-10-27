@@ -1,0 +1,262 @@
+{
+  "id": "s6",
+  "background": {
+    "type": "color",
+    "token": "--bg"
+  },
+  "elements": [
+    {
+      "id": "s6-frame",
+      "type": "shape",
+      "x": 40,
+      "y": 40,
+      "w": 1840,
+      "h": 1000,
+      "z": 0,
+      "shape": "rect",
+      "fill": "#00000000",
+      "stroke": "--border",
+      "strokeWidth": 2
+    },
+    {
+      "id": "s6-bar",
+      "type": "shape",
+      "x": 140,
+      "y": 103,
+      "w": 96,
+      "h": 4,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 0,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s6-kicker",
+      "type": "text",
+      "role": "label",
+      "x": 140,
+      "y": 126,
+      "w": 1200,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Comptes"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 600,
+        "color": "--accent",
+        "align": "left",
+        "lineHeight": 1.4,
+        "letterSpacing": 3,
+        "uppercase": true
+      }
+    },
+    {
+      "id": "s6-heading",
+      "type": "text",
+      "role": "heading",
+      "x": 140,
+      "y": 176,
+      "w": 1640,
+      "h": 140,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Compte de résultat simplifié"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 64,
+        "weight": 500,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.1
+      },
+      "animation": {
+        "type": "mask-reveal",
+        "trigger": "on-enter",
+        "direction": "up",
+        "durationMs": 700
+      }
+    },
+    {
+      "id": "s6-table",
+      "type": "table",
+      "x": 140,
+      "y": 360,
+      "w": 1640,
+      "h": 530,
+      "z": 2,
+      "rows": [
+        [
+          {
+            "text": "En millions d'euros"
+          },
+          {
+            "text": "2025"
+          },
+          {
+            "text": "2026"
+          },
+          {
+            "text": "Évolution"
+          }
+        ],
+        [
+          {
+            "text": "Chiffre d'affaires"
+          },
+          {
+            "text": "393,0"
+          },
+          {
+            "text": "412,0"
+          },
+          {
+            "text": "+4,8 %"
+          }
+        ],
+        [
+          {
+            "text": "Excédent brut d'exploitation"
+          },
+          {
+            "text": "24,6"
+          },
+          {
+            "text": "27,1"
+          },
+          {
+            "text": "+10,2 %"
+          }
+        ],
+        [
+          {
+            "text": "Résultat net"
+          },
+          {
+            "text": "8,9"
+          },
+          {
+            "text": "9,7"
+          },
+          {
+            "text": "+9,0 %"
+          }
+        ],
+        [
+          {
+            "text": "Investissements"
+          },
+          {
+            "text": "18,2"
+          },
+          {
+            "text": "22,5"
+          },
+          {
+            "text": "+23,6 %"
+          }
+        ]
+      ],
+      "headerRow": true,
+      "style": {
+        "size": 28,
+        "color": "--fg",
+        "headerFill": "--surface",
+        "border": "--border"
+      },
+      "columnWidths": [
+        2,
+        1,
+        1,
+        1
+      ],
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "delayMs": 120,
+        "durationMs": 500
+      }
+    },
+    {
+      "id": "s6-footer",
+      "type": "text",
+      "role": "caption",
+      "x": 140,
+      "y": 1000,
+      "w": 1100,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Coopérative Terres d'Ouest · Rapport annuel 2026"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s6-page",
+      "type": "text",
+      "role": "caption",
+      "x": 1660,
+      "y": 1000,
+      "w": 120,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "06"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "right",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s6-rule",
+      "type": "shape",
+      "x": 140,
+      "y": 104,
+      "w": 1640,
+      "h": 2,
+      "z": 1,
+      "shape": "rect",
+      "fill": "--border"
+    },
+    {
+      "id": "s6-footrule",
+      "type": "shape",
+      "x": 140,
+      "y": 978,
+      "w": 1640,
+      "h": 2,
+      "z": 1,
+      "shape": "rect",
+      "fill": "--border"
+    }
+  ]
+}

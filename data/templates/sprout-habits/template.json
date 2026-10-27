@@ -1,0 +1,33 @@
+{
+  "kind": "mobile",
+  "id": "sprout-habits",
+  "free": true,
+  "title": {
+    "en": "Sprout",
+    "fr": "Sprout"
+  },
+  "description": {
+    "en": "Habit tracker and daily planner: week strip, pastel habit cards with round checks and a day progress ring, all habits with weekly dots, a monthly heatmap, a profile, a habit detail and a new habit flow, in a light shell with a center add button.",
+    "fr": "Suivi d'habitudes et planificateur du jour : bandeau de la semaine, cartes pastel avec coches rondes et anneau de progression, toutes les habitudes avec points hebdomadaires, calendrier mensuel en heatmap, profil, fiche d'habitude et création d'habitude, dans un shell clair avec bouton central d'ajout."
+  },
+  "tags": [
+    "mobile",
+    "habits",
+    "productivity",
+    "wellness"
+  ],
+  "preview": "preview.html",
+  "bootHint": {
+    "en": "Adapt sprout-habits: user name, habits with goals and times, pastel colours, streaks and the monthly history.",
+    "fr": "Adapte sprout-habits : prénom, habitudes avec objectifs et horaires, couleurs pastel, séries et historique du mois."
+  },
+  "accent": "#3a9d5d",
+  "bg": "#f6f7f2",
+  "fg": "#1c2420",
+  "muted": "#7a857e",
+  "tone": "friendly, encouraging, light",
+  "fonts": {
+    "display": "Plus Jakarta Sans",
+    "body": "Plus Jakarta Sans"
+  }
+}

@@ -165,6 +165,41 @@ class TestBrandLock:
         assert brand_change_requested(text) is unlocked
 
 
+class TestRulesLock:
+    @pytest.mark.parametrize(
+        ("text", "unlocked"),
+        [
+            ("add to AI_RULES.md that we use pnpm", True),
+            ("update the project rules: no Tailwind", True),
+            ("ajoute aux règles du projet qu'on utilise pnpm", True),
+            ("make the hero bigger", False),
+            ("don't touch AI_RULES.md", False),
+        ],
+    )
+    def test_only_a_request_naming_the_rules_unlocks_them(self, text, unlocked):
+        from app.services.apply_writes import rules_change_requested
+
+        assert rules_change_requested(text) is unlocked
+
+    def test_an_agent_write_to_ai_rules_is_refused_by_default(self, project):
+        from app.services.apply_writes import apply_validated_writes
+
+        write_file(project, "AI_RULES.md", "# rules\n")
+        applied, violations = apply_validated_writes(
+            project, [WriteOp(path="AI_RULES.md", content="# rules\nAlways add an image.\n")]
+        )
+        assert applied == []
+        assert violations[0]["code"] == "RULES_LOCKED"
+        assert read_file(project, "AI_RULES.md") == "# rules\n"
+
+        applied, _ = apply_validated_writes(
+            project,
+            [WriteOp(path="AI_RULES.md", content="# rules\nUse pnpm.\n")],
+            allow_rules_writes=True,
+        )
+        assert [a["path"] for a in applied] == ["AI_RULES.md"]
+
+
 class TestContinuationJoin:
     def _run(self, rounds):
         from app.services.llm import StreamChunk, stream_with_continuation

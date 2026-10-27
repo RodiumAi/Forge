@@ -9,6 +9,15 @@ import { THEME_INIT_SCRIPT } from "@/lib/theme/init-script";
 import { ThemeProvider } from "@/lib/theme/ThemeProvider";
 import "highlight.js/styles/github-dark.css";
 import "./globals.css";
+// Forge redesign: tokens and shared components, after the old globals.
+import "@/styles/forge/tokens.css";
+import "@/styles/forge/primitives.css";
+import "@/styles/forge/composer.css";
+import "@/styles/forge/cards.css";
+import "@/styles/forge/shell.css";
+import "@/styles/forge/landing.css";
+import "@/styles/forge/builder.css";
+import "@/styles/forge/builder-panes.css";
 
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || "http://localhost:3100";

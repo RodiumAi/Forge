@@ -1,0 +1,32 @@
+{
+  "kind": "mobile",
+  "id": "maison-shop",
+  "title": {
+    "en": "Maison",
+    "fr": "Maison"
+  },
+  "description": {
+    "en": "Luxury fashion shopping app: editorial Discover feed with a magazine cover and shop-the-look rows, a shop with category chips and a two-column grid, a product page with gallery, colours, sizes and details, a bag with quantities, euro totals and checkout, and a profile with orders and wishlist, in an ecru editorial phone shell.",
+    "fr": "App de mode haut de gamme : fil Découvrir éditorial avec couverture de magazine et looks à acheter, boutique avec catégories et grille sur deux colonnes, fiche produit avec galerie, couleurs, tailles et détails, panier avec quantités, totaux en euros et paiement, et profil avec commandes et liste d'envies, dans un shell éditorial couleur écru."
+  },
+  "tags": [
+    "mobile",
+    "fashion",
+    "ecommerce",
+    "shopping"
+  ],
+  "preview": "preview.html",
+  "bootHint": {
+    "en": "Adapt maison-shop: brand name, collection and products with photos, prices, sizes and colours, the editorial story, delivery rules and the customer profile.",
+    "fr": "Adapte maison-shop : nom de la marque, collection et produits avec photos, prix, tailles et couleurs, l'histoire éditoriale, les règles de livraison et le profil client."
+  },
+  "accent": "#161412",
+  "bg": "#f3efe8",
+  "fg": "#161412",
+  "muted": "#85807a",
+  "tone": "luxurious, editorial, calm",
+  "fonts": {
+    "display": "Cormorant Garamond",
+    "body": "Jost"
+  }
+}

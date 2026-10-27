@@ -1,0 +1,29 @@
+/* Profile tab. Scoped under .profile-screen. */
+.profile-screen .me { display: grid; justify-items: center; text-align: center; gap: .35rem; }
+.profile-screen .ring { width: 6.6rem; height: 6.6rem; border-radius: 999px; padding: 3px; background: var(--grad); margin-bottom: .55rem; box-shadow: 0 18px 40px -16px var(--accent); }
+.profile-screen .ring img { width: 100%; height: 100%; border-radius: 999px; object-fit: cover; border: 3px solid var(--bg); }
+.profile-screen .me h2 { font-size: 1.6rem; font-weight: 800; }
+.profile-screen .stats { display: flex; gap: 2rem; margin-top: .8rem; }
+.profile-screen .stats div { display: grid; gap: .1rem; }
+.profile-screen .stats strong { font-family: var(--font-display); font-size: 1.3rem; font-weight: 700; }
+.profile-screen .stats span { font-size: .72rem; color: var(--muted); }
+
+.profile-screen .wrapped { position: relative; overflow: hidden; border-radius: 1.6rem; padding: 1.25rem; background: var(--grad); }
+.profile-screen .wrapped::after { content: ""; position: absolute; right: -3rem; top: -3rem; width: 10rem; height: 10rem; border-radius: 999px; border: 1.6rem solid rgba(255, 255, 255, .1); }
+.profile-screen .w-kicker { margin: 0; font-size: .7rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; opacity: .85; }
+.profile-screen .w-num { margin: .3rem 0 1rem; font-family: var(--font-display); font-size: 3rem; font-weight: 800; letter-spacing: -.03em; line-height: 1; }
+.profile-screen .w-num small { font-family: var(--font-sans); font-size: .85rem; font-weight: 600; letter-spacing: 0; margin-left: .4rem; opacity: .85; }
+.profile-screen .w-bars { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; }
+.profile-screen .w-bars li { display: grid; grid-template-columns: 5.5rem 1fr 2.4rem; align-items: center; gap: .6rem; font-size: .8rem; font-weight: 600; }
+.profile-screen .w-bars i { height: .45rem; border-radius: 999px; background: rgba(255, 255, 255, .9); }
+.profile-screen .w-bars em { font-style: normal; text-align: right; opacity: .85; }
+
+.profile-screen .settings { display: grid; background: var(--surface); border-radius: 1.4rem; padding: .3rem 1rem; border: 1px solid var(--line); }
+.profile-screen .row { display: flex; align-items: center; gap: .85rem; width: 100%; min-height: 3.9rem; padding: .4rem 0; border: 0; border-bottom: 1px solid var(--line); background: none; text-align: left; color: var(--fg); }
+.profile-screen .row:last-child { border-bottom: 0; }
+.profile-screen .r-icon { width: 2.6rem; height: 2.6rem; border-radius: .9rem; display: grid; place-items: center; background: var(--surface-2); color: var(--accent); flex-shrink: 0; }
+.profile-screen .r-text { flex: 1; display: grid; gap: .1rem; }
+.profile-screen .r-text strong { font-size: .93rem; font-weight: 600; }
+.profile-screen .r-text span { font-size: .76rem; color: var(--muted); }
+.profile-screen .row > svg:last-child { color: var(--muted); }
+.profile-screen .sign-out { color: var(--accent); }

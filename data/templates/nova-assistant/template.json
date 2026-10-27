@@ -1,0 +1,33 @@
+{
+  "kind": "mobile",
+  "id": "nova-assistant",
+  "title": {
+    "en": "Nova",
+    "fr": "Nova"
+  },
+  "description": {
+    "en": "AI assistant app: home with an animated aqua orb and quick prompts, chat history with search and pins, personas to explore, a Nova Pro profile with usage, a working chat with typing indicator and suggestions, and a full-screen voice mode with waveform, in a dark shell with bottom tabs.",
+    "fr": "App d'assistant IA : accueil avec un orbe aqua animé et des requêtes rapides, historique des conversations avec recherche et épingles, personas à explorer, profil Nova Pro avec consommation, chat fonctionnel avec indicateur de saisie et suggestions, et mode vocal plein écran avec onde sonore, dans un shell sombre avec onglets."
+  },
+  "tags": [
+    "mobile",
+    "ai",
+    "assistant",
+    "chat",
+    "voice"
+  ],
+  "preview": "preview.html",
+  "bootHint": {
+    "en": "Adapt nova-assistant: assistant name, greeting, quick prompts, personas, scripted replies, plan and usage limits.",
+    "fr": "Adapte nova-assistant : nom de l'assistant, salutation, requêtes rapides, personas, réponses scénarisées, offre et limites d'utilisation."
+  },
+  "accent": "#5eead4",
+  "bg": "#0b0d10",
+  "fg": "#eceff3",
+  "muted": "#8a94a3",
+  "tone": "calm, precise and quietly futuristic",
+  "fonts": {
+    "display": "Sora",
+    "body": "Inter"
+  }
+}

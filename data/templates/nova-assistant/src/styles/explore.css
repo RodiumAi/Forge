@@ -1,0 +1,44 @@
+/* Explore tab. Scoped under .explore-screen. */
+.explore-screen { gap: 1.3rem; }
+
+.explore-screen .feature {
+  position: relative; overflow: hidden; display: grid; gap: .3rem; justify-items: start; padding: 1.2rem 1.2rem 1.3rem;
+  border-radius: 1.5rem; text-decoration: none; color: var(--fg); min-height: 11rem;
+  background: linear-gradient(150deg, #10302c, #0d1a1d 55%, #151019);
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+}
+.explore-screen .f-glow { position: absolute; right: -3rem; top: -3rem; width: 12rem; height: 12rem; border-radius: 999px; background: radial-gradient(circle, color-mix(in srgb, var(--accent) 55%, transparent), transparent 65%); filter: blur(10px); opacity: .55; }
+.explore-screen .feature .kicker { color: var(--accent); position: relative; }
+.explore-screen .feature strong { position: relative; font-family: var(--font-display); font-size: 1.4rem; font-weight: 600; letter-spacing: -.03em; line-height: 1.15; max-width: 13ch; }
+.explore-screen .f-sub { position: relative; font-size: .8rem; color: var(--muted); max-width: 26ch; line-height: 1.45; }
+.explore-screen .f-cta { position: relative; margin-top: .55rem; display: inline-flex; align-items: center; gap: .4rem; min-height: 2.6rem; padding: 0 1rem; border-radius: 999px; background: var(--accent); color: var(--on-accent); font-weight: 600; font-size: .82rem; }
+.explore-screen .bars { position: absolute; right: 1.1rem; bottom: 1.3rem; display: flex; align-items: center; gap: .2rem; height: 3rem; }
+.explore-screen .bars i { width: .22rem; border-radius: 999px; background: var(--accent); opacity: .75; animation: explore-bar 1.3s ease-in-out infinite; }
+.explore-screen .bars i:nth-child(3n) { animation-delay: -.4s; background: var(--pink); }
+.explore-screen .bars i:nth-child(3n + 1) { animation-delay: -.8s; }
+.explore-screen .bars i:nth-child(4n) { animation-delay: -1.1s; }
+
+.explore-screen .groups { display: flex; gap: .45rem; overflow-x: auto; scrollbar-width: none; margin-inline: -1.2rem; padding-inline: 1.2rem; }
+.explore-screen .groups::-webkit-scrollbar { display: none; }
+
+.explore-screen .personas { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
+.explore-screen .persona {
+  display: grid; gap: .25rem; align-content: start; padding: .95rem .95rem .85rem; border-radius: 1.3rem;
+  background: var(--surface); border: 1px solid var(--line); position: relative; overflow: hidden;
+}
+.explore-screen .persona::before { content: ""; position: absolute; left: -2rem; top: -2rem; width: 7rem; height: 7rem; border-radius: 999px; background: radial-gradient(circle, var(--tint), transparent 70%); opacity: .18; pointer-events: none; }
+.explore-screen .tone-card-aqua { --tint: var(--accent); }
+.explore-screen .tone-card-pink { --tint: var(--pink); }
+.explore-screen .tone-card-mint { --tint: #a7f3d0; }
+.explore-screen .tone-card-slate { --tint: #c7d2fe; }
+.explore-screen .pe-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: .55rem; position: relative; }
+.explore-screen .add { appearance: none; min-width: 2.75rem; height: 2.75rem; margin: -.3rem -.3rem 0 0; padding: 0 .8rem; border-radius: 999px; border: 1px solid var(--line); background: var(--surface-2); color: var(--fg); font-size: .76rem; font-weight: 600; display: grid; place-items: center; }
+.explore-screen .add.on { background: color-mix(in srgb, var(--accent) 16%, transparent); border-color: color-mix(in srgb, var(--accent) 40%, transparent); color: var(--accent); }
+.explore-screen .persona h3 { font-size: 1.05rem; font-weight: 600; }
+.explore-screen .role { margin: 0; font-size: .74rem; font-weight: 500; color: var(--tint); }
+.explore-screen .desc { margin: .2rem 0 0; font-size: .78rem; line-height: 1.45; color: var(--muted); }
+.explore-screen .pe-foot { display: flex; justify-content: space-between; align-items: center; margin-top: .55rem; padding-top: .55rem; border-top: 1px solid var(--line); }
+.explore-screen .pe-foot > span { font-size: .7rem; color: var(--muted); }
+.explore-screen .go { appearance: none; border: 0; background: transparent; color: var(--fg); min-height: 2.75rem; margin: -.4rem -.3rem -.5rem 0; padding: 0 .3rem; display: inline-flex; align-items: center; gap: .2rem; font-size: .8rem; font-weight: 600; }
+
+@keyframes explore-bar { 0%, 100% { height: 18%; } 50% { height: 100%; } }

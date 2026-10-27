@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<title>Fundraising round preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 480px; height: 300px; overflow: hidden; position: relative;
+    background: #0E0F12; color: #F5F5F2;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  }
+  .hero { position: absolute; inset: 0; background: url(data:image/webp;base64,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) center/cover; }
+  .veil { position: absolute; inset: 0; background: #0E0F12; opacity: 0.62; }
+  .text { position: absolute; left: 30px; width: 400px; bottom: 34px; }
+  .bar { width: 30px; height: 3px; border-radius: 2px; background: #C9F24D; margin: 0 0 8px; }
+  .label { font-size: 7px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: #C9F24D; margin-bottom: 8px; }
+  h1 { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 21px; line-height: 1.05; font-weight: 700; letter-spacing: -.01em;  }
+  p { font-size: 8.5px; line-height: 1.4; margin-top: 10px; opacity: .85; }
+  .count { position: absolute; right: 12px; bottom: 10px; font-size: 7px; font-weight: 600;
+    color: #F5F5F2; background: #1A1C22; border: 1px solid #2B2E36; padding: 3px 7px; border-radius: 99px; }
+</style>
+</head>
+<body>
+  <div class="hero"></div>
+  <div class="veil"></div>
+  <div class="text">
+    <div class="bar"></div>
+    <div class="label">Série A · 6 M€</div>
+    <h1>Koolbox garde les récoltes au frais</h1>
+    <p>Des chambres froides solaires louées à l'usage pour les producteurs de fruits et légumes.</p>
+  </div>
+  <div class="count">12 slides</div>
+</body>
+</html>

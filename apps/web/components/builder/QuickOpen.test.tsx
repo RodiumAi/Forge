@@ -136,7 +136,7 @@ describe("mouse", () => {
 
   it("closes when the backdrop is clicked", async () => {
     const { user, onClose, container } = setup();
-    await user.click(container.querySelector(".quick-open-backdrop")!);
+    await user.click(container.querySelector(".f-bd-qo-scrim")!);
     expect(onClose).toHaveBeenCalled();
   });
 });

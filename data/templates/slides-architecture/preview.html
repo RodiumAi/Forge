@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<title>Architecture overview preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 480px; height: 300px; overflow: hidden; position: relative;
+    background: #0F1419; color: #E6E1CF;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  }
+  .hero { position: absolute; inset: 0; background: url(data:image/webp;base64,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) center/cover; }
+  .veil { position: absolute; inset: 0; background: #0F1419; opacity: 0.8; }
+  .text { position: absolute; left: 30px; top: 92px; width: 330px; }
+  .bar { width: 30px; height: 3px; border-radius: 2px; background: #FFB454; margin-bottom: 8px; }
+  .label { font-size: 7px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: #FFB454; margin-bottom: 8px; }
+  h1 { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 20px; line-height: 1.05; font-weight: 700; letter-spacing: -.01em; }
+  p { font-size: 8.5px; line-height: 1.4; margin-top: 10px; opacity: .85; }
+  .count { position: absolute; right: 12px; bottom: 10px; font-size: 7px; font-weight: 600;
+    color: #E6E1CF; background: #182029; border: 1px solid #253040; padding: 3px 7px; border-radius: 99px; }
+  .dots { position: absolute; left: 30px; bottom: 14px; display: flex; gap: 3px; }
+  .dots i { display: block; width: 10px; height: 3px; border-radius: 2px; background: #9A9583; opacity: .5; }
+  .dots i:first-child { background: #FFB454; opacity: 1; }
+</style>
+</head>
+<body>
+  <div class="hero"></div>
+  <div class="veil"></div>
+  <div class="text">
+    <div class="bar"></div>
+    <div class="label">Revue d'architecture · RFC 112</div>
+    <h1>Paiements v3 : passer à l'événementiel</h1>
+    <p>Découpler l'autorisation, le règlement et la notification pour tenir 4 000 paiements par seconde.</p>
+  </div>
+  <div class="dots"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  <div class="count">12 slides</div>
+</body>
+</html>

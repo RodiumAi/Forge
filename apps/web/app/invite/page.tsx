@@ -11,7 +11,8 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { AuthCallbackScreen } from "@/components/auth/AuthCallbackScreen";
-import { AuthCard } from "@/components/auth/AuthCard";
+import { AuthAlert, AuthCard } from "@/components/auth/AuthCard";
+import { Button } from "@/components/ui/Button";
 import { api, getToken } from "@/lib/api";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { sanitizeReturnTo } from "@/lib/rodium-oauth";
@@ -109,61 +110,79 @@ function InviteInner() {
   const mismatch = Boolean(signedIn && email && current && current.toLowerCase() !== email.toLowerCase());
   const closed = preview?.status === "expired" || preview?.status === "declined";
 
+  const guestNext = encodeURIComponent(sanitizeReturnTo(back) || "/dashboard");
+  const done = Boolean(notice);
+  const expired = preview?.status === "expired";
+  const loadingPreview = !preview && !error;
+
   return (
     <AuthCard
       title={t("inviteTitle")}
       subtitle={subtitle}
-      error={error || (preview?.status === "expired" ? t("inviteExpired") : null)}
+      icon={loadingPreview ? "spinner" : done ? "check" : expired || (error && !preview) ? "clock" : "users"}
+      tone={done ? "ok" : expired || (error && !preview) ? "danger" : "accent"}
+      error={error || (expired ? t("inviteExpired") : null)}
       notice={notice}
     >
+      {preview ? (
+        <div className="f-auth-invite">
+          <span className="f-auth-invite-avatar" aria-hidden>
+            {(preview.project_name || "F").trim().charAt(0).toUpperCase()}
+          </span>
+          <div>
+            <b>{preview.project_name || "Forge"}</b>
+            <small>{fill(t("lndAuthInviteFrom"), { inviter: preview.inviter_name || "Forge" })}</small>
+          </div>
+          <span className="f-auth-invite-role">
+            <span className="f-sr-only">{t("lndAuthInviteRole")}: </span>
+            {roleLabel}
+          </span>
+        </div>
+      ) : null}
+
       {preview && !notice && !closed ? (
         signedIn && !mismatch ? (
-          <div className="options-actions" style={{ display: "flex", gap: "0.6rem", justifyContent: "center" }}>
-            <button type="button" className="btn" disabled={busy !== null} onClick={() => void respond("accept")}>
+          <div className="f-auth-actions">
+            <Button
+              size="lg"
+              icon="check"
+              loading={busy === "accept"}
+              disabled={busy !== null}
+              onClick={() => void respond("accept")}
+            >
               {busy === "accept" ? t("authWorking") : t("inviteAccept")}
-            </button>
-            <button
-              type="button"
-              className="btn btn-ghost"
+            </Button>
+            <Button
+              size="lg"
+              variant="ghost"
+              loading={busy === "decline"}
               disabled={busy !== null}
               onClick={() => void respond("decline")}
             >
               {busy === "decline" ? t("authWorking") : t("inviteDecline")}
-            </button>
+            </Button>
           </div>
         ) : signedIn && mismatch ? (
-          <p className="options-help">
-            {fill(t("inviteMismatch"), { email, current })}
-          </p>
+          <AuthAlert tone="warn">{fill(t("inviteMismatch"), { email, current })}</AuthAlert>
         ) : (
-          <div className="invite-guest">
+          <div className="f-auth-guest">
             <p>{fill(t("inviteSignInHint"), { email })}</p>
-            <p>{fill(t("inviteCreateHint"), { email })}</p>
-            <div className="invite-guest-actions">
-              <button
-                type="button"
-                className="btn"
-                onClick={() => router.push(`/login?next=${encodeURIComponent(sanitizeReturnTo(back) || "/dashboard")}`)}
-              >
+            <p className="f-auth-guest-hint">{fill(t("inviteCreateHint"), { email })}</p>
+            <div className="f-auth-actions">
+              <Button size="lg" onClick={() => router.push(`/login?next=${guestNext}`)}>
                 {t("authSignInCta")}
-              </button>
-              <button
-                type="button"
-                className="btn btn-ghost"
-                onClick={() => router.push(`/register?next=${encodeURIComponent(sanitizeReturnTo(back) || "/dashboard")}`)}
-              >
+              </Button>
+              <Button size="lg" variant="ghost" onClick={() => router.push(`/register?next=${guestNext}`)}>
                 {t("authSignUpCta")}
-              </button>
+              </Button>
             </div>
           </div>
         )
       ) : null}
       {projectId ? (
-        <p className="auth-alt">
-          <button type="button" className="auth-link" onClick={() => router.push(`/projects/${projectId}`)}>
-            {t("inviteOpen")}
-          </button>
-        </p>
+        <Button size="lg" block iconEnd="arrow-right" onClick={() => router.push(`/projects/${projectId}`)}>
+          {t("inviteOpen")}
+        </Button>
       ) : null}
     </AuthCard>
   );

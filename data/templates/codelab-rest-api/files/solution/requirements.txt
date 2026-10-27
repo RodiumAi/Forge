@@ -1,0 +1,3 @@
+fastapi[standard]>=0.115
+pytest>=8
+httpx>=0.27

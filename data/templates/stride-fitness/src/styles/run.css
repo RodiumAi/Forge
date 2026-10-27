@@ -1,0 +1,59 @@
+/* Live run (stack screen, no tab bar). Scoped under .run-screen. */
+.run-screen {
+  min-height: 100dvh; gap: 1.1rem;
+  padding: calc(.8rem + var(--safe-top)) 1.15rem calc(1.4rem + var(--safe-bottom));
+  background: radial-gradient(80% 40% at 50% 0%, rgba(255, 90, 31, .18), transparent 70%), var(--bg);
+}
+.run-screen.paused { background: radial-gradient(80% 40% at 50% 0%, rgba(255, 210, 63, .14), transparent 70%), var(--bg); }
+.run-screen .run-bar { display: flex; align-items: center; justify-content: space-between; }
+.run-screen .bar-space { width: 2.75rem; }
+.run-screen .gps { display: inline-flex; align-items: center; gap: .45rem; font-size: .76rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.run-screen .gps i { width: .5rem; height: .5rem; border-radius: 999px; background: var(--muted); }
+.run-screen .gps.on { color: var(--fg); }
+.run-screen .gps.on i { background: var(--ring-stand); box-shadow: 0 0 0 4px color-mix(in srgb, var(--ring-stand) 25%, transparent); }
+.run-screen.paused .gps.on i { background: var(--volt); }
+
+.run-screen .clock { text-align: center; margin-top: .4rem; }
+.run-screen .big-time { margin: .2rem 0 0; font-size: 5.4rem; font-weight: 800; letter-spacing: -.01em; }
+.run-screen.paused .big-time { color: var(--volt); }
+
+.run-screen .route { height: 7.5rem; border-radius: 1.4rem; background: var(--surface); border: 1px solid var(--line); overflow: hidden;
+  background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px); background-size: 22px 22px; }
+.run-screen .route svg { width: 100%; height: 100%; }
+.run-screen .route path { fill: none; stroke-width: 5; stroke-linecap: round; }
+.run-screen .route-bg { stroke: var(--surface-2); }
+.run-screen .route-done { stroke: var(--accent); filter: drop-shadow(0 0 6px rgba(255, 90, 31, .6)); transition: stroke-dashoffset 1s linear; }
+
+.run-screen .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: .6rem; }
+.run-screen .metric { padding: .85rem .8rem; border-radius: 1.1rem; background: var(--surface); border: 1px solid var(--line); }
+.run-screen .metric .num { margin: 0 0 .25rem; display: flex; align-items: center; gap: .25rem; font-size: 1.9rem; }
+.run-screen .metric .num svg { color: var(--accent); }
+.run-screen .metric span { font-size: .7rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.run-screen .metric.main { grid-column: 1 / -1; display: flex; align-items: baseline; gap: .5rem; padding: 1rem 1.1rem; background: var(--accent); color: var(--on-accent); border: 0; }
+.run-screen .metric.main .num { font-size: 4.4rem; font-weight: 800; }
+.run-screen .metric.main span { color: rgba(11, 11, 12, .7); font-size: .9rem; }
+
+.run-screen .run-controls { margin-top: auto; display: flex; justify-content: center; align-items: center; gap: 1.4rem; min-height: 6.5rem; }
+.run-screen .go, .run-screen .ctrl { appearance: none; border: 0; border-radius: 999px; display: grid; place-items: center; }
+.run-screen .go {
+  width: 6.5rem; height: 6.5rem; background: var(--accent); color: var(--on-accent);
+  font-family: var(--font-display); font-weight: 800; font-size: 2.4rem; letter-spacing: .04em;
+  box-shadow: 0 0 0 12px rgba(255, 90, 31, .16), 0 20px 40px -10px rgba(255, 90, 31, .7);
+}
+.run-screen .go.counting { animation: pop .8s ease-out infinite; }
+.run-screen .ctrl { width: 5.4rem; height: 5.4rem; }
+.run-screen .ctrl.pause { background: var(--fg); color: var(--bg); }
+.run-screen .ctrl.resume { background: var(--accent); color: var(--on-accent); box-shadow: 0 0 0 10px rgba(255, 90, 31, .16); }
+.run-screen .ctrl.finish { width: 4.4rem; height: 4.4rem; background: var(--surface-2); color: var(--fg); border: 1px solid var(--line); }
+.run-screen .hint { margin: 0; text-align: center; font-size: .8rem; color: var(--muted); }
+@keyframes pop { 0% { transform: scale(1.12); } 100% { transform: scale(1); } }
+
+.run-screen.summary { justify-content: center; align-items: center; text-align: center; gap: .7rem; padding-inline: 1.6rem; }
+.run-screen .done-mark { width: 5.4rem; height: 5.4rem; border-radius: 999px; display: grid; place-items: center; background: var(--accent); color: var(--on-accent); box-shadow: 0 0 0 14px rgba(255, 90, 31, .16); margin-bottom: .8rem; }
+.run-screen.summary > .kicker { color: var(--volt); }
+.run-screen .sum-km { margin: 0; font-size: 6rem; font-weight: 800; }
+.run-screen .sum-km small { font-size: 1.6rem; color: var(--accent); margin-left: .3rem; }
+.run-screen .sum-grid { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; margin: .4rem 0 .6rem; text-align: left; }
+.run-screen .sum-grid div { padding: .85rem 1rem; border-radius: 1.1rem; background: var(--surface); border: 1px solid var(--line); }
+.run-screen .sum-grid .num { margin: .3rem 0 0; font-size: 2rem; }
+.run-screen.summary .btn-primary { margin-top: 1rem; }

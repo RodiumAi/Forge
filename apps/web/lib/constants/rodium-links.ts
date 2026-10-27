@@ -71,7 +71,7 @@ export function buildRodiumPayUrl(options: {
  * account on the RodiumAI site.
  */
 export function rodiumUpgradeUrl(): string {
-  return "/dashboard/pricing";
+  return "/billing#plans";
 }
 
 /**

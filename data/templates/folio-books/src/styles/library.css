@@ -1,0 +1,47 @@
+/* Library tab. Scoped under .library-screen. */
+.library-screen { gap: 1.25rem; }
+.library-screen .segmented {
+  display: grid; grid-template-columns: 1fr 1.3fr 1fr; padding: .25rem; border-radius: 1rem;
+  background: var(--surface-2); border: 1px solid var(--line);
+}
+.library-screen .segmented button {
+  appearance: none; border: 0; background: transparent; color: var(--muted); min-height: 2.75rem; border-radius: .8rem;
+  font-weight: 600; font-size: .82rem; display: inline-flex; align-items: center; justify-content: center; gap: .3rem;
+}
+.library-screen .segmented small { font-size: .7rem; padding: .05rem .4rem; border-radius: 999px; background: color-mix(in srgb, var(--fg) 8%, transparent); }
+.library-screen .segmented button.on { background: var(--surface); color: var(--fg); box-shadow: 0 2px 8px -3px rgba(35, 28, 22, .25); }
+.library-screen .segmented button.on small { background: var(--accent); color: var(--on-accent); }
+
+.library-screen .summary { margin: 0; font-family: var(--font-display); font-size: 1.3rem; line-height: 1.3; color: var(--muted); }
+.library-screen .summary em { color: var(--fg); }
+
+.library-screen .grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.6rem .9rem; }
+.library-screen .tile { display: grid; gap: .45rem; text-decoration: none; justify-items: start; }
+.library-screen .tile-cover { position: relative; width: 100%; }
+.library-screen .tile-cover .cover { width: 100%; font-size: .66rem; }
+.library-screen .done { position: absolute; z-index: 3; top: .35rem; right: .35rem; width: 1.6rem; height: 1.6rem; border-radius: 999px; display: grid; place-items: center; background: var(--fg); color: var(--gold); }
+.library-screen .tile strong { margin-top: .3rem; font-family: var(--font-display); font-weight: 500; font-size: .98rem; line-height: 1.15; }
+.library-screen .tile-progress { display: flex; align-items: center; gap: .45rem; width: 100%; }
+.library-screen .tile-progress .progress { flex: 1; }
+.library-screen .tile-progress small, .library-screen .meta { font-size: .72rem; font-weight: 600; color: var(--muted); display: inline-flex; align-items: center; gap: .25rem; }
+.library-screen .add-slot {
+  width: 100%; aspect-ratio: 2 / 3; display: grid; place-content: center; justify-items: center; gap: .4rem;
+  border-radius: .5rem; border: 1.5px dashed color-mix(in srgb, var(--accent) 45%, transparent); color: var(--accent);
+  font-size: .76rem; font-weight: 600;
+}
+
+.library-screen .collections { list-style: none; margin: 0; padding: 0; display: grid; gap: .6rem; }
+.library-screen .collections li { display: flex; align-items: center; gap: 1rem; min-height: 4.8rem; padding: .7rem 1rem .7rem .9rem; border-radius: 1.1rem; background: var(--surface); border: 1px solid var(--line); color: var(--muted); }
+.library-screen .stack { display: flex; width: 5.4rem; flex-shrink: 0; }
+.library-screen .stack .cover { width: 2.4rem; }
+.library-screen .stack .cover-text { display: none; }
+.library-screen .stack .cover + .cover { margin-left: -1rem; }
+.library-screen .stack .cover:nth-child(2) { transform: translateY(-.15rem) rotate(4deg); }
+.library-screen .stack .cover:nth-child(3) { transform: rotate(9deg); }
+.library-screen .c-text { flex: 1; display: grid; gap: .1rem; }
+.library-screen .c-text strong { font-family: var(--font-display); font-weight: 500; font-size: 1.08rem; color: var(--fg); }
+.library-screen .c-text span { font-size: .76rem; }
+
+@media (min-width: 420px) {
+  .library-screen .grid { gap: 1.8rem 1.1rem; }
+}

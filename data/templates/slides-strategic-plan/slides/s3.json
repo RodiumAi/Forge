@@ -1,0 +1,123 @@
+{
+  "id": "s3",
+  "background": {
+    "type": "image",
+    "src": "public/images/road.webp",
+    "fit": "cover",
+    "overlay": "--bg",
+    "overlayOpacity": 0.78,
+    "credit": {
+      "source": "pixabay",
+      "author": "jplenio",
+      "url": "https://pixabay.com/photos/road-nevada-clouds-bird-landscape-3856796/"
+    }
+  },
+  "elements": [
+    {
+      "id": "s3-number",
+      "type": "text",
+      "role": "label",
+      "x": 960,
+      "y": 250,
+      "w": 880,
+      "h": 440,
+      "z": 1,
+      "opacity": 0.9,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "01"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 400,
+        "weight": 700,
+        "color": "--accent",
+        "align": "right",
+        "lineHeight": 1.0,
+        "letterSpacing": -12
+      },
+      "animation": {
+        "type": "mask-reveal",
+        "trigger": "on-enter",
+        "direction": "up",
+        "durationMs": 700
+      }
+    },
+    {
+      "id": "s3-bar",
+      "type": "shape",
+      "x": 140,
+      "y": 440,
+      "w": 120,
+      "h": 10,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 5,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s3-title",
+      "type": "text",
+      "role": "title",
+      "x": 140,
+      "y": 470,
+      "w": 800,
+      "h": 210,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Diagnostic"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 92,
+        "weight": 700,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.05
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "delayMs": 120,
+        "durationMs": 500
+      }
+    },
+    {
+      "id": "s3-subtitle",
+      "type": "text",
+      "role": "subtitle",
+      "x": 140,
+      "y": 700,
+      "w": 800,
+      "h": 130,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Où nous en sommes, sans complaisance."
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 34,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.35
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "delayMs": 120,
+        "durationMs": 500
+      }
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+/* Explore tab. Scoped under .explore-screen. */
+.explore-screen .search {
+  display: flex; align-items: center; gap: .6rem; min-height: 3.2rem; padding: 0 .5rem 0 1rem; border-radius: 999px;
+  background: var(--surface); border: 1px solid var(--line); color: var(--muted);
+}
+.explore-screen .search input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; font: inherit; font-size: .95rem; color: var(--fg); min-height: 2.75rem; }
+.explore-screen .search input::placeholder { color: var(--muted); }
+.explore-screen .search button { appearance: none; border: 0; background: var(--surface-2); width: 2.4rem; height: 2.4rem; border-radius: 999px; display: grid; place-items: center; }
+
+.explore-screen .cats { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+.explore-screen .cat {
+  position: relative; appearance: none; border: 0; padding: 0; overflow: hidden; border-radius: 1.4rem; aspect-ratio: 1.15;
+  text-align: left; color: #fffaf5; outline: 2.5px solid transparent; outline-offset: 2px; transition: outline-color .2s ease, transform .2s ease;
+}
+.explore-screen .cat img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.explore-screen .cat-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(43, 28, 20, .05), rgba(43, 28, 20, .65)); }
+.explore-screen .cat strong { position: absolute; left: .9rem; bottom: 1.8rem; font-family: var(--font-display); font-weight: 500; font-size: 1.3rem; }
+.explore-screen .cat small { position: absolute; left: .9rem; bottom: .85rem; font-size: .74rem; opacity: .85; }
+.explore-screen .cat.on { outline-color: var(--accent); transform: scale(.98); }
+
+.explore-screen .stack { display: grid; gap: 1rem; }
+.explore-screen .empty { margin: 0; padding: 2rem 1rem; text-align: center; color: var(--muted); border: 1.5px dashed var(--line); border-radius: 1.4rem; }

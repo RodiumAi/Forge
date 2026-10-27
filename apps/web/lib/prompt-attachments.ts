@@ -1,4 +1,10 @@
 import { isStoredObjectId } from "@/lib/asset-url";
+import { parsePagesMarker, stripPagesMarker } from "@/components/builder/page-rail-model";
+import {
+  parseIntegrationsMarker,
+  stripIntegrationsMarker,
+  type PickedIntegration,
+} from "@/lib/integrations-marker";
 
 export const MAX_PROMPT_FILES = 5;
 
@@ -198,7 +204,7 @@ async function readTextFile(file: File): Promise<string> {
   return file.text();
 }
 
-async function extractPdfText(file: File): Promise<string> {
+export async function extractPdfText(file: File): Promise<string> {
   const buffer = await file.arrayBuffer();
   const bytes = new Uint8Array(buffer);
   const decoder = new TextDecoder("latin1");
@@ -336,10 +342,16 @@ export function parseUserMessageContent(raw: string): {
   text: string;
   attachments: MessageAttachment[];
   selection: ElementSelectionMarker | null;
+  /** Routes picked in the pages rail (`[Target pages: ...]` marker). */
+  pages: string[];
+  /** Integrations picked from the composer's + menu. */
+  integrations: PickedIntegration[];
 } {
   const attachments: MessageAttachment[] = [];
   const selection = parseElementSelectionMarker(raw);
-  let text = raw || "";
+  const pages = parsePagesMarker(raw);
+  const integrations = parseIntegrationsMarker(raw);
+  let text = stripIntegrationsMarker(stripPagesMarker(raw || ""));
 
   for (const match of raw.matchAll(ATTACH_IMAGE_RE)) {
     const { name, url, objectId: rawObjectId } = parseImageMarkerBody(match[1] || "");
@@ -405,7 +417,7 @@ export function parseUserMessageContent(raw: string): {
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 
-  return { text, attachments, selection };
+  return { text, attachments, selection, pages, integrations };
 }
 
 export async function buildPromptWithAttachments(

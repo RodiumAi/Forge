@@ -121,6 +121,14 @@ export const ChatMarkdown = memo(function ChatMarkdown({
               {children}
             </a>
           ),
+          // Never load an image the model wrote: a URL in it can carry project
+          // data to any host (the request leaves the moment it renders). Show
+          // what it was instead.
+          img: ({ alt, src }) => (
+            <span className="md-img-blocked" title={typeof src === "string" ? src : undefined}>
+              [{alt?.trim() || "image"}]
+            </span>
+          ),
           table: ({ children }) => (
             <div className="md-table-wrap">
               <table>{children}</table>

@@ -1,0 +1,123 @@
+{
+  "version": 1,
+  "title": "Revue trimestrielle T3 2026",
+  "format": {
+    "ratio": "16:9",
+    "width": 1920,
+    "height": 1080
+  },
+  "theme": {
+    "designSystem": "local",
+    "tokens": "DESIGN.md"
+  },
+  "slides": [
+    {
+      "id": "s1",
+      "layout": "title",
+      "transition": {
+        "type": "fade",
+        "durationMs": 500,
+        "easing": "ease-in-out"
+      }
+    },
+    {
+      "id": "s2",
+      "layout": "section",
+      "transition": {
+        "type": "fade",
+        "durationMs": 500,
+        "easing": "ease-in-out"
+      }
+    },
+    {
+      "id": "s3",
+      "layout": "text",
+      "transition": {
+        "type": "fade",
+        "durationMs": 500,
+        "easing": "ease-in-out"
+      }
+    },
+    {
+      "id": "s4",
+      "layout": "two-columns",
+      "transition": {
+        "type": "fade",
+        "durationMs": 500,
+        "easing": "ease-in-out"
+      }
+    },
+    {
+      "id": "s5",
+      "layout": "image-text",
+      "transition": {
+        "type": "fade",
+        "durationMs": 500,
+        "easing": "ease-in-out"
+      }
+    },
+    {
+      "id": "s6",
+      "layout": "quote",
+      "transition": {
+        "type": "fade",
+        "durationMs": 500,
+        "easing": "ease-in-out"
+      }
+    },
+    {
+      "id": "s7",
+      "layout": "key-figures",
+      "transition": {
+        "type": "fade",
+        "durationMs": 500,
+        "easing": "ease-in-out"
+      }
+    },
+    {
+      "id": "s8",
+      "layout": "chart",
+      "transition": {
+        "type": "fade",
+        "durationMs": 500,
+        "easing": "ease-in-out"
+      }
+    },
+    {
+      "id": "s9",
+      "layout": "table",
+      "transition": {
+        "type": "fade",
+        "durationMs": 500,
+        "easing": "ease-in-out"
+      }
+    },
+    {
+      "id": "s10",
+      "layout": "team",
+      "transition": {
+        "type": "fade",
+        "durationMs": 500,
+        "easing": "ease-in-out"
+      }
+    },
+    {
+      "id": "s11",
+      "layout": "timeline",
+      "transition": {
+        "type": "fade",
+        "durationMs": 500,
+        "easing": "ease-in-out"
+      }
+    },
+    {
+      "id": "s12",
+      "layout": "thank-you",
+      "transition": {
+        "type": "fade",
+        "durationMs": 500,
+        "easing": "ease-in-out"
+      }
+    }
+  ]
+}

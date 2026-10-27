@@ -1,0 +1,36 @@
+/* Onboarding (first launch). Scoped under .onboarding-screen. */
+.onboarding-screen {
+  min-height: 100dvh;
+  padding: calc(1rem + var(--safe-top)) 1.4rem calc(1.4rem + var(--safe-bottom));
+  gap: 1.4rem; justify-content: space-between;
+  background:
+    radial-gradient(90% 55% at 50% 22%, color-mix(in srgb, var(--peach) 55%, transparent), transparent 72%),
+    radial-gradient(60% 40% at 0% 100%, color-mix(in srgb, var(--sage) 35%, transparent), transparent 70%),
+    var(--bg);
+}
+.onboarding-screen .onboard-top { display: flex; align-items: center; justify-content: space-between; min-height: 2.75rem; }
+.onboarding-screen .brand { display: inline-flex; align-items: center; gap: .5rem; font-family: var(--font-display); font-size: 1.35rem; font-weight: 500; }
+.onboarding-screen .brand i { width: 1.1rem; height: 1.1rem; border-radius: 999px; background: var(--dusk-gradient); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 16%, transparent); }
+.onboarding-screen .skip { appearance: none; border: 0; background: transparent; color: var(--muted); font-weight: 600; min-height: 2.75rem; padding: 0 .4rem; }
+
+.onboarding-screen .onboard-art { position: relative; height: 44vh; min-height: 290px; max-height: 360px; display: grid; place-items: center; }
+.onboarding-screen .float {
+  position: absolute; margin: 0; width: 7.6rem; padding: .35rem .35rem .55rem; border-radius: 1.2rem; background: var(--surface);
+  box-shadow: 0 20px 40px -18px rgba(120, 72, 48, .5); transition: transform .6s cubic-bezier(.2, .8, .2, 1);
+}
+.onboarding-screen .float img { width: 100%; aspect-ratio: 1.25; object-fit: cover; border-radius: .9rem; }
+.onboarding-screen .float figcaption { display: flex; align-items: center; gap: .3rem; padding: .45rem .3rem 0; font-size: .7rem; font-weight: 600; color: var(--fg); }
+.onboarding-screen .float.a { top: 4%; left: 0; transform: rotate(-7deg); }
+.onboarding-screen .float.b { bottom: 2%; right: 0; transform: rotate(6deg); }
+.onboarding-screen .step-1 .float.a { transform: rotate(-3deg) translate(-8px, 10px); }
+.onboarding-screen .step-1 .float.b { transform: rotate(9deg) translate(6px, -6px); }
+.onboarding-screen .step-2 .float.a { transform: rotate(-10deg) translateY(-6px) scale(.94); }
+.onboarding-screen .step-2 .float.b { transform: rotate(3deg) translateY(-14px) scale(1.06); }
+
+.onboarding-screen .kicker { margin-bottom: .7rem; }
+.onboarding-screen .onboard-body h2 { font-size: 2.35rem; line-height: 1.05; font-weight: 500; margin-bottom: .8rem; }
+.onboarding-screen .onboard-body .muted { font-size: .97rem; max-width: 32ch; }
+.onboarding-screen .onboard-actions { display: grid; gap: 1.1rem; }
+.onboarding-screen .dots { display: flex; gap: .4rem; }
+.onboarding-screen .dots i { width: .5rem; height: .5rem; border-radius: 999px; background: color-mix(in srgb, var(--fg) 14%, transparent); transition: width .3s ease, background .3s ease; }
+.onboarding-screen .dots i.on { width: 1.6rem; background: var(--accent); }

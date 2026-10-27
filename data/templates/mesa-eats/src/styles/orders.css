@@ -1,0 +1,59 @@
+/* Orders tab. Scoped under .orders-screen. */
+.orders-screen { gap: 1.8rem; }
+
+.orders-screen .active-order { background: var(--surface); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+.orders-screen .ao-head { position: relative; height: 9.5rem; display: flex; align-items: flex-end; justify-content: space-between; gap: .8rem; padding: 1rem 1.1rem; color: #fff; }
+.orders-screen .ao-head img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.orders-screen .ao-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(31, 26, 23, .1), rgba(31, 26, 23, .78)); }
+.orders-screen .ao-title, .orders-screen .ao-eta { position: relative; z-index: 1; display: grid; gap: .15rem; }
+.orders-screen .ao-title small { font-size: .74rem; opacity: .85; }
+.orders-screen .ao-title h2 { font-size: 1.4rem; font-weight: 800; line-height: 1.05; }
+.orders-screen .ao-eta { text-align: right; padding: .45rem .75rem; border-radius: 1rem; background: var(--saffron); color: var(--fg); }
+.orders-screen .ao-eta small { font-size: .66rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+.orders-screen .ao-eta b { font-family: var(--font-display); font-weight: 800; font-size: 1.4rem; line-height: 1; }
+
+/* Delivery progress tracker */
+.orders-screen .tracker { --done: 0; position: relative; list-style: none; margin: 0; padding: 1.3rem 1.1rem .4rem; display: grid; grid-template-columns: repeat(4, 1fr); }
+.orders-screen .tracker::before, .orders-screen .tracker::after {
+  content: ""; position: absolute; top: calc(1.3rem + 1.15rem - .15rem); left: calc(1.1rem + 12.5%); height: .3rem; border-radius: 999px;
+}
+.orders-screen .tracker::before { right: calc(1.1rem + 12.5%); background: var(--surface-2); }
+.orders-screen .tracker::after { width: calc((100% - 2.2rem) * .75 * var(--done)); background: var(--accent); transition: width .8s ease; }
+.orders-screen .tracker li { position: relative; z-index: 1; display: grid; justify-items: center; gap: .45rem; text-align: center; }
+.orders-screen .t-dot { width: 2.3rem; height: 2.3rem; border-radius: 999px; display: grid; place-items: center; background: var(--surface-2); color: var(--muted); border: 3px solid var(--surface); transition: background .3s ease, color .3s ease; }
+.orders-screen .t-label { font-size: .7rem; font-weight: 600; color: var(--muted); }
+.orders-screen .tracker li.past .t-dot { background: var(--accent); color: #fff; }
+.orders-screen .tracker li.now .t-dot { background: var(--accent); color: #fff; box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 22%, transparent); animation: pulse 1.8s ease-in-out infinite; }
+.orders-screen .tracker li.now .t-label, .orders-screen .tracker li.past .t-label { color: var(--fg); }
+.orders-screen .done .tracker li.now .t-dot { background: var(--basil); animation: none; box-shadow: 0 0 0 5px color-mix(in srgb, var(--basil) 22%, transparent); }
+@keyframes pulse { 0%, 100% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 22%, transparent); } 50% { box-shadow: 0 0 0 9px color-mix(in srgb, var(--accent) 8%, transparent); } }
+
+.orders-screen .courier { display: flex; align-items: center; gap: .7rem; margin: .9rem 1.1rem 0; padding: .7rem; border-radius: 1.2rem; background: var(--bg); }
+.orders-screen .courier img { width: 2.9rem; height: 2.9rem; border-radius: 999px; object-fit: cover; }
+.orders-screen .c-meta { flex: 1; min-width: 0; display: grid; gap: .12rem; }
+.orders-screen .c-meta strong { font-size: .95rem; }
+.orders-screen .c-meta small { display: inline-flex; align-items: center; gap: .25rem; font-size: .76rem; color: var(--muted); white-space: nowrap; }
+.orders-screen .c-meta svg { color: #e0a100; }
+.orders-screen .courier .call { background: var(--basil); color: #fff; border-color: var(--basil); }
+
+.orders-screen .rate { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin: .9rem 1.1rem 0; padding: .4rem .5rem .4rem 1rem; border-radius: 1.2rem; background: var(--bg); font-weight: 600; font-size: .9rem; }
+.orders-screen .stars { display: flex; }
+.orders-screen .stars button { appearance: none; border: 0; background: none; width: 2.75rem; height: 2.75rem; display: grid; place-items: center; color: #e0a100; }
+
+.orders-screen .ao-sum { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 1.1rem 1.1rem; font-size: .82rem; color: var(--muted); }
+.orders-screen .ao-sum > span:first-child { display: inline-flex; align-items: center; gap: .4rem; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.orders-screen .ao-sum .price { color: var(--fg); font-size: 1.05rem; }
+
+.orders-screen .no-order { display: grid; justify-items: center; text-align: center; gap: .55rem; padding: 2.2rem 1.4rem; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-soft); }
+.orders-screen .no-order > span { width: 4rem; height: 4rem; border-radius: 999px; display: grid; place-items: center; background: color-mix(in srgb, var(--accent) 12%, var(--surface)); color: var(--accent); margin-bottom: .3rem; }
+.orders-screen .no-order h2 { font-size: 1.3rem; }
+.orders-screen .no-order .btn-primary { margin-top: .8rem; }
+
+.orders-screen .past { display: grid; gap: .7rem; }
+.orders-screen .past-row { display: flex; align-items: center; gap: .85rem; padding: .65rem; border-radius: 1.3rem; background: var(--surface); box-shadow: var(--shadow-soft); }
+.orders-screen .past-row img { width: 4.2rem; height: 4.2rem; border-radius: 1rem; object-fit: cover; flex-shrink: 0; }
+.orders-screen .p-meta { flex: 1; min-width: 0; display: grid; gap: .12rem; }
+.orders-screen .p-meta strong { font-size: .95rem; }
+.orders-screen .p-meta small { font-size: .74rem; color: var(--muted); font-weight: 500; white-space: nowrap; }
+.orders-screen .p-meta span { font-size: .8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.orders-screen .reorder { display: inline-flex; align-items: center; gap: .35rem; min-height: 2.75rem; padding: 0 .9rem; border-radius: 999px; background: color-mix(in srgb, var(--accent) 12%, var(--surface)); color: var(--accent-deep); font-size: .8rem; font-weight: 700; text-decoration: none; flex-shrink: 0; }

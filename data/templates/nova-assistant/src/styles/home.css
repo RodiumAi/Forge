@@ -1,0 +1,40 @@
+/* Home tab. Scoped under .home-screen. The orb is the hero. */
+.home-screen .hero { display: grid; justify-items: center; text-align: center; gap: .45rem; padding-top: .4rem; }
+.home-screen .orb-stage { position: relative; display: grid; place-items: center; width: 15rem; height: 15rem; margin-bottom: .6rem; text-decoration: none; }
+.home-screen .ring { position: absolute; inset: 0; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--accent) 16%, transparent); }
+.home-screen .ring.r1 { inset: .4rem; animation: home-ring 6s ease-in-out infinite; }
+.home-screen .ring.r2 { inset: -1rem; border-color: color-mix(in srgb, var(--accent) 7%, transparent); animation: home-ring 6s ease-in-out infinite 1.5s; }
+.home-screen .hello { margin: 0; font-size: .85rem; font-weight: 500; color: var(--accent); }
+.home-screen .hero h1 { font-size: 1.85rem; font-weight: 600; line-height: 1.12; max-width: 14ch; }
+
+.home-screen .ask {
+  display: flex; align-items: center; gap: .5rem; padding: .35rem .35rem .35rem 1.15rem; border-radius: 999px;
+  background: var(--surface); border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--line));
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 5%, transparent), 0 20px 40px -24px color-mix(in srgb, var(--accent) 50%, transparent);
+}
+.home-screen .ask input { flex: 1; min-width: 0; min-height: 2.75rem; border: 0; outline: 0; background: transparent; font-size: .96rem; }
+.home-screen .ask input::placeholder { color: var(--muted); }
+.home-screen .send { appearance: none; border: 0; width: 2.9rem; height: 2.9rem; border-radius: 999px; display: grid; place-items: center; background: var(--accent); color: var(--on-accent); flex-shrink: 0; text-decoration: none; }
+.home-screen .send.voice { background: var(--surface-2); color: var(--accent); }
+
+.home-screen .prompts { display: grid; grid-template-columns: 1fr 1fr; gap: .65rem; }
+.home-screen .prompt {
+  appearance: none; text-align: left; display: grid; gap: .3rem; align-content: start; min-height: 8.2rem; padding: .95rem;
+  border-radius: 1.25rem; border: 1px solid var(--line); color: var(--fg);
+  background: linear-gradient(160deg, var(--surface-2), var(--surface) 60%);
+  transition: border-color .2s ease, transform .2s ease;
+}
+.home-screen .prompt:active { transform: scale(.98); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+.home-screen .pr-icon { width: 2.4rem; height: 2.4rem; border-radius: .8rem; display: grid; place-items: center; margin-bottom: .45rem; color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.home-screen .prompt:nth-child(2) .pr-icon { color: var(--pink); background: color-mix(in srgb, var(--pink) 12%, transparent); }
+.home-screen .prompt strong { font-family: var(--font-display); font-size: .98rem; font-weight: 600; letter-spacing: -.02em; }
+.home-screen .prompt > span:last-child { font-size: .76rem; line-height: 1.4; color: var(--muted); }
+
+.home-screen .recent { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; }
+.home-screen .recent a { display: flex; align-items: center; gap: .8rem; min-height: 3.9rem; padding: .55rem .85rem .55rem .65rem; border-radius: 1.1rem; background: var(--surface); border: 1px solid var(--line); text-decoration: none; color: var(--fg); }
+.home-screen .r-text { flex: 1; min-width: 0; display: grid; gap: .1rem; }
+.home-screen .r-text strong { font-size: .9rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.home-screen .r-text span { font-size: .74rem; color: var(--muted); }
+.home-screen .recent svg:last-child { color: var(--muted); }
+
+@keyframes home-ring { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.04); opacity: .5; } }

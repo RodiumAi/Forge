@@ -1,0 +1,726 @@
+{
+  "version": 1,
+  "name": "Nuvia",
+  "description": "Néobanque mobile pour les indépendants d'Afrique de l'Ouest. Sûre, moderne, sereine.",
+  "tokens": {
+    "color": {
+      "$type": "color",
+      "bg": {
+        "$value": "#0b1220",
+        "$description": "Page and slide background",
+        "$extensions": {
+          "forge": {
+            "role": "bg"
+          }
+        }
+      },
+      "surface": {
+        "$value": "#131c2e",
+        "$description": "Cards, panels and inputs",
+        "$extensions": {
+          "forge": {
+            "role": "surface"
+          }
+        }
+      },
+      "fg": {
+        "$value": "#e8eef8",
+        "$description": "Main text",
+        "$extensions": {
+          "forge": {
+            "role": "fg",
+            "contrast": [
+              {
+                "on": "bg",
+                "ratio": 16.06,
+                "level": "AAA",
+                "required": 4.5
+              },
+              {
+                "on": "surface",
+                "ratio": 14.61,
+                "level": "AAA",
+                "required": 4.5
+              }
+            ]
+          }
+        }
+      },
+      "muted": {
+        "$value": "#94a3b8",
+        "$description": "Secondary text",
+        "$extensions": {
+          "forge": {
+            "role": "muted",
+            "contrast": [
+              {
+                "on": "bg",
+                "ratio": 7.3,
+                "level": "AAA",
+                "required": 4.5
+              },
+              {
+                "on": "surface",
+                "ratio": 6.64,
+                "level": "AA",
+                "required": 4.5
+              }
+            ]
+          }
+        }
+      },
+      "accent": {
+        "$value": "#10b981",
+        "$description": "Brand accent: buttons, links, highlights",
+        "$extensions": {
+          "forge": {
+            "role": "accent",
+            "contrast": [
+              {
+                "on": "bg",
+                "ratio": 7.38,
+                "level": "AAA",
+                "required": 3
+              }
+            ]
+          }
+        }
+      },
+      "border": {
+        "$value": "#22304a",
+        "$description": "Hairlines, dividers and input borders",
+        "$extensions": {
+          "forge": {
+            "role": "border"
+          }
+        }
+      },
+      "accent-contrast": {
+        "$value": "#0b0b0f",
+        "$description": "Text and icons on the accent colour",
+        "$extensions": {
+          "forge": {
+            "role": "accent-contrast",
+            "contrast": [
+              {
+                "on": "accent",
+                "ratio": 7.74,
+                "level": "AAA",
+                "required": 4.5
+              }
+            ]
+          }
+        }
+      },
+      "secondary": {
+        "$value": "#38bdf8",
+        "$description": "Secondary brand colour",
+        "$extensions": {
+          "forge": {
+            "role": "secondary"
+          }
+        }
+      },
+      "success": {
+        "$value": "#34d399",
+        "$description": "Positive status",
+        "$extensions": {
+          "forge": {
+            "role": "success",
+            "contrast": [
+              {
+                "on": "bg",
+                "ratio": 9.74,
+                "level": "AAA",
+                "required": 3
+              }
+            ]
+          }
+        }
+      },
+      "warning": {
+        "$value": "#fbbf24",
+        "$description": "Warning status",
+        "$extensions": {
+          "forge": {
+            "role": "warning",
+            "contrast": [
+              {
+                "on": "bg",
+                "ratio": 11.22,
+                "level": "AAA",
+                "required": 3
+              }
+            ]
+          }
+        }
+      },
+      "danger": {
+        "$value": "#f87171",
+        "$description": "Errors and destructive actions",
+        "$extensions": {
+          "forge": {
+            "role": "danger",
+            "contrast": [
+              {
+                "on": "bg",
+                "ratio": 6.77,
+                "level": "AA",
+                "required": 3
+              }
+            ]
+          }
+        }
+      },
+      "info": {
+        "$value": "#60a5fa",
+        "$description": "Neutral information",
+        "$extensions": {
+          "forge": {
+            "role": "info",
+            "contrast": [
+              {
+                "on": "bg",
+                "ratio": 7.36,
+                "level": "AAA",
+                "required": 3
+              }
+            ]
+          }
+        }
+      }
+    },
+    "font": {
+      "$type": "fontFamily",
+      "display": {
+        "$value": [
+          "Manrope",
+          "system-ui",
+          "-apple-system",
+          "Segoe UI",
+          "Roboto",
+          "sans-serif"
+        ],
+        "$description": "Titles and headings"
+      },
+      "body": {
+        "$value": [
+          "Manrope",
+          "system-ui",
+          "-apple-system",
+          "Segoe UI",
+          "Roboto",
+          "sans-serif"
+        ],
+        "$description": "Body text and interface"
+      },
+      "mono": {
+        "$value": [
+          "IBM Plex Mono",
+          "ui-monospace",
+          "SFMono-Regular",
+          "Menlo",
+          "monospace"
+        ],
+        "$description": "Code and figures"
+      }
+    },
+    "weight": {
+      "$type": "fontWeight",
+      "regular": {
+        "$value": 400
+      },
+      "medium": {
+        "$value": 500
+      },
+      "semibold": {
+        "$value": 600
+      },
+      "bold": {
+        "$value": 700
+      }
+    },
+    "text": {
+      "$type": "dimension",
+      "xs": {
+        "$value": {
+          "value": 12,
+          "unit": "px"
+        }
+      },
+      "sm": {
+        "$value": {
+          "value": 13,
+          "unit": "px"
+        }
+      },
+      "base": {
+        "$value": {
+          "value": 16,
+          "unit": "px"
+        },
+        "$extensions": {
+          "forge": {
+            "base": 16,
+            "ratio": 1.25
+          }
+        }
+      },
+      "lg": {
+        "$value": {
+          "value": 20,
+          "unit": "px"
+        }
+      },
+      "xl": {
+        "$value": {
+          "value": 25,
+          "unit": "px"
+        }
+      },
+      "2xl": {
+        "$value": {
+          "value": 31,
+          "unit": "px"
+        }
+      },
+      "3xl": {
+        "$value": {
+          "value": 39,
+          "unit": "px"
+        }
+      },
+      "4xl": {
+        "$value": {
+          "value": 49,
+          "unit": "px"
+        }
+      },
+      "5xl": {
+        "$value": {
+          "value": 61,
+          "unit": "px"
+        }
+      }
+    },
+    "leading": {
+      "$type": "number",
+      "tight": {
+        "$value": 1.15
+      },
+      "snug": {
+        "$value": 1.3
+      },
+      "normal": {
+        "$value": 1.55
+      }
+    },
+    "type": {
+      "$type": "typography",
+      "display": {
+        "$value": {
+          "fontFamily": "{font.display}",
+          "fontSize": "{text.5xl}",
+          "fontWeight": "{weight.bold}",
+          "lineHeight": "{leading.tight}",
+          "letterSpacing": {
+            "value": -1,
+            "unit": "px"
+          }
+        }
+      },
+      "h1": {
+        "$value": {
+          "fontFamily": "{font.display}",
+          "fontSize": "{text.4xl}",
+          "fontWeight": "{weight.bold}",
+          "lineHeight": "{leading.tight}",
+          "letterSpacing": {
+            "value": -0.5,
+            "unit": "px"
+          }
+        }
+      },
+      "h2": {
+        "$value": {
+          "fontFamily": "{font.display}",
+          "fontSize": "{text.3xl}",
+          "fontWeight": "{weight.semibold}",
+          "lineHeight": "{leading.snug}",
+          "letterSpacing": {
+            "value": 0,
+            "unit": "px"
+          }
+        }
+      },
+      "h3": {
+        "$value": {
+          "fontFamily": "{font.display}",
+          "fontSize": "{text.2xl}",
+          "fontWeight": "{weight.semibold}",
+          "lineHeight": "{leading.snug}",
+          "letterSpacing": {
+            "value": 0,
+            "unit": "px"
+          }
+        }
+      },
+      "body": {
+        "$value": {
+          "fontFamily": "{font.body}",
+          "fontSize": "{text.base}",
+          "fontWeight": "{weight.regular}",
+          "lineHeight": "{leading.normal}",
+          "letterSpacing": {
+            "value": 0,
+            "unit": "px"
+          }
+        }
+      },
+      "small": {
+        "$value": {
+          "fontFamily": "{font.body}",
+          "fontSize": "{text.sm}",
+          "fontWeight": "{weight.regular}",
+          "lineHeight": "{leading.normal}",
+          "letterSpacing": {
+            "value": 0,
+            "unit": "px"
+          }
+        }
+      },
+      "caption": {
+        "$value": {
+          "fontFamily": "{font.body}",
+          "fontSize": "{text.xs}",
+          "fontWeight": "{weight.medium}",
+          "lineHeight": "{leading.normal}",
+          "letterSpacing": {
+            "value": 0.2,
+            "unit": "px"
+          }
+        }
+      },
+      "code": {
+        "$value": {
+          "fontFamily": "{font.mono}",
+          "fontSize": "{text.sm}",
+          "fontWeight": "{weight.regular}",
+          "lineHeight": "{leading.normal}",
+          "letterSpacing": {
+            "value": 0,
+            "unit": "px"
+          }
+        }
+      }
+    },
+    "space": {
+      "$type": "dimension",
+      "xs": {
+        "$value": {
+          "value": 4,
+          "unit": "px"
+        }
+      },
+      "sm": {
+        "$value": {
+          "value": 8,
+          "unit": "px"
+        },
+        "$extensions": {
+          "forge": {
+            "unit": 8
+          }
+        }
+      },
+      "md": {
+        "$value": {
+          "value": 16,
+          "unit": "px"
+        }
+      },
+      "lg": {
+        "$value": {
+          "value": 24,
+          "unit": "px"
+        }
+      },
+      "xl": {
+        "$value": {
+          "value": 32,
+          "unit": "px"
+        }
+      },
+      "2xl": {
+        "$value": {
+          "value": 48,
+          "unit": "px"
+        }
+      },
+      "3xl": {
+        "$value": {
+          "value": 64,
+          "unit": "px"
+        }
+      }
+    },
+    "radius": {
+      "$type": "dimension",
+      "none": {
+        "$value": {
+          "value": 0,
+          "unit": "px"
+        }
+      },
+      "sm": {
+        "$value": {
+          "value": 8,
+          "unit": "px"
+        }
+      },
+      "md": {
+        "$value": {
+          "value": 12,
+          "unit": "px"
+        }
+      },
+      "lg": {
+        "$value": {
+          "value": 20,
+          "unit": "px"
+        }
+      },
+      "xl": {
+        "$value": {
+          "value": 30,
+          "unit": "px"
+        }
+      },
+      "full": {
+        "$value": {
+          "value": 9999,
+          "unit": "px"
+        }
+      }
+    },
+    "shadow": {
+      "$type": "shadow",
+      "sm": {
+        "$value": {
+          "color": "#0000003d",
+          "offsetX": {
+            "value": 0,
+            "unit": "px"
+          },
+          "offsetY": {
+            "value": 1,
+            "unit": "px"
+          },
+          "blur": {
+            "value": 2,
+            "unit": "px"
+          },
+          "spread": {
+            "value": 0,
+            "unit": "px"
+          }
+        }
+      },
+      "md": {
+        "$value": {
+          "color": "#00000065",
+          "offsetX": {
+            "value": 0,
+            "unit": "px"
+          },
+          "offsetY": {
+            "value": 4,
+            "unit": "px"
+          },
+          "blur": {
+            "value": 12,
+            "unit": "px"
+          },
+          "spread": {
+            "value": -2,
+            "unit": "px"
+          }
+        },
+        "$extensions": {
+          "forge": {
+            "style": "medium"
+          }
+        }
+      },
+      "lg": {
+        "$value": {
+          "color": "#000000a2",
+          "offsetX": {
+            "value": 0,
+            "unit": "px"
+          },
+          "offsetY": {
+            "value": 12,
+            "unit": "px"
+          },
+          "blur": {
+            "value": 32,
+            "unit": "px"
+          },
+          "spread": {
+            "value": -8,
+            "unit": "px"
+          }
+        }
+      }
+    },
+    "motion": {
+      "$type": "duration",
+      "fast": {
+        "$value": {
+          "value": 150,
+          "unit": "ms"
+        }
+      },
+      "base": {
+        "$value": {
+          "value": 300,
+          "unit": "ms"
+        },
+        "$extensions": {
+          "forge": {
+            "style": "balanced"
+          }
+        }
+      },
+      "slow": {
+        "$value": {
+          "value": 500,
+          "unit": "ms"
+        }
+      }
+    },
+    "ease": {
+      "$type": "cubicBezier",
+      "standard": {
+        "$value": [
+          0.2,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    "icon": {
+      "library": {
+        "$value": "lucide",
+        "$description": "Icônes nettes et lisibles, l'émeraude réservée aux actions positives."
+      },
+      "style": {
+        "$value": "outline",
+        "$extensions": {
+          "forge": {
+            "guidance": {
+              "summary": "Icônes nettes et lisibles, l'émeraude réservée aux actions positives.",
+              "do": [
+                "Flèches pour les flux d'argent",
+                "Cadenas pour la sécurité"
+              ],
+              "dont": [
+                "Icônes de pièces ou de billets clichés",
+                "Rouge hors des alertes"
+              ]
+            }
+          }
+        }
+      },
+      "stroke": {
+        "$type": "dimension",
+        "$value": {
+          "value": 2,
+          "unit": "px"
+        }
+      },
+      "size": {
+        "$type": "dimension",
+        "sm": {
+          "$value": {
+            "value": 16,
+            "unit": "px"
+          }
+        },
+        "md": {
+          "$value": {
+            "value": 20,
+            "unit": "px"
+          }
+        },
+        "lg": {
+          "$value": {
+            "value": 24,
+            "unit": "px"
+          }
+        }
+      }
+    }
+  },
+  "logo": {
+    "src": "public/brand/logo.svg",
+    "darkSrc": "public/brand/logo-dark.svg",
+    "iconSrc": "public/brand/icon.svg",
+    "minSizePx": 28,
+    "clearSpace": "La moitié de la hauteur du logo",
+    "usage": [
+      "Version claire sur le bleu nuit",
+      "Symbole seul pour l'icône d'application",
+      "Avoid: Changer la couleur émeraude",
+      "Avoid: Placer le logo sur un fond rouge",
+      "Avoid: Animer le logo"
+    ]
+  },
+  "voice": {
+    "summary": "Rassurant et transparent. Chaque frais est annoncé avant l'action.",
+    "do": [
+      "Montants exacts avec la devise",
+      "Expliquer ce qui va se passer",
+      "Tutoyer avec respect"
+    ],
+    "dont": [
+      "Promesses de gains",
+      "Petites lignes cachées",
+      "Urgence artificielle"
+    ]
+  },
+  "imagery": {
+    "summary": "Portraits d'entrepreneurs en lumière naturelle, couleurs désaturées.",
+    "do": [
+      "Vraies personnes au travail",
+      "Cadrages serrés et sereins"
+    ],
+    "dont": [
+      "Billets et pièces en gros plan",
+      "Graphiques boursiers décoratifs"
+    ]
+  },
+  "guidelines": {
+    "summary": "La confiance se lit dans la constance : mêmes composants, mêmes mots.",
+    "do": [
+      "Chiffres en police mono alignés à droite",
+      "Confirmer chaque transfert",
+      "Contraste AA partout"
+    ],
+    "dont": [
+      "Vert pour autre chose qu'un succès",
+      "Tableaux sans séparateurs",
+      "Texte sous 14 px"
+    ]
+  },
+  "components": [
+    "button",
+    "input",
+    "card",
+    "badge",
+    "alert",
+    "table"
+  ]
+}

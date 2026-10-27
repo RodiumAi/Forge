@@ -1,0 +1,134 @@
+{
+  "version": 1,
+  "title": "Studio Trame, portfolio 2026",
+  "format": {
+    "ratio": "16:9",
+    "width": 1920,
+    "height": 1080
+  },
+  "theme": {
+    "designSystem": "local",
+    "tokens": "DESIGN.md"
+  },
+  "slides": [
+    {
+      "id": "s1",
+      "layout": "title",
+      "transition": {
+        "type": "fade",
+        "durationMs": 600,
+        "easing": "ease-out"
+      }
+    },
+    {
+      "id": "s2",
+      "layout": "quote",
+      "transition": {
+        "type": "push",
+        "direction": "left",
+        "durationMs": 600,
+        "easing": "ease-out"
+      }
+    },
+    {
+      "id": "s3",
+      "layout": "two-columns",
+      "transition": {
+        "type": "push",
+        "direction": "left",
+        "durationMs": 600,
+        "easing": "ease-out"
+      }
+    },
+    {
+      "id": "s4",
+      "layout": "section",
+      "transition": {
+        "type": "push",
+        "direction": "left",
+        "durationMs": 600,
+        "easing": "ease-out"
+      }
+    },
+    {
+      "id": "s5",
+      "layout": "image-text",
+      "transition": {
+        "type": "push",
+        "direction": "left",
+        "durationMs": 600,
+        "easing": "ease-out"
+      }
+    },
+    {
+      "id": "s6",
+      "layout": "key-figures",
+      "transition": {
+        "type": "push",
+        "direction": "left",
+        "durationMs": 600,
+        "easing": "ease-out"
+      }
+    },
+    {
+      "id": "s7",
+      "layout": "chart",
+      "transition": {
+        "type": "push",
+        "direction": "left",
+        "durationMs": 600,
+        "easing": "ease-out"
+      }
+    },
+    {
+      "id": "s8",
+      "layout": "table",
+      "transition": {
+        "type": "push",
+        "direction": "left",
+        "durationMs": 600,
+        "easing": "ease-out"
+      }
+    },
+    {
+      "id": "s9",
+      "layout": "text",
+      "transition": {
+        "type": "push",
+        "direction": "left",
+        "durationMs": 600,
+        "easing": "ease-out"
+      }
+    },
+    {
+      "id": "s10",
+      "layout": "team",
+      "transition": {
+        "type": "push",
+        "direction": "left",
+        "durationMs": 600,
+        "easing": "ease-out"
+      }
+    },
+    {
+      "id": "s11",
+      "layout": "timeline",
+      "transition": {
+        "type": "push",
+        "direction": "left",
+        "durationMs": 600,
+        "easing": "ease-out"
+      }
+    },
+    {
+      "id": "s12",
+      "layout": "thank-you",
+      "transition": {
+        "type": "push",
+        "direction": "left",
+        "durationMs": 600,
+        "easing": "ease-out"
+      }
+    }
+  ]
+}

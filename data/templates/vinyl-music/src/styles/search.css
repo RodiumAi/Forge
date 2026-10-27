@@ -1,0 +1,26 @@
+/* Search tab: search field, recent searches, genre tiles. Scoped under .search-screen. */
+.search-screen .search-field {
+  display: flex; align-items: center; gap: .7rem; min-height: 3.25rem; padding: 0 .4rem 0 1.05rem; border-radius: 1rem;
+  background: var(--fg); color: var(--bg);
+}
+.search-screen .search-field input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font: inherit; font-size: .95rem; font-weight: 500; color: var(--bg); }
+.search-screen .search-field input::placeholder { color: #6e6878; }
+.search-screen .clear { appearance: none; border: 0; width: 2.75rem; height: 2.75rem; border-radius: 999px; display: grid; place-items: center; background: transparent; color: var(--bg); }
+
+.search-screen .recent { display: flex; flex-wrap: wrap; gap: .5rem; }
+.search-screen .recent-chip { appearance: none; display: inline-flex; align-items: center; gap: .4rem; min-height: 2.75rem; padding: 0 .95rem; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: .84rem; font-weight: 500; color: var(--fg); }
+.search-screen .recent-chip svg { color: var(--muted); }
+
+.search-screen .genres { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
+.search-screen .genre {
+  appearance: none; position: relative; overflow: hidden; border: 0; min-height: 6.4rem; border-radius: 1.1rem; padding: .85rem;
+  text-align: left; color: #fff; display: flex; align-items: flex-start;
+}
+.search-screen .genre span { position: relative; z-index: 1; font-family: var(--font-display); font-size: 1.15rem; font-weight: 800; letter-spacing: -.01em; }
+.search-screen .genre img { position: absolute; right: -.9rem; bottom: -.7rem; width: 4.7rem; height: 4.7rem; border-radius: .7rem; object-fit: cover; transform: rotate(22deg); box-shadow: -6px 8px 18px rgba(0, 0, 0, .35); }
+
+.search-screen .none { padding: 1.5rem 0; text-align: center; }
+
+@media (min-width: 560px) {
+  .search-screen .genres { grid-template-columns: repeat(3, 1fr); }
+}

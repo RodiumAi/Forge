@@ -1,0 +1,16 @@
+{
+  "name": "Serein",
+  "short_name": "Serein",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fbf5ef",
+  "theme_color": "#fbf5ef",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

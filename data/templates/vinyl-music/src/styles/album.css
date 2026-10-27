@@ -1,0 +1,23 @@
+/* Album (stack screen, no tab bar). Scoped under .album-screen. */
+.album-screen { padding-bottom: calc(1.6rem + var(--safe-bottom)); gap: 1.2rem; }
+
+.album-screen .album-head {
+  position: relative; isolation: isolate; overflow: hidden; display: grid; justify-items: center; text-align: center; gap: .35rem;
+  padding: calc(.8rem + var(--safe-top)) 1.3rem 1.4rem;
+}
+.album-screen .album-bg { position: absolute; inset: -30%; width: 160%; height: 160%; max-width: none; object-fit: cover; filter: blur(40px) saturate(1.4); opacity: .65; z-index: -2; }
+.album-screen .album-head::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, rgba(13, 11, 18, .2), var(--bg)); }
+.album-screen .album-bar { justify-self: stretch; display: flex; }
+.album-screen .album-bar .icon-btn { background: rgba(255, 255, 255, .1); border-color: rgba(255, 255, 255, .14); }
+.album-screen .album-cover { width: 62%; max-width: 15rem; aspect-ratio: 1; object-fit: cover; border-radius: 1.3rem; margin: .4rem 0 .9rem; box-shadow: 0 30px 50px -18px rgba(0, 0, 0, .9); }
+.album-screen h1 { font-size: 2rem; font-weight: 800; line-height: 1.02; }
+.album-screen .album-artist { margin: 0; font-weight: 600; color: var(--accent); }
+.album-screen .album-meta { margin: 0; font-size: .78rem; color: var(--muted); }
+
+.album-screen .album-actions { display: flex; align-items: center; gap: .55rem; padding-inline: 1.3rem; }
+.album-screen .round { appearance: none; width: 2.9rem; height: 2.9rem; border-radius: 999px; display: grid; place-items: center; border: 1px solid var(--line); background: var(--surface); color: var(--fg); }
+.album-screen .round.on { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 50%, transparent); }
+.album-screen .round.push { margin-left: auto; }
+
+.album-screen .album-tracks { padding-inline: 1.15rem; }
+.album-screen .credits { padding-inline: 1.3rem; font-size: .76rem; }

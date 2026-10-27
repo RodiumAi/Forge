@@ -87,7 +87,7 @@
       ".forge-sel-label{position:fixed;z-index:2147483646;background:#2563eb;color:#fff;font:11px/1.2 ui-sans-serif,system-ui,sans-serif;padding:2px 6px;border-radius:4px;pointer-events:none;transform:translateY(4px)}" +
       "body.forge-tool-text [data-forge-editable]{cursor:text}" +
       "body.forge-tool-text [data-forge-editable]:hover{outline:1px dashed rgba(242,98,10,.55);outline-offset:2px}" +
-      "body.forge-tool-text [data-forge-editing]{outline:2px solid #f2620a!important;outline-offset:2px;caret-color:currentColor!important}" +
+      "[data-forge-editing]{outline:2px solid #f2620a!important;outline-offset:2px;caret-color:currentColor!important}" +
       "body.forge-tool-image img{cursor:crosshair}";
     document.head.appendChild(s);
   }
@@ -166,6 +166,17 @@
     return structuralSelector(el) || '[data-forge-ref="' + ensureRef(el) + '"]';
   }
 
+  /** Source location of the element (`<file>:<line>:<col>`), set by the
+   *  preview transform on host elements. Falls back to the nearest tagged
+   *  ancestor for nodes rendered by a library (icons, third-party widgets). */
+  function forgeIdOf(el) {
+    if (!el || el.nodeType !== 1) return null;
+    var own = el.getAttribute("data-forge-id");
+    if (own) return own;
+    var host = el.closest ? el.closest("[data-forge-id]") : null;
+    return host ? host.getAttribute("data-forge-id") : null;
+  }
+
   function describe(el) {
     var tag = (el.tagName || "").toLowerCase();
     var className = (typeof el.className === "string" ? el.className : "").trim() || null;
@@ -175,7 +186,8 @@
       id: el.id || null,
       className: className,
       selector: buildSelector(el),
-      text: text
+      text: text,
+      forgeId: forgeIdOf(el)
     };
   }
 
@@ -367,7 +379,7 @@
     if (save && next && next !== ORIG) {
       // Keep markup so a failed API write can restore without flattening.
       PENDING_EDIT = { el: el, html: ORIG_HTML, oldText: ORIG, newText: next };
-      post({ type: "forge-visual-edit", oldText: ORIG, newText: next });
+      post({ type: "forge-visual-edit", oldText: ORIG, newText: next, forgeId: forgeIdOf(el) });
     } else if (!save) {
       // Restore markup, not flattened text: `innerText = ORIG` destroyed nested
       // links, <strong> and icons on every cancel.
@@ -496,13 +508,13 @@
       post({
         type: "forge-element-select",
         tag: info.tag, id: info.id, className: info.className,
-        selector: info.selector, text: info.text
+        selector: info.selector, text: info.text, forgeId: info.forgeId
       });
     } else if (TOOL === "comment") {
       post({
         type: "forge-comment-anchor",
         tag: info.tag, id: info.id, className: info.className,
-        selector: info.selector, text: info.text
+        selector: info.selector, text: info.text, forgeId: info.forgeId
       });
     } else if (TOOL === "image") {
       post({
@@ -512,7 +524,8 @@
         // data-forge-src, and that's what the replace endpoint must match.
         src: target.getAttribute("data-forge-src") || target.getAttribute("src") || "",
         alt: target.getAttribute("alt") || "",
-        selector: info.selector
+        selector: info.selector,
+        forgeId: info.forgeId
       });
     }
   }, true);
@@ -544,6 +557,110 @@
     }
   }, true);
 
+  /* ---------------------------------------------------------- context menu */
+
+  // A right click (or a long press on a touch screen) asks the builder for
+  // its own menu, drawn over the iframe with what sits under the pointer.
+  // Shift+right click keeps the browser's menu, and so does a text edit.
+  var CTX = null;
+  var PRESS = null;
+  var PRESS_MS = 520;
+
+  function openContextMenu(raw, x, y) {
+    if (!PARENT_ORIGIN || EDITING) return false;
+    var el = raw && raw.nodeType === 3 ? raw.parentElement : raw;
+    if (!el || el.nodeType !== 1) return false;
+    if (el.id === "forge-sel-label" || (el.closest && el.closest("#forge-sel-label"))) return false;
+    var element = pickTarget(el, "select");
+    var textHost = isEditableTarget(el);
+    var img = pickTarget(el, "image");
+    var link = el.closest ? el.closest("a[href]") : null;
+    var picked = "";
+    try {
+      picked = String(window.getSelection() || "").trim().slice(0, 5000);
+    } catch (err) {
+      picked = "";
+    }
+    CTX = { text: textHost, x: x, y: y };
+    post({
+      type: "forge-context-menu",
+      x: x,
+      y: y,
+      element: element ? describe(element) : null,
+      editable: Boolean(textHost),
+      image: img
+        ? {
+            src: img.getAttribute("data-forge-src") || img.getAttribute("src") || "",
+            alt: img.getAttribute("alt") || "",
+            selector: buildSelector(img),
+            forgeId: forgeIdOf(img)
+          }
+        : null,
+      link: link ? link.href : null,
+      selection: picked
+    });
+    return true;
+  }
+
+  function contextAction(action) {
+    if (action === "edit-text") {
+      var host = CTX && CTX.text;
+      if (!host || !document.contains(host)) return;
+      ensureStyle();
+      LAST_CLICK = { x: CTX.x, y: CTX.y };
+      startTextEdit(host);
+    }
+  }
+
+  function clearPress() {
+    if (PRESS && PRESS.timer) clearTimeout(PRESS.timer);
+    PRESS = null;
+  }
+
+  document.addEventListener("contextmenu", function (e) {
+    if (e.shiftKey || !PARENT_ORIGIN) return;
+    // Android fires this on a long press too: one menu, not two.
+    if (PRESS) {
+      if (PRESS.timer) clearTimeout(PRESS.timer);
+      PRESS.timer = null;
+      if (PRESS.fired) {
+        e.preventDefault();
+        return;
+      }
+      PRESS.fired = true;
+    }
+    if (openContextMenu(e.target, e.clientX, e.clientY)) e.preventDefault();
+  }, true);
+
+  // iOS never fires `contextmenu`: time the hold ourselves.
+  document.addEventListener("touchstart", function (e) {
+    clearPress();
+    if (!PARENT_ORIGIN || EDITING || !e.touches || e.touches.length !== 1) return;
+    var touch = e.touches[0];
+    var target = e.target;
+    var press = { x: touch.clientX, y: touch.clientY, fired: false, timer: null };
+    press.timer = setTimeout(function () {
+      press.timer = null;
+      if (PRESS !== press || press.fired) return;
+      press.fired = openContextMenu(target, press.x, press.y);
+    }, PRESS_MS);
+    PRESS = press;
+  }, { capture: true, passive: true });
+
+  document.addEventListener("touchmove", function (e) {
+    if (!PRESS || PRESS.fired || !e.touches || !e.touches.length) return;
+    var touch = e.touches[0];
+    if (Math.abs(touch.clientX - PRESS.x) + Math.abs(touch.clientY - PRESS.y) > 10) clearPress();
+  }, { capture: true, passive: true });
+
+  function endPress(e) {
+    // The finger lifted after the menu opened: no click on what sat under it.
+    if (PRESS && PRESS.fired && e.cancelable) e.preventDefault();
+    clearPress();
+  }
+  document.addEventListener("touchend", endPress, { capture: true, passive: false });
+  document.addEventListener("touchcancel", clearPress, { capture: true, passive: true });
+
   var navigatingFromParent = false;
   var lastReportedPath = null;
   var SECTION_HASHES = {
@@ -558,6 +675,82 @@
     temoignages: 1,
     home: 1,
   };
+
+  /**
+   * A hash that names an element on the page (`#features` next to
+   * `<section id="features">`) is an in-page link, not a page: reporting it
+   * as one added a fake page to the rail and sent the preview to a route
+   * that does not exist, so it never scrolled to the section.
+   */
+  function isSectionHash(hash) {
+    var key = String(hash || "");
+    if (!key) return false;
+    if (SECTION_HASHES[key.toLowerCase()]) return true;
+    try {
+      key = decodeURIComponent(key);
+    } catch (e) {
+      /* keep the raw value */
+    }
+    if (document.getElementById(key)) return true;
+    try {
+      return Boolean(document.getElementsByName(key).length);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function findSection(key) {
+    var id = String(key || "");
+    try {
+      id = decodeURIComponent(id);
+    } catch (e) {
+      /* keep the raw value */
+    }
+    if (!id) return null;
+    var el = document.getElementById(id);
+    if (el) return el;
+    var named = document.getElementsByName(id);
+    return named.length ? named[0] : null;
+  }
+
+  /**
+   * Scroll to a section of the home page, the way `/#tarifs` does on a live
+   * site. The preview lives under /runner/, so letting the browser follow the
+   * link would leave the shell; and treating it as a route made it a page.
+   */
+  function goToSection(key) {
+    function scroll() {
+      var el = findSection(key);
+      if (!el) return false;
+      try {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      } catch (e) {
+        el.scrollIntoView();
+      }
+      return true;
+    }
+    if (scroll()) {
+      // Keep the address in sync without a navigation (no jump, no reload).
+      try {
+        window.history.replaceState(
+          window.history.state,
+          "",
+          window.location.pathname + (window.location.search || "") + "#" + key,
+        );
+      } catch (e) {
+        /* ignore */
+      }
+      reportPreviewPath("/");
+      return;
+    }
+    // On another page: go home first, then scroll once it has rendered.
+    navigatePreviewPath("/");
+    var tries = 0;
+    var retry = setInterval(function () {
+      tries += 1;
+      if (scroll() || tries > 20) clearInterval(retry);
+    }, 100);
+  }
 
   function reportPreviewPath(path) {
     if (!PARENT_ORIGIN) return;
@@ -624,7 +817,7 @@
 
     var hash = (window.location.hash || "").replace(/^#/, "").split(/[/?]/)[0];
     if (hash) {
-      if (SECTION_HASHES[hash.toLowerCase()]) return "/";
+      if (isSectionHash(hash)) return "/";
       return "/" + hash.toLowerCase();
     }
     var pathname = window.location.pathname || "/";
@@ -898,6 +1091,8 @@
       clearPendingEdit();
     } else if (data.type === "forge-visual-edit-failed") {
       revertPendingEdit();
+    } else if (data.type === "forge-context-action") {
+      contextAction(typeof data.action === "string" ? data.action : "");
     } else if (data.type === "forge-tool-ping") {
       notifyReady();
       ackTool(TOOL);
@@ -934,6 +1129,12 @@
    * then in-page controls, then a runner-scoped History API update.
    */
   function navigatePreviewPath(path) {
+    // `/#tarifs` (or `#tarifs`) is a section of the home page, not a page.
+    var sectionTarget = String(path || "").match(/^\/?#(.+)$/);
+    if (sectionTarget) {
+      goToSection(sectionTarget[1]);
+      return;
+    }
     var normalized = (path || "/").replace(/\/+$/, "") || "/";
     var pageKey = normalized === "/" ? "" : normalized.replace(/^\//, "");
     var targetHash = pageKey ? "#" + pageKey : "";
@@ -1047,6 +1248,13 @@
       var link = ev.target && ev.target.closest ? ev.target.closest("a[href]") : null;
       if (!link) return;
       var href = (link.getAttribute("href") || "").trim();
+      var rootSection = href.match(/^\/#(.+)$/);
+      if (rootSection) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        goToSection(rootSection[1]);
+        return;
+      }
       if (!href || href.startsWith("#") || href.startsWith("mailto:") || /^https?:/i.test(href)) return;
       if (!href.startsWith("/")) return;
       var normalizedHref = href.replace(/\/+$/, "") || "/";

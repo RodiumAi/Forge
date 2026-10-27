@@ -203,6 +203,9 @@ jobs:
             'test "$(id -u)" != "0" && touch /data/projects/.non-root-smoke'
           docker run --rm --entrypoint python "${IMAGE}" -c \
             'from playwright.sync_api import sync_playwright; p = sync_playwright().start(); b = p.chromium.launch(headless=True); b.close(); p.stop()'
+          # The deck player bundle builds inside the image (publish and exports of slides).
+          docker run --rm --entrypoint sh "${IMAGE}" -c \
+            'echo "{\"icons\":[\"rocket\"]}" | node /app/runtime/deck/build.mjs --out /tmp/deck.js && test -s /tmp/deck.js'
 
       - name: Push verified API image
         run: |

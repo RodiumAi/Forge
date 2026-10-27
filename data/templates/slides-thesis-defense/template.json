@@ -1,0 +1,49 @@
+{
+  "kind": "slides",
+  "id": "slides-thesis-defense",
+  "title": {
+    "fr": "Soutenance",
+    "en": "Thesis defense"
+  },
+  "description": {
+    "fr": "Soutenance de thèse académique et sobre, serif bleu nuit : contexte, question de recherche, méthode, résultats, discussion, limites et perspectives.",
+    "en": "Sober academic thesis defense in a navy serif: context, research question, method, results, discussion, limitations and outlook."
+  },
+  "tags": [
+    "thesis",
+    "academic",
+    "research",
+    "light"
+  ],
+  "category": "education",
+  "preview": "preview.html",
+  "bootHint": {
+    "fr": "Adapte slides-thesis-defense : sujet, question de recherche, méthode, résultats, jury.",
+    "en": "Adapt slides-thesis-defense: topic, research question, method, results, committee."
+  },
+  "accent": "#1D3E8C",
+  "bg": "#FFFFFF",
+  "fg": "#101828",
+  "muted": "#556070",
+  "tone": "rigorous, clear, modest",
+  "fonts": {
+    "display": "Source Serif 4",
+    "body": "IBM Plex Sans",
+    "mono": "IBM Plex Mono"
+  },
+  "transitionPreset": "sober",
+  "layouts": {
+    "title": "s1",
+    "text": "s2",
+    "section": "s3",
+    "two-columns": "s4",
+    "image-text": "s5",
+    "key-figures": "s6",
+    "chart": "s7",
+    "table": "s8",
+    "quote": "s9",
+    "timeline": "s10",
+    "team": "s11",
+    "thank-you": "s12"
+  }
+}

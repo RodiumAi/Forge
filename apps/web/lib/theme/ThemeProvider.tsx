@@ -134,3 +134,8 @@ export function useTheme() {
   if (!ctx) throw new Error("useTheme must be used within ThemeProvider");
   return ctx;
 }
+
+/** Same as useTheme, but null outside a ThemeProvider (isolated component tests). */
+export function useOptionalTheme() {
+  return useContext(ThemeContext);
+}

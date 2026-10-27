@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Serein preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;600;700&family=Fraunces:ital,wght@0,400;0,500;1,400;1,500&display=swap" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 480px; height: 270px; overflow: hidden; position: relative;
+    background:
+      radial-gradient(55% 75% at 50% 105%, rgba(224,122,95,.45), transparent 70%),
+      radial-gradient(40% 55% at 6% 12%, rgba(163,177,138,.55), transparent 70%),
+      radial-gradient(40% 60% at 96% 8%, rgba(246,201,168,.85), transparent 70%),
+      #f7ede3;
+    font-family: "DM Sans", system-ui, sans-serif; color: #2b2420;
+  }
+  .sun { position: absolute; width: 220px; height: 220px; left: 130px; top: -40px; border-radius: 999px; background: radial-gradient(circle, rgba(255,243,232,.9), transparent 65%); }
+  .dev { position: absolute; width: 128px; height: 268px; border-radius: 22px; background: #fbf5ef; border: 3px solid #fffdfa; overflow: hidden; box-shadow: 0 22px 44px -10px rgba(120,72,48,.45), 0 0 0 1px rgba(43,36,32,.06); }
+  .dev::before { content: ""; position: absolute; top: 6px; left: 50%; transform: translateX(-50%); width: 34px; height: 9px; border-radius: 99px; background: #2b2420; z-index: 4; }
+  .l { left: 54px; top: 46px; transform: rotate(-8deg); }
+  .r { right: 54px; top: 46px; transform: rotate(8deg); background: #262238; }
+  .c { left: 50%; top: 14px; width: 142px; height: 300px; transform: translateX(-50%); z-index: 2; }
+  .s { padding: 22px 9px 0; display: grid; gap: 7px; }
+  .disp { font-family: "Fraunces", serif; letter-spacing: -.01em; }
+  .mu { color: #8c7f76; }
+  em { font-style: italic; color: #e07a5f; }
+  /* today */
+  .nav { display: flex; align-items: center; justify-content: space-between; }
+  .nav small { font-size: 4.6px; display: block; }
+  .nav b { font-size: 9px; font-weight: 500; display: block; line-height: 1.1; }
+  .av { width: 15px; height: 15px; border-radius: 99px; background: url("https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=80&q=60") center/cover; box-shadow: 0 0 0 1.5px #fbf5ef, 0 0 0 2.5px #f6c9a8; }
+  .orbw { position: relative; height: 92px; display: grid; place-items: center; background: radial-gradient(60% 60% at 50% 50%, rgba(246,201,168,.55), transparent 75%); border-radius: 18px; }
+  .orb { width: 70px; height: 70px; border-radius: 99px; background: radial-gradient(circle at 32% 28%, #fff3e8 0%, transparent 38%), radial-gradient(circle at 70% 78%, rgba(163,177,138,.7), transparent 46%), radial-gradient(circle, #f7b796, #e98b6d 55%, #d86c52); box-shadow: 0 14px 22px -8px rgba(201,98,74,.6); display: grid; place-items: center; }
+  .orb span { font-family: "Fraunces"; font-style: italic; font-size: 8px; color: #fffaf5; }
+  .ring { position: absolute; width: 86px; height: 86px; border-radius: 99px; border: 1px solid rgba(224,122,95,.3); }
+  .hint { font-size: 4.8px; text-align: center; margin-top: -3px; }
+  .today { display: flex; align-items: center; gap: 5px; background: #fffdfa; border-radius: 11px; padding: 4px; box-shadow: 0 8px 16px -8px rgba(120,72,48,.4); }
+  .today .th { width: 30px; height: 30px; border-radius: 7px; background: url("https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?auto=format&fit=crop&w=120&q=60") center/cover; }
+  .today small { font-size: 3.8px; font-weight: 700; letter-spacing: .1em; color: #c9624a; display: block; }
+  .today b { font-size: 8px; font-weight: 500; display: block; }
+  .today p { font-size: 4.2px; }
+  .pl { margin-left: auto; width: 17px; height: 17px; border-radius: 99px; background: #e07a5f; display: grid; place-items: center; }
+  .pl i { width: 0; height: 0; border-left: 5px solid #fffaf5; border-top: 3.2px solid transparent; border-bottom: 3.2px solid transparent; margin-left: 1.5px; }
+  .rit { background: #fffdfa; border-radius: 11px; padding: 6px 7px; }
+  .rit .h { display: flex; justify-content: space-between; font-size: 7px; } .rit .h span { font-size: 4.5px; color: #6f7f58; font-weight: 700; }
+  .bar { height: 2.5px; border-radius: 9px; background: #f4ebe2; margin: 4px 0 2px; } .bar i { display: block; width: 66%; height: 100%; border-radius: 9px; background: linear-gradient(90deg,#a3b18a,#e07a5f); }
+  .st { display: flex; align-items: center; gap: 4px; font-size: 5px; font-weight: 600; padding: 3px 0; border-bottom: 1px solid rgba(43,36,32,.07); }
+  .st:last-child { border: 0; }
+  .st i { width: 7px; height: 7px; border-radius: 99px; border: 1px solid rgba(43,36,32,.2); } .st.d i { background: #a3b18a; border-color: #a3b18a; } .st.d { color: #8c7f76; } .st.d u { text-decoration: line-through; }
+  .st u { text-decoration: none; }
+  .st span { margin-left: auto; font-weight: 500; color: #8c7f76; }
+  .tab { position: absolute; left: 0; right: 0; bottom: 0; height: 26px; background: rgba(255,253,250,.95); border-top: 1px solid rgba(43,36,32,.07); display: grid; grid-template-columns: repeat(4,1fr); justify-items: center; padding-top: 4px; font-size: 4.2px; font-weight: 600; color: #8c7f76; }
+  .tab div { display: grid; justify-items: center; gap: 1.5px; }
+  .tab div::before { content: ""; width: 7px; height: 7px; border-radius: 99px; border: 1.2px solid currentColor; }
+  .tab div::after { content: ""; width: 2px; height: 2px; border-radius: 9px; }
+  .tab .on { color: #2b2420; } .tab .on::after { background: #e07a5f; }
+  /* explore */
+  .srch { height: 15px; border-radius: 99px; background: #fffdfa; border: 1px solid rgba(43,36,32,.08); font-size: 4.8px; color: #8c7f76; padding-left: 7px; display: flex; align-items: center; }
+  .cats { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+  .cats div { position: relative; height: 46px; border-radius: 9px; background-size: cover; background-position: center; overflow: hidden; }
+  .cats div::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 30%, rgba(43,28,20,.65)); }
+  .cats div b { position: absolute; left: 5px; bottom: 9px; z-index: 1; font-family: "Fraunces"; font-weight: 500; font-size: 7px; color: #fffaf5; }
+  .cats div small { position: absolute; left: 5px; bottom: 3px; z-index: 1; font-size: 3.8px; color: #fffaf5; opacity: .85; }
+  .cats .on { outline: 1.5px solid #e07a5f; outline-offset: 1px; }
+  .card { position: relative; height: 54px; border-radius: 10px; background: url("https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=300&q=60") center/cover; overflow: hidden; }
+  .card::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 35%, rgba(43,28,20,.7)); }
+  .card p { position: absolute; left: 6px; bottom: 5px; z-index: 1; color: #fffaf5; font-size: 4px; font-weight: 600; letter-spacing: .06em; }
+  .card p b { display: block; font-family: "Fraunces"; font-weight: 500; font-size: 7.5px; letter-spacing: 0; }
+  .card .hrt { position: absolute; right: 5px; top: 5px; z-index: 1; width: 11px; height: 11px; border-radius: 99px; background: #fffdfa; }
+  .card .hrt::after { content: ""; position: absolute; inset: 3.3px; border-radius: 99px; background: #e07a5f; }
+  /* player */
+  .pbg { position: absolute; inset: 0; background: url("https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?auto=format&fit=crop&w=300&q=60") center/cover; }
+  .pbg::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(38,26,22,.3), rgba(38,26,22,.2) 30%, rgba(38,26,22,.8) 70%, rgba(30,22,20,.95)); }
+  .pl2 { position: relative; z-index: 1; padding: 22px 9px 0; color: #fffaf5; display: grid; justify-items: center; gap: 6px; }
+  .pbar { width: 100%; display: flex; justify-content: space-between; align-items: center; font-size: 4px; letter-spacing: .14em; font-weight: 600; }
+  .pbar i { width: 13px; height: 13px; border-radius: 99px; background: rgba(255,250,245,.18); border: 1px solid rgba(255,250,245,.3); }
+  .dial { position: relative; width: 92px; height: 92px; display: grid; place-items: center; margin-top: 6px; }
+  .dial svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+  .core { width: 66px; height: 66px; border-radius: 99px; background: radial-gradient(circle at 35% 30%, rgba(255,243,232,.35), rgba(224,122,95,.25) 60%, rgba(224,122,95,.08)); border: 1px solid rgba(255,250,245,.2); display: grid; place-content: center; justify-items: center; }
+  .core b { font-family: "Fraunces"; font-weight: 400; font-size: 15px; line-height: 1; }
+  .core small { font-size: 4.2px; opacity: .75; }
+  .pl2 h3 { font-family: "Fraunces"; font-weight: 500; font-size: 11px; margin-top: 4px; }
+  .pl2 p { font-size: 4.5px; opacity: .8; margin-top: -4px; }
+  .ctl { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+  .ctl .g { width: 15px; height: 15px; border-radius: 99px; background: rgba(255,250,245,.16); border: 1px solid rgba(255,250,245,.3); }
+  .ctl .p { width: 26px; height: 26px; border-radius: 99px; background: #e07a5f; box-shadow: 0 0 0 4px rgba(224,122,95,.25); display: grid; place-items: center; }
+  .ctl .p i { width: 2.4px; height: 9px; background: #fffaf5; border-radius: 1px; box-shadow: 4px 0 0 #fffaf5; margin-left: -4px; }
+</style>
+</head>
+<body>
+  <div class="sun"></div>
+
+  <div class="dev l">
+    <div class="s">
+      <b class="disp" style="font-size:12px;font-weight:500">Explore</b>
+      <div class="srch">Sessions, guides, moods</div>
+      <div class="cats">
+        <div style="background-image:url('https://images.unsplash.com/photo-1532767153582-b1a0e5145009?auto=format&fit=crop&w=160&q=60')"><b>Sleep</b><small>42 sessions</small></div>
+        <div class="on" style="background-image:url('https://images.unsplash.com/photo-1508672019048-805c876b67e2?auto=format&fit=crop&w=160&q=60')"><b>Focus</b><small>28 sessions</small></div>
+        <div style="background-image:url('https://images.unsplash.com/photo-1518241353330-0f7941c2d9b5?auto=format&fit=crop&w=160&q=60')"><b>Anxiety</b><small>31 sessions</small></div>
+        <div style="background-image:url('https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?auto=format&fit=crop&w=160&q=60')"><b>Morning</b><small>19 sessions</small></div>
+      </div>
+      <b class="disp" style="font-size:8px;font-weight:500">For <em>focus</em></b>
+      <div class="card"><span class="hrt"></span><p>FOCUS · 15 MIN<b>Forest walk</b></p></div>
+    </div>
+    <div class="tab"><div>Today</div><div class="on">Explore</div><div>Sleep</div><div>Profile</div></div>
+  </div>
+
+  <div class="dev r">
+    <div class="pbg"></div>
+    <div class="pl2">
+      <div class="pbar"><i></i>MORNING<i></i></div>
+      <div class="dial">
+        <svg viewBox="0 0 100 100"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f8d9c0"/><stop offset="1" stop-color="#e07a5f"/></linearGradient></defs><circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,250,245,.2)" stroke-width="2.6"/><circle cx="50" cy="50" r="44" fill="none" stroke="url(#g)" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="276.5" stroke-dashoffset="182"/></svg>
+        <div class="core"><b>03:24</b><small>of 10:00</small></div>
+      </div>
+      <h3>Soft landing</h3>
+      <p>with Nana Owusu · 10 min</p>
+      <div class="ctl"><span class="g"></span><span class="p"><i></i></span><span class="g"></span></div>
+    </div>
+  </div>
+
+  <div class="dev c">
+    <div class="s">
+      <div class="nav"><div><small class="mu">Saturday, 25 October</small><b class="disp">Good morning, <em>Aïcha</em></b></div><span class="av"></span></div>
+      <div class="orbw"><span class="ring"></span><div class="orb"><span>Breathe in</span></div></div>
+      <p class="hint mu">Follow the orb for a minute, <em>then begin</em></p>
+      <div class="today"><span class="th"></span><div><small>TODAY'S SESSION</small><b class="disp">Soft landing</b><p class="mu">10 min · Nana Owusu</p></div><span class="pl"><i></i></span></div>
+      <div class="rit">
+        <div class="h"><b class="disp" style="font-weight:500">Your ritual</b><span>2 of 3</span></div>
+        <div class="bar"><i></i></div>
+        <div class="st d"><i></i><u>Morning</u><span>07:30</span></div>
+        <div class="st d"><i></i><u>Midday reset</u><span>13:00</span></div>
+        <div class="st"><i></i>Wind down<span>22:15</span></div>
+      </div>
+    </div>
+    <div class="tab"><div class="on">Today</div><div>Explore</div><div>Sleep</div><div>Profile</div></div>
+  </div>
+</body>
+</html>

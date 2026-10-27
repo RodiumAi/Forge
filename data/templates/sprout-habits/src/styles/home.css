@@ -1,0 +1,39 @@
+/* Today tab. Scoped under .home-screen. */
+.home-screen .week { display: grid; grid-template-columns: repeat(7, 1fr); gap: .3rem; }
+.home-screen .week button {
+  appearance: none; border: 0; background: transparent; border-radius: 1.2rem; padding: .55rem 0 .45rem; min-height: 4.4rem;
+  display: grid; justify-items: center; gap: .15rem; color: var(--muted); transition: background .2s ease, color .2s ease;
+}
+.home-screen .week small { font-size: .7rem; font-weight: 700; }
+.home-screen .week strong { font-size: 1.05rem; font-weight: 800; color: var(--fg); }
+.home-screen .week i { width: .35rem; height: .35rem; border-radius: 999px; background: transparent; }
+.home-screen .week i.full { background: var(--accent); }
+.home-screen .week .today strong { color: var(--accent-deep); }
+.home-screen .week .on { background: var(--fg); color: rgba(255, 255, 255, .65); box-shadow: 0 10px 22px -10px rgba(28, 36, 32, .6); }
+.home-screen .week .on strong { color: #fff; }
+.home-screen .week .on i.full { background: #7fd39d; }
+
+.home-screen .progress {
+  position: relative; overflow: hidden; display: flex; align-items: center; gap: 1.1rem;
+  padding: 1.25rem 1.2rem; border-radius: 1.9rem; background: var(--accent); color: #fff;
+  box-shadow: 0 20px 40px -18px rgba(58, 157, 93, .8);
+}
+.home-screen .progress.perfect { background: linear-gradient(135deg, #3a9d5d, #2b7d48 60%, #1f6a3b); }
+.home-screen .ring-box { position: relative; width: 7rem; height: 7rem; flex-shrink: 0; z-index: 1; }
+.home-screen .ring { width: 100%; height: 100%; }
+.home-screen .ring-track { fill: none; stroke: rgba(255, 255, 255, .22); stroke-width: 11; }
+.home-screen .ring-value { fill: none; stroke: #fff; stroke-width: 11; stroke-linecap: round; transition: stroke-dasharray .5s cubic-bezier(.3, 1.2, .5, 1); }
+.home-screen .ring-label { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--font-display); font-size: 1.05rem; font-weight: 700; color: rgba(255, 255, 255, .8); }
+.home-screen .ring-label b { font-size: 2rem; font-weight: 800; color: #fff; letter-spacing: -.03em; }
+.home-screen .progress-text { position: relative; z-index: 1; display: grid; gap: .25rem; justify-items: start; }
+.home-screen .p-kicker { margin: 0; font-size: .72rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: rgba(255, 255, 255, .75); }
+.home-screen .progress h2 { font-size: 1.45rem; line-height: 1.1; }
+.home-screen .progress-text > p:not(.p-kicker) { margin: 0; font-size: .82rem; color: rgba(255, 255, 255, .85); line-height: 1.4; }
+.home-screen .flame-chip { display: inline-flex; align-items: center; gap: .3rem; margin-top: .4rem; padding: .35rem .65rem; border-radius: 999px; background: rgba(255, 255, 255, .95); color: var(--flame); font-size: .74rem; font-weight: 800; }
+.home-screen .leaf { position: absolute; right: -1.6rem; bottom: -1.8rem; color: rgba(255, 255, 255, .14); }
+
+.home-screen .add-row {
+  display: flex; align-items: center; gap: .7rem; margin-top: .65rem; min-height: 3.6rem; padding: 0 1rem; border-radius: 1.5rem;
+  border: 2px dashed color-mix(in srgb, var(--accent) 45%, transparent); color: var(--accent-deep); font-weight: 700; text-decoration: none;
+}
+.home-screen .add-row span { width: 2rem; height: 2rem; border-radius: 999px; display: grid; place-items: center; background: color-mix(in srgb, var(--accent) 14%, transparent); }

@@ -1,0 +1,594 @@
+{
+  "id": "s3",
+  "background": {
+    "type": "color",
+    "token": "--bg"
+  },
+  "elements": [
+    {
+      "id": "s3-pthz0",
+      "type": "shape",
+      "x": -40,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s3-pthz1",
+      "type": "shape",
+      "x": 40,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent-2",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s3-pthz2",
+      "type": "shape",
+      "x": 120,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s3-pthz3",
+      "type": "shape",
+      "x": 200,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent-2",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s3-pthz4",
+      "type": "shape",
+      "x": 280,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s3-pthz5",
+      "type": "shape",
+      "x": 360,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent-2",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s3-pthz6",
+      "type": "shape",
+      "x": 440,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s3-pthz7",
+      "type": "shape",
+      "x": 520,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent-2",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s3-pthz8",
+      "type": "shape",
+      "x": 600,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s3-pthz9",
+      "type": "shape",
+      "x": 680,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent-2",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s3-pthz10",
+      "type": "shape",
+      "x": 760,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s3-pthz11",
+      "type": "shape",
+      "x": 840,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent-2",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s3-pthz12",
+      "type": "shape",
+      "x": 920,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s3-pthz13",
+      "type": "shape",
+      "x": 1000,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent-2",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s3-pthz14",
+      "type": "shape",
+      "x": 1080,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s3-pthz15",
+      "type": "shape",
+      "x": 1160,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent-2",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s3-pthz16",
+      "type": "shape",
+      "x": 1240,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s3-pthz17",
+      "type": "shape",
+      "x": 1320,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent-2",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s3-pthz18",
+      "type": "shape",
+      "x": 1400,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s3-pthz19",
+      "type": "shape",
+      "x": 1480,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent-2",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s3-pthz20",
+      "type": "shape",
+      "x": 1560,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s3-pthz21",
+      "type": "shape",
+      "x": 1640,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent-2",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s3-pthz22",
+      "type": "shape",
+      "x": 1720,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s3-pthz23",
+      "type": "shape",
+      "x": 1800,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent-2",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s3-pthz24",
+      "type": "shape",
+      "x": 1880,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s3-pthz25",
+      "type": "shape",
+      "x": 1960,
+      "y": -46,
+      "w": 36,
+      "h": 120,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent-2",
+      "opacity": 0.9,
+      "rotation": 40
+    },
+    {
+      "id": "s3-pthzline",
+      "type": "shape",
+      "x": 0,
+      "y": 26,
+      "w": 1920,
+      "h": 2,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border"
+    },
+    {
+      "id": "s3-bar",
+      "type": "shape",
+      "x": 140,
+      "y": 102,
+      "w": 288,
+      "h": 54,
+      "z": 2,
+      "shape": "rect",
+      "fill": "#0000",
+      "radius": 6,
+      "matchKey": "accent-bar",
+      "stroke": "--accent",
+      "strokeWidth": 2
+    },
+    {
+      "id": "s3-kicker",
+      "type": "text",
+      "role": "label",
+      "x": 168,
+      "y": 108,
+      "w": 600,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Cause racine"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 600,
+        "color": "--accent",
+        "align": "left",
+        "lineHeight": 1.4,
+        "letterSpacing": 3,
+        "uppercase": true
+      }
+    },
+    {
+      "id": "s3-heading",
+      "type": "text",
+      "role": "heading",
+      "x": 140,
+      "y": 184,
+      "w": 1640,
+      "h": 140,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Un pool de connexions épuisé"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 64,
+        "weight": 600,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.1
+      }
+    },
+    {
+      "id": "s3-body",
+      "type": "text",
+      "role": "body",
+      "x": 140,
+      "y": 360,
+      "w": 940,
+      "h": 560,
+      "z": 3,
+      "content": [
+        {
+          "type": "bullet-list",
+          "items": [
+            {
+              "text": "Migration de schéma lancée à 19 h 58"
+            },
+            {
+              "text": "Verrou de table tenu pendant 47 minutes"
+            },
+            {
+              "text": "Pool de 200 connexions saturé en 3 minutes"
+            },
+            {
+              "text": "Alerte de saturation absente sur ce pool"
+            }
+          ]
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 34,
+        "weight": 400,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.55
+      }
+    },
+    {
+      "id": "s3-panel",
+      "type": "shape",
+      "x": 1140,
+      "y": 360,
+      "w": 640,
+      "h": 560,
+      "z": 1,
+      "shape": "rect",
+      "fill": "--surface",
+      "stroke": "--border",
+      "strokeWidth": 1,
+      "radius": 4
+    },
+    {
+      "id": "s3-code",
+      "type": "code",
+      "x": 1140,
+      "y": 420,
+      "w": 640,
+      "h": 500,
+      "z": 3,
+      "language": "log",
+      "code": "20:01:12 WARN pool used=180/200\n20:03:40 WARN pool used=200/200\n20:03:41 ERROR acquire timeout\n20:03:41 ERROR POST /charges 503\n20:49:58 INFO lock released\n20:53:02 INFO pool used=64/200",
+      "lineNumbers": true,
+      "size": 22,
+      "highlight": "3-4"
+    },
+    {
+      "id": "s3-footer",
+      "type": "text",
+      "role": "caption",
+      "x": 140,
+      "y": 1000,
+      "w": 1100,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Payvia · Post-mortem INC-2026-1003 · Sans blâme"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s3-page",
+      "type": "text",
+      "role": "caption",
+      "x": 1660,
+      "y": 1000,
+      "w": 120,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "03"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "right",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s3-light0",
+      "type": "shape",
+      "x": 1164,
+      "y": 380,
+      "w": 16,
+      "h": 16,
+      "z": 3,
+      "shape": "ellipse",
+      "fill": "--accent"
+    },
+    {
+      "id": "s3-light1",
+      "type": "shape",
+      "x": 1194,
+      "y": 380,
+      "w": 16,
+      "h": 16,
+      "z": 3,
+      "shape": "ellipse",
+      "fill": "--accent-2"
+    },
+    {
+      "id": "s3-light2",
+      "type": "shape",
+      "x": 1224,
+      "y": 380,
+      "w": 16,
+      "h": 16,
+      "z": 3,
+      "shape": "ellipse",
+      "fill": "--muted"
+    },
+    {
+      "id": "s3-file",
+      "type": "text",
+      "role": "caption",
+      "x": 1270,
+      "y": 370,
+      "w": 490,
+      "h": 36,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "payments-api.log"
+        }
+      ],
+      "style": {
+        "font": "mono",
+        "size": 22,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      }
+    }
+  ]
+}

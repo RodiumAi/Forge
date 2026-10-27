@@ -1,0 +1,268 @@
+{
+  "id": "s7",
+  "background": {
+    "type": "color",
+    "token": "--bg"
+  },
+  "elements": [
+    {
+      "id": "s7-bar",
+      "type": "shape",
+      "x": 140,
+      "y": 103,
+      "w": 96,
+      "h": 4,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 0,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s7-kicker",
+      "type": "text",
+      "role": "label",
+      "x": 140,
+      "y": 126,
+      "w": 1200,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Projections"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 600,
+        "color": "--accent",
+        "align": "left",
+        "lineHeight": 1.4,
+        "letterSpacing": 3,
+        "uppercase": true
+      }
+    },
+    {
+      "id": "s7-heading",
+      "type": "text",
+      "role": "heading",
+      "x": 140,
+      "y": 176,
+      "w": 1640,
+      "h": 140,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Une recharge en baisse probable"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 64,
+        "weight": 600,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.1
+      }
+    },
+    {
+      "id": "s7-chart",
+      "type": "chart",
+      "x": 140,
+      "y": 350,
+      "w": 1080,
+      "h": 600,
+      "z": 2,
+      "chart": "line",
+      "data": {
+        "labels": [
+          "2020",
+          "2025",
+          "2030",
+          "2035",
+          "2040",
+          "2045",
+          "2050"
+        ],
+        "series": [
+          {
+            "name": "Scénario médian (mm/an)",
+            "values": [
+              112,
+              109,
+              105,
+              101,
+              98,
+              95,
+              92
+            ],
+            "color": "--accent"
+          },
+          {
+            "name": "Scénario sec (mm/an)",
+            "values": [
+              112,
+              106,
+              99,
+              93,
+              87,
+              82,
+              77
+            ],
+            "color": "--accent-2"
+          }
+        ]
+      },
+      "options": {
+        "legend": true,
+        "values": true
+      }
+    },
+    {
+      "id": "s7-icon",
+      "type": "icon",
+      "x": 1320,
+      "y": 380,
+      "w": 56,
+      "h": 56,
+      "z": 3,
+      "icon": "trending-down",
+      "color": "--accent",
+      "strokeWidth": 1.75
+    },
+    {
+      "id": "s7-takeaway",
+      "type": "text",
+      "role": "heading",
+      "x": 1320,
+      "y": 460,
+      "w": 460,
+      "h": 130,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "De 112 à 92 mm par an"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 40,
+        "weight": 600,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.2
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 1
+      }
+    },
+    {
+      "id": "s7-comment",
+      "type": "text",
+      "role": "body",
+      "x": 1320,
+      "y": 610,
+      "w": 460,
+      "h": 300,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Même dans le scénario médian, la recharge baisse de 18 % en trente ans, et de 31 % dans le scénario sec."
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 26,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.5
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 2
+      }
+    },
+    {
+      "id": "s7-footer",
+      "type": "text",
+      "role": "caption",
+      "x": 140,
+      "y": 1000,
+      "w": 1100,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "R. Ahouandjinou · Soutenance de thèse · Université d'Abomey-Calavi"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s7-page",
+      "type": "text",
+      "role": "caption",
+      "x": 1660,
+      "y": 1000,
+      "w": 120,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "07"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "right",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s7-rule",
+      "type": "shape",
+      "x": 140,
+      "y": 104,
+      "w": 1640,
+      "h": 2,
+      "z": 1,
+      "shape": "rect",
+      "fill": "--border"
+    },
+    {
+      "id": "s7-footrule",
+      "type": "shape",
+      "x": 140,
+      "y": 978,
+      "w": 1640,
+      "h": 2,
+      "z": 1,
+      "shape": "rect",
+      "fill": "--border"
+    }
+  ]
+}

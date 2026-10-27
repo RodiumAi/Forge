@@ -1,0 +1,34 @@
+{
+  "kind": "codelab",
+  "id": "codelab-data",
+  "title": {
+    "fr": "Tutoriel data",
+    "en": "Data tutorial"
+  },
+  "description": {
+    "fr": "Analyser un fichier de ventes avec Python et pandas : chargement, nettoyage, agrégations et graphique. Jeu de données fourni.",
+    "en": "Analyse a sales file with Python and pandas: loading, cleaning, aggregation and a chart. Dataset included."
+  },
+  "tags": [
+    "data",
+    "python",
+    "pandas",
+    "analyse"
+  ],
+  "category": "data",
+  "bootHint": {
+    "fr": "Adapte codelab-data : jeu de données, questions à poser, bibliothèques.",
+    "en": "Adapt codelab-data: dataset, questions, libraries."
+  },
+  "tone": "curious, precise",
+  "preview": "preview.html",
+  "accent": "#2563EB",
+  "bg": "#F7FAFF",
+  "fg": "#0F1B33",
+  "muted": "#5B6170",
+  "fonts": {
+    "display": "IBM Plex Sans",
+    "body": "IBM Plex Sans",
+    "mono": "IBM Plex Mono"
+  }
+}

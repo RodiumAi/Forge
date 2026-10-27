@@ -1,0 +1,120 @@
+{
+  "id": "s2",
+  "background": {
+    "type": "image",
+    "src": "public/images/neon.webp",
+    "fit": "cover",
+    "overlay": "--bg",
+    "overlayOpacity": 0.8,
+    "credit": {
+      "source": "pixabay",
+      "author": "Alexas_Fotos",
+      "url": "https://pixabay.com/photos/crystal-ball-photography-bullet-3894871/"
+    }
+  },
+  "elements": [
+    {
+      "id": "s2-number",
+      "type": "text",
+      "role": "label",
+      "x": 140,
+      "y": 250,
+      "w": 1640,
+      "h": 240,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "4.0"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 200,
+        "weight": 700,
+        "color": "--accent",
+        "align": "center",
+        "lineHeight": 1.1
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "on-enter",
+        "durationMs": 500
+      }
+    },
+    {
+      "id": "s2-bar",
+      "type": "shape",
+      "x": 900,
+      "y": 510,
+      "w": 120,
+      "h": 10,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 5,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s2-title",
+      "type": "text",
+      "role": "title",
+      "x": 140,
+      "y": 550,
+      "w": 1640,
+      "h": 200,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Ce qui change aujourd'hui"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 88,
+        "weight": 700,
+        "color": "--fg",
+        "align": "center",
+        "lineHeight": 1.1
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 80,
+        "durationMs": 450
+      }
+    },
+    {
+      "id": "s2-subtitle",
+      "type": "text",
+      "role": "subtitle",
+      "x": 140,
+      "y": 770,
+      "w": 1640,
+      "h": 100,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Trois ans de retours, un an de réécriture."
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 34,
+        "weight": 400,
+        "color": "--muted",
+        "align": "center",
+        "lineHeight": 1.35
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 80,
+        "durationMs": 450
+      }
+    }
+  ]
+}

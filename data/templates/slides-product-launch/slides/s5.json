@@ -1,0 +1,366 @@
+{
+  "id": "s5",
+  "background": {
+    "type": "color",
+    "token": "--bg"
+  },
+  "elements": [
+    {
+      "id": "s5-glow",
+      "type": "shape",
+      "x": 1460,
+      "y": -520,
+      "w": 900,
+      "h": 900,
+      "z": 0,
+      "shape": "ellipse",
+      "fill": "--accent",
+      "opacity": 0.12
+    },
+    {
+      "id": "s5-bar",
+      "type": "shape",
+      "x": 140,
+      "y": 100,
+      "w": 80,
+      "h": 8,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 4,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s5-kicker",
+      "type": "text",
+      "role": "label",
+      "x": 140,
+      "y": 126,
+      "w": 1200,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "La technologie"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 600,
+        "color": "--accent",
+        "align": "left",
+        "lineHeight": 1.4,
+        "letterSpacing": 3,
+        "uppercase": true
+      }
+    },
+    {
+      "id": "s5-heading",
+      "type": "text",
+      "role": "heading",
+      "x": 140,
+      "y": 176,
+      "w": 1640,
+      "h": 140,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Deux innovations maison"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 56,
+        "weight": 700,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.1,
+        "uppercase": true,
+        "letterSpacing": 1
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "on-enter",
+        "durationMs": 500
+      }
+    },
+    {
+      "id": "s5-card1",
+      "type": "shape",
+      "x": 140,
+      "y": 360,
+      "w": 800,
+      "h": 560,
+      "z": 1,
+      "shape": "rect",
+      "fill": "--surface",
+      "stroke": "--border",
+      "strokeWidth": 1,
+      "radius": 24,
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 0
+      }
+    },
+    {
+      "id": "s5-badge1",
+      "type": "shape",
+      "x": 196,
+      "y": 410,
+      "w": 104,
+      "h": 104,
+      "z": 2,
+      "shape": "ellipse",
+      "fill": "--accent",
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 0
+      }
+    },
+    {
+      "id": "s5-icon1",
+      "type": "icon",
+      "x": 222,
+      "y": 436,
+      "w": 52,
+      "h": 52,
+      "z": 3,
+      "icon": "audio-waveform",
+      "color": "--accent-contrast",
+      "strokeWidth": 1.75,
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 0
+      }
+    },
+    {
+      "id": "s5-col1-title",
+      "type": "text",
+      "role": "heading",
+      "x": 196,
+      "y": 560,
+      "w": 690,
+      "h": 64,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Calibrage spatial"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 40,
+        "weight": 700,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.2
+      }
+    },
+    {
+      "id": "s5-col1-body",
+      "type": "text",
+      "role": "body",
+      "x": 196,
+      "y": 636,
+      "w": 690,
+      "h": 250,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Six micros mesurent la pièce en dix secondes et ajustent le son où que vous posiez Halo."
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 30,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.5
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 1
+      }
+    },
+    {
+      "id": "s5-card2",
+      "type": "shape",
+      "x": 980,
+      "y": 360,
+      "w": 800,
+      "h": 560,
+      "z": 1,
+      "shape": "rect",
+      "fill": "--surface",
+      "stroke": "--border",
+      "strokeWidth": 1,
+      "radius": 24,
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 2
+      }
+    },
+    {
+      "id": "s5-badge2",
+      "type": "shape",
+      "x": 1036,
+      "y": 410,
+      "w": 104,
+      "h": 104,
+      "z": 2,
+      "shape": "ellipse",
+      "fill": "--accent",
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 2
+      }
+    },
+    {
+      "id": "s5-icon2",
+      "type": "icon",
+      "x": 1062,
+      "y": 436,
+      "w": 52,
+      "h": 52,
+      "z": 3,
+      "icon": "battery-charging",
+      "color": "--accent-contrast",
+      "strokeWidth": 1.75,
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 2
+      }
+    },
+    {
+      "id": "s5-col2-title",
+      "type": "text",
+      "role": "heading",
+      "x": 1036,
+      "y": 560,
+      "w": 690,
+      "h": 64,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "20 h d'autonomie"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 40,
+        "weight": 700,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.2
+      }
+    },
+    {
+      "id": "s5-col2-body",
+      "type": "text",
+      "role": "body",
+      "x": 1036,
+      "y": 636,
+      "w": 690,
+      "h": 250,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Une batterie remplaçable, garantie cinq ans, rechargeable sur tout chargeur USB-C."
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 30,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.5
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 3
+      }
+    },
+    {
+      "id": "s5-footer",
+      "type": "text",
+      "role": "caption",
+      "x": 140,
+      "y": 1000,
+      "w": 1100,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Sonore · Halo · Keynote 2026"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s5-page",
+      "type": "text",
+      "role": "caption",
+      "x": 1660,
+      "y": 1000,
+      "w": 120,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "05"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "right",
+        "lineHeight": 1.4
+      }
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+/* Shop: serif category title, chips, hairline sort bar, two-column product grid. */
+.shop-screen { gap: 1.2rem; }
+.shop-screen .shop-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
+.shop-screen .shop-head h2 { font-size: 2.4rem; font-style: italic; line-height: 1; }
+
+.shop-screen .sortbar { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.shop-screen .sorts { display: flex; }
+.shop-screen .sort {
+  appearance: none; background: none; border: 0; min-height: 2.75rem; padding: 0 .55rem;
+  font-size: .66rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted);
+}
+.shop-screen .sort.on { color: var(--fg); text-decoration: underline; text-underline-offset: .4em; }
+
+.shop-screen .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.6rem .85rem; }
+.shop-screen .grid { padding-bottom: 1.6rem; }
+.shop-screen .grid .product-card:nth-child(even) { transform: translateY(1.6rem); }
+.shop-screen .empty { text-align: center; padding: 3rem 1rem; }

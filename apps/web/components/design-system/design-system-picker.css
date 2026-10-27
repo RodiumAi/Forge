@@ -1,0 +1,65 @@
+/* Design system picker: deck Theme section and builder Options > Marque. */
+.de-ds { position: relative; display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.de-ds-current,
+.de-ds-option {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 8px 10px; border: 1px solid var(--f-line); border-radius: 12px;
+  background: var(--f-surface); color: var(--f-text); font: inherit; text-align: left; cursor: pointer;
+}
+.de-ds-current:hover:not(:disabled), .de-ds-current.is-open { border-color: var(--f-orange); }
+.de-ds-current > svg { margin-left: auto; color: var(--f-muted); flex: none; }
+.de-ds-current:disabled { cursor: default; opacity: .7; }
+.de-ds-name { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.de-ds-name strong { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.de-ds-name small { font-size: 11.5px; color: var(--f-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.de-ds-swatch {
+  position: relative; flex: none; display: grid; place-items: center; width: 34px; height: 34px;
+  border-radius: 9px; font-size: 13px; font-weight: 700; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1);
+}
+.de-ds-swatch i { position: absolute; right: -3px; bottom: -3px; width: 12px; height: 12px; border-radius: 99px; border: 2px solid var(--f-bg); }
+.de-ds-swatch.is-empty { background: rgba(255, 255, 255, .06); color: var(--f-muted); }
+.de-ds-menu {
+  position: absolute; top: calc(100% - 4px); left: 0; right: 0; z-index: 30;
+  display: flex; flex-direction: column; gap: 2px; max-height: 360px; overflow-y: auto;
+  padding: 6px; border: 1px solid var(--f-line); border-radius: 14px; background: var(--f-composer, #1C1F26);
+  box-shadow: 0 18px 40px -16px rgba(0, 0, 0, .7);
+}
+.de-ds-menu .de-ds-option { border-color: transparent; background: transparent; padding: 6px 8px; }
+.de-ds-menu .de-ds-option:hover, .de-ds-menu .de-ds-option:focus-visible { background: rgba(255, 255, 255, .06); outline: none; }
+.de-ds-menu .de-ds-option[aria-selected="true"] { background: var(--f-orange-soft); }
+.de-ds-menu .de-ds-option > svg { color: var(--f-orange); flex: none; }
+.de-ds-group { margin: 6px 8px 2px; font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--f-muted); font-weight: 600; }
+.de-ds-empty { margin: 6px 8px; font-size: 12px; color: var(--f-muted); }
+.de-ds-create { margin-top: 4px; border-top: 1px solid var(--f-line) !important; border-radius: 0 0 10px 10px !important; text-decoration: none; }
+.de-ds-plus { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 9px; border: 1px dashed var(--f-line); color: var(--f-orange); }
+.de-ds-update { display: flex; flex-direction: column; gap: 6px; padding: 10px; border-radius: 12px; background: var(--f-orange-soft); }
+.de-ds-update p { margin: 0; font-size: 12px; }
+.de-ds-update .de-ds-btn { align-self: flex-start; }
+.de-ds-detach { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; padding: 2px 0; border: 0; background: none; color: var(--f-muted); font: inherit; font-size: 12px; cursor: pointer; }
+.de-ds-detach:hover { color: var(--f-text); }
+.de-ds-error { margin: 0; font-size: 12px; color: #f87171; }
+.de-ds-locked { display: flex; gap: 10px; margin-bottom: 12px; padding: 12px; border-radius: 12px; background: var(--f-orange-soft); }
+.de-ds-locked > svg { flex: none; margin-top: 2px; color: var(--f-orange); }
+.de-ds-locked strong { font-size: 13px; }
+.de-ds-locked p { margin: 4px 0 10px; font-size: 12px; color: var(--f-muted); line-height: 1.4; }
+.de-ds-btn {
+  display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 99px;
+  border: 1px solid var(--f-line); background: var(--f-surface); color: var(--f-text); font: inherit; font-size: 12.5px;
+  font-weight: 600; text-decoration: none; cursor: pointer; white-space: nowrap;
+}
+.de-ds-btn.is-primary { background: var(--f-orange); border-color: transparent; color: #fff; }
+.de-ds-btn:hover:not(:disabled) { filter: brightness(1.08); }
+.de-ds-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* Below the Builder plan: the picker stays visible, greyed, with its plan. */
+.de-ds.is-locked .de-ds-current { cursor: not-allowed; }
+.de-ds.is-locked .de-ds-current:hover { border-color: var(--f-line); }
+.de-ds.is-locked .de-ds-swatch,
+.de-ds.is-locked .de-ds-name { opacity: .55; }
+.de-ds.is-locked .de-ds-locked { margin-bottom: 0; }
+.de-ds-plan {
+  display: inline-flex; align-items: center; gap: 4px; margin-left: auto; flex: none;
+  padding: 3px 8px; border-radius: 99px; background: var(--f-text); color: var(--f-bg);
+  font-size: 11px; font-weight: 600; line-height: 1.2;
+}
+.de-ds-current > .de-ds-plan > svg { margin: 0; color: inherit; }

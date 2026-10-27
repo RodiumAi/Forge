@@ -1,0 +1,28 @@
+/* Home tab. Scoped under .home-screen. The room photo sits behind the
+   transparent navbar and fades into the page; everything above it is glass. */
+.home-screen { position: static; }
+.home-screen > *:not(.backdrop) { position: relative; }
+.home-screen .backdrop { position: absolute; z-index: 0; inset: 0 0 auto; height: 27rem; overflow: hidden; pointer-events: none; }
+.home-screen .backdrop img { width: 100%; height: 100%; object-fit: cover; filter: blur(3px) saturate(115%); transform: scale(1.08); }
+.home-screen .backdrop::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(18, 20, 23, .55) 0%, rgba(18, 20, 23, .2) 35%, rgba(18, 20, 23, .7) 72%, var(--bg) 100%);
+}
+
+.home-screen .climate-hero { display: grid; gap: .3rem; margin-top: 1.4rem; padding: 1.15rem 1.25rem 1.2rem; border-radius: 1.9rem; color: var(--fg); text-decoration: none; background: rgba(255, 255, 255, .09); }
+.home-screen .ch-top { display: flex; justify-content: space-between; align-items: center; }
+.home-screen .ch-top .kicker { color: color-mix(in srgb, var(--fg) 75%, transparent); }
+.home-screen .ch-go { width: 2.2rem; height: 2.2rem; border-radius: 999px; display: grid; place-items: center; background: rgba(255, 255, 255, .12); }
+.home-screen .ch-temp { margin: .1rem 0 0; font-family: var(--font-display); font-weight: 300; font-size: 4.4rem; line-height: 1; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+.home-screen .ch-temp sup { font-size: 1.2rem; font-weight: 400; letter-spacing: 0; vertical-align: 2.2rem; margin-left: .2rem; color: var(--accent); }
+.home-screen .ch-mode { margin: 0; font-size: .86rem; color: color-mix(in srgb, var(--fg) 80%, transparent); display: flex; align-items: center; gap: .45rem; }
+.home-screen .mode-dot { width: .55rem; height: .55rem; border-radius: 999px; background: var(--cool); box-shadow: 0 0 10px var(--cool); }
+.home-screen .mode-dot.heat { background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+.home-screen .mode-dot.auto { background: linear-gradient(90deg, var(--cool), var(--accent)); }
+.home-screen .ch-stats { display: flex; gap: .5rem; margin-top: .7rem; }
+.home-screen .ch-stats span { display: inline-flex; align-items: center; gap: .35rem; padding: .4rem .75rem; border-radius: 999px; background: rgba(0, 0, 0, .25); font-size: .8rem; }
+
+.home-screen .pulse { display: grid; grid-template-columns: repeat(3, 1fr); gap: .6rem; }
+.home-screen .pulse > div { border-radius: 1.2rem; padding: .8rem .85rem; display: grid; gap: .25rem; min-height: 4.6rem; align-content: space-between; color: var(--accent); }
+.home-screen .pulse strong { font-family: var(--font-display); font-size: 1.45rem; font-weight: 500; line-height: 1; color: var(--fg); }
+.home-screen .pulse span { font-size: .75rem; color: color-mix(in srgb, var(--fg) 75%, transparent); }

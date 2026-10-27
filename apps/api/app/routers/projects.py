@@ -17,7 +17,9 @@ from sqlalchemy.orm import Session
 from app.auth import get_current_user, get_media_user
 from app.config import get_settings
 from app.db import get_db
+from app.errors import SitesError
 from app.i18n import resolve_locale, t
+from app.kinds import get_kind, kind_enabled, resolve_kind
 from app.models import AgentRun, Chat, Message, PreviewComment, Project, SiteUsageDay, User
 from app.schemas import (
     ChatCreate,
@@ -31,6 +33,7 @@ from app.schemas import (
 )
 from app.services import preview_babel, rate_limit
 from app.services.capabilities import require_rodi_for_paid_capability
+from app.services.document_scaffold import apply_design_system
 from app.services.filesystem import list_files, project_dir, write_bytes
 from app.services.frodi_cycle import current_frodi_cycle_key
 from app.services.posthog_client import capture_for_user
@@ -85,6 +88,14 @@ def _has_thumbnail(project_id: str | UUID) -> bool:
     return _thumbnail_path(project_id).is_file()
 
 
+def _thumbnail_at(project_id: str | UUID) -> int | None:
+    """mtime of the stored card, so its URL changes when it is re-rendered."""
+    try:
+        return int(_thumbnail_path(project_id).stat().st_mtime)
+    except OSError:
+        return None
+
+
 def _project_out(
     project: Project,
     *,
@@ -112,11 +123,12 @@ def _project_out(
         custom_domain=domain.hostname if domain else None,
         custom_domain_status=domain.status if domain else None,
         template_id=project.template_id,
-        platform=getattr(project, "platform", None) or "web",
+        platform=resolve_kind(getattr(project, "platform", None)),
         published_at=getattr(project, "published_at", None),
         created_at=project.created_at,
         updated_at=project.updated_at,
         has_thumbnail=_has_thumbnail(project.id),
+        thumbnail_at=_thumbnail_at(project.id),
         access_role=access_role,
         collaborators=collaborators or [],
     )
@@ -256,6 +268,11 @@ def list_projects(user: User = Depends(get_current_user), db: Session = Depends(
         for project, role in shared
     )
     out.sort(key=lambda item: item.updated_at, reverse=True)
+    # Cards show a stored image only: (re)render the stale ones in the background.
+    from app.services.project_thumbnail import request_thumbnail
+
+    for item in out:
+        request_thumbnail(str(item.id), item.platform, item.name)
     return out
 
 
@@ -377,13 +394,34 @@ async def create_project(
 
     template_id = (body.template_id or "").strip() or None
     prompt = (body.prompt or "").strip()
-    platform = (body.platform or "web").strip().lower()
-    if platform not in ("web", "mobile"):
-        platform = "web"
-    if template_id:
-        meta_for_kind = get_template(template_id)
-        if meta_for_kind is not None:
-            platform = meta_for_kind.kind if meta_for_kind.kind in ("web", "mobile") else "web"
+    platform = resolve_kind(body.platform or "web")
+    meta_for_kind = get_template(template_id) if template_id else None
+    if meta_for_kind is not None:
+        platform = resolve_kind(meta_for_kind.kind)
+    # Forge Design kinds ship dark: refused until their flag is on.
+    if not kind_enabled(platform):
+        raise SitesError(400, "KIND_DISABLED", "This project type is not available yet.")
+    # Design systems (a new one, or one dressing the project) start at Builder.
+    if platform == "design_system" or body.design_system_id is not None:
+        from app.services.design_system.gating import require_design_systems
+
+        require_design_systems(db, user)
+    # Free starts from its free kits only; the others start at Starter.
+    if meta_for_kind is not None:
+        from app.services.template_gating import require_template
+
+        require_template(db, user, meta_for_kind)
+    # The format only means something for a deck; other kinds ignore it.
+    deck_ratio = body.format if platform == "slides" else None
+    # A design system to dress the new project: it must be a design_system
+    # project the caller can open (owner or collaborator), else 404 / 400.
+    # Team members may use a design system shared with their team.
+    design_system_source: str | None = None
+    if body.design_system_id is not None:
+        from app.services.design_system.registry import design_system_project
+
+        source = design_system_project(db, user, body.design_system_id)
+        design_system_source = str(source.id)
     # Templates apply ONLY when the user explicitly picks one. The old keyword
     # router silently forked a kit from prompt words ("portfolio", "shop"…),
     # hijacking the user's intent — a bespoke design request landed on a
@@ -450,12 +488,17 @@ async def create_project(
                     project.design_brief = desc
                     db.commit()
         else:
-            await asyncio.to_thread(
-                scaffold_vite_react,
-                str(project.id),
-                project.name,
-                platform,
-            )
+            kind = get_kind(platform)
+            if kind is not None and kind.engine == "document":
+                options = {"ratio": deck_ratio} if deck_ratio else {}
+                await asyncio.to_thread(kind.scaffold, str(project.id), project.name, **options)
+            else:
+                await asyncio.to_thread(
+                    scaffold_vite_react,
+                    str(project.id),
+                    project.name,
+                    platform,
+                )
     except Exception as exc:
         db.delete(project)
         db.commit()
@@ -463,6 +506,27 @@ async def create_project(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(exc),
         ) from exc
+
+    if design_system_source:
+        # Best effort: a design system that cannot be read leaves the default
+        # charter in place rather than failing a project that already exists.
+        try:
+            applied = await asyncio.to_thread(
+                apply_design_system, str(project.id), design_system_source, platform
+            )
+            if applied:
+                from app.services.design_system.registry import ensure_record, get_record, refresh_version
+
+                row = get_record(db, design_system_source)
+                if row is None and source is not None:
+                    row = ensure_record(db, source)
+                project.design_system_project_id = source.id
+                project.design_system_version = refresh_version(row) if row is not None else None
+                db.commit()
+        except Exception:
+            logger.warning(
+                "design system %s not applied to %s", design_system_source, project.id, exc_info=True
+            )
 
     chat = Chat(project_id=project.id, title=t("main_chat", locale))
     db.add(chat)
@@ -475,6 +539,8 @@ async def create_project(
             "template_id": template_id,
             "platform": platform,
             "has_prompt": bool(prompt),
+            "format": deck_ratio,
+            "has_design_system": bool(design_system_source),
         },
     )
     return _project_out(project)

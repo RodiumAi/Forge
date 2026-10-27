@@ -1,0 +1,142 @@
+{
+  "id": "s1",
+  "background": {
+    "type": "image",
+    "src": "public/images/fireworks.webp",
+    "fit": "cover",
+    "overlay": "--bg",
+    "overlayOpacity": 0.72,
+    "credit": {
+      "source": "pixabay",
+      "author": "nck_gsl",
+      "url": "https://pixabay.com/photos/new-years-eve-fireworks-city-sky-1953253/"
+    }
+  },
+  "elements": [
+    {
+      "id": "s1-bar",
+      "type": "shape",
+      "x": 900,
+      "y": 300,
+      "w": 120,
+      "h": 10,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 5,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s1-label",
+      "type": "text",
+      "role": "label",
+      "x": 140,
+      "y": 336,
+      "w": 1640,
+      "h": 48,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Bilan personnel · Yasmine Belaïd"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 26,
+        "weight": 600,
+        "color": "--accent",
+        "align": "center",
+        "lineHeight": 1.4,
+        "letterSpacing": 3,
+        "uppercase": true
+      }
+    },
+    {
+      "id": "s1-title",
+      "type": "text",
+      "role": "title",
+      "x": 140,
+      "y": 396,
+      "w": 1640,
+      "h": 300,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Mon année 2026"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 160,
+        "weight": 800,
+        "color": "--fg",
+        "align": "center",
+        "lineHeight": 1.05,
+        "letterSpacing": -1
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "on-enter",
+        "durationMs": 500
+      }
+    },
+    {
+      "id": "s1-subtitle",
+      "type": "text",
+      "role": "subtitle",
+      "x": 140,
+      "y": 720,
+      "w": 1640,
+      "h": 130,
+      "z": 3,
+      "opacity": 0.86,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Un nouveau travail, un premier semi-marathon et beaucoup de premières fois."
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 34,
+        "weight": 400,
+        "color": "--fg",
+        "align": "center",
+        "lineHeight": 1.35
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 80,
+        "durationMs": 450
+      }
+    },
+    {
+      "id": "s1-meta",
+      "type": "text",
+      "role": "caption",
+      "x": 140,
+      "y": 930,
+      "w": 1640,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Partagé avec mes proches le 31 décembre 2026"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 500,
+        "color": "--muted",
+        "align": "center",
+        "lineHeight": 1.4
+      }
+    }
+  ]
+}

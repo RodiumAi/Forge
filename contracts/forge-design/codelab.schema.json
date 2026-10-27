@@ -1,0 +1,217 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge.rodiumai.io/contracts/forge-design/codelab.schema.json",
+  "title": "Forge codelab",
+  "description": "codelab.json of a `codelab` project: metadata, ordered steps (each one an extended Markdown file under steps/) and downloadable files under files/. Version 1. Rules JSON Schema cannot express (unique step and download ids, unique step files) are enforced by the API and web validators.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "title", "level", "durationMinutes", "steps"],
+  "properties": {
+    "version": { "const": 1 },
+    "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "summary": { "type": "string", "maxLength": 2000 },
+    "level": { "enum": ["beginner", "intermediate", "advanced"] },
+    "durationMinutes": { "type": "integer", "minimum": 0, "maximum": 6000 },
+    "prerequisites": {
+      "type": "array",
+      "maxItems": 30,
+      "items": { "type": "string", "minLength": 1, "maxLength": 300 }
+    },
+    "learn": {
+      "type": "array",
+      "maxItems": 30,
+      "items": { "type": "string", "minLength": 1, "maxLength": 300 }
+    },
+    "author": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "url": { "type": "string", "maxLength": 2000, "pattern": "^https://" }
+      }
+    },
+    "repoUrl": { "type": "string", "maxLength": 2000, "pattern": "^https://" },
+    "theme": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["designSystem", "tokens"],
+      "properties": {
+        "designSystem": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "tokens": { "type": "string", "minLength": 1, "maxLength": 200 }
+      }
+    },
+    "steps": {
+      "type": "array",
+      "maxItems": 200,
+      "items": { "$ref": "#/$defs/step" }
+    },
+    "downloads": {
+      "type": "array",
+      "maxItems": 50,
+      "items": { "$ref": "#/$defs/download" }
+    },
+    "cover": {
+      "description": "Cover page: kicker above the title (event, workshop), short highlights and the QR code of the published page (`showQr`, default true).",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "eyebrow": { "type": "string", "maxLength": 160 },
+        "highlights": {
+          "type": "array",
+          "maxItems": 8,
+          "items": { "type": "string", "minLength": 1, "maxLength": 200 }
+        },
+        "showQr": { "type": "boolean" }
+      }
+    },
+    "presenter": {
+      "description": "Who presents the codelab. The name falls back to `author.name`.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "maxLength": 120 },
+        "role": { "type": "string", "maxLength": 120 },
+        "company": { "type": "string", "maxLength": 120 },
+        "photo": { "type": "string", "minLength": 1, "maxLength": 400, "pattern": "^(?!.*\\.\\.)(?!/)[A-Za-z0-9_./-]+$" },
+        "bio": { "type": "string", "maxLength": 1500 },
+        "links": {
+          "type": "array",
+          "maxItems": 6,
+          "items": { "$ref": "#/$defs/link" }
+        }
+      }
+    },
+    "setup": {
+      "description": "Setup page: tools to install, numbered steps per service, a promo code and commands to copy.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "intro": { "type": "string", "maxLength": 1000 },
+        "tools": {
+          "type": "array",
+          "maxItems": 20,
+          "items": { "$ref": "#/$defs/setupTool" }
+        },
+        "groups": {
+          "type": "array",
+          "maxItems": 6,
+          "items": { "$ref": "#/$defs/setupGroup" }
+        },
+        "promo": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["code"],
+          "properties": {
+            "code": { "type": "string", "minLength": 1, "maxLength": 64 },
+            "label": { "type": "string", "maxLength": 200 },
+            "url": { "type": "string", "maxLength": 2000, "pattern": "^https://" }
+          }
+        },
+        "commands": {
+          "type": "array",
+          "maxItems": 12,
+          "items": { "$ref": "#/$defs/setupCommand" }
+        }
+      }
+    },
+    "pages": {
+      "description": "Show (true) or hide (false) the presenter and setup pages; absent means shown when filled.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "presenter": { "type": "boolean" },
+        "setup": { "type": "boolean" }
+      }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"
+    },
+    "step": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "file", "minutes"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "title": { "type": "string", "maxLength": 200 },
+        "file": {
+          "description": "steps/<nn>-<slug>.md",
+          "type": "string",
+          "pattern": "^steps/[0-9]{2,3}-[a-z0-9]+(-[a-z0-9]+)*\\.md$"
+        },
+        "minutes": { "type": "integer", "minimum": 0, "maximum": 600 }
+      }
+    },
+    "download": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "path"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "label": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "path": {
+          "description": "A file or folder under files/. `zip` packs it at publish time.",
+          "type": "string",
+          "maxLength": 300,
+          "pattern": "^files/(?!.*\\.\\.)[A-Za-z0-9_./-]+$"
+        },
+        "zip": { "type": "boolean" }
+      }
+    },
+    "link": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["label", "url"],
+      "properties": {
+        "label": { "type": "string", "minLength": 1, "maxLength": 60 },
+        "url": { "type": "string", "maxLength": 2000, "pattern": "^https://" }
+      }
+    },
+    "setupTool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "version": { "type": "string", "maxLength": 40 },
+        "url": { "type": "string", "maxLength": 2000, "pattern": "^https://" }
+      }
+    },
+    "setupGroup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "items"],
+      "properties": {
+        "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "items": {
+          "type": "array",
+          "maxItems": 12,
+          "items": { "$ref": "#/$defs/setupItem" }
+        }
+      }
+    },
+    "setupItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text"],
+      "properties": {
+        "text": { "type": "string", "minLength": 1, "maxLength": 300 },
+        "url": { "type": "string", "maxLength": 2000, "pattern": "^https://" },
+        "code": { "type": "string", "maxLength": 200 }
+      }
+    },
+    "setupCommand": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code"],
+      "properties": {
+        "label": { "type": "string", "maxLength": 120 },
+        "language": { "type": "string", "pattern": "^[a-z0-9+#-]{1,32}$" },
+        "code": { "type": "string", "minLength": 1, "maxLength": 4000 }
+      }
+    }
+  }
+}

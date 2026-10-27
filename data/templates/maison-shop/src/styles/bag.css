@@ -1,0 +1,32 @@
+/* Bag: free delivery meter, hairline item rows with steppers, totals, checkout and success state. */
+.bag-screen { gap: 1.4rem; }
+
+.bag-screen .ship-note {
+  position: relative; display: flex; align-items: center; gap: .55rem; padding: .85rem 1rem; overflow: hidden;
+  border: 1px solid var(--line); font-size: .74rem; letter-spacing: .12em; text-transform: uppercase;
+}
+.bag-screen .ship-note i { position: absolute; left: 0; bottom: 0; height: 2px; background: var(--rust); transition: width .4s ease; }
+
+.bag-screen .lines { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.bag-screen .lines li { display: grid; grid-template-columns: 5.6rem 1fr; gap: 1rem; padding: 1.1rem 0; border-bottom: 1px solid var(--line); }
+.bag-screen .line-photo { display: block; aspect-ratio: 3 / 4; overflow: hidden; background: var(--surface-2); }
+.bag-screen .line-photo img { width: 100%; height: 100%; object-fit: cover; }
+.bag-screen .line-info { display: grid; align-content: space-between; gap: .4rem; min-width: 0; }
+.bag-screen .line-top { display: flex; justify-content: space-between; align-items: flex-start; gap: .5rem; }
+.bag-screen .line-top strong { font-family: var(--font-display); font-size: 1.3rem; font-weight: 600; line-height: 1.1; padding-top: .3rem; }
+.bag-screen .line-remove { appearance: none; border: 0; background: none; width: 2.75rem; height: 2.75rem; margin: -.5rem -.7rem 0 0; display: grid; place-items: center; color: var(--muted); }
+.bag-screen .line-bottom { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+.bag-screen .line-price { color: var(--rust); font-weight: 500; }
+
+.bag-screen .totals { display: grid; gap: .65rem; }
+.bag-screen .totals div { display: flex; justify-content: space-between; font-size: .9rem; }
+.bag-screen .totals div span:first-child { color: var(--muted); }
+.bag-screen .totals .grand { font-family: var(--font-display); font-size: 1.6rem; font-weight: 600; }
+.bag-screen .totals .grand span:first-child { color: var(--fg); }
+.bag-screen .fine { text-align: center; font-size: .8rem; }
+
+.bag-screen .done { display: grid; justify-items: center; text-align: center; gap: 1rem; padding: 3.5rem .5rem 1rem; }
+.bag-screen .done-mark { width: 4.5rem; height: 4.5rem; border: 1px solid var(--fg); border-radius: 999px; display: grid; place-items: center; animation: rise .6s ease both; }
+.bag-screen .done h2 { font-size: 2.5rem; font-style: italic; line-height: 1; }
+.bag-screen .done .muted { max-width: 30ch; }
+.bag-screen .done .btn-primary { margin-top: .6rem; }

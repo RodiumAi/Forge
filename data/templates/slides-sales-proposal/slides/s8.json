@@ -1,0 +1,257 @@
+{
+  "id": "s8",
+  "background": {
+    "type": "color",
+    "token": "--bg"
+  },
+  "elements": [
+    {
+      "id": "s8-band",
+      "type": "shape",
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 336,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--surface"
+    },
+    {
+      "id": "s8-bar",
+      "type": "shape",
+      "x": 140,
+      "y": 120,
+      "w": 539,
+      "h": 50,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 25,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s8-kicker",
+      "type": "text",
+      "role": "label",
+      "x": 166,
+      "y": 124,
+      "w": 539,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Retour sur investissement"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 600,
+        "color": "--accent-contrast",
+        "align": "left",
+        "lineHeight": 1.4,
+        "letterSpacing": 3,
+        "uppercase": true
+      }
+    },
+    {
+      "id": "s8-heading",
+      "type": "text",
+      "role": "heading",
+      "x": 140,
+      "y": 192,
+      "w": 1640,
+      "h": 140,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Un projet remboursé en 19 mois"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 64,
+        "weight": 600,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.1
+      }
+    },
+    {
+      "id": "s8-chart",
+      "type": "chart",
+      "x": 140,
+      "y": 350,
+      "w": 1080,
+      "h": 600,
+      "z": 2,
+      "chart": "bar",
+      "data": {
+        "labels": [
+          "T1",
+          "T2",
+          "T3",
+          "T4",
+          "T5",
+          "T6",
+          "T7",
+          "T8"
+        ],
+        "series": [
+          {
+            "name": "Gain cumulé (k€)",
+            "values": [
+              -310,
+              -260,
+              -170,
+              -60,
+              40,
+              160,
+              290,
+              430
+            ],
+            "color": "--accent"
+          }
+        ]
+      },
+      "options": {
+        "legend": false,
+        "values": true
+      }
+    },
+    {
+      "id": "s8-icon",
+      "type": "icon",
+      "x": 1320,
+      "y": 380,
+      "w": 56,
+      "h": 56,
+      "z": 3,
+      "icon": "piggy-bank",
+      "color": "--accent",
+      "strokeWidth": 1.75
+    },
+    {
+      "id": "s8-takeaway",
+      "type": "text",
+      "role": "heading",
+      "x": 1320,
+      "y": 460,
+      "w": 460,
+      "h": 130,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "430 k€ de gain net à deux ans"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 40,
+        "weight": 600,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.2
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 1
+      }
+    },
+    {
+      "id": "s8-comment",
+      "type": "text",
+      "role": "body",
+      "x": 1320,
+      "y": 610,
+      "w": 460,
+      "h": 300,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Hypothèse prudente : +5 points de clients fidèles et 12 minutes gagnées par réservation."
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 26,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.5
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 2
+      }
+    },
+    {
+      "id": "s8-footer",
+      "type": "text",
+      "role": "caption",
+      "x": 140,
+      "y": 1000,
+      "w": 1100,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Nexo Conseil · Proposition pour Hôtels Azur"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s8-page",
+      "type": "text",
+      "role": "caption",
+      "x": 1660,
+      "y": 1000,
+      "w": 120,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "08"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "right",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s8-footrule",
+      "type": "shape",
+      "x": 140,
+      "y": 978,
+      "w": 1640,
+      "h": 2,
+      "z": 1,
+      "shape": "rect",
+      "fill": "--border"
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+/* Voice mode (full screen, no tab bar). Scoped under .voice-screen. */
+.voice-screen {
+  min-height: 100dvh; align-items: center; text-align: center;
+  padding: calc(.7rem + var(--safe-top)) 1.2rem calc(1.8rem + var(--safe-bottom));
+  background:
+    radial-gradient(70% 45% at 50% 40%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%),
+    radial-gradient(50% 30% at 50% 100%, color-mix(in srgb, var(--pink) 8%, transparent), transparent 70%),
+    var(--bg);
+}
+.voice-screen .voice-bar { width: 100%; display: flex; align-items: center; justify-content: space-between; }
+.voice-screen .v-title { display: inline-flex; align-items: center; gap: .45rem; font-family: var(--font-display); font-weight: 600; font-size: .95rem; }
+.voice-screen .v-title i { width: .5rem; height: .5rem; border-radius: 999px; background: var(--accent); box-shadow: 0 0 10px var(--accent); animation: voice-blink 1.6s ease-in-out infinite; }
+.voice-screen .icon-btn.on { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+
+.voice-screen .stage { position: relative; flex: 1; width: 100%; display: grid; place-items: center; min-height: 20rem; }
+.voice-screen .pulse { position: absolute; width: 15rem; height: 15rem; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); animation: voice-pulse 2.8s ease-out infinite; }
+.voice-screen .pulse.p2 { animation-delay: 1.4s; }
+.voice-screen.speaking .pulse { animation-duration: 1.6s; }
+.voice-screen.muted .pulse { animation: none; opacity: 0; }
+.voice-screen .stage .orb { animation: voice-throb 2.4s ease-in-out infinite; }
+.voice-screen.speaking .stage .orb { animation-duration: .9s; }
+.voice-screen.muted .stage .orb { animation: none; }
+
+.voice-screen .status { margin: 0 0 .5rem; font-size: .74rem; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); }
+.voice-screen.muted .status { color: var(--muted); }
+.voice-screen .caption { margin: 0; min-height: 4.2rem; max-width: 22ch; font-family: var(--font-display); font-size: 1.35rem; font-weight: 500; line-height: 1.35; letter-spacing: -.02em; transition: opacity .3s ease; }
+.voice-screen .caption.hidden { opacity: 0; }
+
+.voice-screen .wave { display: flex; align-items: center; justify-content: center; gap: .22rem; height: 3.6rem; margin: 1.2rem 0 1.6rem; }
+.voice-screen .wave i { width: .24rem; height: 100%; border-radius: 999px; background: linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--accent) 40%, var(--pink))); transform-origin: center; animation: voice-wave 1s ease-in-out infinite; }
+.voice-screen.muted .wave i { animation-play-state: paused; opacity: .25; }
+
+.voice-screen .controls { display: flex; gap: 1.6rem; }
+.voice-screen .ctl { appearance: none; width: 4.4rem; height: 4.4rem; border-radius: 999px; border: 1px solid var(--line); background: var(--surface-2); display: grid; place-items: center; }
+.voice-screen .ctl.on { background: var(--fg); color: var(--bg); }
+.voice-screen .ctl.end { background: #ef4444; border-color: #ef4444; color: #fff; box-shadow: 0 12px 30px -10px rgba(239, 68, 68, .7); }
+
+@keyframes voice-pulse { from { transform: scale(.9); opacity: .9; } to { transform: scale(1.7); opacity: 0; } }
+@keyframes voice-throb { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+@keyframes voice-wave { 0%, 100% { transform: scaleY(.18); } 50% { transform: scaleY(1); } }
+@keyframes voice-blink { 50% { opacity: .35; } }

@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "title": "Créer une API REST avec FastAPI",
+  "summary": "Une API en 45 minutes.",
+  "level": "intermediate",
+  "durationMinutes": 45,
+  "prerequisites": [
+    "Python 3.12",
+    "Un terminal"
+  ],
+  "learn": [
+    "Créer des routes",
+    "Valider les données"
+  ],
+  "author": {
+    "name": "RodiumAi",
+    "url": "https://rodiumai.com"
+  },
+  "repoUrl": "https://github.com/RodiumAi/example",
+  "theme": {
+    "designSystem": "local",
+    "tokens": "DESIGN.md"
+  },
+  "steps": [
+    {
+      "id": "intro",
+      "file": "steps/01-intro.md",
+      "minutes": 3
+    },
+    {
+      "id": "setup",
+      "title": "Installation",
+      "file": "steps/02-setup.md",
+      "minutes": 7
+    }
+  ],
+  "downloads": [
+    {
+      "id": "starter",
+      "label": "Projet de départ",
+      "path": "files/starter",
+      "zip": true
+    },
+    {
+      "id": "solution",
+      "label": "Solution finale",
+      "path": "files/solution/main.py"
+    }
+  ]
+}

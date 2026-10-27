@@ -1,0 +1,190 @@
+/* Forge redesign: design tokens.
+   Every token is prefixed `--f-` so it never collides with the old globals.css
+   variables (--bg, --muted, --radius, --font...) while both designs coexist.
+   Dark is the reference theme; light overrides it. The ThemeProvider always sets
+   data-theme on <html>; without it (script blocked) the OS preference decides. */
+
+:root {
+  /* Brand */
+  --f-orange: #EB6118;
+  --f-orange-hover: #EA5416;
+  --f-orange-text-light: #C14A0C; /* small orange text on light: 4.9:1 */
+  --f-orange-soft: rgba(235, 97, 24, .16);
+  --f-orange-ring: rgba(235, 97, 24, .18);
+  --f-midnight: #1C1F26;
+  --f-white: #FFFFFF;
+
+  /* Type */
+  --f-font: var(--font-open-sauce-sans), "Open Sauce Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --f-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --f-fs-xs: 12px;
+  --f-fs-sm: 13.5px;
+  --f-fs: 15px;
+  --f-fs-md: 16px;
+  --f-fs-lg: 18px;
+  --f-fs-h3: 20px;
+  --f-fs-h2: clamp(22px, 2.4vw, 28px);
+  --f-fs-h1: clamp(30px, 4vw, 46px);
+  --f-fs-display: clamp(42px, 8.2vw, 100px);
+  --f-lh: 1.55;
+  --f-tracking-tight: -.02em;
+
+  /* Radii */
+  --f-r-xs: 8px;
+  --f-r-sm: 10px;
+  --f-r-md: 12px;
+  --f-r: 16px;
+  --f-r-lg: 24px;
+  --f-r-xl: 32px;
+  --f-r-pill: 999px;
+
+  /* Spacing and layout */
+  --f-space-1: 4px;
+  --f-space-2: 8px;
+  --f-space-3: 12px;
+  --f-space-4: 16px;
+  --f-space-5: 24px;
+  --f-space-6: 32px;
+  --f-space-7: 48px;
+  --f-wrap: 1240px;
+  --f-gutter: clamp(16px, 4vw, 40px);
+  --f-page-max: 1360px;
+  --f-side-w: 264px;
+  --f-side-w-collapsed: 76px;
+  --f-topbar-h: 68px;
+
+  /* Motion */
+  --f-ease: cubic-bezier(.2, 0, 0, 1);
+  --f-ease-out: cubic-bezier(.16, 1, .3, 1);
+  --f-dur-fast: .18s;
+  --f-dur: .25s;
+  --f-dur-slow: .4s;
+  --f-dur-reveal: .8s;
+
+  /* Paper band (template galleries): light in both themes */
+  --f-paper: #F1EEE9;
+  --f-paper-2: #E8E4DD;
+  --f-paper-ink: #1C1F26;
+  --f-paper-muted: #5B606B;
+  --f-paper-line: rgba(28, 31, 38, .1);
+
+  /* Kinds */
+  --f-kind-web: #3B82F6;
+  --f-kind-mobile: #14B8A6;
+  --f-kind-slides: #EB6118;
+  --f-kind-codelab: #22C55E;
+  --f-kind-design_system: #8B5CF6;
+
+  /* Status */
+  --f-ok: #22C55E;
+  --f-warn: #F59E0B;
+  --f-danger: #EF4444;
+  --f-info: #60A5FA;
+
+  /* z-index scale */
+  --f-z-sticky: 25;
+  --f-z-side: 30;
+  --f-z-popover: 40;
+  --f-z-dialog: 80;
+  --f-z-toast: 100;
+}
+
+/* Dark (reference) */
+:root,
+:root[data-theme="dark"],
+.f-theme-dark {
+  --f-bg: #1C1F26;
+  --f-bg-deep: #16181E;
+  --f-side: #16181E;
+  --f-surface: #242832;
+  --f-surface-2: #2C313C;
+  --f-surface-3: #353B47;
+  --f-line: rgba(255, 255, 255, .09);
+  --f-line-strong: rgba(255, 255, 255, .16);
+  --f-text: #F6F4F0;
+  --f-muted: #A8ADB8;
+  --f-faint: #7D8391;
+  --f-accent-text: #FF8A4C;
+  --f-shadow: 0 1px 0 rgba(255, 255, 255, .04) inset, 0 20px 50px -20px rgba(0, 0, 0, .55);
+  --f-shadow-lg: 0 40px 90px -30px rgba(0, 0, 0, .7);
+  --f-glow: rgba(235, 97, 24, .22);
+  --f-composer: #262A33;
+  --f-composer-2: #2F343F;
+  --f-pop: #2A2F39;
+  --f-ok-text: #86EFAC;
+  --f-warn-text: #FCD34D;
+  --f-danger-text: #FCA5A5;
+  --f-info-text: #93C5FD;
+}
+
+:root[data-theme="light"],
+.f-theme-light {
+  --f-bg: #FBFAF8;
+  --f-bg-deep: #F4F2EE;
+  --f-side: #F6F4F0;
+  --f-surface: #FFFFFF;
+  --f-surface-2: #F3F1EC;
+  --f-surface-3: #E9E6E0;
+  --f-line: rgba(28, 31, 38, .09);
+  --f-line-strong: rgba(28, 31, 38, .17);
+  --f-text: #1C1F26;
+  --f-muted: #555B67;
+  --f-faint: #7A808C;
+  --f-accent-text: #C14A0C;
+  --f-shadow: 0 1px 2px rgba(28, 31, 38, .05), 0 18px 40px -22px rgba(28, 31, 38, .22);
+  --f-shadow-lg: 0 40px 80px -36px rgba(28, 31, 38, .35);
+  --f-glow: rgba(235, 97, 24, .16);
+  /* The composer stays dark on light pages: it is the product's signature. */
+  --f-composer: #1C1F26;
+  --f-composer-2: #262A33;
+  --f-pop: #2A2F39;
+  --f-ok-text: #16A34A;
+  --f-warn-text: #B45309;
+  --f-danger-text: #DC2626;
+  --f-info-text: #1D5FC4;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    --f-bg: #FBFAF8;
+    --f-bg-deep: #F4F2EE;
+    --f-side: #F6F4F0;
+    --f-surface: #FFFFFF;
+    --f-surface-2: #F3F1EC;
+    --f-surface-3: #E9E6E0;
+    --f-line: rgba(28, 31, 38, .09);
+    --f-line-strong: rgba(28, 31, 38, .17);
+    --f-text: #1C1F26;
+    --f-muted: #555B67;
+    --f-faint: #7A808C;
+    --f-accent-text: #C14A0C;
+    --f-shadow: 0 1px 2px rgba(28, 31, 38, .05), 0 18px 40px -22px rgba(28, 31, 38, .22);
+    --f-shadow-lg: 0 40px 80px -36px rgba(28, 31, 38, .35);
+    --f-glow: rgba(235, 97, 24, .16);
+    --f-composer: #1C1F26;
+    --f-composer-2: #262A33;
+    --f-ok-text: #16A34A;
+    --f-warn-text: #B45309;
+    --f-danger-text: #DC2626;
+    --f-info-text: #1D5FC4;
+  }
+}
+
+/* `.f-theme-dark` / `.f-theme-light` force a theme on a subtree (dev gallery, previews). */
+
+/* Paper scope: anything inside `.f-paper` reads the light paper palette. */
+.f-paper {
+  background: var(--f-paper);
+  color: var(--f-paper-ink);
+  --f-text: var(--f-paper-ink);
+  /* Inverted controls (dark buttons, selected chips) read --f-bg as their text colour. */
+  --f-bg: var(--f-paper);
+  --f-muted: var(--f-paper-muted);
+  --f-faint: #6E7380;
+  --f-line: var(--f-paper-line);
+  --f-line-strong: rgba(28, 31, 38, .2);
+  --f-surface: #FFFFFF;
+  --f-surface-2: #EAE6DF;
+  --f-surface-3: #DDD8CF;
+  --f-accent-text: #C14A0C;
+}

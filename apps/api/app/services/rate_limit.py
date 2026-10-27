@@ -107,23 +107,98 @@ def _incr_redis(key: str, window: int) -> int | None:
         return None
 
 
-def enforce(request: Request, bucket: str, limit: int, window_seconds: int, subject: str = "") -> None:
-    """Raise 429 once `limit` hits are seen in `window_seconds`.
+def _key(request: Request, bucket: str, subject: str, per_ip: bool) -> str:
+    """Bucket key: the caller IP, the subject, or both.
 
-    `subject` narrows the bucket beyond the caller's IP — pass the target
-    email on reset/resend so one address cannot be mailed repeatedly from a
-    rotating set of addresses.
+    A bucket keyed on a subject alone (an email) can be filled by anyone who
+    knows the address, which locks its owner out. `per_ip` keeps the subject
+    but adds the caller IP, so only the caller's own budget runs out.
     """
-    identity = subject.strip().lower() or _client_ip(request)
-    key = f"{_PREFIX}{bucket}:{identity}"
+    subject = subject.strip().lower()
+    if not subject:
+        return f"{_PREFIX}{bucket}:{_client_ip(request)}"
+    if per_ip:
+        return f"{_PREFIX}{bucket}:{subject}|{_client_ip(request)}"
+    return f"{_PREFIX}{bucket}:{subject}"
 
-    hits = _incr_redis(key, window_seconds)
-    if hits is None:
-        hits = _incr_local(key, window_seconds)
 
-    if hits > limit:
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=t("too_many_requests", resolve_locale(request)),
-            headers={"Retry-After": str(window_seconds)},
+def _hit(key: str, window: int) -> int:
+    hits = _incr_redis(key, window)
+    return _incr_local(key, window) if hits is None else hits
+
+
+def _decr_local(key: str) -> None:
+    now = time.monotonic()
+    with _local_lock:
+        hits, expires_at = _local_hits.get(key, (0, 0.0))
+        if hits > 0 and expires_at > now:
+            _local_hits[key] = (hits - 1, expires_at)
+
+
+def _decr_redis(key: str) -> bool:
+    try:
+        import redis
+
+        client = redis.Redis.from_url(get_settings().redis_url)
+        # Never below zero, never on an expired key (DECR would recreate it).
+        client.eval(
+            "local v = tonumber(redis.call('GET', KEYS[1]) or '0') "
+            "if v > 0 then redis.call('DECR', KEYS[1]) end return 0",
+            1,
+            key,
         )
+        return True
+    except Exception as exc:
+        logger.debug("rate-limit redis unavailable (%s); using in-process counter", exc)
+        return False
+
+
+def _too_many(request: Request, window_seconds: int) -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        detail=t("too_many_requests", resolve_locale(request)),
+        headers={"Retry-After": str(window_seconds)},
+    )
+
+
+def enforce(
+    request: Request,
+    bucket: str,
+    limit: int,
+    window_seconds: int,
+    subject: str = "",
+    *,
+    per_ip: bool = False,
+) -> None:
+    """Count one hit and raise 429 once `limit` hits are seen in `window_seconds`.
+
+    `subject` keys the bucket on something other than the caller's IP (a user
+    id). Pass `per_ip=True` when the subject is something a stranger can name,
+    such as an email: see `_key`.
+    """
+    if _hit(_key(request, bucket, subject, per_ip), window_seconds) > limit:
+        raise _too_many(request, window_seconds)
+
+
+def allow(
+    request: Request,
+    bucket: str,
+    limit: int,
+    window_seconds: int,
+    subject: str = "",
+    *,
+    per_ip: bool = False,
+) -> bool:
+    """Count one hit; False past `limit`. For caps the caller enforces silently."""
+    return _hit(_key(request, bucket, subject, per_ip), window_seconds) <= limit
+
+
+def refund(request: Request, bucket: str, subject: str = "", *, per_ip: bool = False) -> None:
+    """Give back one hit counted by `enforce`.
+
+    To count failures only: `enforce` before the attempt (atomic, so parallel
+    attempts cannot all slip under the limit), `refund` once it succeeds.
+    """
+    key = _key(request, bucket, subject, per_ip)
+    if not _decr_redis(key):
+        _decr_local(key)

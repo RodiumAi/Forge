@@ -1,0 +1,221 @@
+{
+  "id": "s9",
+  "background": {
+    "type": "color",
+    "token": "--bg"
+  },
+  "elements": [
+    {
+      "id": "s9-band",
+      "type": "shape",
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 336,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--surface"
+    },
+    {
+      "id": "s9-bar",
+      "type": "shape",
+      "x": 140,
+      "y": 120,
+      "w": 169,
+      "h": 50,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 25,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s9-kicker",
+      "type": "text",
+      "role": "label",
+      "x": 166,
+      "y": 124,
+      "w": 169,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Budget"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 600,
+        "color": "--accent-contrast",
+        "align": "left",
+        "lineHeight": 1.4,
+        "letterSpacing": 3,
+        "uppercase": true
+      }
+    },
+    {
+      "id": "s9-heading",
+      "type": "text",
+      "role": "heading",
+      "x": 140,
+      "y": 192,
+      "w": 1640,
+      "h": 140,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Notre proposition financière"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 64,
+        "weight": 600,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.1
+      }
+    },
+    {
+      "id": "s9-table",
+      "type": "table",
+      "x": 140,
+      "y": 360,
+      "w": 1640,
+      "h": 530,
+      "z": 2,
+      "rows": [
+        [
+          {
+            "text": "Lot"
+          },
+          {
+            "text": "Contenu"
+          },
+          {
+            "text": "Montant HT"
+          }
+        ],
+        [
+          {
+            "text": "Cadrage et pilote"
+          },
+          {
+            "text": "Ateliers, reprise des données, pilote"
+          },
+          {
+            "text": "68 000 €"
+          }
+        ],
+        [
+          {
+            "text": "Déploiement"
+          },
+          {
+            "text": "17 hôtels, paramétrage, tests"
+          },
+          {
+            "text": "142 000 €"
+          }
+        ],
+        [
+          {
+            "text": "Formation"
+          },
+          {
+            "text": "140 personnes, supports, e-learning"
+          },
+          {
+            "text": "36 000 €"
+          }
+        ],
+        [
+          {
+            "text": "Licences annuelles"
+          },
+          {
+            "text": "18 hôtels, support inclus"
+          },
+          {
+            "text": "64 000 €"
+          }
+        ]
+      ],
+      "headerRow": true,
+      "style": {
+        "size": 28,
+        "color": "--fg",
+        "headerFill": "--surface",
+        "border": "--border"
+      },
+      "columnWidths": [
+        1.2,
+        2.2,
+        0.9
+      ]
+    },
+    {
+      "id": "s9-footer",
+      "type": "text",
+      "role": "caption",
+      "x": 140,
+      "y": 1000,
+      "w": 1100,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Nexo Conseil · Proposition pour Hôtels Azur"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s9-page",
+      "type": "text",
+      "role": "caption",
+      "x": 1660,
+      "y": 1000,
+      "w": 120,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "09"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "right",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s9-footrule",
+      "type": "shape",
+      "x": 140,
+      "y": 978,
+      "w": 1640,
+      "h": 2,
+      "z": 1,
+      "shape": "rect",
+      "fill": "--border"
+    }
+  ]
+}

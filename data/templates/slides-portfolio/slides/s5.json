@@ -1,0 +1,191 @@
+{
+  "id": "s5",
+  "background": {
+    "type": "color",
+    "token": "--bg"
+  },
+  "elements": [
+    {
+      "id": "s5-image",
+      "type": "image",
+      "x": 0,
+      "y": 0,
+      "w": 880,
+      "h": 1080,
+      "z": 1,
+      "src": "public/images/still-life.webp",
+      "alt": "Bouquet de dahlias dans un pichet en faïence",
+      "fit": "cover",
+      "matchKey": "hero-image",
+      "credit": {
+        "source": "pixabay",
+        "author": "MsErinEast",
+        "url": "https://pixabay.com/photos/dahlia-flowers-vase-blossom-4494586/"
+      }
+    },
+    {
+      "id": "s5-bar",
+      "type": "shape",
+      "x": 1000,
+      "y": 180,
+      "w": 80,
+      "h": 8,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 4,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s5-kicker",
+      "type": "text",
+      "role": "label",
+      "x": 1000,
+      "y": 206,
+      "w": 780,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Projet phare"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 600,
+        "color": "--accent",
+        "align": "left",
+        "lineHeight": 1.4,
+        "letterSpacing": 3,
+        "uppercase": true
+      }
+    },
+    {
+      "id": "s5-heading",
+      "type": "text",
+      "role": "heading",
+      "x": 1000,
+      "y": 256,
+      "w": 780,
+      "h": 210,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Appartement Croix-Rousse, 2025"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 60,
+        "weight": 600,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.1
+      },
+      "animation": {
+        "type": "mask-reveal",
+        "trigger": "on-enter",
+        "direction": "up",
+        "durationMs": 700
+      }
+    },
+    {
+      "id": "s5-body",
+      "type": "text",
+      "role": "body",
+      "x": 1000,
+      "y": 490,
+      "w": 780,
+      "h": 180,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "120 m² d'ancien atelier de canut réinventés pour une famille de quatre personnes."
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 30,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.5
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "delayMs": 120,
+        "durationMs": 500
+      }
+    },
+    {
+      "id": "s5-list",
+      "type": "text",
+      "role": "body",
+      "x": 1000,
+      "y": 690,
+      "w": 780,
+      "h": 250,
+      "z": 3,
+      "content": [
+        {
+          "type": "bullet-list",
+          "items": [
+            {
+              "text": "Poutres et tomettes d'origine conservées"
+            },
+            {
+              "text": "Verrière d'atelier entre séjour et bureau"
+            },
+            {
+              "text": "Chantier livré en 14 semaines"
+            }
+          ]
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 28,
+        "weight": 400,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.55
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "delayMs": 120,
+        "durationMs": 500
+      }
+    },
+    {
+      "id": "s5-page",
+      "type": "text",
+      "role": "caption",
+      "x": 1660,
+      "y": 1000,
+      "w": 120,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "05"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "right",
+        "lineHeight": 1.4
+      }
+    }
+  ]
+}

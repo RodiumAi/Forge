@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "title": "Codelab",
+  "level": "beginner",
+  "durationMinutes": 5,
+  "setup": {
+    "promo": { "label": "300 RODI" }
+  },
+  "steps": []
+}

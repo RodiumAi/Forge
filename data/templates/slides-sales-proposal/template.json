@@ -1,0 +1,49 @@
+{
+  "kind": "slides",
+  "id": "slides-sales-proposal",
+  "title": {
+    "fr": "Proposition commerciale",
+    "en": "Sales proposal"
+  },
+  "description": {
+    "fr": "Proposition commerciale claire et rassurante : enjeux du client, solution, méthode, références, planning, budget et prochaines étapes.",
+    "en": "Clear, reassuring sales proposal: client challenges, solution, approach, references, schedule, pricing and next steps."
+  },
+  "tags": [
+    "sales",
+    "proposal",
+    "b2b",
+    "light"
+  ],
+  "category": "business",
+  "preview": "preview.html",
+  "bootHint": {
+    "fr": "Adapte slides-sales-proposal : client, besoin, solution proposée, budget, planning.",
+    "en": "Adapt slides-sales-proposal: client, need, proposed solution, pricing, schedule."
+  },
+  "accent": "#0F766E",
+  "bg": "#FFFFFF",
+  "fg": "#0F172A",
+  "muted": "#5A6578",
+  "tone": "client-centred, precise, reassuring",
+  "fonts": {
+    "display": "Outfit",
+    "body": "Inter",
+    "mono": "JetBrains Mono"
+  },
+  "transitionPreset": "sober",
+  "layouts": {
+    "title": "s1",
+    "text": "s2",
+    "two-columns": "s3",
+    "section": "s4",
+    "image-text": "s5",
+    "timeline": "s6",
+    "key-figures": "s7",
+    "chart": "s8",
+    "table": "s9",
+    "team": "s10",
+    "quote": "s11",
+    "thank-you": "s12"
+  }
+}

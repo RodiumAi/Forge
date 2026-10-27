@@ -1,0 +1,63 @@
+/* Home: search, teal next-appointment hero, vitals row, specialties and top doctors. */
+.home-screen .small { font-size: .78rem; }
+
+.home-screen .search {
+  display: flex; align-items: center; gap: .7rem; min-height: 3.3rem; padding: 0 .4rem 0 1rem;
+  background: var(--surface); border-radius: 1.1rem; box-shadow: var(--shadow); color: var(--muted); text-decoration: none; font-size: .92rem;
+}
+.home-screen .search span { flex: 1; }
+.home-screen .search i { width: 2.6rem; height: 2.6rem; border-radius: .9rem; display: grid; place-items: center; background: var(--accent); color: var(--on-accent); }
+
+/* Teal hero */
+.home-screen .hero {
+  position: relative; overflow: hidden; display: grid; gap: .95rem; padding: 1.15rem; border-radius: 1.6rem; color: #fff;
+  background: radial-gradient(120% 90% at 100% 0%, #2bb397 0%, transparent 55%), linear-gradient(150deg, #14907a 0%, #0d6f5e 100%);
+  box-shadow: 0 22px 40px -22px rgba(13, 111, 94, .9);
+}
+.home-screen .hero::after {
+  content: ""; position: absolute; right: -3.5rem; bottom: -4.5rem; width: 11rem; height: 11rem; border-radius: 999px;
+  border: 1.6rem solid rgba(255, 255, 255, .07); pointer-events: none;
+}
+.home-screen .hero-head { display: flex; justify-content: space-between; align-items: center; }
+.home-screen .hero-kicker { font-size: .78rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; opacity: .85; }
+.home-screen .hero-kind { font-size: .74rem; font-weight: 700; padding: .3rem .65rem; border-radius: 999px; background: rgba(255, 255, 255, .18); }
+.home-screen .hero-doc { display: flex; align-items: center; gap: .8rem; color: #fff; text-decoration: none; position: relative; z-index: 1; }
+.home-screen .hero-doc img { width: 3.4rem; height: 3.4rem; border-radius: 1rem; object-fit: cover; object-position: top; border: 2px solid rgba(255, 255, 255, .5); }
+.home-screen .hero-doc span { flex: 1; display: grid; gap: .15rem; min-width: 0; }
+.home-screen .hero-doc strong { font-size: 1.08rem; font-weight: 800; }
+.home-screen .hero-doc small { font-size: .82rem; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.home-screen .hero-when { display: flex; gap: .5rem; position: relative; z-index: 1; }
+.home-screen .hero-when span {
+  flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: .4rem; min-height: 2.75rem;
+  border-radius: .9rem; background: rgba(255, 255, 255, .15); font-size: .88rem; font-weight: 700;
+}
+.home-screen .hero-cta {
+  position: relative; z-index: 1; appearance: none; border: 0; min-height: 3.1rem; border-radius: 1rem; background: #fff; color: var(--accent-deep);
+  font-weight: 800; font-size: .95rem; display: inline-flex; align-items: center; justify-content: center; gap: .5rem; text-decoration: none;
+}
+.home-screen .hero.empty strong { font-size: 1.2rem; }
+.home-screen .hero.empty p { margin: 0; opacity: .85; }
+
+/* Vitals */
+.home-screen .vitals { display: grid; grid-template-columns: repeat(3, 1fr); gap: .6rem; }
+.home-screen .vital { background: var(--surface); border-radius: 1.2rem; padding: .8rem .75rem; box-shadow: var(--shadow); display: grid; gap: .35rem; }
+.home-screen .v-icon { width: 2rem; height: 2rem; border-radius: .7rem; display: grid; place-items: center; }
+.home-screen .heart .v-icon { background: var(--coral-soft); color: #e8643f; }
+.home-screen .sleep .v-icon { background: #ece4ff; color: #6a4fd1; }
+.home-screen .steps .v-icon { background: var(--accent-soft); color: var(--accent); }
+.home-screen .vital strong { font-size: 1.15rem; font-weight: 800; letter-spacing: -.02em; }
+.home-screen .vital strong small { font-size: .72rem; font-weight: 600; color: var(--muted); }
+.home-screen .v-label { font-size: .74rem; color: var(--muted); font-weight: 600; }
+.home-screen .pulse-line { width: 100%; height: 1.6rem; }
+.home-screen .pulse-line path { fill: none; stroke: var(--coral); stroke-width: 2.4; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.home-screen .bars { height: 1.6rem; display: flex; align-items: end; gap: 3px; }
+.home-screen .bars i { flex: 1; height: var(--h); border-radius: 3px; background: linear-gradient(#a58cf5, #6a4fd1); }
+.home-screen .meter { position: relative; height: 1.6rem; display: flex; align-items: center; }
+.home-screen .meter::after { content: ""; position: absolute; inset: calc(50% - 4px) 0 auto; height: 8px; border-radius: 999px; background: var(--surface-2); }
+.home-screen .meter i { position: relative; z-index: 1; height: 8px; border-radius: 999px; background: linear-gradient(90deg, #4fc7ad, var(--accent)); }
+
+/* Specialties */
+.home-screen .specs { display: grid; grid-template-columns: repeat(4, 1fr); gap: .5rem; }
+.home-screen .spec { display: grid; justify-items: center; gap: .45rem; text-decoration: none; color: var(--fg); font-size: .76rem; font-weight: 700; text-align: center; }
+.home-screen .spec span { width: 3.6rem; height: 3.6rem; border-radius: 1.2rem; display: grid; place-items: center; color: var(--fg); transition: transform .2s ease; }
+.home-screen .spec:active span { transform: scale(.94); }

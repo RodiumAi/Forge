@@ -13,6 +13,7 @@ import json
 import re
 from functools import lru_cache
 
+from app.kinds import get_kind, react_kind
 from app.services.filesystem import read_file
 
 _EXCERPT_CSS_CHARS = 3_200
@@ -21,7 +22,6 @@ _YOUNG_PROJECT_MAX_SRC = 30
 _PLAN_TASK_RE = re.compile(r"Current plan task \(\d+/\d+\):", re.I)
 _SKIP_TASK_RE = re.compile(r"(coh[ée]rence|\bedit\b|\bmodifier\b)", re.I)
 _WORD_RE = re.compile(r"[a-zA-Zàâçéèêëîïôûùüÿœ]{3,}")
-_DEFAULT_KIT = {"web": "aurora-ai", "mobile": "nova-bank"}
 _SECTION_FILES = (
     "src/components/Hero.tsx",
     "src/components/Features.tsx",
@@ -41,7 +41,7 @@ def _forked_origin(project_id: str) -> dict | None:
 def _pick_kit(query: str, platform: str):
     from app.services.templates import get_template, list_templates
 
-    kits = list_templates(kind=platform if platform in ("web", "mobile") else "web")
+    kits = list_templates(kind=react_kind(platform))
     if not kits:
         return None
     words = {w.lower() for w in _WORD_RE.findall(query or "")}
@@ -55,7 +55,9 @@ def _pick_kit(query: str, platform: str):
             best, best_score = kit, score
     if best is not None and best_score >= 2:
         return best
-    return get_template(_DEFAULT_KIT.get(platform, "aurora-ai")) or kits[0]
+    kind = get_kind(platform)
+    default_kit = (kind.default_kit if kind is not None else "") or "aurora-ai"
+    return get_template(default_kit) or kits[0]
 
 
 @lru_cache(maxsize=64)

@@ -1,16 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import {
-  BoxSelect,
-  ChevronsRight,
-  Image as ImageIcon,
-  MessageSquare,
-  Type,
-  Wand2,
-} from "lucide-react";
-import { Icon } from "@/components/ui/icon";
+
+import { Glyph, type GlyphName } from "@/components/ui/glyph";
 import { useI18n } from "@/lib/i18n/I18nProvider";
+import type { MessageKey } from "@/lib/i18n/dictionaries";
 import type { PreviewTool } from "./types";
 
 type Props = {
@@ -20,55 +14,54 @@ type Props = {
   defaultCollapsed?: boolean;
 };
 
-const TOOLS: { id: PreviewTool; icon: typeof BoxSelect; labelKey: string }[] = [
-  { id: "select", icon: BoxSelect, labelKey: "previewToolSelect" },
-  { id: "text", icon: Type, labelKey: "previewToolText" },
-  { id: "comment", icon: MessageSquare, labelKey: "previewToolComment" },
-  { id: "image", icon: ImageIcon, labelKey: "previewToolImage" },
+const TOOLS: { id: PreviewTool; glyph: GlyphName; labelKey: MessageKey }[] = [
+  { id: "select", glyph: "cursor", labelKey: "bdToolSelect" },
+  { id: "text", glyph: "textcur", labelKey: "bdToolText" },
+  { id: "comment", glyph: "msg", labelKey: "bdToolComment" },
+  { id: "image", glyph: "image", labelKey: "bdToolImage" },
 ];
 
+/** Floating tool bar over the preview: select an element, edit text, comment, replace an image. */
 export function PreviewToolbar({ tool, onToolChange, defaultCollapsed = false }: Props) {
   const { t } = useI18n();
-  // Collapsing parks it as a bottom-right pill so it stops covering the preview.
+  // Collapsing parks it as a bottom-right button so it stops covering the preview.
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
 
   if (collapsed) {
     return (
       <button
         type="button"
-        className="preview-toolbar-restore"
+        className="f-bd-tools-restore"
         title={t("previewToolbarShow")}
         aria-label={t("previewToolbarShow")}
         aria-expanded={false}
         onClick={() => setCollapsed(false)}
       >
-        <Icon icon={Wand2} className="ui-icon-md" />
+        <Glyph name="wand" />
       </button>
     );
   }
 
   return (
-    <div className="preview-toolbar" role="toolbar" aria-label={t("previewToolbar")}>
+    <div className="f-bd-tools" role="toolbar" aria-label={t("bdToolsLabel")}>
       {TOOLS.map((item) => {
         const active = tool === item.id;
         return (
           <button
             key={item.id}
             type="button"
-            className={`preview-toolbar-btn${active ? " active" : ""}`}
-            title={t(item.labelKey as "previewToolSelect")}
-            aria-label={t(item.labelKey as "previewToolSelect")}
+            title={t(item.labelKey)}
             aria-pressed={active}
             onClick={() => onToolChange(active ? null : item.id)}
           >
-            <Icon icon={item.icon} className="ui-icon-md" />
+            <Glyph name={item.glyph} size="sm" />
+            <span className="lbl">{t(item.labelKey)}</span>
           </button>
         );
       })}
-      <span className="preview-toolbar-sep" aria-hidden />
+      <span className="sep" aria-hidden />
       <button
         type="button"
-        className="preview-toolbar-btn preview-toolbar-collapse"
         title={t("previewToolbarHide")}
         aria-label={t("previewToolbarHide")}
         aria-expanded
@@ -78,7 +71,7 @@ export function PreviewToolbar({ tool, onToolChange, defaultCollapsed = false }:
           setCollapsed(true);
         }}
       >
-        <Icon icon={ChevronsRight} className="ui-icon-md" />
+        <Glyph name="chevron-right" size="sm" />
       </button>
     </div>
   );

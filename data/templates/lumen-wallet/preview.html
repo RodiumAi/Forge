@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Lumen Wallet preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700&family=Space+Grotesk:wght@600;700&display=swap" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 480px; height: 270px; overflow: hidden; position: relative;
+    background: radial-gradient(60% 80% at 50% 110%, rgba(198,244,50,.35), transparent 70%), radial-gradient(50% 60% at 12% 0%, #1f2430, transparent 70%), #0b0c10;
+    font-family: "Inter", system-ui, sans-serif; color: #f4f5f7;
+  }
+  .grid { position: absolute; inset: 0; background-image: linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px); background-size: 24px 24px; mask-image: radial-gradient(70% 70% at 50% 40%, #000, transparent); }
+  .dev { position: absolute; width: 128px; height: 268px; border-radius: 22px; background: #0e0f13; border: 3px solid #2a2d36; overflow: hidden; box-shadow: 0 24px 50px rgba(0,0,0,.55); }
+  .dev::before { content: ""; position: absolute; top: 6px; left: 50%; transform: translateX(-50%); width: 34px; height: 9px; border-radius: 99px; background: #000; z-index: 3; }
+  .l { left: 58px; top: 44px; transform: rotate(-8deg); }
+  .r { right: 58px; top: 44px; transform: rotate(8deg); }
+  .c { left: 50%; top: 16px; width: 142px; height: 296px; transform: translateX(-50%); z-index: 2; border-color: #353946; }
+  .s { padding: 22px 9px 0; display: grid; gap: 7px; }
+  .disp { font-family: "Space Grotesk", sans-serif; letter-spacing: -.03em; }
+  .mu { color: #8b8f9a; }
+  /* home */
+  .top { display: flex; align-items: center; gap: 5px; }
+  .av { width: 17px; height: 17px; border-radius: 99px; background: url("https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=80&q=60") center/cover; box-shadow: 0 0 0 1.5px #c6f432; }
+  .top b { font-size: 7.5px; display: block; } .top small { font-size: 5px; }
+  .ic { margin-left: auto; width: 15px; height: 15px; border-radius: 99px; background: #17191f; border: 1px solid #262931; }
+  .bal { background: #c6f432; color: #0e0f13; border-radius: 13px; padding: 8px 9px 4px; }
+  .bal small { font-size: 5.5px; font-weight: 600; }
+  .bal .amt { font-size: 18px; font-weight: 700; margin-top: 2px; }
+  .bal .amt i { font-size: 6px; font-style: normal; opacity: .6; letter-spacing: 0; }
+  .bal .ch { font-size: 5px; margin-top: 2px; } .bal .ch span { background: #0e0f13; color: #c6f432; border-radius: 99px; padding: 1px 3px; font-weight: 700; }
+  .bal svg { width: 100%; height: 18px; display: block; }
+  .acts { display: grid; grid-template-columns: repeat(4,1fr); gap: 4px; }
+  .acts div { height: 24px; border-radius: 8px; background: #17191f; border: 1px solid #23262e; display: grid; place-items: center; }
+  .acts div i { width: 8px; height: 8px; border: 1.5px solid #f4f5f7; border-radius: 2px; }
+  .h { font-size: 7px; font-weight: 600; display: flex; justify-content: space-between; } .h span { color: #c6f432; font-size: 5.5px; }
+  .ppl { display: flex; gap: 5px; }
+  .ppl i { width: 20px; height: 20px; border-radius: 99px; background-size: cover; background-position: center; }
+  .tx { display: flex; align-items: center; gap: 5px; padding: 4px 0; border-bottom: 1px solid #1f2229; }
+  .tx i { width: 15px; height: 15px; border-radius: 5px; background: #20232b; }
+  .tx i.g { background: rgba(198,244,50,.18); }
+  .tx b { font-size: 6px; display: block; } .tx small { font-size: 4.5px; }
+  .tx .v { margin-left: auto; font-size: 6.5px; font-weight: 700; font-family: "Space Grotesk"; } .tx .v.g { color: #c6f432; }
+  .tab { position: absolute; left: 10px; right: 10px; bottom: 8px; height: 22px; border-radius: 99px; background: #20232b; display: flex; align-items: center; justify-content: space-between; padding: 0 3px; }
+  .tab i { width: 16px; height: 16px; border-radius: 99px; } .tab i.on { width: 38px; background: #c6f432; }
+  /* onboarding */
+  .ob { height: 100%; background: radial-gradient(80% 50% at 50% 20%, rgba(198,244,50,.18), transparent 70%); padding: 24px 10px 0; }
+  .card { margin: 16px auto 0; width: 92px; height: 58px; border-radius: 10px; background: linear-gradient(140deg, #c6f432, #7aa31a); transform: rotate(-9deg); color: #0e0f13; padding: 7px; box-shadow: 0 14px 24px rgba(0,0,0,.5); }
+  .card b { font-size: 6px; font-family: "Space Grotesk"; } .card p { font-size: 11px; font-weight: 700; margin-top: 10px; }
+  .chip { display: inline-block; margin: 12px 0 0 42px; font-size: 5px; font-weight: 600; color: #c6f432; background: #20232b; padding: 3px 5px; border-radius: 99px; }
+  .ob .k { font-size: 5px; color: #c6f432; font-weight: 600; letter-spacing: .1em; margin-top: 26px; }
+  .ob h3 { font-size: 13.5px; line-height: 1.05; margin-top: 4px; font-weight: 700; }
+  .ob p.mu { font-size: 5.5px; line-height: 1.4; margin-top: 4px; }
+  .btn { position: absolute; left: 10px; right: 10px; bottom: 12px; height: 19px; border-radius: 99px; background: #c6f432; color: #0e0f13; font-size: 6px; font-weight: 700; display: grid; place-items: center; }
+  /* cards */
+  .seg { display: flex; background: #17191f; border-radius: 99px; padding: 2px; font-size: 5.5px; font-weight: 600; }
+  .seg span { flex: 1; text-align: center; padding: 4px 0; border-radius: 99px; color: #8b8f9a; } .seg span.on { background: #20232b; color: #f4f5f7; }
+  .pc { height: 66px; border-radius: 11px; padding: 7px 8px; background: radial-gradient(80% 90% at 100% 0%, rgba(198,244,50,.45), transparent 60%), linear-gradient(150deg, #2b2f39, #111216); border: 1px solid #2a2d36; display: flex; flex-direction: column; justify-content: space-between; }
+  .pc b { font-size: 7px; font-family: "Space Grotesk"; } .pc i { width: 13px; height: 9px; border-radius: 2px; background: linear-gradient(135deg,#f5e7a8,#c9a74e); }
+  .pc p { font-size: 6.5px; letter-spacing: .1em; font-family: "Space Grotesk"; }
+  .lim { background: #17191f; border-radius: 10px; padding: 7px; font-size: 5px; }
+  .bar { height: 4px; border-radius: 99px; background: #20232b; margin-top: 5px; } .bar i { display: block; width: 43%; height: 100%; background: #c6f432; border-radius: 99px; }
+  .set { display: flex; align-items: center; gap: 5px; font-size: 5.5px; font-weight: 600; padding: 4px 0; }
+  .set i { width: 14px; height: 14px; border-radius: 5px; background: #20232b; }
+  .tg { margin-left: auto; width: 16px; height: 9px; border-radius: 99px; background: #20232b; position: relative; }
+  .tg.on { background: #c6f432; } .tg::after { content: ""; position: absolute; top: 1.5px; left: 1.5px; width: 6px; height: 6px; border-radius: 99px; background: #0e0f13; } .tg.on::after { left: 8.5px; }
+  .tg:not(.on)::after { background: #f4f5f7; }
+</style>
+</head>
+<body>
+  <div class="grid"></div>
+
+  <div class="dev l">
+    <div class="ob">
+      <div class="top"><span class="disp" style="font-size:8px;font-weight:700">Lumen</span><span class="mu" style="margin-left:auto;font-size:5.5px">Skip</span></div>
+      <div class="card disp"><b>Lumen</b><p>1 284 650</p></div>
+      <span class="chip">25 000 sent</span>
+      <p class="k">WELCOME TO LUMEN</p>
+      <h3 class="disp">Money that moves at your speed</h3>
+      <p class="mu">One account for spending, saving and sending.</p>
+    </div>
+    <div class="btn">Continue</div>
+  </div>
+
+  <div class="dev r">
+    <div class="s">
+      <b class="disp" style="font-size:11px">Cards</b>
+      <div class="seg"><span class="on">Physical</span><span>Virtual</span></div>
+      <div class="pc"><b>Lumen</b><i></i><p>•••• 4821</p></div>
+      <div class="lim"><span class="mu">Monthly limit</span> <b style="float:right">214 300</b><div class="bar"><i></i></div></div>
+      <div class="set"><i></i>Freeze card<span class="tg"></span></div>
+      <div class="set"><i></i>Online payments<span class="tg on"></span></div>
+      <div class="set"><i></i>Show PIN</div>
+    </div>
+    <div class="tab"><i></i><i class="on"></i><i></i><i></i></div>
+  </div>
+
+  <div class="dev c">
+    <div class="s">
+      <div class="top"><span class="av"></span><div><small class="mu">Good evening</small><b class="disp">Amine</b></div><span class="ic"></span></div>
+      <div class="bal">
+        <small>Total balance</small>
+        <p class="amt disp">1 284 650 <i>FCFA</i></p>
+        <p class="ch"><span>+7.2%</span> + 86 400 this month</p>
+        <svg viewBox="0 0 300 60" preserveAspectRatio="none"><path d="M0 48 C 30 44, 45 30, 70 34 S 115 52, 140 38 S 190 12, 215 22 S 265 30, 300 6" fill="none" stroke="#0e0f13" stroke-width="5" stroke-linecap="round"/></svg>
+      </div>
+      <div class="acts"><div><i></i></div><div><i></i></div><div><i></i></div><div><i></i></div></div>
+      <p class="h">Send again <span>See all</span></p>
+      <div class="ppl">
+        <i style="background-image:url('https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=80&q=60')"></i>
+        <i style="background-image:url('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=80&q=60')"></i>
+        <i style="background-image:url('https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=80&q=60')"></i>
+        <i style="background-image:url('https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=80&q=60')"></i>
+        <i style="background-image:url('https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=80&q=60')"></i>
+      </div>
+      <div>
+        <div class="tx"><i></i><div><b>Café Kora</b><small class="mu">Coffee · 09:12</small></div><span class="v">-2 400</span></div>
+        <div class="tx"><i class="g"></i><div><b>From Awa Diallo</b><small class="mu">Transfer · 08:40</small></div><span class="v g">+25 000</span></div>
+      </div>
+    </div>
+    <div class="tab"><i class="on"></i><i></i><i></i><i></i></div>
+  </div>
+</body>
+</html>

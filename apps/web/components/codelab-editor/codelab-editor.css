@@ -1,0 +1,860 @@
+/* Codelab editor. Chrome colors come from the app theme tokens (light and
+   dark); the preview carries the codelab's own design system tokens. */
+
+.cle-root {
+  --cle-accent: var(--f-orange);
+  --cle-panel: var(--f-surface);
+  --cle-soft: var(--f-surface-2);
+  --cle-line: var(--f-line);
+  --cle-radius: var(--f-r-sm);
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--f-bg);
+  color: var(--f-text);
+  font-family: var(--f-font);
+  font-size: 13px;
+  z-index: 1;
+}
+
+.cle-root button:not(.f-bd-top *) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--cle-line);
+  background: var(--cle-panel);
+  color: inherit;
+  border-radius: var(--cle-radius);
+  padding: 5px 9px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.cle-root button:not(.f-bd-top *):disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.cle-root input:not(.f-bd-top *),
+.cle-root select,
+.cle-root textarea {
+  border: 1px solid var(--cle-line);
+  background: var(--cle-panel);
+  color: inherit;
+  border-radius: var(--cle-radius);
+  padding: 6px 8px;
+  font: inherit;
+  min-width: 0;
+}
+
+.cle-center {
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.cle-spin {
+  animation: cle-spin 0.9s linear infinite;
+}
+
+@keyframes cle-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.cle-hint {
+  color: var(--f-muted);
+  font-size: 12px;
+}
+
+.cle-top {
+  flex: none;
+}
+
+.cle-save {
+  color: var(--f-muted);
+  font-size: 12px;
+}
+
+.cle-save[data-state="error"],
+.cle-save[data-state="conflict"] {
+  color: var(--f-danger-text);
+}
+
+.cle-root .cle-active {
+  border-color: var(--cle-accent);
+  color: var(--cle-accent);
+}
+
+.cle-root .cle-primary {
+  background: var(--cle-accent);
+  border-color: var(--cle-accent);
+  color: #fff;
+}
+
+.cle-banner {
+  padding: 8px 14px;
+  background: color-mix(in srgb, #dc2626 10%, var(--f-bg));
+  border-bottom: 1px solid var(--cle-line);
+  cursor: default;
+}
+
+.cle-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr) 340px;
+}
+
+.cle-steps {
+  border-right: 1px solid var(--cle-line);
+  overflow: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cle-steps-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.cle-steps ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cle-steps li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 2px 6px;
+  padding: 4px;
+  border-radius: var(--cle-radius);
+  border: 1px solid transparent;
+}
+
+.cle-steps li[data-active] {
+  border-color: var(--cle-accent);
+  background: var(--cle-soft);
+}
+
+.cle-steps li[data-streaming] .cle-step-n {
+  background: var(--cle-accent);
+  color: #fff;
+}
+
+.cle-root .cle-step-pick {
+  border: 0;
+  background: transparent;
+  padding: 2px;
+  min-width: 0;
+  text-align: left;
+}
+
+.cle-step-n {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: inline-grid;
+  place-items: center;
+  font-size: 11px;
+  background: var(--cle-soft);
+  border: 1px solid var(--cle-line);
+}
+
+.cle-step-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cle-step-min {
+  font-size: 11px;
+  color: var(--f-muted);
+}
+
+.cle-step-tools {
+  grid-column: 1 / -1;
+  display: none;
+  gap: 4px;
+}
+
+.cle-steps li:hover .cle-step-tools,
+.cle-steps li[data-active] .cle-step-tools {
+  display: flex;
+}
+
+.cle-root .cle-step-tools button {
+  padding: 3px 5px;
+}
+
+.cle-add {
+  justify-content: center;
+}
+
+.cle-main {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  gap: 8px;
+}
+
+.cle-empty {
+  margin: auto;
+}
+
+.cle-step-meta {
+  display: flex;
+  gap: 10px;
+}
+
+.cle-step-meta label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  font-size: 12px;
+}
+
+.cle-step-meta .cle-minutes {
+  flex: none;
+  width: 120px;
+}
+
+.cle-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.cle-split {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.cle-root .cle-markdown {
+  resize: none;
+  font-family: var(--f-mono);
+  font-size: 12.5px;
+  line-height: 1.55;
+  height: 100%;
+}
+
+.cle-preview {
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid var(--cle-line);
+  border-radius: var(--cle-radius);
+}
+
+.cle-preview .fcl-root {
+  min-height: 100%;
+}
+
+.cle-player {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.cle-side {
+  border-left: 1px solid var(--cle-line);
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.cle-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 8px;
+  border-bottom: 1px solid var(--cle-line);
+}
+
+.cle-side-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 10px;
+}
+
+.cle-side-body[hidden] {
+  display: none;
+}
+
+.cle-details {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cle-details label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.cle-details .cle-check-row {
+  flex-direction: row;
+  align-items: center;
+}
+
+.cle-details h3 {
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+
+/* Cover, presenter and setup sections of the Infos tab */
+.cle-section {
+  border: 1px solid var(--cle-line);
+  border-radius: 10px;
+  padding: 0 10px;
+  background: var(--cle-soft);
+}
+
+.cle-section[open] {
+  padding-bottom: 10px;
+}
+
+.cle-section > summary {
+  cursor: pointer;
+  padding: 9px 0;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.cle-section[open] > summary {
+  margin-bottom: 2px;
+}
+
+.cle-section > :not(summary) + :not(summary) {
+  margin-top: 8px;
+}
+
+.cle-section > .cle-hint {
+  margin: 0;
+  font-size: 12px;
+}
+
+.cle-sub {
+  margin: 12px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.cle-row {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.cle-row > input {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.cle-row-wrap {
+  flex-wrap: wrap;
+}
+
+.cle-row-wrap > input {
+  flex: 1 1 120px;
+}
+
+.cle-root .cle-row > input.cle-narrow {
+  flex: 0 0 76px;
+}
+
+.cle-root .cle-row-wrap > input.cle-narrow {
+  flex: 1 1 76px;
+}
+
+.cle-root .cle-row-remove {
+  flex-shrink: 0;
+  padding: 3px 5px;
+}
+
+.cle-root .cle-row-add,
+.cle-upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+  font-size: 12px;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.cle-details .cle-upload-btn {
+  flex-direction: row;
+  border: 1px solid var(--cle-line);
+  border-radius: var(--cle-radius);
+  background: var(--cle-panel);
+}
+
+.cle-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  border: 1px dashed var(--cle-line);
+  border-radius: 8px;
+}
+
+.cle-group ol {
+  margin: 0;
+  padding: 0 0 0 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cle-group ol > li {
+  display: flex;
+}
+
+.cle-mono {
+  font-family: var(--f-mono);
+  font-size: 12px;
+}
+
+.cle-photo {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.cle-photo-preview {
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--cle-line);
+  background: var(--cle-panel);
+}
+
+.cle-photo-tools {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cle-photo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.cle-danger {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, #e5484d 45%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, #e5484d 6%, transparent);
+}
+
+.cle-danger h3 {
+  margin: 0;
+  color: #e5484d;
+}
+
+.cle-danger .cle-hint {
+  margin: 0;
+}
+
+.cle-danger-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: #e5484d;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cle-danger-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.cle-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.cle-link {
+  color: var(--cle-accent);
+}
+
+.cle-root button.cle-link {
+  border: 0;
+  background: none;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.cle-notice {
+  color: var(--cle-accent);
+}
+
+.cle-files {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cle-files-upload,
+.cle-files-folders {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: flex-end;
+}
+
+.cle-files-upload label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.cle-file-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cle-file-list li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cle-file-path {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--f-mono);
+  font-size: 12px;
+}
+
+.cle-file-actions {
+  display: flex;
+  gap: 3px;
+}
+
+.cle-root .cle-file-actions button {
+  padding: 3px 5px;
+}
+
+.cle-chat {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cle-chat-log {
+  flex: 1;
+  min-height: 120px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cle-msg p {
+  margin: 2px 0 0;
+  white-space: pre-wrap;
+}
+
+.cle-msg-who {
+  font-size: 11px;
+  color: var(--f-muted);
+}
+
+.cle-msg-error p {
+  color: var(--f-danger-text);
+}
+
+.cle-outline,
+.cle-check {
+  border: 1px solid var(--cle-line);
+  border-radius: var(--cle-radius);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cle-outline ol {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cle-outline li {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+}
+
+.cle-outline li input:first-child {
+  flex: 1;
+}
+
+.cle-outline li input[type="number"] {
+  width: 56px;
+}
+
+.cle-root .cle-outline li button {
+  padding: 3px 4px;
+}
+
+.cle-check li[data-severity="error"] {
+  color: var(--f-danger-text);
+}
+
+.cle-check ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.cle-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--f-muted);
+}
+
+.cle-chat-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.cle-target {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.cle-chat-form {
+  display: flex;
+  gap: 6px;
+  align-items: flex-end;
+}
+
+.cle-chat-form textarea {
+  flex: 1;
+  resize: vertical;
+}
+
+@media (max-width: 1100px) {
+  .cle-body {
+    grid-template-columns: 200px minmax(0, 1fr);
+  }
+  .cle-side {
+    grid-column: 1 / -1;
+    border-left: 0;
+    border-top: 1px solid var(--cle-line);
+    max-height: 45vh;
+  }
+}
+
+@media (max-width: 760px) {
+  .cle-body {
+    grid-template-columns: minmax(0, 1fr);
+    overflow: auto;
+  }
+  .cle-steps {
+    border-right: 0;
+    border-bottom: 1px solid var(--cle-line);
+    max-height: 30vh;
+  }
+  .cle-split {
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-rows: minmax(240px, auto);
+  }
+}
+
+/* ── redesign layer: Forge workspace look (tokens from styles/forge) ───────── */
+
+.cle-root {
+  --cle-radius: 12px;
+  font-size: 13.5px;
+}
+.cle-root button:not(.f-bd-top *):not(.fcl-root *) {
+  border-radius: var(--f-r-pill);
+  border-color: var(--f-line-strong);
+  background: transparent;
+  padding: 6px 12px;
+  font-weight: 600;
+  transition: background var(--f-dur-fast) var(--f-ease);
+}
+.cle-root button:not(.f-bd-top *):not(.fcl-root *):hover:not(:disabled) { background: var(--f-surface-2); }
+.cle-root button:not(.f-bd-top *):not(.fcl-root *):focus-visible,
+.cle-root a:focus-visible { outline: 2px solid var(--f-orange); outline-offset: 2px; }
+.cle-root input:not(.f-bd-top *),
+.cle-root select,
+.cle-root textarea {
+  border-radius: 12px;
+  border-color: var(--f-line);
+  background: var(--f-surface);
+}
+.cle-root input:not(.f-bd-top *):focus,
+.cle-root select:focus,
+.cle-root textarea:focus {
+  outline: 0;
+  border-color: var(--f-orange);
+  box-shadow: 0 0 0 3px var(--f-orange-soft);
+}
+
+/* step list: numbered pills, the current step in orange */
+.cle-steps { background: var(--f-bg); padding: 12px 10px; }
+.cle-steps-head strong, .cle-steps-head h2 { font-size: 11.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--f-faint); }
+.cle-steps li { border-radius: 14px; padding: 6px; }
+.cle-steps li[data-active] { border-color: var(--f-line); background: var(--f-surface); }
+.cle-root .cle-step-pick { border: 0 !important; background: transparent !important; padding: 2px !important; font-weight: 500 !important; gap: 10px; }
+.cle-step-n { width: 26px; height: 26px; font-size: 12px; font-weight: 600; background: var(--f-surface-2); border: 0; color: var(--f-muted); }
+.cle-steps li[data-active] .cle-step-n,
+.cle-steps li[data-streaming] .cle-step-n { background: var(--f-orange); color: var(--f-white); }
+.cle-step-min { font-size: 12px; color: var(--f-faint); font-variant-numeric: tabular-nums; }
+.cle-root .cle-add { border-style: dashed !important; justify-content: center; }
+
+/* editor area */
+.cle-main { background: var(--f-bg-deep, var(--f-bg)); }
+.cle-root .cle-toolbar button { border-color: transparent; color: var(--f-muted); }
+.cle-root .cle-toolbar button:hover:not(:disabled) { color: var(--f-text); }
+.cle-root .cle-markdown { font-family: var(--f-mono); border-radius: 16px; background: var(--f-surface); line-height: 1.7; }
+.cle-preview { border-radius: 16px; overflow: hidden; box-shadow: var(--f-shadow); }
+
+/* side panel: segmented tabs like the deck inspector */
+.cle-side { background: var(--f-bg); }
+.cle-root .cle-tabs { margin: 10px 12px 4px; padding: 3px; gap: 2px; border-radius: var(--f-r-pill); background: var(--f-surface-2); display: flex; }
+.cle-root .cle-tabs button { flex: 1; justify-content: center; border: 0 !important; color: var(--f-muted); background: transparent; }
+.cle-root .cle-tabs button.cle-active { background: var(--f-surface) !important; color: var(--f-text); }
+.cle-root .cle-chat-form textarea { background: var(--f-composer); color: #f6f4f0; border-color: rgba(255, 255, 255, 0.07); border-radius: 18px; }
+.cle-root .cle-chat-form textarea::placeholder { color: #8c92a0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cle-root *, .cle-root *::before, .cle-root *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
+.cle-root input[type="checkbox"] { accent-color: var(--f-orange); }
+
+/* top bar publish popover (same pattern as the deck and the site) */
+.cle-publish-wrap { position: relative; }
+.cle-publish {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 40;
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--f-line);
+  border-radius: 16px;
+  background: var(--f-surface);
+  color: var(--f-text);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
+  font-size: 13px;
+}
+.cle-publish-title { font-size: 14px; }
+.cle-publish-check { display: flex; align-items: flex-start; gap: 8px; line-height: 1.4; cursor: pointer; }
+.cle-publish-check input { margin-top: 2px; accent-color: var(--f-orange); }
+.cle-publish-hint { margin: 0; color: var(--f-muted); font-size: 12.5px; }
+.cle-publish-error { color: var(--f-danger); }
+.cle-root .cle-publish .cle-publish-run {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: var(--f-r-pill);
+  background: var(--f-orange);
+  color: var(--f-white);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.cle-root .cle-publish .cle-publish-run:hover:not(:disabled) { background: var(--f-orange-hover); }
+.cle-root .cle-publish .cle-publish-run:disabled { opacity: 0.6; cursor: default; }
+.cle-publish-links { display: flex; gap: 6px; flex-wrap: wrap; }
+.cle-publish-links a,
+.cle-root .cle-publish .cle-publish-links button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--f-line);
+  border-radius: var(--f-r-pill);
+  background: transparent;
+  color: var(--f-text);
+  font: inherit;
+  font-size: 12.5px;
+  text-decoration: none;
+  cursor: pointer;
+}
+.cle-publish-links a:hover,
+.cle-root .cle-publish .cle-publish-links button:hover { background: var(--f-surface-2); }
+
+/* intro pages (cover, presenter, setup) above the steps, previewed live */
+.cle-pages { list-style: none; margin: 0 0 6px; padding: 0 0 10px; display: flex; flex-direction: column; gap: 2px; border-bottom: 1px solid var(--f-line); }
+.cle-root .cle-page-pick {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px !important;
+  border: 1px solid transparent !important;
+  border-radius: 14px !important;
+  background: transparent !important;
+  font-weight: 500 !important;
+  text-align: left;
+  color: var(--f-text);
+}
+.cle-root .cle-page-pick:hover { background: var(--f-surface) !important; }
+.cle-root .cle-page-pick[aria-current="true"] { border-color: var(--f-line) !important; background: var(--f-surface) !important; }
+.cle-page-icon { width: 26px; height: 26px; border-radius: 50%; display: inline-grid; place-items: center; background: var(--f-surface-2); color: var(--f-muted); flex: none; }
+.cle-page-pick[aria-current="true"] .cle-page-icon { background: var(--f-orange); color: var(--f-white); }
+.cle-page-preview { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
+.cle-page-preview > .cle-hint { margin: 0; }
+.cle-page-frame { flex: 1; min-height: 0; overflow: auto; border-radius: 16px; box-shadow: var(--f-shadow); border: 1px solid var(--cle-line); }

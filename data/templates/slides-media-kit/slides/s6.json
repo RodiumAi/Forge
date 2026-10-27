@@ -1,0 +1,203 @@
+{
+  "id": "s6",
+  "background": {
+    "type": "color",
+    "token": "--bg"
+  },
+  "elements": [
+    {
+      "id": "s6-image",
+      "type": "image",
+      "x": 80,
+      "y": 90,
+      "w": 760,
+      "h": 860,
+      "z": 1,
+      "src": "public/images/studio.webp",
+      "alt": "Studio de tournage avec fond vert et éclairages",
+      "fit": "cover",
+      "matchKey": "hero-image",
+      "credit": {
+        "source": "pixabay",
+        "author": "LadyQuester",
+        "url": "https://pixabay.com/photos/film-studio-chomakey-studio-5366454/"
+      },
+      "radius": 20
+    },
+    {
+      "id": "s6-bar",
+      "type": "shape",
+      "x": 1000,
+      "y": 217,
+      "w": 20,
+      "h": 20,
+      "z": 2,
+      "shape": "ellipse",
+      "fill": "--accent",
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s6-kicker",
+      "type": "text",
+      "role": "label",
+      "x": 1036,
+      "y": 206,
+      "w": 744,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Contenu de marque"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 600,
+        "color": "--accent",
+        "align": "left",
+        "lineHeight": 1.4,
+        "letterSpacing": 3,
+        "uppercase": true
+      }
+    },
+    {
+      "id": "s6-heading",
+      "type": "text",
+      "role": "heading",
+      "x": 1000,
+      "y": 256,
+      "w": 780,
+      "h": 210,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Nos studios, votre histoire"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 60,
+        "weight": 600,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.1
+      },
+      "animation": {
+        "type": "mask-reveal",
+        "trigger": "on-enter",
+        "direction": "up",
+        "durationMs": 700
+      }
+    },
+    {
+      "id": "s6-body",
+      "type": "text",
+      "role": "body",
+      "x": 1000,
+      "y": 490,
+      "w": 780,
+      "h": 180,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Notre équipe produit des séries vidéo et des épisodes de podcast avec les marques, dans le ton de Racines."
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 30,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.5
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "delayMs": 120,
+        "durationMs": 500
+      }
+    },
+    {
+      "id": "s6-list",
+      "type": "text",
+      "role": "body",
+      "x": 1000,
+      "y": 690,
+      "w": 780,
+      "h": 250,
+      "z": 3,
+      "content": [
+        {
+          "type": "bullet-list",
+          "items": [
+            {
+              "text": "Studio vidéo et son à Paris"
+            },
+            {
+              "text": "Diffusion sur nos réseaux, 420 k abonnés"
+            },
+            {
+              "text": "Mention partenaire transparente"
+            }
+          ]
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 28,
+        "weight": 400,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.55
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "delayMs": 120,
+        "durationMs": 500
+      }
+    },
+    {
+      "id": "s6-page",
+      "type": "text",
+      "role": "caption",
+      "x": 1660,
+      "y": 1000,
+      "w": 120,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "06"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "right",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s6-frame",
+      "type": "shape",
+      "x": 130,
+      "y": 140,
+      "w": 760,
+      "h": 860,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 20
+    }
+  ]
+}

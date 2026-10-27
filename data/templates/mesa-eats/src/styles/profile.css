@@ -1,0 +1,46 @@
+/* Profile tab. Scoped under .profile-screen. */
+.profile-screen { gap: 1.4rem; }
+
+.profile-screen .member {
+  position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: .9rem 1rem; padding: 1.2rem;
+  border-radius: var(--radius); color: #fff; overflow: hidden;
+  background: radial-gradient(120% 90% at 100% 0%, rgba(255, 201, 77, .55), transparent 55%), linear-gradient(140deg, #e8442e, #c9341f);
+  box-shadow: 0 20px 40px -18px rgba(201, 52, 31, .7);
+}
+.profile-screen .member img { width: 4.2rem; height: 4.2rem; border-radius: 999px; object-fit: cover; box-shadow: 0 0 0 3px rgba(255, 255, 255, .85); }
+.profile-screen .m-meta { display: grid; gap: .15rem; justify-items: start; }
+.profile-screen .m-meta h2 { font-size: 1.35rem; font-weight: 800; }
+.profile-screen .m-meta small { font-size: .78rem; opacity: .85; }
+.profile-screen .plus { display: inline-flex; align-items: center; gap: .3rem; margin-top: .3rem; padding: .25rem .6rem; border-radius: 999px; background: var(--saffron); color: var(--fg); font-size: .72rem; font-weight: 700; }
+.profile-screen .m-stats { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem; }
+.profile-screen .m-stats div { display: grid; gap: .1rem; padding: .7rem .75rem; border-radius: 1rem; background: rgba(255, 255, 255, .16); }
+.profile-screen .m-stats b { font-family: var(--font-display); font-size: 1.3rem; font-weight: 800; line-height: 1.05; }
+.profile-screen .m-stats span { font-size: .7rem; opacity: .85; }
+
+.profile-screen .invite { display: flex; align-items: center; gap: .8rem; padding: .8rem 1rem .8rem .8rem; border-radius: 1.3rem; background: color-mix(in srgb, var(--basil) 10%, var(--surface)); border: 1px dashed color-mix(in srgb, var(--basil) 45%, transparent); color: inherit; text-decoration: none; }
+.profile-screen .inv-ico { width: 2.75rem; height: 2.75rem; border-radius: .9rem; display: grid; place-items: center; background: var(--basil); color: #fff; flex-shrink: 0; }
+.profile-screen .invite > span:nth-child(2) { flex: 1; display: grid; gap: .1rem; }
+.profile-screen .invite strong { font-size: .92rem; }
+.profile-screen .invite small { font-size: .76rem; color: var(--muted); }
+
+.profile-screen .favs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .7rem; }
+.profile-screen .fav { display: grid; gap: .45rem; color: inherit; text-decoration: none; }
+.profile-screen .fav img { aspect-ratio: 1; width: 100%; object-fit: cover; border-radius: 1.2rem; box-shadow: var(--shadow-soft); }
+.profile-screen .fav span { font-size: .78rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.profile-screen .list { padding: .9rem 1rem .4rem; }
+.profile-screen .list h3 { font-size: 1.05rem; margin-bottom: .2rem; }
+.profile-screen .row { display: flex; align-items: center; gap: .85rem; min-height: 3.6rem; padding: .5rem 0; border-bottom: 1px solid var(--line); color: inherit; }
+.profile-screen .row:last-child { border-bottom: 0; }
+.profile-screen button.row { appearance: none; width: 100%; background: none; border-left: 0; border-right: 0; border-top: 0; text-align: left; }
+.profile-screen button.row:last-child { border-bottom: 0; }
+.profile-screen .row > svg { color: var(--muted); }
+.profile-screen .r-ico { width: 2.5rem; height: 2.5rem; border-radius: .85rem; display: grid; place-items: center; background: var(--surface-2); flex-shrink: 0; }
+.profile-screen .row-meta { flex: 1; min-width: 0; display: grid; gap: .1rem; }
+.profile-screen .row-meta strong { font-size: .93rem; font-weight: 600; }
+.profile-screen .row-meta span { font-size: .78rem; color: var(--muted); }
+.profile-screen .row.add strong { color: var(--accent); }
+.profile-screen .row.add .r-ico { background: color-mix(in srgb, var(--accent) 12%, var(--surface)); color: var(--accent); }
+.profile-screen .radio { width: 1.35rem; height: 1.35rem; border-radius: 999px; border: 2px solid color-mix(in srgb, var(--fg) 20%, transparent); flex-shrink: 0; transition: border .2s ease; }
+.profile-screen .radio.on { border: 6px solid var(--accent); }
+.profile-screen .sign-out { color: var(--accent-deep); }

@@ -1,10 +1,11 @@
 "use client";
 
 import { ChangeEvent, useCallback, useEffect, useState } from "react";
-import { ImagePlus, Loader2 } from "lucide-react";
+import { Copy, Download, ExternalLink, ImagePlus, Loader2 } from "lucide-react";
 import { api, apiBase, getToken } from "@/lib/api";
 import { assetContentUrl } from "@/lib/asset-url";
 import { Icon } from "@/components/ui/icon";
+import { ContextMenu, copyText, useContextMenu, useMenuTrigger } from "@/components/ui/ContextMenu";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { FileTypeIcon } from "./file-icons";
 import type { ProjectAsset } from "@/lib/prompt-upload";
@@ -21,6 +22,31 @@ export function FilesPane({ projectId, onChanged, onGoToCode }: Props) {
   const [assets, setAssets] = useState<ProjectAsset[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const menu = useContextMenu();
+  const trigger = useMenuTrigger<{ asset: ProjectAsset; url: string }>(({ asset, url }, at) => {
+    const ico = (I: typeof Copy) => <I size={16} aria-hidden />;
+    menu.open(
+      at,
+      [
+        { id: "open", label: t("bdMenuOpenNewTab"), icon: ico(ExternalLink), onSelect: () => window.open(url, "_blank", "noopener,noreferrer") },
+        {
+          id: "download",
+          label: t("bdMenuDownload"),
+          icon: ico(Download),
+          onSelect: () => {
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = asset.name;
+            a.rel = "noreferrer";
+            a.click();
+          },
+        },
+        { type: "separator" },
+        { id: "copy-name", label: t("bdMenuCopyName"), icon: ico(Copy), onSelect: () => copyText(asset.name) },
+      ],
+      t("bdMenuFile"),
+    );
+  });
 
   const load = useCallback(async () => {
     try {
@@ -98,6 +124,10 @@ export function FilesPane({ projectId, onChanged, onGoToCode }: Props) {
                   target="_blank"
                   rel="noreferrer"
                   title={asset.name}
+                  {...trigger.bind({ asset, url: viewUrl })}
+                  onClick={(e) => {
+                    if (trigger.justFired()) e.preventDefault();
+                  }}
                 >
                   {asset.content_type.startsWith("image/") ? (
                      
@@ -115,6 +145,7 @@ export function FilesPane({ projectId, onChanged, onGoToCode }: Props) {
           })}
         </ul>
       )}
+      <ContextMenu request={menu.request} onClose={menu.close} />
     </section>
   );
 }

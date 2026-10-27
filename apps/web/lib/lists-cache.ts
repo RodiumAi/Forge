@@ -1,8 +1,9 @@
 import { api, getToken } from "@/lib/api";
+import type { ProjectKindId } from "@/lib/kinds";
 
 const PROJECTS_KEY = "forge_projects_v1";
-const TEMPLATES_KEY = "forge_templates_v1";
-const INTEGRATIONS_KEY = "forge_integrations_v1";
+const TEMPLATES_KEY = "forge_templates_v2";
+const INTEGRATIONS_KEY = "forge_integrations_v2"; // v2: embed_hosts
 /** Soft TTL: show cache immediately, refresh in background when older. */
 const SOFT_TTL_MS = 90 * 1000;
 const HARD_TTL_MS = 30 * 60 * 1000;
@@ -21,7 +22,7 @@ export type CachedProject = {
   updated_at?: string;
   status?: string;
   has_thumbnail?: boolean;
-  platform?: "web" | "mobile";
+  platform?: ProjectKindId;
   access_role?: string;
   collaborators?: { name: string | null; email: string; avatar_url: string | null }[];
 };
@@ -35,7 +36,9 @@ export type CachedTemplate = {
   accent?: string | null;
   bg?: string | null;
   preview_url?: string | null;
-  kind?: "web" | "mobile";
+  preview_image_url?: string | null;
+  kind?: ProjectKindId;
+  required_plan?: "starter" | "builder" | null;
 };
 
 export type CachedIntegration = {
@@ -50,6 +53,8 @@ export type CachedIntegration = {
   badge?: string | null;
   enabled_hint?: boolean;
   logo_url?: string | null;
+  /** Domains of the embed snippet (composer "snippet missing" check). */
+  embed_hosts?: string[];
 };
 
 type ListEnvelope<T> = {
@@ -417,5 +422,15 @@ export function removeProject(locale: string, projectId: string) {
   commitProjects(
     locale,
     prev.filter((p) => p.id !== projectId),
+  );
+}
+
+/** Merge fields into one cached project (after a rename). */
+export function patchProject(locale: string, projectId: string, patch: Partial<CachedProject>) {
+  const prev = getCachedProjects(locale);
+  if (!prev) return;
+  commitProjects(
+    locale,
+    prev.map((p) => (p.id === projectId ? { ...p, ...patch } : p)),
   );
 }

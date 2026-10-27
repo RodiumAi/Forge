@@ -1,10 +1,14 @@
 "use client";
 
 import { ReactNode, useEffect, useRef, useState } from "react";
+import { Copy, ImagePlus, Link2, MessageSquare, PencilLine, RotateCw, Sparkles } from "lucide-react";
 import { api, apiBase } from "@/lib/api";
 import { getMediaToken } from "@/lib/media-token";
 import { uploadProjectThumbnail } from "@/lib/project-thumbnail";
 import { useI18n } from "@/lib/i18n/I18nProvider";
+import { Button } from "@/components/ui/Button";
+import { Glyph } from "@/components/ui/glyph";
+import { ContextMenu, copyText, useContextMenu, type ContextMenuEntry } from "@/components/ui/ContextMenu";
 import { PreviewToolbar } from "./PreviewToolbar";
 import type {
   ElementSelection,
@@ -35,13 +39,18 @@ type Props = {
   onPreviewToolChange: (tool: PreviewTool | null) => void;
   onStartPreview: () => void;
   onRefreshPreview?: () => void;
-  onVisualEdit?: (oldText: string, newText: string) => void | Promise<void>;
+  onVisualEdit?: (oldText: string, newText: string, forgeId?: string | null) => void | Promise<void>;
 
   onElementSelect?: (sel: ElementSelection) => void;
   onCommentAnchor?: (sel: ElementSelection) => void;
   onImageSelect?: (sel: ImageSelection) => void;
   /** Fired when the preview app navigates (hash / history) so the page picker can sync. */
   onPreviewPathChange?: (path: string) => void;
+  /**
+   * Pages rail: receives a small picture of the page on screen once it has
+   * settled (after a load, a navigation or a re-render). Omit to capture nothing.
+   */
+  onPageSnapshot?: (path: string, dataUrl: string) => void;
   sidePanel?: ReactNode;
   /**
    * While the agent is generating / repairing, hide the blocking Babel overlay
@@ -60,6 +69,8 @@ const WIDTH: Record<ViewportMode, string> = {
 const TOOL_RETRY_DELAYS_MS = [50, 150, 400, 800, 1600, 3200];
 const NAV_RETRY_DELAYS_MS = [0, 120, 350, 700, 1400, 2800];
 const MAX_BRIDGE_PINGS = 8;
+/** Settle time before the pages rail snapshot (fonts, images, entrance animations). */
+const PAGE_CAPTURE_DELAY_MS = 1400;
 
 /**
  * Origin of the preview iframe, or null when it cannot be determined.
@@ -97,6 +108,7 @@ export function PreviewPane({
   onCommentAnchor,
   onImageSelect,
   onPreviewPathChange,
+  onPageSnapshot,
   sidePanel,
   suppressErrorOverlay = false,
 }: Props) {
@@ -105,6 +117,8 @@ export function PreviewPane({
   const [bridgeSynced, setBridgeSynced] = useState(false);
   const [bridgeWarning, setBridgeWarning] = useState(false);
   const [editMissHint, setEditMissHint] = useState<string | null>(null);
+  const menu = useContextMenu();
+  const openMenuRef = useRef<(data: Record<string, unknown>) => void>(() => undefined);
   const frameRef = useRef<HTMLIFrameElement>(null);
   const toolRetryTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const pingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -117,6 +131,12 @@ export function PreviewPane({
   const onCommentAnchorRef = useRef(onCommentAnchor);
   const onImageSelectRef = useRef(onImageSelect);
   const onPreviewPathChangeRef = useRef(onPreviewPathChange);
+  const onPageSnapshotRef = useRef(onPageSnapshot);
+  const viewportRef = useRef(viewport);
+  const previewToolRef = useRef(previewTool);
+  const pageCaptureTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pageCaptureReqRef = useRef<{ id: string; path: string } | null>(null);
+  const pageCaptureSeqRef = useRef(0);
   const previewPathRef = useRef(previewPath);
   const suppressErrorOverlayRef = useRef(suppressErrorOverlay);
   const pendingThumbRef = useRef(false);
@@ -130,6 +150,9 @@ export function PreviewPane({
   onCommentAnchorRef.current = onCommentAnchor;
   onImageSelectRef.current = onImageSelect;
   onPreviewPathChangeRef.current = onPreviewPathChange;
+  onPageSnapshotRef.current = onPageSnapshot;
+  viewportRef.current = viewport;
+  previewToolRef.current = previewTool;
   previewPathRef.current = previewPath;
   suppressErrorOverlayRef.current = suppressErrorOverlay;
   desiredToolRef.current = previewTool;
@@ -153,6 +176,50 @@ export function PreviewPane({
       /* ignore */
     }
   }
+
+  /**
+   * Pages rail: ask the runner for a snapshot of the page on screen once it
+   * settled. Debounced; skipped mid-run (half-written bundle) and while a
+   * tool overlay is active. The reply is filed under the route asked for,
+   * and dropped if the preview moved to another page meanwhile.
+   */
+  function schedulePageCapture(delay = PAGE_CAPTURE_DELAY_MS) {
+    if (!onPageSnapshotRef.current) return;
+    if (pageCaptureTimerRef.current) clearTimeout(pageCaptureTimerRef.current);
+    pageCaptureTimerRef.current = setTimeout(() => {
+      pageCaptureTimerRef.current = null;
+      if (!onPageSnapshotRef.current || !appMountedRef.current) return;
+      if (suppressErrorOverlayRef.current || previewToolRef.current) return;
+      const win = frameRef.current?.contentWindow;
+      const target = previewOrigin(previewSrc);
+      if (!win || !target) return;
+      pageCaptureSeqRef.current += 1;
+      const req = { id: `page-${pageCaptureSeqRef.current}`, path: previewPathRef.current || "/" };
+      pageCaptureReqRef.current = req;
+      try {
+        win.postMessage(
+          { type: "forge:capture-page", requestId: req.id, width: viewportRef.current === "phone" ? 240 : 320 },
+          target,
+        );
+      } catch {
+        /* iframe reloading: the next mount schedules another capture */
+      }
+    }, delay);
+  }
+
+  useEffect(
+    () => () => {
+      if (pageCaptureTimerRef.current) clearTimeout(pageCaptureTimerRef.current);
+    },
+    [],
+  );
+
+  // A new page on screen, the end of a run, or a tool closed: snapshot again.
+  useEffect(() => {
+    if (!previewSrc || suppressErrorOverlay || previewTool) return;
+    schedulePageCapture();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- capture reads refs at call time
+  }, [previewPath, previewSrc, suppressErrorOverlay, previewTool, Boolean(onPageSnapshot)]);
 
   // After an agent run (working → idle), ask the runner for a JPEG and persist it.
   useEffect(() => {
@@ -234,6 +301,14 @@ export function PreviewPane({
         setLoadError(false);
         setBabelError(null);
         if (pendingThumbRef.current) requestThumbCapture();
+        schedulePageCapture();
+      }
+      if (data.type === "forge:page-snapshot") {
+        const req = pageCaptureReqRef.current;
+        if (!req || data.requestId !== req.id) return;
+        pageCaptureReqRef.current = null;
+        if (typeof data.dataUrl !== "string" || req.path !== previewPathRef.current) return;
+        onPageSnapshotRef.current?.(req.path, data.dataUrl);
       }
       if (
         data.type === "forge:thumb-snapshot" &&
@@ -373,6 +448,82 @@ export function PreviewPane({
     }
   }
 
+  function postAction(action: string) {
+    const win = frameRef.current?.contentWindow;
+    const target = previewOrigin(previewSrc);
+    if (!win || !target) return;
+    try {
+      win.postMessage({ type: "forge-context-action", action }, target);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  /** Right click or long press in the preview: the bridge says what sits under it. */
+  openMenuRef.current = (data) => {
+    const frame = frameRef.current;
+    if (!frame) return;
+    const box = frame.getBoundingClientRect();
+    const scale = frame.offsetWidth ? box.width / frame.offsetWidth : 1;
+    const x = typeof data.x === "number" ? data.x : 0;
+    const y = typeof data.y === "number" ? data.y : 0;
+    const at = { x: Math.round(box.left + x * scale), y: Math.round(box.top + y * scale) };
+    const ico = (Icon: typeof Copy) => <Icon size={16} aria-hidden />;
+    const raw = data.element && typeof data.element === "object" ? (data.element as Record<string, unknown>) : null;
+    const str = (v: unknown) => (typeof v === "string" ? v : null);
+    const element: ElementSelection | null = raw
+      ? {
+          tag: str(raw.tag) || "div",
+          id: str(raw.id),
+          className: str(raw.className),
+          selector: str(raw.selector) || "",
+          text: str(raw.text) || "",
+          forgeId: str(raw.forgeId),
+        }
+      : null;
+    const img = data.image && typeof data.image === "object" ? (data.image as Record<string, unknown>) : null;
+    const image: ImageSelection | null = img
+      ? { src: str(img.src) || "", alt: str(img.alt) || "", selector: str(img.selector) || "", forgeId: str(img.forgeId) }
+      : null;
+    const selection = str(data.selection) || "";
+    const link = str(data.link);
+    const items: ContextMenuEntry[] = [];
+    if (data.editable === true && onVisualEditRef.current) {
+      items.push({ id: "edit-text", label: t("bdMenuEditText"), icon: ico(PencilLine), onSelect: () => postAction("edit-text") });
+    }
+    if (image && onImageSelectRef.current) {
+      items.push({
+        id: "image",
+        label: t("bdMenuReplaceImage"),
+        icon: ico(ImagePlus),
+        onSelect: () => {
+          onPreviewToolChange("image");
+          onImageSelectRef.current?.(image);
+        },
+      });
+    }
+    if (element && onElementSelectRef.current) {
+      items.push({ id: "ask", label: t("bdMenuAskElement"), icon: ico(Sparkles), onSelect: () => onElementSelectRef.current?.(element) });
+    }
+    if (element && onCommentAnchorRef.current) {
+      items.push({
+        id: "comment",
+        label: t("bdMenuComment"),
+        icon: ico(MessageSquare),
+        onSelect: () => {
+          onPreviewToolChange("comment");
+          onCommentAnchorRef.current?.(element);
+        },
+      });
+    }
+    items.push({ type: "separator" });
+    if (selection) items.push({ id: "copy", label: t("bdMenuCopy"), icon: ico(Copy), onSelect: () => copyText(selection) });
+    if (link) items.push({ id: "copy-link", label: t("bdMenuCopyLink"), icon: ico(Link2), onSelect: () => copyText(link) });
+    items.push({ type: "separator" });
+    if (onRefreshPreview) items.push({ id: "reload", label: t("bdMenuReload"), icon: ico(RotateCw), onSelect: onRefreshPreview });
+    menu.open(at, items, t("bdMenuPreview"));
+  };
+
   function postTool(tool: PreviewTool | null) {
     const win = frameRef.current?.contentWindow;
     const target = previewOrigin(previewSrc);
@@ -477,6 +628,11 @@ export function PreviewPane({
         return;
       }
 
+      if (type === "forge-context-menu") {
+        openMenuRef.current(data as Record<string, unknown>);
+        return;
+      }
+
       if (type === "forge-tool-escape") {
         onPreviewToolChange(null);
         return;
@@ -485,12 +641,13 @@ export function PreviewPane({
       if (type === "forge-visual-edit") {
         const oldText = typeof data.oldText === "string" ? data.oldText : "";
         const newText = typeof data.newText === "string" ? data.newText : "";
+        const forgeId = typeof data.forgeId === "string" ? data.forgeId : null;
         if (!oldText || newText === oldText) return;
         const win = frameRef.current?.contentWindow;
         const target = trustedOrigin;
         void (async () => {
           try {
-            await onVisualEditRef.current?.(oldText, newText);
+            await onVisualEditRef.current?.(oldText, newText, forgeId);
             if (win && target) win.postMessage({ type: "forge-visual-edit-ok" }, target);
           } catch {
             if (win && target) win.postMessage({ type: "forge-visual-edit-failed" }, target);
@@ -506,6 +663,7 @@ export function PreviewPane({
           className: typeof data.className === "string" ? data.className : null,
           selector: typeof data.selector === "string" ? data.selector : "",
           text: typeof data.text === "string" ? data.text : "",
+          forgeId: typeof data.forgeId === "string" ? data.forgeId : null,
         };
         if (type === "forge-element-select") onElementSelectRef.current?.(sel);
         else onCommentAnchorRef.current?.(sel);
@@ -517,13 +675,17 @@ export function PreviewPane({
           src: typeof data.src === "string" ? data.src : "",
           alt: typeof data.alt === "string" ? data.alt : "",
           selector: typeof data.selector === "string" ? data.selector : "",
+          forgeId: typeof data.forgeId === "string" ? data.forgeId : null,
         });
         return;
       }
 
       if (type === "forge-preview-location") {
-        const path = typeof data.path === "string" ? data.path : "";
-        if (!path) return;
+        const raw = typeof data.path === "string" ? data.path : "";
+        if (!raw) return;
+        // `/#tarifs` is a section of the page on screen, never a page of its
+        // own: an older bridge reported it as one and it filled the rail.
+        const path = raw.includes("#") ? raw.split("#")[0] || "/" : raw;
         if (path === previewPathRef.current) return;
         onPreviewPathChangeRef.current?.(path);
       }
@@ -540,104 +702,101 @@ export function PreviewPane({
   const showBridgeWarning = Boolean(previewTool && previewSrc && bridgeWarning && !bridgeSynced);
 
   return (
-    <section
-      className={`builder-preview builder-main-pane${toolActive ? " builder-preview-tool-active" : ""}`}
-    >
-      <div className="builder-preview-layout">
-        <div className={`builder-preview-stage viewport-${viewport}`}>
-          {editMissHint ? (
-            <div className="builder-preview-edit-badge builder-preview-edit-miss" aria-live="polite">
-              {editMissHint}
-            </div>
-          ) : null}
-          {showBridgeWarning ? (
-            <div className="builder-preview-edit-badge builder-preview-bridge-warn" aria-live="polite">
-              {t("previewBridgeWarn")}
-            </div>
-          ) : null}
-          {previewTool === "text" && showToolHint ? (
-            <div className="builder-preview-edit-badge" aria-live="polite">
-              {t("previewTextEditHint")}
-            </div>
-          ) : null}
-          {previewTool === "select" && showToolHint ? (
-            <div className="builder-preview-edit-badge" aria-live="polite">
-              {t("previewSelectHint")}
-            </div>
-          ) : null}
-          {previewSrc ? (
-            <div className="builder-viewport-frame" style={{ width: WIDTH[viewport] }}>
-              <iframe
-                ref={frameRef}
-                title="preview"
-                src={previewSrc}
-                className="builder-preview-frame"
-                // `allow-same-origin` is required: the runner needs a real origin so
-                // both sides can pin postMessage to it (a sandboxed opaque origin
-                // reports "null" and forces a wildcard, which is worse). The iframe
-                // is served from the API origin, which holds no browser credentials —
-                // the session token lives in the builder origin only.
-                sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups"
-                onLoad={() => {
-                  setLoadError(false);
-                  runnerReadyRef.current = true;
-                }}
-              />
-              {loadError && (
-                <div className="builder-preview-recover">
-                  <p>{babelError || t("previewBlankHint")}</p>
-                  <button
-                    type="button"
-                    className="btn builder-preview-recover-btn"
-                    onClick={() => {
-                      setLoadError(false);
-                      setBabelError(null);
-                      onRefreshPreview?.();
-                      onStartPreview();
-                    }}
-                  >
-                    {t("restartPreview")}
-                  </button>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="builder-preview-placeholder">
-              <p>
-                {previewBusy || previewLiveStatus === "starting"
-                  ? t("builderStarting")
-                  : previewLiveStatus === "dead"
-                    ? t("previewBlankHint")
-                    : t("previewEmpty")}
-              </p>
-              {!previewBusy && previewLiveStatus !== "starting" && (
-                <button
-                  type="button"
-                  className="btn"
+    <section className={`f-bd-preview${toolActive ? " is-tool" : ""}`} data-viewport={viewport}>
+      <div className="f-bd-preview-stage">
+        {editMissHint ? (
+          <div className="f-bd-hint warn" aria-live="polite">
+            {editMissHint}
+          </div>
+        ) : null}
+        {showBridgeWarning ? (
+          <div className="f-bd-hint warn" aria-live="polite">
+            {t("previewBridgeWarn")}
+          </div>
+        ) : null}
+        {previewTool === "text" && showToolHint ? (
+          <div className="f-bd-hint" aria-live="polite">
+            {t("previewTextEditHint")}
+          </div>
+        ) : null}
+        {previewTool === "select" && showToolHint ? (
+          <div className="f-bd-hint" aria-live="polite">
+            {t("previewSelectHint")}
+          </div>
+        ) : null}
+        {previewSrc ? (
+          <div className="f-bd-frame" data-d={viewport} style={{ width: WIDTH[viewport] }}>
+            <iframe
+              ref={frameRef}
+              title="preview"
+              src={previewSrc}
+              // `allow-same-origin` is required: the runner needs a real origin so
+              // both sides can pin postMessage to it (a sandboxed opaque origin
+              // reports "null" and forces a wildcard, which is worse). The iframe
+              // is served from the API origin, which holds no browser credentials:
+              // the session token lives in the builder origin only.
+              sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups"
+              onLoad={() => {
+                setLoadError(false);
+                runnerReadyRef.current = true;
+              }}
+            />
+            {loadError && (
+              <div className="f-bd-frame-recover">
+                <p>{babelError || t("previewBlankHint")}</p>
+                <Button
+                  size="sm"
+                  icon="refresh"
                   onClick={() => {
-                    if (previewLiveStatus === "dead") {
-                      onRefreshPreview?.();
-                    } else {
-                      onStartPreview();
-                    }
+                    setLoadError(false);
+                    setBabelError(null);
+                    onRefreshPreview?.();
+                    onStartPreview();
                   }}
                 >
-                  {previewLiveStatus === "dead" ? t("restartPreview") : t("startPreview")}
-                </button>
-              )}
-            </div>
-          )}
-          {previewSrc ? (
-            <PreviewToolbar
-              key={viewport}
-              tool={previewTool}
-              onToolChange={onPreviewToolChange}
-              defaultCollapsed={viewport === "phone"}
-            />
-          ) : null}
-        </div>
-        {sidePanel}
+                  {t("restartPreview")}
+                </Button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="f-bd-placeholder">
+            {previewBusy || previewLiveStatus === "starting" ? <Glyph name="refresh" className="f-spin" /> : null}
+            <p style={{ margin: 0 }}>
+              {previewBusy || previewLiveStatus === "starting"
+                ? t("builderStarting")
+                : previewLiveStatus === "dead"
+                  ? t("previewBlankHint")
+                  : t("previewEmpty")}
+            </p>
+            {!previewBusy && previewLiveStatus !== "starting" && (
+              <Button
+                size="sm"
+                icon={previewLiveStatus === "dead" ? "refresh" : "play"}
+                onClick={() => {
+                  if (previewLiveStatus === "dead") {
+                    onRefreshPreview?.();
+                  } else {
+                    onStartPreview();
+                  }
+                }}
+              >
+                {previewLiveStatus === "dead" ? t("restartPreview") : t("startPreview")}
+              </Button>
+            )}
+          </div>
+        )}
+        {previewSrc ? (
+          <PreviewToolbar
+            key={viewport}
+            tool={previewTool}
+            onToolChange={onPreviewToolChange}
+            defaultCollapsed={viewport === "phone"}
+          />
+        ) : null}
       </div>
+      {sidePanel ? <aside className="f-bd-side">{sidePanel}</aside> : null}
+      <ContextMenu request={menu.request} onClose={menu.close} />
     </section>
   );
 }

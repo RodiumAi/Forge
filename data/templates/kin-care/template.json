@@ -1,0 +1,32 @@
+{
+  "kind": "mobile",
+  "id": "kin-care",
+  "title": {
+    "en": "Kin",
+    "fr": "Kin"
+  },
+  "description": {
+    "en": "Health and telemedicine app: home with a teal next-appointment card, daily vitals and top doctors, a doctor search with specialty chips, upcoming and past appointments, a profile with medical info and an insurance card, and a doctor profile with day and time booking.",
+    "fr": "Application de santé et de téléconsultation : accueil avec carte du prochain rendez-vous, constantes du jour et meilleurs médecins, recherche de médecins par spécialité, rendez-vous à venir et passés, profil avec informations médicales et carte d'assurance, et fiche médecin avec réservation par jour et créneau."
+  },
+  "tags": [
+    "mobile",
+    "health",
+    "telemedicine",
+    "appointments"
+  ],
+  "preview": "preview.html",
+  "bootHint": {
+    "en": "Adapt kin-care: patient name, doctors with photos, specialties, fees and slots, appointments, vitals and the insurance card.",
+    "fr": "Adapte kin-care : nom du patient, médecins avec photos, spécialités, tarifs et créneaux, rendez-vous, constantes et carte d'assurance."
+  },
+  "accent": "#14907a",
+  "bg": "#f3f8f8",
+  "fg": "#102a2b",
+  "muted": "#6d8485",
+  "tone": "clean, reassuring, caring",
+  "fonts": {
+    "display": "Figtree",
+    "body": "Figtree"
+  }
+}

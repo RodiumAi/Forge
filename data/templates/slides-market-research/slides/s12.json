@@ -1,0 +1,178 @@
+{
+  "id": "s12",
+  "background": {
+    "type": "gradient",
+    "angle": 135,
+    "stops": [
+      {
+        "color": "--bg",
+        "at": 0
+      },
+      {
+        "color": "--surface",
+        "at": 1
+      }
+    ]
+  },
+  "elements": [
+    {
+      "id": "s12-bar",
+      "type": "shape",
+      "x": 900,
+      "y": 260,
+      "w": 120,
+      "h": 10,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 5,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s12-title",
+      "type": "text",
+      "role": "title",
+      "x": 160,
+      "y": 300,
+      "w": 1600,
+      "h": 230,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Merci"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 160,
+        "weight": 700,
+        "color": "--fg",
+        "align": "center",
+        "lineHeight": 1.05,
+        "letterSpacing": -2
+      }
+    },
+    {
+      "id": "s12-subtitle",
+      "type": "text",
+      "role": "subtitle",
+      "x": 160,
+      "y": 550,
+      "w": 1600,
+      "h": 110,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Rapport complet, questionnaire et données brutes disponibles."
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 38,
+        "weight": 400,
+        "color": "--muted",
+        "align": "center",
+        "lineHeight": 1.35
+      }
+    },
+    {
+      "id": "s12-icon1",
+      "type": "icon",
+      "x": 260,
+      "y": 760,
+      "w": 48,
+      "h": 48,
+      "z": 3,
+      "icon": "mail",
+      "color": "--accent",
+      "strokeWidth": 1.75,
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 0
+      }
+    },
+    {
+      "id": "s12-contact1",
+      "type": "text",
+      "role": "body",
+      "x": 330,
+      "y": 760,
+      "w": 640,
+      "h": 52,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "anais.perrin@paniervrac.example"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 32,
+        "weight": 500,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.5
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 0
+      }
+    },
+    {
+      "id": "s12-icon2",
+      "type": "icon",
+      "x": 1000,
+      "y": 760,
+      "w": 48,
+      "h": 48,
+      "z": 3,
+      "icon": "download",
+      "color": "--accent",
+      "strokeWidth": 1.75,
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 1
+      }
+    },
+    {
+      "id": "s12-contact2",
+      "type": "text",
+      "role": "body",
+      "x": 1070,
+      "y": 760,
+      "w": 640,
+      "h": 52,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "paniervrac.example/etude-2026"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 32,
+        "weight": 500,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.5
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 1
+      }
+    }
+  ]
+}
