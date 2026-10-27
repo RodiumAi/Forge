@@ -32,10 +32,13 @@ COPY data/integrations ./data/integrations
 # Forge Design deck player source: runtime/deck/build.mjs bundles it (with
 # only the icons a deck uses) when a deck is published or exported.
 COPY apps/web/components/deck-player ./runtime/deck/player-src/deck-player
+# Both players import the Forge mark from their parent folder.
+COPY apps/web/components/ForgeMark.tsx ./runtime/deck/player-src/ForgeMark.tsx
 # Forge Design codelab player source: runtime/codelab/build.mjs bundles it once
 # here (static output in runtime/codelab/dist, copied by every codelab publish).
 COPY apps/web/components/codelab-player ./runtime/codelab/player-src/components/codelab-player
 COPY apps/web/components/deck-player/theme.ts apps/web/components/deck-player/types.ts ./runtime/codelab/player-src/components/deck-player/
+COPY apps/web/components/ForgeMark.tsx ./runtime/codelab/player-src/components/ForgeMark.tsx
 
 WORKDIR /app/runtime
 # Preview iframe loads /runner/babel.min.js — vendor file is not committed
