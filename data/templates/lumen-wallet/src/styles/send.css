@@ -1,0 +1,32 @@
+/* Send (stack screen, no tab bar). Scoped under .send-screen. */
+.send-screen { min-height: 100dvh; padding: calc(.8rem + var(--safe-top)) 1.15rem calc(1.2rem + var(--safe-bottom)); gap: 1.2rem; }
+.send-screen .send-bar { display: flex; align-items: center; justify-content: space-between; }
+.send-screen .send-bar h1 { font-size: 1.05rem; font-weight: 600; }
+.send-screen .bar-space { width: 2.75rem; }
+
+.send-screen .recipients { display: flex; gap: .55rem; overflow-x: auto; scrollbar-width: none; margin-inline: -1.15rem; padding-inline: 1.15rem; }
+.send-screen .recipients::-webkit-scrollbar { display: none; }
+.send-screen .recipients button {
+  appearance: none; flex-shrink: 0; display: inline-flex; align-items: center; gap: .5rem; min-height: 2.9rem;
+  padding: .3rem .95rem .3rem .3rem; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-weight: 600; font-size: .85rem;
+}
+.send-screen .recipients img { width: 2.2rem; height: 2.2rem; border-radius: 999px; object-fit: cover; }
+.send-screen .recipients button.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+
+.send-screen .amount-box { flex: 1; display: grid; place-content: center; justify-items: center; gap: .55rem; text-align: center; min-height: 9rem; }
+.send-screen .big { margin: 0; font-family: var(--font-display); font-size: 3.2rem; font-weight: 700; letter-spacing: -.04em; line-height: 1; font-variant-numeric: tabular-nums; }
+.send-screen .big.empty { color: var(--muted); }
+.send-screen .big small { font-size: 1rem; margin-left: .35rem; color: var(--muted); letter-spacing: 0; }
+
+.send-screen .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: .4rem; }
+.send-screen .keypad button {
+  appearance: none; border: 0; background: transparent; min-height: 3.6rem; border-radius: 1.1rem;
+  font-family: var(--font-display); font-size: 1.5rem; font-weight: 500; display: grid; place-items: center;
+}
+.send-screen .keypad button:active { background: var(--surface); }
+.send-screen .send-btn:disabled { opacity: .35; }
+
+.send-screen.done { justify-content: center; align-items: center; text-align: center; gap: .9rem; padding-inline: 2rem; }
+.send-screen .done-mark { width: 5.5rem; height: 5.5rem; border-radius: 999px; display: grid; place-items: center; background: var(--accent); color: var(--on-accent); box-shadow: 0 0 0 14px color-mix(in srgb, var(--accent) 14%, transparent); margin-bottom: .8rem; }
+.send-screen.done h2 { font-size: 1.8rem; }
+.send-screen.done .btn-primary { margin-top: 1.4rem; max-width: 20rem; }

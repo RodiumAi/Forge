@@ -1,0 +1,123 @@
+{
+  "id": "s4",
+  "background": {
+    "type": "image",
+    "src": "public/images/posters.webp",
+    "fit": "cover",
+    "overlay": "--bg",
+    "overlayOpacity": 0.76,
+    "credit": {
+      "source": "pixabay",
+      "author": "ha11ok",
+      "url": "https://pixabay.com/photos/wall-painted-graffiti-devanagari-1108420/"
+    }
+  },
+  "elements": [
+    {
+      "id": "s4-number",
+      "type": "text",
+      "role": "label",
+      "x": 960,
+      "y": 250,
+      "w": 880,
+      "h": 440,
+      "z": 1,
+      "opacity": 0.9,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "01"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 400,
+        "weight": 400,
+        "color": "--accent",
+        "align": "right",
+        "lineHeight": 1.0,
+        "letterSpacing": -12
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "on-enter",
+        "durationMs": 500
+      }
+    },
+    {
+      "id": "s4-bar",
+      "type": "shape",
+      "x": 140,
+      "y": 440,
+      "w": 120,
+      "h": 10,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 5,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s4-title",
+      "type": "text",
+      "role": "title",
+      "x": 140,
+      "y": 470,
+      "w": 800,
+      "h": 210,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Projets phares"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 92,
+        "weight": 400,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.05,
+        "uppercase": true
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 80,
+        "durationMs": 450
+      }
+    },
+    {
+      "id": "s4-subtitle",
+      "type": "text",
+      "role": "subtitle",
+      "x": 140,
+      "y": 700,
+      "w": 800,
+      "h": 130,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Trois projets qui disent qui nous sommes."
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 34,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.35
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 80,
+        "durationMs": 450
+      }
+    }
+  ]
+}

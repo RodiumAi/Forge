@@ -1,0 +1,176 @@
+{
+  "id": "s12",
+  "background": {
+    "type": "image",
+    "src": "public/images/grad.webp",
+    "fit": "cover",
+    "overlay": "--bg",
+    "overlayOpacity": 0.82,
+    "credit": {
+      "source": "pixabay",
+      "author": "greymatters",
+      "url": "https://pixabay.com/photos/graduation-teen-high-school-student-995042/"
+    }
+  },
+  "elements": [
+    {
+      "id": "s12-bar",
+      "type": "shape",
+      "x": 140,
+      "y": 260,
+      "w": 120,
+      "h": 10,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 5,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s12-title",
+      "type": "text",
+      "role": "title",
+      "x": 140,
+      "y": 300,
+      "w": 1640,
+      "h": 230,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Merci de votre attention"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 112,
+        "weight": 600,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.05,
+        "letterSpacing": -2
+      }
+    },
+    {
+      "id": "s12-subtitle",
+      "type": "text",
+      "role": "subtitle",
+      "x": 140,
+      "y": 550,
+      "w": 1400,
+      "h": 110,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Je suis prête à répondre à vos questions."
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 38,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.35
+      }
+    },
+    {
+      "id": "s12-icon1",
+      "type": "icon",
+      "x": 140,
+      "y": 730,
+      "w": 48,
+      "h": 48,
+      "z": 3,
+      "icon": "mail",
+      "color": "--accent",
+      "strokeWidth": 1.75,
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 0
+      }
+    },
+    {
+      "id": "s12-contact1",
+      "type": "text",
+      "role": "body",
+      "x": 216,
+      "y": 730,
+      "w": 1200,
+      "h": 52,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "r.ahouandjinou@uac.example"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 32,
+        "weight": 500,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.5
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 0
+      }
+    },
+    {
+      "id": "s12-icon2",
+      "type": "icon",
+      "x": 140,
+      "y": 810,
+      "w": 48,
+      "h": 48,
+      "z": 3,
+      "icon": "book-open",
+      "color": "--accent",
+      "strokeWidth": 1.75,
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 1
+      }
+    },
+    {
+      "id": "s12-contact2",
+      "type": "text",
+      "role": "body",
+      "x": 216,
+      "y": 810,
+      "w": 1200,
+      "h": 52,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Manuscrit : theses.example/ahouandjinou"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 32,
+        "weight": 500,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.5
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 1
+      }
+    }
+  ]
+}

@@ -1,0 +1,254 @@
+{
+  "id": "s9",
+  "background": {
+    "type": "color",
+    "token": "--bg"
+  },
+  "elements": [
+    {
+      "id": "s9-ptframe",
+      "type": "shape",
+      "x": 40,
+      "y": 40,
+      "w": 1840,
+      "h": 1000,
+      "z": 0,
+      "shape": "rect",
+      "fill": "#0000",
+      "stroke": "--border",
+      "strokeWidth": 2
+    },
+    {
+      "id": "s9-ptframe2",
+      "type": "shape",
+      "x": 56,
+      "y": 56,
+      "w": 1808,
+      "h": 968,
+      "z": 0,
+      "shape": "rect",
+      "fill": "#0000",
+      "stroke": "--accent",
+      "strokeWidth": 1,
+      "opacity": 0.6
+    },
+    {
+      "id": "s9-bar",
+      "type": "shape",
+      "x": 920,
+      "y": 100,
+      "w": 80,
+      "h": 8,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 4,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s9-kicker",
+      "type": "text",
+      "role": "label",
+      "x": 140,
+      "y": 126,
+      "w": 1640,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Hébergements"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 600,
+        "color": "--accent",
+        "align": "center",
+        "lineHeight": 1.4,
+        "letterSpacing": 3,
+        "uppercase": true
+      }
+    },
+    {
+      "id": "s9-heading",
+      "type": "text",
+      "role": "heading",
+      "x": 140,
+      "y": 176,
+      "w": 1640,
+      "h": 140,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Où dormir près du domaine"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 64,
+        "weight": 600,
+        "color": "--fg",
+        "align": "center",
+        "lineHeight": 1.1
+      },
+      "animation": {
+        "type": "mask-reveal",
+        "trigger": "on-enter",
+        "direction": "up",
+        "durationMs": 700
+      }
+    },
+    {
+      "id": "s9-table",
+      "type": "table",
+      "x": 140,
+      "y": 360,
+      "w": 1640,
+      "h": 530,
+      "z": 2,
+      "rows": [
+        [
+          {
+            "text": "Hébergement"
+          },
+          {
+            "text": "Distance"
+          },
+          {
+            "text": "Prix par nuit"
+          },
+          {
+            "text": "Code"
+          }
+        ],
+        [
+          {
+            "text": "Gîtes du domaine"
+          },
+          {
+            "text": "Sur place"
+          },
+          {
+            "text": "95 €"
+          },
+          {
+            "text": "Réservés famille"
+          }
+        ],
+        [
+          {
+            "text": "Hôtel des Vignes"
+          },
+          {
+            "text": "4 km"
+          },
+          {
+            "text": "120 €"
+          },
+          {
+            "text": "CLARAMATHIS"
+          }
+        ],
+        [
+          {
+            "text": "Chambres d'hôtes Le Moulin"
+          },
+          {
+            "text": "7 km"
+          },
+          {
+            "text": "85 €"
+          },
+          {
+            "text": "Aucun"
+          }
+        ],
+        [
+          {
+            "text": "Hôtel de la Gare, Libourne"
+          },
+          {
+            "text": "18 km"
+          },
+          {
+            "text": "70 €"
+          },
+          {
+            "text": "Navette"
+          }
+        ]
+      ],
+      "headerRow": true,
+      "style": {
+        "size": 28,
+        "color": "--fg",
+        "headerFill": "--surface",
+        "border": "--border"
+      },
+      "columnWidths": [
+        1.7,
+        0.9,
+        1,
+        1.2
+      ],
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "delayMs": 120,
+        "durationMs": 500
+      }
+    },
+    {
+      "id": "s9-footer",
+      "type": "text",
+      "role": "caption",
+      "x": 140,
+      "y": 1000,
+      "w": 1100,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Clara et Mathis · 12 juin 2027 · Domaine des Tilleuls"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s9-page",
+      "type": "text",
+      "role": "caption",
+      "x": 1660,
+      "y": 1000,
+      "w": 120,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "09"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "right",
+        "lineHeight": 1.4
+      }
+    }
+  ]
+}

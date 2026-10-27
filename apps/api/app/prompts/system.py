@@ -81,7 +81,8 @@ replacement lines
     "redesign", "from scratch").
 17. Preserve existing layout, palette and copy outside the requested scope.
 18. When a [Selection: …] or [Sélection: …] marker is present, it is the sole edit target
-    unless the user clearly asks for broader changes.
+    unless the user clearly asks for broader changes. A "Targeted edit" message then gives
+    its exact file, line and source; when it limits the edit scope, never write other files.
 19. Prefer the smallest change that satisfies the request (forge-edit).
 
 ## Current file state (critical, never revert user edits)
@@ -166,8 +167,13 @@ replacement lines
 
 ## Pages, SEO & accessibility
 
-41. Multi-page sites use react-router-dom: `<BrowserRouter>`, one component per page in
-    `src/pages/`, and a catch-all `path="*"` route rendering a designed NotFound page.
+41. Every page is a real URL route with react-router-dom: `<BrowserRouter>` in main.tsx,
+    `<Routes>` in App.tsx, one component per page in `src/pages/<Name>.tsx` with the path in
+    kebab case (`About.tsx` -> `/about`, `Home.tsx` -> `/`), links through `<Link>` /
+    `<NavLink>`, and a catch-all `path="*"` route rendering a designed NotFound page. Never
+    fake pages with a `useState` (`setPage("about")`) and conditional rendering: the URL must
+    change, a reload must stay on the page and every page must be linkable. A true one-page
+    site (one scroll with `#section` anchors) needs no router.
 42. Each page sets its own title and description with react-helmet-async (`<HelmetProvider>`
     in main.tsx, `<Helmet>` in the page): published pages are pre-rendered with them.
 43. Semantic HTML: one `<h1>` per page, ordered headings, `<header>/<nav>/<main>/<footer>`,
@@ -234,9 +240,12 @@ SYSTEM_PROMPT_WITH_DESIGN = SYSTEM_PROMPT  # same body; design rules cover chart
 
 
 def system_prompt_with_design(has_design: bool, platform: str = "web") -> str:
+    from app.kinds import get_kind
+
     base = SYSTEM_PROMPT
-    if platform == "mobile":
-        base = SYSTEM_PROMPT + "\n" + MOBILE_PLATFORM_RULES + "\n"
+    kind = get_kind(platform)
+    if kind is not None and kind.prompt_rules:
+        base = SYSTEM_PROMPT + "\n" + kind.prompt_rules + "\n"
     # Every visible string of the site (copy, headings, SEO, alt, labels).
     base = base + "\n" + NO_LONG_DASH_RULE + "\n"
     if has_design:
@@ -269,6 +278,24 @@ structure the UI like a real product, not a marketing site:
    `env(safe-area-inset-bottom)`. Never replace this with a desktop mega-menu.
 5. When asked for deeper flows: **stack screens** (detail with back), sheets/modals, lists,
    forms, empty states, and success toasts, still inside the app shell.
+
+### Screens are routes (hard rule)
+Every screen is a real URL route with react-router-dom, never a `useState` switch
+(`setTab("search")`, `setScreen(...)` + conditional rendering is forbidden for screens):
+- `src/main.tsx` wraps `<App />` in `<BrowserRouter>` (the preview sets the basename, never set it).
+- `src/App.tsx` declares `<Routes>`; one component per screen in `src/screens/<Name>Screen.tsx`,
+  path = kebab name without `Screen`: `HomeScreen` -> `/`, `SearchScreen` -> `/search`,
+  `NowPlayingScreen` -> `/now-playing`.
+- The tab shell is a layout route: top bar, `<Outlet />`, persistent pieces (mini-player...)
+  and the bottom tabs as `<NavLink>` (active state from `isActive`).
+- Onboarding is its own route `/onboarding`, outside the shell; the shell redirects there with
+  `<Navigate to="/onboarding" replace />` until the `localStorage` flag is set, and finishing it
+  calls `navigate("/", { replace: true })`. Its slides stay as state inside that route.
+- Detail screens use params (`/album/:id`) and a back button: `navigate(-1)` when there is
+  history, otherwise the parent route.
+- Catch-all `path="*"` -> `<Navigate to="/" replace />`.
+- Sheets, modals, toasts and in-screen segmented tabs are not screens: they stay as state.
+- Shared app state (current item, player, cart) lives in a Context above the routes.
 
 ### Hard rules
 - Build an **app shell** (screens + nav), NOT a multi-section landing page / pricing / testimonials layout.

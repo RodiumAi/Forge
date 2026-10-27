@@ -1,0 +1,16 @@
+{
+  "name": "Kin",
+  "short_name": "Kin",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f3f8f8",
+  "theme_color": "#f3f8f8",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

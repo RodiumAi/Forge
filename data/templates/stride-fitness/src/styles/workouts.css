@@ -1,0 +1,14 @@
+/* Workouts tab. Scoped under .workouts-screen. */
+.workouts-screen .plan-banner {
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; padding: 1.1rem 1.15rem; border-radius: 1.4rem;
+  background: var(--volt); color: var(--on-accent);
+}
+.workouts-screen .plan-banner .kicker { color: rgba(11, 11, 12, .6); }
+.workouts-screen .plan-banner h2 { font-size: 2.1rem; font-weight: 800; margin: .2rem 0 .25rem; }
+.workouts-screen .plan-banner .muted { color: rgba(11, 11, 12, .7); font-size: .8rem; font-weight: 500; }
+.workouts-screen .plan-meter { display: flex; align-items: flex-end; gap: .22rem; height: 2.6rem; }
+.workouts-screen .plan-meter i { width: .45rem; height: 40%; border-radius: 999px; background: rgba(11, 11, 12, .18); }
+.workouts-screen .plan-meter i.done { height: 70%; background: var(--on-accent); }
+.workouts-screen .plan-meter i.now { height: 100%; background: var(--accent); }
+
+.workouts-screen .grid { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; margin-top: .75rem; }

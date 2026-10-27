@@ -1,0 +1,590 @@
+{
+  "id": "s7",
+  "background": {
+    "type": "color",
+    "token": "--bg"
+  },
+  "elements": [
+    {
+      "id": "s7-ptband",
+      "type": "shape",
+      "x": 1820,
+      "y": -200,
+      "w": 520,
+      "h": 1500,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--surface",
+      "rotation": 18
+    },
+    {
+      "id": "s7-ptbandline",
+      "type": "shape",
+      "x": 1760,
+      "y": -200,
+      "w": 6,
+      "h": 1500,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--accent-2",
+      "opacity": 0.4,
+      "rotation": 18
+    },
+    {
+      "id": "s7-bar",
+      "type": "shape",
+      "x": 140,
+      "y": 102,
+      "w": 326,
+      "h": 54,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 0,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s7-kicker",
+      "type": "text",
+      "role": "label",
+      "x": 168,
+      "y": 108,
+      "w": 600,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Objectifs 2030"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 600,
+        "color": "--accent-contrast",
+        "align": "left",
+        "lineHeight": 1.4,
+        "letterSpacing": 3,
+        "uppercase": true
+      }
+    },
+    {
+      "id": "s7-heading",
+      "type": "text",
+      "role": "heading",
+      "x": 140,
+      "y": 184,
+      "w": 1640,
+      "h": 140,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Quatre engagements chiffrés"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 64,
+        "weight": 700,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.1
+      }
+    },
+    {
+      "id": "s7-card1",
+      "type": "shape",
+      "x": 140,
+      "y": 380,
+      "w": 380,
+      "h": 460,
+      "z": 1,
+      "shape": "rect",
+      "fill": "#0000",
+      "stroke": "--accent",
+      "strokeWidth": 2,
+      "radius": 0,
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 0
+      }
+    },
+    {
+      "id": "s7-value1",
+      "type": "text",
+      "role": "heading",
+      "x": 180,
+      "y": 420,
+      "w": 300,
+      "h": 150,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "1 000"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 76,
+        "weight": 700,
+        "color": "--accent",
+        "align": "left",
+        "lineHeight": 1.1,
+        "letterSpacing": -1
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 0
+      }
+    },
+    {
+      "id": "s7-label1",
+      "type": "text",
+      "role": "body",
+      "x": 180,
+      "y": 600,
+      "w": 300,
+      "h": 90,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "km de côtes"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 30,
+        "weight": 600,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.3
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 0
+      }
+    },
+    {
+      "id": "s7-detail1",
+      "type": "text",
+      "role": "caption",
+      "x": 180,
+      "y": 700,
+      "w": 300,
+      "h": 110,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Sous protection active"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 0
+      }
+    },
+    {
+      "id": "s7-card2",
+      "type": "shape",
+      "x": 560,
+      "y": 380,
+      "w": 380,
+      "h": 460,
+      "z": 1,
+      "shape": "rect",
+      "fill": "#0000",
+      "stroke": "--accent",
+      "strokeWidth": 2,
+      "radius": 0,
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 1
+      }
+    },
+    {
+      "id": "s7-value2",
+      "type": "text",
+      "role": "heading",
+      "x": 600,
+      "y": 420,
+      "w": 300,
+      "h": 150,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "600 ha"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 76,
+        "weight": 700,
+        "color": "--accent",
+        "align": "left",
+        "lineHeight": 1.1,
+        "letterSpacing": -1
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 1
+      }
+    },
+    {
+      "id": "s7-label2",
+      "type": "text",
+      "role": "body",
+      "x": 600,
+      "y": 600,
+      "w": 300,
+      "h": 90,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "d'herbiers"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 30,
+        "weight": 600,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.3
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 1
+      }
+    },
+    {
+      "id": "s7-detail2",
+      "type": "text",
+      "role": "caption",
+      "x": 600,
+      "y": 700,
+      "w": 300,
+      "h": 110,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Restaurés et suivis"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 1
+      }
+    },
+    {
+      "id": "s7-card3",
+      "type": "shape",
+      "x": 980,
+      "y": 380,
+      "w": 380,
+      "h": 460,
+      "z": 1,
+      "shape": "rect",
+      "fill": "#0000",
+      "stroke": "--accent",
+      "strokeWidth": 2,
+      "radius": 0,
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 2
+      }
+    },
+    {
+      "id": "s7-value3",
+      "type": "text",
+      "role": "heading",
+      "x": 1020,
+      "y": 420,
+      "w": 300,
+      "h": 150,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "12"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 76,
+        "weight": 700,
+        "color": "--accent",
+        "align": "left",
+        "lineHeight": 1.1,
+        "letterSpacing": -1
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 2
+      }
+    },
+    {
+      "id": "s7-label3",
+      "type": "text",
+      "role": "body",
+      "x": 1020,
+      "y": 600,
+      "w": 300,
+      "h": 90,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "sites pilotes"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 30,
+        "weight": 600,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.3
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 2
+      }
+    },
+    {
+      "id": "s7-detail3",
+      "type": "text",
+      "role": "caption",
+      "x": 1020,
+      "y": 700,
+      "w": 300,
+      "h": 110,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Sur trois façades"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 2
+      }
+    },
+    {
+      "id": "s7-card4",
+      "type": "shape",
+      "x": 1400,
+      "y": 380,
+      "w": 380,
+      "h": 460,
+      "z": 1,
+      "shape": "rect",
+      "fill": "#0000",
+      "stroke": "--accent",
+      "strokeWidth": 2,
+      "radius": 0,
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 3
+      }
+    },
+    {
+      "id": "s7-value4",
+      "type": "text",
+      "role": "heading",
+      "x": 1440,
+      "y": 420,
+      "w": 300,
+      "h": 150,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "18 M€"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 76,
+        "weight": 700,
+        "color": "--accent",
+        "align": "left",
+        "lineHeight": 1.1,
+        "letterSpacing": -1
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 3
+      }
+    },
+    {
+      "id": "s7-label4",
+      "type": "text",
+      "role": "body",
+      "x": 1440,
+      "y": 600,
+      "w": 300,
+      "h": 90,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "mobilisés"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 30,
+        "weight": 600,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.3
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 3
+      }
+    },
+    {
+      "id": "s7-detail4",
+      "type": "text",
+      "role": "caption",
+      "x": 1440,
+      "y": 700,
+      "w": 300,
+      "h": 110,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Sur quatre ans"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 3
+      }
+    },
+    {
+      "id": "s7-footer",
+      "type": "text",
+      "role": "caption",
+      "x": 140,
+      "y": 1000,
+      "w": 1100,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Fondation Bleu Large · Stratégie océan 2030"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s7-page",
+      "type": "text",
+      "role": "caption",
+      "x": 1660,
+      "y": 1000,
+      "w": 120,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "07"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "right",
+        "lineHeight": 1.4
+      }
+    }
+  ]
+}

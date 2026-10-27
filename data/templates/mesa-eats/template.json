@@ -1,0 +1,32 @@
+{
+  "kind": "mobile",
+  "id": "mesa-eats",
+  "title": {
+    "en": "Mesa",
+    "fr": "Mesa"
+  },
+  "description": {
+    "en": "Food delivery app: big food photos, category chips and restaurant cards on Home, search with cuisines and recent searches, a live delivery tracker and past orders, a profile with payment and addresses, a restaurant menu with quantity steppers and a cart with tip, totals in FCFA and an order confirmation.",
+    "fr": "App de livraison de repas : grandes photos, catégories et cartes de restaurants sur l'accueil, recherche par cuisine avec recherches récentes, suivi de livraison en direct et commandes passées, profil avec paiement et adresses, menu d'un restaurant avec sélecteurs de quantité et panier avec pourboire, totaux en FCFA et confirmation de commande."
+  },
+  "tags": [
+    "mobile",
+    "food",
+    "delivery",
+    "restaurants"
+  ],
+  "preview": "preview.html",
+  "bootHint": {
+    "en": "Adapt mesa-eats: app name, delivery area, restaurants and their menus, prices and currency, delivery fees, tips and payment methods.",
+    "fr": "Adapte mesa-eats : nom de l'app, zone de livraison, restaurants et leurs menus, prix et devise, frais de livraison, pourboires et moyens de paiement."
+  },
+  "accent": "#e8442e",
+  "bg": "#fff8f1",
+  "fg": "#1f1a17",
+  "muted": "#8a7f77",
+  "tone": "appetizing, friendly, quick",
+  "fonts": {
+    "display": "Bricolage Grotesque",
+    "body": "Inter"
+  }
+}

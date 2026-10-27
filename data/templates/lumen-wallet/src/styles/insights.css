@@ -1,0 +1,25 @@
+/* Insights tab. Scoped under .insights-screen. */
+.insights-screen .periods { display: flex; gap: .4rem; }
+.insights-screen .periods button { appearance: none; border: 1px solid var(--line); background: transparent; color: var(--muted); min-height: 2.75rem; padding: 0 1.1rem; border-radius: 999px; font-weight: 600; font-size: .85rem; }
+.insights-screen .periods button.on { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+
+.insights-screen .spent { display: grid; gap: .45rem; justify-items: start; }
+.insights-screen .spent-amt { margin: 0; font-family: var(--font-display); font-size: 2.5rem; font-weight: 700; letter-spacing: -.04em; line-height: 1; font-variant-numeric: tabular-nums; }
+.insights-screen .spent-amt small { font-size: .95rem; color: var(--muted); letter-spacing: 0; }
+
+.insights-screen .chart { padding: 1.2rem 1rem 1rem; }
+.insights-screen .bars { display: grid; grid-template-columns: repeat(7, 1fr); gap: .55rem; height: 10.5rem; align-items: end; }
+.insights-screen .col { height: 100%; display: grid; grid-template-rows: 1fr auto; gap: .5rem; justify-items: center; }
+.insights-screen .col span { align-self: end; width: 100%; max-width: 2.1rem; border-radius: .7rem; background: var(--surface-2); }
+.insights-screen .col.peak span { background: var(--accent); }
+.insights-screen .col small { font-size: .72rem; color: var(--muted); font-weight: 600; }
+
+.insights-screen .cats { list-style: none; margin: 0; padding: 0; display: grid; gap: .65rem; }
+.insights-screen .cat { display: flex; align-items: center; gap: .85rem; padding: .85rem .95rem; border-radius: 1.2rem; background: var(--surface); border: 1px solid var(--line); }
+.insights-screen .cat-icon { width: 2.6rem; height: 2.6rem; border-radius: .95rem; display: grid; place-items: center; flex-shrink: 0; }
+.insights-screen .cat-body { flex: 1; display: grid; gap: .5rem; min-width: 0; }
+.insights-screen .cat-row { display: flex; justify-content: space-between; gap: .5rem; font-size: .9rem; }
+.insights-screen .cat-row strong { font-weight: 600; }
+.insights-screen .cat-row span { font-family: var(--font-display); font-weight: 600; font-variant-numeric: tabular-nums; }
+.insights-screen .cat-bar { height: .35rem; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+.insights-screen .cat-bar i { display: block; height: 100%; border-radius: inherit; }

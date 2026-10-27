@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "title": "Untitled codelab",
+  "summary": "",
+  "level": "beginner",
+  "durationMinutes": 5,
+  "prerequisites": [],
+  "learn": [],
+  "steps": [
+    {
+      "id": "intro",
+      "title": "Introduction",
+      "file": "intro.md",
+      "minutes": 5
+    }
+  ],
+  "downloads": []
+}

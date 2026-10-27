@@ -1,0 +1,30 @@
+/* Profile: portrait header, hairline stats, wishlist rail, orders and settings lists. */
+.profile-screen .who { display: grid; grid-template-columns: 4.6rem 1fr; gap: 1rem; align-items: center; }
+.profile-screen .who img { width: 4.6rem; height: 4.6rem; border-radius: 999px; object-fit: cover; }
+.profile-screen .who h2 { font-size: 2rem; line-height: 1; margin-bottom: .35rem; }
+
+.profile-screen .stats { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.profile-screen .stats div { display: grid; justify-items: center; gap: .2rem; padding: 1rem 0; }
+.profile-screen .stats div + div { border-left: 1px solid var(--line); }
+.profile-screen .stats strong { font-family: var(--font-display); font-size: 1.75rem; font-weight: 600; line-height: 1; }
+
+.profile-screen .wish-item { width: 7.6rem; display: grid; gap: .45rem; text-decoration: none; }
+.profile-screen .wish-item img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; }
+.profile-screen .wish-item span { font-family: var(--font-display); font-size: 1.05rem; font-weight: 600; line-height: 1.1; }
+.profile-screen .muted svg { vertical-align: -2px; }
+
+.profile-screen .orders, .profile-screen .settings { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.profile-screen .orders li { display: grid; grid-template-columns: auto 1fr auto; gap: .9rem; align-items: center; padding: .9rem 0; border-bottom: 1px solid var(--line); }
+.profile-screen .orders li div { display: grid; gap: .2rem; }
+.profile-screen .orders strong { font-weight: 500; font-size: .92rem; letter-spacing: .04em; }
+.profile-screen .orders .label { letter-spacing: .1em; }
+.profile-screen .status { font-size: .7rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.profile-screen .status.live { color: var(--rust); }
+
+.profile-screen .settings li { border-bottom: 1px solid var(--line); }
+.profile-screen .settings button {
+  appearance: none; border: 0; background: none; width: 100%; min-height: 3.4rem; padding: 0;
+  display: grid; grid-template-columns: auto 1fr auto auto; gap: .9rem; align-items: center; text-align: left;
+}
+.profile-screen .settings small { color: var(--muted); font-size: .8rem; }
+.profile-screen .settings .out { grid-template-columns: auto 1fr; color: var(--rust); }

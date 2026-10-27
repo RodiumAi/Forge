@@ -947,19 +947,31 @@ def resend_verification(
 
     if body.token:
         rate_subject = auth_tokens.hash_token(body.token)[:32]
-        rate_limit.enforce(request, "verify-resend", limit=3, window_seconds=900, subject=rate_subject)
+        rate_limit.enforce(
+            request, "verify-resend", limit=3, window_seconds=900, subject=rate_subject, per_ip=True
+        )
         user_id = auth_tokens.lookup_user_id(db, body.token, AuthToken.KIND_EMAIL_VERIFY)
         if user_id is not None:
             user = db.get(User, user_id)
     elif body.email:
         email = body.email.strip().lower()
         rate_subject = email
-        rate_limit.enforce(request, "verify-resend", limit=3, window_seconds=900, subject=rate_subject)
+        rate_limit.enforce(
+            request, "verify-resend", limit=3, window_seconds=900, subject=rate_subject, per_ip=True
+        )
         user = db.query(User).filter(User.email == email).first()
     else:
         raise HTTPException(status_code=422, detail="email or token is required")
 
-    if user is not None and user.email_verified_at is None:
+    # Per-address ceiling, whoever asks: past it nothing more is mailed, with
+    # the same answer, so a stranger cannot block the owner with a 429.
+    if (
+        user is not None
+        and user.email_verified_at is None
+        and rate_limit.allow(
+            request, "verify-resend-address", limit=6, window_seconds=3600, subject=str(user.id)
+        )
+    ):
         _send_verification_email(db, user, locale)
     return SimpleOkResponse(message=t("verify_email_sent", locale))
 
@@ -971,9 +983,18 @@ def forgot_password(
     """Start a password reset. Always reports success (membership oracle)."""
     locale = resolve_locale(request)
     email = body.email.strip().lower()
-    rate_limit.enforce(request, "forgot-password", limit=3, window_seconds=900, subject=email)
+    # Keyed on the address and the caller: a stranger who knows the address
+    # only spends their own budget, never the owner's.
+    rate_limit.enforce(request, "forgot-password", limit=3, window_seconds=900, subject=email, per_ip=True)
 
     user = db.query(User).filter(User.email == email).first()
+    # Per-address ceiling, whoever asks. Past it nothing is mailed and the last
+    # link sent stays valid (no `invalidate_outstanding`), so the owner can
+    # still use it; the answer does not change (membership oracle).
+    if user is not None and not rate_limit.allow(
+        request, "forgot-password-address", limit=6, window_seconds=3600, subject=str(user.id)
+    ):
+        return SimpleOkResponse(message=t("reset_email_sent", locale))
     # Always return the same success payload (membership oracle).
     #
     # Send a real reset link when the mailbox is proven (`email_verified_at`)
@@ -1191,9 +1212,15 @@ async def login(
 ) -> TokenResponse:
     locale = resolve_locale(request)
     email = body.email.strip().lower()
-    # IP bucket (spray) + per-account bucket (rotating XFF / proxies useless).
+    # IP bucket (spray), then failed attempts only: per address and caller,
+    # and a higher ceiling per address against brute force from many IPs.
+    # Counting failures (not requests) keyed with the caller means a stranger
+    # who knows the address cannot lock its owner out cheaply.
     rate_limit.enforce(request, "login", limit=10, window_seconds=900)
-    rate_limit.enforce(request, "login-account", limit=10, window_seconds=900, subject=email)
+    # Counted up front so parallel attempts cannot all pass, given back below
+    # when the password is right.
+    rate_limit.enforce(request, "login-fail", limit=10, window_seconds=900, subject=email, per_ip=True)
+    rate_limit.enforce(request, "login-fail-account", limit=50, window_seconds=900, subject=email)
 
     user = db.query(User).filter(User.email == email).first()
     if user is None or not user.password_hash or not verify_password(body.password, user.password_hash):
@@ -1203,6 +1230,8 @@ async def login(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=t("invalid_credentials", locale),
         )
+    rate_limit.refund(request, "login-fail", subject=email, per_ip=True)
+    rate_limit.refund(request, "login-fail-account", subject=email)
     # Correct password, unconfirmed address: no session. 403 rather than 401 so
     # the sign-in form can tell "wrong password" from "confirm your email" and
     # offer to resend the link. Only reachable once the password checks out, so
@@ -1368,6 +1397,11 @@ async def forge_status(
             priority_generation=row.priority_generation,
             allowed_model_tiers=tiers,
             frodi_balance=row.frodi_balance,
+            export_pdf=bool(row.export_pdf),
+            export_html=bool(row.export_html),
+            export_pptx=bool(row.export_pptx),
+            remove_badge=bool(row.remove_badge),
+            design_system_sharing=bool(row.design_system_sharing),
         )
         # Live gateway read failed but we still have a cached FRODI figure — show
         # it rather than a blank so the header does not regress to RODI-only.

@@ -2,6 +2,7 @@
 
 import { CountryCurrencySelect, type PricingCountry } from "@/components/landing/CountryCurrencySelect";
 import { api, getToken } from "@/lib/api";
+import { showsOnForge } from "@/lib/compare-surface";
 import {
   forgeSubscribeResumeUrl,
   forgeSubscribeReturnPath,
@@ -567,6 +568,10 @@ type CompareStored = {
   label?: string;
   labelFr?: string;
   visible?: boolean;
+  /** Set in the admin: "forge", "code" or "both". */
+  surface?: unknown;
+  /** Older rows only. */
+  forgeOnly?: boolean;
   sort?: number;
   kind?: "yes" | "no" | "text";
   text?: string;
@@ -600,6 +605,8 @@ function buildCompareRows(
   }
   return [...defs.values()]
     .filter((row) => row.visible !== false)
+    // This is the Forge pricing: a benefit that applies to RodiumAi Code only is not shown here.
+    .filter((row) => showsOnForge(row.id, row))
     .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
     .map((def) => ({
       label: locale === "fr" ? def.labelFr || def.label || def.id : def.label || def.labelFr || def.id,

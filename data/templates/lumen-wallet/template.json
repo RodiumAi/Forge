@@ -1,0 +1,32 @@
+{
+  "kind": "mobile",
+  "id": "lumen-wallet",
+  "title": {
+    "en": "Lumen Wallet",
+    "fr": "Lumen Wallet"
+  },
+  "description": {
+    "en": "Neobank app: lime balance hero, send in a few taps, virtual and physical cards, monthly insights and a profile, in a dark phone shell with bottom tabs.",
+    "fr": "App néobanque : solde héro citron vert, envoi en quelques gestes, cartes virtuelles et physiques, analyses du mois et profil, dans un shell sombre avec onglets."
+  },
+  "tags": [
+    "mobile",
+    "fintech",
+    "banking",
+    "wallet"
+  ],
+  "preview": "preview.html",
+  "bootHint": {
+    "en": "Adapt lumen-wallet: bank name, currency, balance, contacts, card names and transaction labels.",
+    "fr": "Adapte lumen-wallet : nom de la banque, devise, solde, contacts, noms de cartes et libellés de transactions."
+  },
+  "accent": "#c6f432",
+  "bg": "#0e0f13",
+  "fg": "#f4f5f7",
+  "muted": "#8b8f9a",
+  "tone": "confident, precise, quietly bold",
+  "fonts": {
+    "display": "Space Grotesk",
+    "body": "Inter"
+  }
+}

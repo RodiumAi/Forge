@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Maison preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Jost:wght@400;500;600&display=swap" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 480px; height: 270px; overflow: hidden; position: relative;
+    background: radial-gradient(60% 80% at 50% 0%, #faf7f1, transparent 70%), linear-gradient(180deg, #f3efe8, #e9e2d6);
+    font-family: "Jost", system-ui, sans-serif; color: #161412;
+  }
+  .serif { font-family: "Cormorant Garamond", Georgia, serif; }
+  .bg-word { position: absolute; left: 50%; top: 150px; transform: translateX(-50%); font-family: "Cormorant Garamond", serif; font-style: italic; font-weight: 500; font-size: 150px; line-height: 1; color: #161412; opacity: .05; white-space: nowrap; letter-spacing: -.02em; }
+  .rule { position: absolute; left: 0; right: 0; top: 160px; height: 1px; background: rgba(22,20,18,.12); }
+  .side-l { position: absolute; left: 18px; top: 16px; font-size: 5.5px; letter-spacing: .3em; text-transform: uppercase; color: #85807a; }
+  .side-r { position: absolute; right: 18px; top: 16px; font-size: 5.5px; letter-spacing: .3em; text-transform: uppercase; color: #b4532a; }
+
+  .dev { position: absolute; width: 128px; height: 268px; border-radius: 22px; background: #f3efe8; border: 3px solid #161412; overflow: hidden; box-shadow: 0 26px 46px -16px rgba(22,20,18,.5); }
+  .dev::before { content: ""; position: absolute; top: 6px; left: 50%; transform: translateX(-50%); width: 34px; height: 9px; border-radius: 99px; background: #161412; z-index: 5; }
+  .l { left: 30px; top: 46px; transform: rotate(-8deg); }
+  .r { right: 30px; top: 46px; transform: rotate(8deg); }
+  .c { left: 50%; top: 12px; width: 144px; height: 298px; transform: translateX(-50%); z-index: 2; }
+  .lab { font-size: 3.8px; letter-spacing: .24em; text-transform: uppercase; color: #85807a; }
+  .rust { color: #b4532a; }
+
+  /* masthead + tab bar */
+  .mast { padding: 20px 8px 5px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(22,20,18,.13); }
+  .mast b { font-family: "Cormorant Garamond", serif; font-weight: 600; font-size: 11px; letter-spacing: .24em; padding-left: .24em; }
+  .mast i { width: 6px; height: 6px; border-radius: 99px; border: 1px solid #161412; display: block; }
+  .mast i.b { border-radius: 2px 2px 3px 3px; position: relative; } .mast i.b::after { content: ""; position: absolute; right: -2px; top: -2px; width: 2.5px; height: 2.5px; border-radius: 99px; background: #b4532a; }
+  .tab { position: absolute; left: 0; right: 0; bottom: 0; height: 22px; background: #f3efe8; border-top: 1px solid rgba(22,20,18,.13); display: flex; justify-content: space-around; align-items: center; font-size: 3.6px; letter-spacing: .22em; text-transform: uppercase; color: #85807a; }
+  .tab span { position: relative; display: inline-flex; align-items: center; gap: 2px; }
+  .tab span.on { color: #161412; } .tab span.on::after { content: ""; position: absolute; left: 50%; bottom: -3.5px; width: 11px; height: .8px; background: #161412; transform: translateX(-50%); }
+  .tab em { font-style: normal; width: 6px; height: 6px; border-radius: 99px; background: #b4532a; color: #fff; font-size: 3.4px; letter-spacing: 0; display: inline-grid; place-items: center; }
+
+  /* discover */
+  .hello { text-align: center; padding: 6px 0 5px; }
+  .cover { position: relative; height: 150px; background: url("https://images.unsplash.com/photo-1485462537746-965f33f7f6a7?auto=format&fit=crop&w=400&q=60") center 20%/cover; color: #f8f4ee; }
+  .cover::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 45%, rgba(22,20,18,.72)); }
+  .cover div { position: absolute; z-index: 1; left: 9px; right: 9px; bottom: 9px; display: grid; gap: 2px; }
+  .cover .lab { color: rgba(248,244,238,.85); }
+  .cover strong { font-family: "Cormorant Garamond", serif; font-style: italic; font-weight: 500; font-size: 21px; line-height: .95; }
+  .cover small { font-size: 3.6px; letter-spacing: .2em; text-transform: uppercase; }
+  .sec { padding: 8px 9px 0; }
+  .sh { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
+  .sh b { font-family: "Cormorant Garamond", serif; font-weight: 500; font-size: 11px; } .sh b i { font-style: italic; }
+  .sh u { font-size: 3.6px; letter-spacing: .2em; text-transform: uppercase; }
+  .row { display: flex; gap: 5px; margin-right: -9px; overflow: hidden; }
+  .pc { flex-shrink: 0; width: 52px; position: relative; min-width: 0; }
+  .pc .nm { white-space: nowrap; overflow: hidden; text-overflow: clip; }
+  .ph { height: 68px; background-size: cover; background-position: center; position: relative; }
+  .bd { position: absolute; left: 3px; top: 3px; background: #faf8f4; color: #b4532a; font-size: 3.2px; letter-spacing: .14em; text-transform: uppercase; padding: 1.2px 2.4px; font-weight: 600; }
+  .ht { position: absolute; right: 3px; top: 3px; width: 9px; height: 9px; border-radius: 99px; background: rgba(250,248,244,.9); display: grid; place-items: center; }
+  .hrt { position: relative; display: block; width: 4.6px; height: 4.2px; }
+  .hrt::before, .hrt::after { content: ""; position: absolute; top: 0; width: 2.5px; height: 3.9px; background: #b4532a; border-radius: 3px 3px 0 0; }
+  .hrt::before { left: 2.3px; transform: rotate(-45deg); transform-origin: 0 100%; }
+  .hrt::after { left: 0; transform: rotate(45deg); transform-origin: 100% 100%; }
+  .ht.off .hrt::before, .ht.off .hrt::after { background: transparent; box-shadow: inset 0 0 0 .6px #161412; }
+  .pc .cat { font-size: 3px; letter-spacing: .2em; text-transform: uppercase; color: #85807a; margin-top: 3px; display: block; }
+  .pc .nm { font-family: "Cormorant Garamond", serif; font-weight: 600; font-size: 6.2px; line-height: 1.05; display: block; }
+  .pc .pr { font-size: 4.2px; color: #b4532a; font-weight: 500; }
+
+  /* shop */
+  .sh2 { padding: 8px 9px 0; display: flex; justify-content: space-between; align-items: baseline; }
+  .sh2 b { font-family: "Cormorant Garamond", serif; font-style: italic; font-weight: 500; font-size: 15px; line-height: 1; }
+  .chips { display: flex; gap: 2.5px; padding: 6px 9px 0; overflow: hidden; }
+  .chips span { flex-shrink: 0; font-size: 3.4px; letter-spacing: .16em; text-transform: uppercase; padding: 3px 5px; border-radius: 99px; border: .6px solid rgba(22,20,18,.2); }
+  .chips span.on { background: #161412; color: #f3efe8; border-color: #161412; }
+  .sort { margin: 6px 9px 0; border-top: .6px solid rgba(22,20,18,.15); border-bottom: .6px solid rgba(22,20,18,.15); padding: 3.5px 0; display: flex; justify-content: space-between; font-size: 3.4px; letter-spacing: .16em; text-transform: uppercase; color: #85807a; }
+  .sort u { color: #161412; }
+  .grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 9px 5px; padding: 7px 9px 0; }
+  .grid .pc { width: auto; }
+  .grid .pc:nth-child(even) { transform: translateY(8px); }
+  .grid .ph { height: 72px; }
+
+  /* product */
+  .gal { position: relative; height: 150px; background: url("https://images.unsplash.com/photo-1539533018447-63fcce2678e3?auto=format&fit=crop&w=400&q=60") center 25%/cover; }
+  .gal .rb { position: absolute; top: 20px; width: 14px; height: 14px; border-radius: 99px; background: rgba(250,248,244,.9); display: grid; place-items: center; }
+  .gal .rb.a { left: 7px; } .gal .rb.b { right: 7px; }
+  .arrow { width: 5px; height: 5px; border-left: .9px solid #161412; border-bottom: .9px solid #161412; transform: rotate(45deg); margin-left: 1.5px; }
+  .dots { position: absolute; left: 0; right: 0; bottom: 6px; display: flex; justify-content: center; gap: 2.5px; }
+  .dots i { width: 2.6px; height: 2.6px; border-radius: 99px; background: rgba(248,244,238,.6); } .dots i.on { width: 9px; background: #f8f4ee; }
+  .pd { padding: 7px 9px 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 5px; }
+  .tt { display: flex; justify-content: space-between; align-items: baseline; gap: 4px; }
+  .tt b { font-family: "Cormorant Garamond", serif; font-weight: 500; font-size: 12px; line-height: 1; }
+  .tt span { font-size: 5.6px; color: #b4532a; font-weight: 500; }
+  .sw { display: flex; gap: 3px; } .sw i { width: 9px; height: 9px; border-radius: 99px; box-shadow: inset 0 0 0 .5px rgba(22,20,18,.2); }
+  .sw i.on { outline: .7px solid #161412; outline-offset: 1.3px; }
+  .sz { display: flex; gap: 2.5px; } .sz span { min-width: 15px; text-align: center; font-size: 3.8px; font-weight: 500; padding: 3.5px 0; border: .6px solid rgba(22,20,18,.2); }
+  .sz span.on { background: #161412; color: #f3efe8; border-color: #161412; }
+  .acc { border-top: .6px solid rgba(22,20,18,.15); padding-top: 4px; display: grid; gap: 2px; }
+  .acc .lab { color: #161412; display: flex; justify-content: space-between; }
+  .acc p { font-family: "Cormorant Garamond", serif; font-size: 5.2px; line-height: 1.35; }
+  .buy { position: absolute; left: 0; right: 0; bottom: 0; padding: 5px 8px 7px; background: #f3efe8; border-top: .6px solid rgba(22,20,18,.13); }
+  .buy span { display: block; text-align: center; background: #161412; color: #f3efe8; border-radius: 99px; font-size: 3.8px; letter-spacing: .2em; text-transform: uppercase; padding: 5px 0; }
+</style>
+</head>
+<body>
+  <div class="bg-word">Maison</div>
+  <div class="rule"></div>
+  <span class="side-l">N°14 · Autumn edit</span>
+  <span class="side-r">Free delivery over €200</span>
+
+  <!-- Product -->
+  <div class="dev l">
+    <div class="gal">
+      <span class="rb a"><i class="arrow"></i></span>
+      <span class="rb b"><i class="hrt"></i></span>
+      <div class="dots"><i class="on"></i><i></i><i></i></div>
+    </div>
+    <div class="pd">
+      <span class="lab">Coats · <span class="rust">New</span></span>
+      <div class="tt"><b>Alba wrap coat</b><span>€420</span></div>
+      <span class="lab">Colour · Camel</span>
+      <div class="sw"><i class="on" style="background:#b88a5a"></i><i style="background:#e9e1d3"></i><i style="background:#22252b"></i></div>
+      <span class="lab">Size · S</span>
+      <div class="sz"><span>XS</span><span class="on">S</span><span>M</span><span>L</span><span>XL</span></div>
+      <div class="acc"><span class="lab">Details <span>&minus;</span></span><p>A double-faced wool wrap coat with a shawl collar and a self belt.</p></div>
+    </div>
+    <div class="buy"><span>Add to bag · €420</span></div>
+  </div>
+
+  <!-- Discover -->
+  <div class="dev c">
+    <div class="mast"><i></i><b>MAISON</b><i class="b"></i></div>
+    <p class="lab hello">Good morning, Ama</p>
+    <div class="cover">
+      <div>
+        <span class="lab">N°14 · Autumn edit</span>
+        <strong>The quiet coat</strong>
+        <small>Read the edit</small>
+      </div>
+    </div>
+    <div class="sec">
+      <div class="sh"><b>New <i>in</i></b><u>View all</u></div>
+      <div class="row">
+        <div class="pc"><div class="ph" style="background-image:url('https://images.unsplash.com/photo-1566174053879-31528523f8ae?auto=format&fit=crop&w=200&q=60')"><span class="ht off"><i class="hrt"></i></span></div><span class="cat">Dresses</span><span class="nm">Velours slip dress</span><span class="pr">€290</span></div>
+        <div class="pc"><div class="ph" style="background-image:url('https://images.unsplash.com/photo-1590874103328-eac38a683ce7?auto=format&fit=crop&w=200&q=60')"><span class="bd">New</span><span class="ht off"><i class="hrt"></i></span></div><span class="cat">Bags</span><span class="nm">Lou rattan bag</span><span class="pr">€185</span></div>
+        <div class="pc"><div class="ph" style="background-image:url('https://images.unsplash.com/photo-1515347619252-60a4bf4fff4f?auto=format&fit=crop&w=200&q=60')"><span class="ht off"><i class="hrt"></i></span></div><span class="cat">Shoes</span><span class="nm">Marin suede pump</span><span class="pr">€175</span></div>
+      </div>
+    </div>
+    <div class="tab"><span class="on">Discover</span><span>Shop</span><span>Bag <em>2</em></span><span>Profile</span></div>
+  </div>
+
+  <!-- Shop -->
+  <div class="dev r">
+    <div class="mast"><i></i><b class="serif" style="letter-spacing:0;font-style:italic;font-weight:500;font-size:10px;padding:0">Shop</b><i class="b"></i></div>
+    <div class="sh2"><b>Everything</b><span class="lab">8 pieces</span></div>
+    <div class="chips"><span class="on">All</span><span>Coats</span><span>Dresses</span><span>Knitwear</span></div>
+    <div class="sort"><span>Sort</span><span><u>Featured</u> &nbsp;Price up</span></div>
+    <div class="grid">
+      <div class="pc"><div class="ph" style="background-image:url('https://images.unsplash.com/photo-1434389677669-e08b4cac3105?auto=format&fit=crop&w=200&q=60')"><span class="bd">Hand made</span><span class="ht off"><i class="hrt"></i></span></div><span class="nm">Noor crochet knit</span><span class="pr">€135</span></div>
+      <div class="pc"><div class="ph" style="background-image:url('https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=200&q=60')"><span class="ht"><i class="hrt"></i></span></div><span class="nm">Sienna top handle</span><span class="pr">€340</span></div>
+      <div class="pc"><div class="ph" style="background-image:url('https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?auto=format&fit=crop&w=200&q=60')"><span class="bd">-25%</span><span class="ht off"><i class="hrt"></i></span></div><span class="nm">Rosa linen trouser</span><span class="pr">€110</span></div>
+      <div class="pc"><div class="ph" style="background-image:url('https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&w=200&q=60')"><span class="ht off"><i class="hrt"></i></span></div><span class="nm">Tom biker jacket</span><span class="pr">€380</span></div>
+    </div>
+    <div class="tab"><span>Discover</span><span class="on">Shop</span><span>Bag <em>2</em></span><span>Profile</span></div>
+  </div>
+</body>
+</html>

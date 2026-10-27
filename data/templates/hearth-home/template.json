@@ -1,0 +1,32 @@
+{
+  "kind": "mobile",
+  "id": "hearth-home",
+  "title": {
+    "en": "Hearth",
+    "fr": "Hearth"
+  },
+  "description": {
+    "en": "Smart home app: glass device tiles over a warm living room photo, rooms with photos and dimmers, a semicircular thermostat, energy with solar and grid split, and settings, in a dark warm shell with a glass tab bar.",
+    "fr": "App maison connectée : tuiles d'appareils en verre sur une photo de salon chaleureuse, pièces en photo avec variateurs, thermostat semi-circulaire, énergie solaire et réseau, et réglages, dans un shell sombre et chaleureux avec barre d'onglets en verre."
+  },
+  "tags": [
+    "mobile",
+    "smart-home",
+    "iot",
+    "energy"
+  ],
+  "preview": "preview.html",
+  "bootHint": {
+    "en": "Adapt hearth-home: home name, city, rooms and photos, devices, scenes, energy figures and currency.",
+    "fr": "Adapte hearth-home : nom du logement, ville, pièces et photos, appareils, scènes, chiffres d'énergie et devise."
+  },
+  "accent": "#f5b544",
+  "bg": "#121417",
+  "fg": "#f2f2ef",
+  "muted": "#8c9096",
+  "tone": "warm, calm, quietly luxurious",
+  "fonts": {
+    "display": "Outfit",
+    "body": "Outfit"
+  }
+}

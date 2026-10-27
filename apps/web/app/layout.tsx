@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
+import { ConsentBanner } from "@/components/consent/ConsentBanner";
 import { TopProgressHost } from "@/components/TopProgressHost";
 import { LandingJsonLd } from "@/components/landing/LandingJsonLd";
-import { PostHogPageView } from "@/components/posthog/PostHogPageView";
 import { PostHogProvider } from "@/components/posthog/PostHogProvider";
 import { appFonts } from "@/lib/fonts";
 import { I18nProvider } from "@/lib/i18n/I18nProvider";
@@ -10,6 +9,15 @@ import { THEME_INIT_SCRIPT } from "@/lib/theme/init-script";
 import { ThemeProvider } from "@/lib/theme/ThemeProvider";
 import "highlight.js/styles/github-dark.css";
 import "./globals.css";
+// Forge redesign: tokens and shared components, after the old globals.
+import "@/styles/forge/tokens.css";
+import "@/styles/forge/primitives.css";
+import "@/styles/forge/composer.css";
+import "@/styles/forge/cards.css";
+import "@/styles/forge/shell.css";
+import "@/styles/forge/landing.css";
+import "@/styles/forge/builder.css";
+import "@/styles/forge/builder-panes.css";
 
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || "http://localhost:3100";
@@ -114,11 +122,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeProvider>
           <I18nProvider>
             <PostHogProvider>
-              <Suspense fallback={null}>
-                <PostHogPageView />
-              </Suspense>
               <TopProgressHost />
               {children}
+              <ConsentBanner />
             </PostHogProvider>
           </I18nProvider>
         </ThemeProvider>

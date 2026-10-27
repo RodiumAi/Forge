@@ -1,0 +1,17 @@
+{
+  "name": "@forge/codelab-runtime",
+  "private": true,
+  "version": "1.0.0",
+  "license": "MIT",
+  "type": "module",
+  "description": "Published codelab player bundle for Forge Design. esbuild comes from the parent runtime package (or the web toolchain in a checkout).",
+  "dependencies": {
+    "lucide-react": "1.52.0",
+    "qrcode": "1.5.4",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-markdown": "9.1.0",
+    "remark-gfm": "4.0.1",
+    "shiki": "4.5.0"
+  }
+}

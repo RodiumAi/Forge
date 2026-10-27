@@ -50,7 +50,8 @@ const contentSecurityPolicy = [
   "font-src 'self' data: https://fonts.gstatic.com",
   "form-action 'self'",
   "frame-ancestors 'none'",
-  `frame-src 'self' ${apiOrigins} ${firebaseAuthOrigin()} https://accounts.google.com https://*.firebaseapp.com`,
+  // Deck video elements embed YouTube (privacy-enhanced domain) and Vimeo players.
+  `frame-src 'self' ${apiOrigins} ${firebaseAuthOrigin()} https://accounts.google.com https://*.firebaseapp.com https://www.youtube-nocookie.com https://player.vimeo.com`,
   `img-src 'self' data: blob: https: ${apiOrigins}`,
   "object-src 'none'",
   `script-src 'self' 'unsafe-inline'${scriptEval} ${posthogOrigin} https://*.i.posthog.com https://apis.google.com https://accounts.google.com https://*.firebaseapp.com https://*.googleapis.com`,
@@ -74,7 +75,7 @@ const securityHeaders = [
   {
     key: "Permissions-Policy",
     value:
-      "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+      "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(self), payment=(), usb=()",
   },
   {
     key: "X-Frame-Options",

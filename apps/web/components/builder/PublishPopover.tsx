@@ -2,21 +2,11 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import {
-  Check,
-  CheckCircle2,
-  Copy,
-  Download,
-  ExternalLink,
-  Globe,
-  Loader2,
-  Pencil,
-  Upload,
-} from "lucide-react";
 import { api, apiBase, getToken } from "@/lib/api";
 import { projectPublicUrl } from "@/lib/asset-url";
 import QRCode from "qrcode";
-import { Icon } from "@/components/ui/icon";
+import { Button } from "@/components/ui/Button";
+import { Glyph } from "@/components/ui/glyph";
 import { exportAllowed, useForgeStatus } from "@/lib/forge-status";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { topProgressDone, topProgressStart } from "@/lib/top-progress";
@@ -32,6 +22,8 @@ type Props = {
     sites_url: string;
     published_at?: string | null;
   }) => void;
+  /** Nothing to publish yet (empty project) or Forge is still writing. */
+  disabled?: boolean;
 };
 
 type PublishResult = {
@@ -78,9 +70,11 @@ export function PublishPopover({
   sitesUrl,
   publishedAt,
   onMetaChange,
+  disabled = false,
 }: Props) {
   const { t, locale } = useI18n();
-  const canExport = exportAllowed(useForgeStatus());
+  const forgeStatus = useForgeStatus();
+  const canExport = exportAllowed(forgeStatus);
   const [upgradeNote, setUpgradeNote] = useState<{ text: string; id: number } | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -355,16 +349,15 @@ export function PublishPopover({
       ? sitesHostLabel(slug)
       : t("publishEmpty");
 
-  // Publish is a single synchronous POST: phase labels are estimated from
+  // Publish is a single synchronous POST: phases are estimated from the
   // elapsed time (the granular Firestore phases went away with the mirror).
-  const phaseLabel =
-    elapsed < 8
-      ? t("publishPhaseDeps")
-      : elapsed < 45
-        ? t("publishPhaseBuild")
-        : elapsed < 90
-          ? t("publishPhaseUpload")
-          : t("publishPhaseFinalize");
+  const phaseIndex = elapsed < 45 ? 0 : elapsed < 90 ? 1 : 2;
+  const phases = [t("bdPhaseBuild"), t("bdPhaseImages"), t("bdPhaseUpload")];
+  const ent = forgeStatus?.entitlements ?? null;
+  const planSlug = forgeStatus?.plan ?? ent?.plan_slug ?? null;
+  // Off Forge Cloud nothing is plan-gated: every row reads as included.
+  const customDomainOk = ent ? ent.custom_domain : true;
+  const showBadgeNote = planSlug === "free";
 
   const panel = open && mounted
     ? createPortal(
@@ -374,103 +367,78 @@ export function PublishPopover({
               bubble to the parent document), so the popover looked stuck. */}
           <button
             type="button"
-            className="publish-popover-backdrop"
+            className="f-bd-pub-backdrop"
             aria-label={t("close")}
             tabIndex={-1}
             onClick={() => {
               if (!busy && !exporting) setOpen(false);
             }}
           />
-        <div
-          ref={popoverRef}
-          className={`publish-popover publish-popover-portal${busy ? " is-busy" : ""}`}
-          role="dialog"
-          aria-label={t("publish")}
-          aria-busy={busy}
-          style={{ top: pos.top, right: pos.right }}
-        >
-          <header className="publish-popover-head">
-            <div className="publish-title-row">
-              <span className={`publish-status-dot${hasPublished ? " live" : ""}`} />
-              <strong>{t("publish")}</strong>
+          <div
+            ref={popoverRef}
+            className="f-bd-pub"
+            role="dialog"
+            aria-label={t("bdPublishTitle")}
+            aria-busy={busy}
+            style={{ top: pos.top, right: pos.right }}
+          >
+            <div className="f-bd-pub-head">
+              <span className={`dot${hasPublished ? " live" : ""}`} aria-hidden />
+              <h3>{t("bdPublishTitle")}</h3>
             </div>
-          </header>
+            <p className="f-bd-pub-meta">
+              {busy
+                ? `${phases[phaseIndex]} · ${elapsed} s`
+                : hasPublished
+                  ? t("publishChangesSince").replace("{date}", formatPublishDate(lastPublished!, locale))
+                  : t("publishNever")}
+            </p>
 
-          <p className="publish-meta">
-            {busy
-              ? `${phaseLabel} · ${elapsed}s`
-              : hasPublished
-                ? t("publishChangesSince").replace(
-                    "{date}",
-                    formatPublishDate(lastPublished!, locale),
-                  )
-                : t("publishNever")}
-          </p>
-
-          <p className="publish-draft-hint">{t("publishDraftVsLive")}</p>
-
-          <div className="publish-section-label">
-            <span>{t("publishWebsiteUrl")}</span>
-            <span className="publish-add-domain-muted">{sitesBaseDomain()}</span>
-          </div>
-
-          <div className="publish-url-card">
-            {editing ? (
-              <form
-                className="publish-slug-edit"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  void saveSlug();
-                }}
-              >
-                <input
-                  value={draftSlug}
-                  onChange={(e) => setDraftSlug(e.target.value)}
-                  autoFocus
-                  spellCheck={false}
-                  aria-label={t("publishEditSlug")}
-                  disabled={savingSlug || busy}
-                />
-                <button type="submit" className="publish-icon-btn" disabled={savingSlug || busy} title={t("save")}>
-                  {savingSlug ? (
-                    <Icon icon={Loader2} className="ui-icon-sm agent-spin" />
-                  ) : (
-                    <Icon icon={Check} className="ui-icon-sm" />
-                  )}
-                </button>
-              </form>
-            ) : (
-              <>
-                <div className="publish-url-main">
-                  <span className="publish-favicon" aria-hidden>
-                    {/* The site's own favicon, not Forge's app icon. Falls back
-                        to a neutral globe when the project has none yet. */}
+            <div className="f-bd-pub-url">
+              {editing ? (
+                <form
+                  className="f-bd-pub-slug"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    void saveSlug();
+                  }}
+                >
+                  <input
+                    value={draftSlug}
+                    onChange={(e) => setDraftSlug(e.target.value)}
+                    autoFocus
+                    spellCheck={false}
+                    aria-label={t("publishEditSlug")}
+                    disabled={savingSlug || busy}
+                  />
+                  <span className="dom">.{sitesBaseDomain()}</span>
+                  <button type="submit" className="f-bd-pub-ib" disabled={savingSlug || busy} aria-label={t("save")}>
+                    <Glyph name={savingSlug ? "refresh" : "check"} size="sm" className={savingSlug ? "f-spin" : undefined} />
+                  </button>
+                </form>
+              ) : (
+                <>
+                  <span className="fav" aria-hidden>
+                    {/* The favicon of the site itself, not the Forge app icon. */}
                     {faviconUrl ? (
-                      <img
-                        src={faviconUrl}
-                        alt=""
-                        width={16}
-                        height={16}
-                        onError={() => setFaviconUrl(null)}
-                      />
+                      <img src={faviconUrl} alt="" width={16} height={16} onError={() => setFaviconUrl(null)} />
                     ) : (
-                      <Icon icon={Globe} className="ui-icon-sm" />
+                      <Glyph name="globe" size="sm" />
                     )}
                   </span>
                   {hasPublished && url ? (
-                    <a href={url} target="_blank" rel="noreferrer" className="publish-url-link">
+                    <a href={url} target="_blank" rel="noreferrer" className="lnk">
                       {hostLabel}
                     </a>
                   ) : (
-                    <span className="publish-url-link muted" title={t("publishLiveLockedHint")}>
+                    <span className="lnk muted" title={t("publishLiveLockedHint")}>
                       {hostLabel}
                     </span>
                   )}
-                </div>
-                <div className="publish-url-actions">
                   <button
                     type="button"
-                    className="publish-icon-btn"
+                    className="f-bd-pub-ib"
+                    aria-label={t("publishEditSlug")}
                     title={t("publishEditSlug")}
                     onClick={() => {
                       setDraftSlug(slug);
@@ -478,69 +446,59 @@ export function PublishPopover({
                     }}
                     disabled={!slug || busy}
                   >
-                    <Icon icon={Pencil} className="ui-icon-sm" />
+                    <Glyph name="edit" size="sm" />
                   </button>
                   <button
                     type="button"
-                    className="publish-icon-btn"
+                    className="f-bd-pub-ib"
+                    aria-label={copied ? t("bdLinkCopied") : t("publishCopy")}
                     title={t("publishCopy")}
                     onClick={() => void copy()}
                     disabled={!hasPublished || !url || busy}
                   >
-                    <Icon icon={copied ? Check : Copy} className="ui-icon-sm" />
+                    <Glyph name={copied ? "check" : "copy"} size="sm" />
                   </button>
-                  {hasPublished && url ? (
-                    <a
-                      href={url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="publish-icon-btn"
-                      title={t("publishOpen")}
-                    >
-                      <Icon icon={ExternalLink} className="ui-icon-sm" />
-                    </a>
-                  ) : (
-                    <button
-                      type="button"
-                      className="publish-icon-btn"
-                      title={t("publishLiveLockedHint")}
-                      disabled
-                    >
-                      <Icon icon={ExternalLink} className="ui-icon-sm" />
-                    </button>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
-
-          {!hasPublished && (
-            <p className="publish-live-hint">{t("publishLiveLockedHint")}</p>
-          )}
-
-          {hasPublished && url && qrDataUrl ? (
-            <div className="publish-qr">
-              { }
-              <img src={qrDataUrl} alt={t("publishQrAlt")} width={132} height={132} />
-              <span>{t("publishQrHint")}</span>
+                </>
+              )}
             </div>
-          ) : null}
+            {!hasPublished && !busy ? <p className="f-bd-pub-note">{t("publishLiveLockedHint")}</p> : null}
 
-          <div className="publish-visibility">
-            <Icon icon={Globe} className="ui-icon-sm" />
-            <span>{t("publishVisibilityPublic")}</span>
-          </div>
+            {busy || hasPublished ? (
+              <div className="f-bd-pub-mid">
+                {hasPublished && url && qrDataUrl && !busy ? (
+                  <img className="f-bd-pub-qr" src={qrDataUrl} alt={t("publishQrAlt")} width={92} height={92} />
+                ) : null}
+                <ol className="f-bd-pub-phases" aria-live="polite">
+                  {phases.map((label, index) => {
+                    const state = !busy ? "ok" : index < phaseIndex ? "ok" : index === phaseIndex ? "run" : "wait";
+                    return (
+                      <li key={label} className={state}>
+                        {state === "ok" ? (
+                          <Glyph name="check" size="sm" />
+                        ) : state === "run" ? (
+                          <Glyph name="refresh" size="sm" className="f-spin" />
+                        ) : (
+                          <span className="w" aria-hidden />
+                        )}
+                        {label}
+                      </li>
+                    );
+                  })}
+                </ol>
+              </div>
+            ) : null}
+            {hasPublished && url && qrDataUrl && !busy ? <p className="f-bd-pub-note">{t("publishQrHint")}</p> : null}
 
-          <div className="publish-security">
-            <Icon icon={CheckCircle2} className="ui-icon-sm" />
-            <span>{t("publishSecurityOk")}</span>
-          </div>
-
-          <div className="publish-export-block">
-            <p className="publish-export-help">{t("optionsExportHelp")}</p>
+            <div className="f-bd-pub-row">
+              <Glyph name={customDomainOk ? "globe" : "lock"} size="sm" />
+              <span>
+                {t("bdCustomDomain")}
+                <small>{customDomainOk ? t("bdIncluded") : t("bdIncludedIn").replace("{plan}", "Pro")}</small>
+              </span>
+            </div>
             <button
               type="button"
-              className={`publish-export-btn${canExport ? "" : " is-locked"}`}
+              className="f-bd-pub-row is-action"
               disabled={busy || exporting}
               onClick={() => {
                 if (!canExport) {
@@ -551,59 +509,47 @@ export function PublishPopover({
                 void exportZip();
               }}
             >
-              <Icon
-                icon={exporting ? Loader2 : Download}
-                className={`ui-icon-sm ${exporting ? "agent-spin" : ""}`}
+              <Glyph
+                name={exporting ? "refresh" : canExport ? "download" : "lock"}
+                size="sm"
+                className={exporting ? "f-spin" : undefined}
               />
-              {exporting ? t("optionsExporting") : t("optionsExport")}
+              <span>
+                {exporting ? t("optionsExporting") : t("bdCodeZip")}
+                <small>{canExport ? t("bdIncluded") : t("bdFromPlan").replace("{plan}", "Starter")}</small>
+              </span>
             </button>
-            {upgradeNote ? <p className="publish-export-note">{upgradeNote.text}</p> : null}
-            {exportNotice ? <p className="publish-export-ok">{exportNotice}</p> : null}
-          </div>
+            {upgradeNote ? <p className="f-bd-pub-note warn">{upgradeNote.text}</p> : null}
+            {exportNotice ? <p className="f-bd-pub-note ok">{exportNotice}</p> : null}
+            {showBadgeNote ? <p className="f-bd-pub-note">{t("bdByForgeBadge")}</p> : null}
+            {error ? (
+              <p className="f-bd-pub-note err" role="alert">
+                {error}
+              </p>
+            ) : null}
 
-          {error && <p className="publish-error">{error}</p>}
-
-          <div className="publish-footer">
-            <button
-              type="button"
-              className="publish-run"
-              disabled={busy || exporting}
-              onClick={() => void publish()}
-            >
-              {busy ? (
-                <>
-                  <Icon icon={Loader2} className="ui-icon-sm agent-spin" />
-                  {t("publishRunning")}
-                </>
-              ) : hasPublished ? (
-                t("publishUpdate")
-              ) : (
-                t("publishRun")
-              )}
-            </button>
+            <Button icon="rocket" loading={busy} disabled={exporting} onClick={() => void publish()} block>
+              {busy ? t("publishRunning") : hasPublished ? t("bdPublishChanges") : t("bdPublishFirst")}
+            </Button>
           </div>
-        </div>
         </>,
         document.body,
       )
     : null;
 
   return (
-    <div className="publish-wrap" ref={wrapRef}>
+    <div className="f-bd-pub-wrap" ref={wrapRef}>
       <button
         ref={btnRef}
         type="button"
-        className={`builder-publish-btn${busy ? " is-busy" : ""}`}
+        className="f-btn f-btn-primary f-btn-sm"
         aria-expanded={open}
         aria-haspopup="dialog"
+        disabled={disabled && !busy}
         onClick={() => setOpen((v) => !v)}
       >
-        {busy ? (
-          <Icon icon={Loader2} className="ui-icon-sm agent-spin" />
-        ) : (
-          <Icon icon={Upload} className="ui-icon-sm" />
-        )}
-        {busy ? t("publishRunning") : t("publish")}
+        <Glyph name={busy ? "refresh" : "rocket"} size="sm" className={busy ? "f-spin" : undefined} />
+        <span className="f-btn-label">{busy ? t("publishRunning") : t("bdPublish")}</span>
       </button>
       {panel}
     </div>

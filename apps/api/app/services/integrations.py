@@ -229,7 +229,109 @@ def format_integrations_prompt_block(locale: str = "en") -> str:
     return "\n".join(lines)
 
 
+_FENCE_RE = re.compile(r"```[a-zA-Z]*\n(.*?)```", re.S)
+_URL_HOST_RE = re.compile(r"https?://([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})")
+# Placeholder domains the guides use in their examples: no use for matching.
+_PLACEHOLDER_DOMAINS = frozenset({"example.com", "example.org", "yourdomain.com", "your-domain.com"})
+# Two-label public suffixes, so "foo.co.uk" keeps "foo.co.uk" instead of "co.uk".
+_TWO_LABEL_SUFFIXES = frozenset({"co.uk", "com.au", "co.jp", "com.br"})
+_hosts_cache: dict[str, tuple[str, ...]] = {}
+
+
+def _registrable(host: str) -> str:
+    labels = host.lower().strip(".").split(".")
+    if len(labels) >= 3 and ".".join(labels[-2:]) in _TWO_LABEL_SUFFIXES:
+        return ".".join(labels[-3:])
+    return ".".join(labels[-2:])
+
+
+def embed_hosts(meta: IntegrationMeta) -> tuple[str, ...]:
+    """Domains the embed snippet of this integration points at, read from the
+    code blocks of its guide ("google.com", "tally.so"). The composer uses them
+    to tell whether the user pasted the snippet; empty when the guide only has
+    placeholder URLs, and the client then falls back to any iframe/script/URL."""
+    cached = _hosts_cache.get(meta.id)
+    if cached is not None:
+        return cached
+    try:
+        guide = (meta.path / "guide.en.md").read_text(encoding="utf-8")
+    except OSError:
+        guide = ""
+    out: list[str] = []
+    for block in _FENCE_RE.findall(guide):
+        for host in _URL_HOST_RE.findall(block):
+            domain = _registrable(host)
+            if domain in _PLACEHOLDER_DOMAINS or "your" in domain or domain in out:
+                continue
+            out.append(domain)
+    _hosts_cache[meta.id] = tuple(out)
+    return _hosts_cache[meta.id]
+
+
+# Line the composer puts at the top of a message when the user picked
+# integrations from the + menu: "[Integrations: Google Maps Embed (google-maps)]".
+INTEGRATIONS_MARKER_RE = re.compile(r"\[(?:Integrations|Intégrations)\s*:\s*([^\]]*)\]", re.I)
+_MARKER_ID_RE = re.compile(r"\(([a-z0-9][a-z0-9-]{1,62})\)")
+_GUIDE_LIMIT = 6000
+
+
+def parse_integrations_marker(text: str) -> list[str]:
+    """Catalog ids named in the integrations marker of a message, in order."""
+    match = INTEGRATIONS_MARKER_RE.search(text or "")
+    if not match:
+        return []
+    out: list[str] = []
+    for tid in _MARKER_ID_RE.findall(match.group(1)):
+        if tid not in out:
+            out.append(tid)
+    return out[:5]
+
+
+def format_selected_integrations_block(text: str, locale: str = "en") -> str:
+    """Guides of the integrations the user picked for this message, plus the
+    rule that ties them to the snippet the user pasted (or asks for it)."""
+    metas = [m for m in (get_integration(tid) for tid in parse_integrations_marker(text)) if m]
+    if not metas:
+        return ""
+    names = ", ".join(m.name for m in metas)
+    if locale == "fr":
+        head = (
+            f"L'utilisateur a choisi d'ajouter ces intégrations à ce message : {names}. "
+            "Pour chacune, suis son guide ci-dessous. Utilise tel quel le snippet, l'URL "
+            "ou l'identifiant qu'il a collé dans son message (src, id de formulaire, clé "
+            "publique) : ne le réécris pas et n'invente jamais un identifiant. Convertis "
+            "l'iframe en JSX (attributs en camelCase, style en objet, width 100 %, hauteur "
+            "fixée par le conteneur) et place-la là où il le demande, sinon dans la section "
+            "la plus logique. Un widget script se charge une seule fois dans un useEffect. "
+            "S'il manque le snippet ou l'identifiant d'une intégration, place un emplacement "
+            "clairement étiqueté à son nom et demande-le en une phrase dans ta réponse."
+        )
+    else:
+        head = (
+            f"The user picked these integrations for this message: {names}. For each one, "
+            "follow its guide below. Use the snippet, URL or id the user pasted in the "
+            "message as is (src, form id, public key): never rewrite it and never invent an "
+            "id. Convert an iframe to JSX (camelCase attributes, style as an object, width "
+            "100%, height set by its container) and place it where the user asks, otherwise "
+            "in the most fitting section. A script widget loads once in a useEffect. When "
+            "the snippet or id of an integration is missing, add a clearly labeled "
+            "placeholder named after it and ask for it in one sentence in your answer."
+        )
+    parts = [head]
+    for meta in metas:
+        path = guide_path(meta.id, locale)
+        guide = path.read_text(encoding="utf-8") if path else ""
+        if len(guide) > _GUIDE_LIMIT:
+            guide = guide[:_GUIDE_LIMIT] + "\n[...]"
+        docs = f"\nDocs: {meta.docs_url}" if meta.docs_url else ""
+        parts.append(
+            f'<integration id="{meta.id}" name="{meta.name}">{docs}\n{guide.strip()}\n</integration>'
+        )
+    return "\n\n".join(parts)
+
+
 def clear_integrations_cache() -> None:
     global _cache, _cache_mtime
     _cache = None
     _cache_mtime = None
+    _hosts_cache.clear()

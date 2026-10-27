@@ -30,6 +30,16 @@ export type ForgeEntitlements = {
   priority_generation: boolean;
   allowed_model_tiers: string[] | null;
   frodi_balance: number;
+  /**
+   * Forge Design rights (deck and codelab exports, the "Made with Forge"
+   * badge, team design systems). Optional: an older API omits them, which
+   * reads as not granted.
+   */
+  export_pdf?: boolean;
+  export_html?: boolean;
+  export_pptx?: boolean;
+  remove_badge?: boolean;
+  design_system_sharing?: boolean;
 };
 
 export type ForgeStatus = {
@@ -170,7 +180,16 @@ export function forgeFeatureEnabled(
   status: ForgeStatus | null,
   flag: keyof Pick<
     ForgeEntitlements,
-    "model_selection" | "custom_domain" | "export_enabled" | "history_enabled" | "priority_generation"
+    | "model_selection"
+    | "custom_domain"
+    | "export_enabled"
+    | "history_enabled"
+    | "priority_generation"
+    | "export_pdf"
+    | "export_html"
+    | "export_pptx"
+    | "remove_badge"
+    | "design_system_sharing"
   >,
 ): boolean {
   const ent = status?.entitlements;

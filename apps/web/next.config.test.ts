@@ -21,7 +21,7 @@ describe("Next security headers", () => {
       "X-Content-Type-Options": "nosniff",
       "Referrer-Policy": "strict-origin-when-cross-origin",
       "Permissions-Policy":
-        "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(self), payment=(), usb=()",
       "X-Frame-Options": "DENY",
     });
     expect(headers["Strict-Transport-Security"]).not.toContain("includeSubDomains");
@@ -40,6 +40,16 @@ describe("Next security headers", () => {
     expect(csp).toContain(
       new URL(process.env.NEXT_PUBLIC_API_URL || "http://localhost:8100").origin,
     );
+  });
+
+  it("lets deck videos embed YouTube (nocookie) and Vimeo players only", async () => {
+    const routes = await configuredHeaders();
+    const global = routes.find((route) => route.source === "/:path*");
+    const csp = (global?.headers ?? []).find(({ key }) => key === "Content-Security-Policy")?.value ?? "";
+    const frameSrc = csp.split(";").map((part) => part.trim()).find((part) => part.startsWith("frame-src")) ?? "";
+    expect(frameSrc).toContain("https://www.youtube-nocookie.com");
+    expect(frameSrc).toContain("https://player.vimeo.com");
+    expect(frameSrc).not.toContain("https://www.youtube.com");
   });
 
   it.each(["/login", "/register", "/auth/:path*"])(

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<title>Minimal dark preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 480px; height: 300px; overflow: hidden; position: relative;
+    background: #0A0A0A; color: #F2F2F2;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  }
+  .hero { position: absolute; inset: 0; background: url(data:image/webp;base64,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) center/cover; }
+  .veil { position: absolute; inset: 0; background: #0A0A0A; opacity: 0.72; }
+  .text { position: absolute; left: 30px; top: 92px; width: 330px; }
+  .bar { width: 30px; height: 3px; border-radius: 2px; background: #E8C468; margin-bottom: 8px; }
+  .label { font-size: 7px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: #E8C468; margin-bottom: 8px; }
+  h1 { font-family: Georgia, "Times New Roman", serif; font-size: 26px; line-height: 1.05; font-weight: 400; letter-spacing: -.01em; }
+  p { font-size: 8.5px; line-height: 1.4; margin-top: 10px; opacity: .85; }
+  .count { position: absolute; right: 12px; bottom: 10px; font-size: 7px; font-weight: 600;
+    color: #F2F2F2; background: #141414; border: 1px solid #2A2A2A; padding: 3px 7px; border-radius: 99px; }
+  .dots { position: absolute; left: 30px; bottom: 14px; display: flex; gap: 3px; }
+  .dots i { display: block; width: 10px; height: 3px; border-radius: 2px; background: #8F8F8F; opacity: .5; }
+  .dots i:first-child { background: #E8C468; opacity: 1; }
+</style>
+</head>
+<body>
+  <div class="hero"></div>
+  <div class="veil"></div>
+  <div class="text">
+    <div class="bar"></div>
+    <div class="label">Conférence · Design produit</div>
+    <h1>Moins, mais mieux</h1>
+    <p>Dix ans à retirer des fonctionnalités, et ce que j'en ai appris.</p>
+  </div>
+  <div class="dots"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  <div class="count">12 slides</div>
+</body>
+</html>

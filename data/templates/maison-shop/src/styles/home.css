@@ -1,0 +1,31 @@
+/* Discover: magazine cover, New in rail, editorial story with shop-the-look rows. */
+.home-screen .hello { text-align: center; }
+
+.home-screen .cover { position: relative; display: block; margin-inline: -1.25rem; aspect-ratio: 4 / 5; overflow: hidden; text-decoration: none; color: #f8f4ee; background: var(--surface-2); }
+.home-screen .cover img { width: 100%; height: 100%; object-fit: cover; transition: transform 1.2s ease; }
+.home-screen .cover:hover img { transform: scale(1.03); }
+.home-screen .cover::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(22, 20, 18, 0) 45%, rgba(22, 20, 18, .72) 100%); }
+.home-screen .cover-text { position: absolute; left: 1.4rem; right: 1.4rem; bottom: 1.5rem; z-index: 1; display: grid; gap: .5rem; }
+.home-screen .cover-text .label { color: rgba(248, 244, 238, .8); }
+.home-screen .cover-text strong { font-family: var(--font-display); font-weight: 500; font-style: italic; font-size: 3.1rem; line-height: .95; }
+.home-screen .cover-cta { display: inline-flex; align-items: center; gap: .45rem; font-size: .68rem; letter-spacing: .2em; text-transform: uppercase; }
+
+.home-screen .story { display: grid; gap: 1.1rem; }
+.home-screen .story blockquote { margin: 0; font-family: var(--font-display); font-size: 1.7rem; line-height: 1.15; font-weight: 500; font-style: italic; }
+.home-screen .story-grid { display: grid; grid-template-columns: 1.15fr 1fr; gap: .7rem; align-items: start; }
+.home-screen .frame { margin: 0; overflow: hidden; background: var(--surface-2); }
+.home-screen .frame img { width: 100%; height: 100%; object-fit: cover; }
+.home-screen .frame.f0 { aspect-ratio: 3 / 4; }
+.home-screen .frame.f1 { aspect-ratio: 3 / 4.6; margin-top: 2.4rem; }
+
+.home-screen .shop-the-look { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.home-screen .shop-the-look li { border-bottom: 1px solid var(--line); }
+.home-screen .shop-the-look a { display: grid; grid-template-columns: 3.4rem 1fr auto; gap: .9rem; align-items: center; padding: .75rem 0; text-decoration: none; }
+.home-screen .shop-the-look img { width: 3.4rem; height: 4.2rem; object-fit: cover; }
+.home-screen .shop-the-look span { display: grid; gap: .15rem; }
+.home-screen .shop-the-look strong { font-family: var(--font-display); font-weight: 600; font-size: 1.15rem; }
+.home-screen .shop-the-look small { color: var(--rust); font-size: .82rem; font-weight: 500; }
+
+.home-screen .ateliers { display: grid; gap: 1rem; }
+.home-screen .atelier-row { display: grid; grid-template-columns: 5.2rem 1fr; gap: 1rem; align-items: baseline; }
+.home-screen .atelier-row p { margin: 0; font-family: var(--font-display); font-size: 1.15rem; line-height: 1.35; }

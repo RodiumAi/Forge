@@ -2,7 +2,9 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+
+from app.kinds import KindId
 
 
 class RegisterRequest(BaseModel):
@@ -201,6 +203,13 @@ class ForgeEntitlementsOut(BaseModel):
     priority_generation: bool = False
     allowed_model_tiers: list[str] | None = None
     frodi_balance: int = 0
+    # Forge Design rights: exports of decks and codelabs, the "Made with
+    # Forge" badge, and sharing a design system with the team.
+    export_pdf: bool = False
+    export_html: bool = False
+    export_pptx: bool = False
+    remove_badge: bool = False
+    design_system_sharing: bool = False
 
 
 class ForgeModelChoice(BaseModel):
@@ -335,7 +344,12 @@ class ProjectCreate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=200)
     prompt: str | None = Field(default=None, max_length=8000)
     template_id: str | None = Field(default=None, max_length=64)
-    platform: Literal["web", "mobile"] | None = Field(default="web")
+    platform: KindId | None = Field(default="web")
+    #: Slides only: canvas ratio of the new deck. Absent means 16:9.
+    format: Literal["16:9", "4:3", "1:1"] | None = None
+    #: A design_system project the caller can open: its tokens dress the new
+    #: project (DESIGN.md, and the theme of a deck or codelab).
+    design_system_id: UUID | None = None
 
 
 class ProjectPersonOut(BaseModel):
@@ -356,11 +370,13 @@ class ProjectOut(BaseModel):
     custom_domain: str | None = None
     custom_domain_status: str | None = None
     template_id: str | None = None
-    platform: Literal["web", "mobile"] = "web"
+    platform: KindId = "web"
     published_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
     has_thumbnail: bool = False
+    # mtime of the stored card image (cache buster); None when there is none yet.
+    thumbnail_at: int | None = None
     #: ``owner`` for projects you created, otherwise the accepted share role.
     access_role: str = "owner"
     #: Accepted collaborators, for the dashboard avatar stack. Empty when the
@@ -403,7 +419,22 @@ class TemplateOut(BaseModel):
     accent: str | None = None
     bg: str | None = None
     preview_url: str | None = None
-    kind: Literal["web", "mobile"] = "web"
+    # Still image of the card, when the kit ships one; preferred over preview_url.
+    preview_image_url: str | None = None
+    kind: KindId = "web"
+    # Lowest plan that may use the kit on Forge Cloud: None (Free), "starter" or "builder".
+    required_plan: Literal["starter", "builder"] | None = None
+
+
+class KindOut(BaseModel):
+    """One project kind and whether this instance offers it (``GET /kinds``)."""
+
+    id: KindId
+    engine: str
+    editor: str
+    exports: list[str] = Field(default_factory=list)
+    publish: str
+    enabled: bool = False
 
 
 class IntegrationOut(BaseModel):
@@ -418,6 +449,8 @@ class IntegrationOut(BaseModel):
     badge: str | None = None
     enabled_hint: bool = False
     logo_url: str | None = None
+    # Domains of the embed snippet, so the composer can tell the user pasted it.
+    embed_hosts: list[str] = []
 
 
 class IntegrationDetailOut(IntegrationOut):
@@ -455,10 +488,69 @@ class ChatCreate(BaseModel):
     title: str | None = None
 
 
+DesignSystemSection = Literal[
+    "colors", "typography", "spacing", "logo", "iconography", "imagery", "voice", "guidelines", "components"
+]
+
+
+class MessageTarget(BaseModel):
+    """What a chat message may change. Absent = the whole project.
+
+    Document kinds (slides): ``slideId`` limits the AI to that slide,
+    ``elementId`` to that element. Codelabs: ``stepId`` limits the AI to
+    that step.
+
+    React projects (sites, mobile apps): ``route`` is the preview route the
+    user is on, ``forgeId`` the ``data-forge-id`` of the selected element
+    (``<file>:<line>:<col>``), ``filePath`` an explicit source file. With
+    ``restrict`` the server refuses writes outside the selection's files
+    (``TARGET_SCOPE`` warnings); the builder resends with ``restrict: false``
+    to widen. Unknown keys are ignored.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    slideId: str | None = Field(default=None, max_length=64, pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
+    elementId: str | None = Field(default=None, max_length=64, pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
+    stepId: str | None = Field(default=None, max_length=64, pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
+    #: Design system section edited alone (colors, typography, spacing, logo...).
+    section: DesignSystemSection | None = None
+    route: str | None = Field(default=None, max_length=200)
+    forgeId: str | None = Field(default=None, max_length=320)
+    filePath: str | None = Field(default=None, max_length=300)
+    restrict: bool = False
+    #: Pages the user picked in the builder's pages rail: the change applies to
+    #: them (a focus for the model, never a write restriction).
+    pages: list[str] | None = Field(default=None, max_length=40)
+
+    @field_validator("pages")
+    @classmethod
+    def _clip_pages(cls, value: list[str] | None) -> list[str] | None:
+        if value is None:
+            return None
+        out: list[str] = []
+        for raw in value:
+            item = str(raw or "").strip()[:200]
+            if item and item not in out:
+                out.append(item)
+        return out or None
+
+
+#: Quick actions of the deck editor (sent with a target) and of the codelab
+#: editor (``check_code`` and ``make_files`` need no target).
+QuickAction = Literal[
+    "shorten", "punchier", "change_layout", "add_visual", "translate", "check_code", "make_files"
+]
+
+
 class SendMessageRequest(BaseModel):
     content: str = Field(min_length=1, max_length=50000)
     mode: str = Field(default="agent", pattern="^(agent|plan)$")
     model: str | None = Field(default=None, max_length=120)
+    target: MessageTarget | None = None
+    action: QuickAction | None = None
+    #: Argument of the action: a layout name for change_layout, a language for translate.
+    action_input: str | None = Field(default=None, max_length=64)
 
 
 class ClarifyAnswersRequest(BaseModel):
@@ -505,6 +597,9 @@ class BranchMessagesRequest(BaseModel):
     content: str = Field(min_length=1, max_length=50000)
     mode: str = Field(default="agent", pattern="^(agent|plan)$")
     model: str | None = Field(default=None, max_length=120)
+    target: MessageTarget | None = None
+    action: QuickAction | None = None
+    action_input: str | None = Field(default=None, max_length=64)
 
 
 class AgentRunOut(BaseModel):

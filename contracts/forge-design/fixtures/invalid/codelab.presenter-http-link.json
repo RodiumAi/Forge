@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "title": "Codelab",
+  "level": "beginner",
+  "durationMinutes": 5,
+  "presenter": {
+    "name": "Ada",
+    "links": [{ "label": "Site", "url": "http://example.com" }]
+  },
+  "steps": []
+}

@@ -1,0 +1,46 @@
+/* Onboarding (first launch). Scoped under .onboarding-screen. */
+.onboarding-screen {
+  min-height: 100dvh;
+  padding: calc(1rem + var(--safe-top)) 1.4rem calc(1.4rem + var(--safe-bottom));
+  gap: 1.4rem; justify-content: space-between;
+  background: radial-gradient(80% 50% at 85% 10%, #fff1d6, transparent 70%), radial-gradient(70% 50% at 0% 40%, #e3eeff, transparent 70%), var(--bg);
+}
+.onboarding-screen .onboard-top { display: flex; align-items: center; justify-content: space-between; min-height: 2.75rem; }
+.onboarding-screen .brand { font-family: var(--font-display); font-style: italic; font-size: 1.9rem; line-height: 1; }
+.onboarding-screen .skip { appearance: none; border: 0; background: transparent; color: var(--muted); font-weight: 700; min-height: 2.75rem; padding: 0 .4rem; }
+
+/* Three tall destination cards fanned out; each slide re-deals them */
+.onboarding-screen .onboard-art { position: relative; height: 46vh; min-height: 300px; max-height: 390px; }
+.onboarding-screen .fan {
+  position: absolute; margin: 0; left: 50%; top: 50%; width: 52%; aspect-ratio: 3 / 4.2; border-radius: 1.6rem; overflow: hidden;
+  box-shadow: 0 26px 50px -18px rgba(14, 26, 34, .45); border: 4px solid #fff; transition: transform .6s cubic-bezier(.2, .8, .2, 1);
+}
+.onboarding-screen .fan img { width: 100%; height: 100%; object-fit: cover; }
+.onboarding-screen .fan::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 50%, rgba(14, 26, 34, .7)); }
+.onboarding-screen .fan figcaption { position: absolute; z-index: 1; left: .8rem; bottom: .7rem; color: #fff; display: grid; }
+.onboarding-screen .fan figcaption span { font-family: var(--font-display); font-size: 1.6rem; line-height: 1; }
+.onboarding-screen .fan figcaption small { display: inline-flex; align-items: center; gap: .2rem; font-size: .68rem; font-weight: 600; }
+.onboarding-screen .f0 { transform: translate(-108%, -50%) rotate(-11deg) scale(.86); }
+.onboarding-screen .f2 { transform: translate(8%, -48%) rotate(10deg) scale(.86); }
+.onboarding-screen .f1 { z-index: 1; transform: translate(-50%, -52%); }
+.onboarding-screen .step-1 .f0 { transform: translate(-112%, -44%) rotate(-6deg) scale(.82); }
+.onboarding-screen .step-1 .f1 { transform: translate(-50%, -56%) rotate(-3deg); }
+.onboarding-screen .step-1 .f2 { transform: translate(12%, -42%) rotate(14deg) scale(.82); }
+.onboarding-screen .step-2 .f0 { transform: translate(-100%, -54%) rotate(-14deg) scale(.88); }
+.onboarding-screen .step-2 .f1 { transform: translate(-50%, -48%) rotate(2deg) scale(1.03); }
+.onboarding-screen .step-2 .f2 { transform: translate(2%, -56%) rotate(6deg) scale(.88); }
+
+.onboarding-screen .float-chip {
+  position: absolute; z-index: 2; display: inline-flex; align-items: center; gap: .35rem; padding: .55rem .85rem; border-radius: 999px;
+  background: #fff; font-size: .78rem; font-weight: 700; box-shadow: 0 14px 30px -10px rgba(14, 26, 34, .35);
+}
+.onboarding-screen .float-chip.a { top: 6%; right: 6%; color: var(--love); }
+.onboarding-screen .float-chip.b { bottom: 4%; left: 4%; color: var(--accent); }
+
+.onboarding-screen .onboard-body .kicker { margin-bottom: .7rem; }
+.onboarding-screen .onboard-body h2 { font-size: 2.65rem; line-height: 1; margin-bottom: .75rem; }
+.onboarding-screen .onboard-body .muted { font-size: .95rem; max-width: 32ch; }
+.onboarding-screen .onboard-actions { display: grid; gap: 1.1rem; }
+.onboarding-screen .dots { display: flex; gap: .4rem; }
+.onboarding-screen .dots i { width: .5rem; height: .5rem; border-radius: 999px; background: #cfd8de; transition: width .3s ease, background .3s ease; }
+.onboarding-screen .dots i.on { width: 1.6rem; background: var(--accent); }

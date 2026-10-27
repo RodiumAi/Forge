@@ -1,0 +1,63 @@
+/* Now Playing (stack screen, no tab bar). Scoped under .now-playing-screen. */
+.now-playing-screen {
+  position: relative; isolation: isolate; overflow: hidden; min-height: 100dvh; gap: 1.35rem;
+  padding: calc(.8rem + var(--safe-top)) 1.3rem calc(1.4rem + var(--safe-bottom));
+}
+.now-playing-screen .np-bg { position: absolute; inset: -25%; width: 150%; height: 70%; max-width: none; object-fit: cover; filter: blur(60px) saturate(1.6); opacity: .55; z-index: -2; }
+.now-playing-screen::before { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, transparent, var(--bg) 62%); }
+
+.now-playing-screen .np-bar { display: flex; align-items: center; justify-content: space-between; gap: .6rem; }
+.now-playing-screen .np-bar .icon-btn { background: rgba(255, 255, 255, .08); border-color: rgba(255, 255, 255, .12); }
+.now-playing-screen .np-from { display: grid; text-align: center; gap: .1rem; min-width: 0; }
+.now-playing-screen .np-from span { font-size: .66rem; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.now-playing-screen .np-from strong { font-size: .88rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Vinyl: grooves, sheen, cover as the label, a tonearm that drops while playing */
+.now-playing-screen .stage { position: relative; width: min(84%, 21rem); aspect-ratio: 1; margin: .4rem auto 0; }
+.now-playing-screen .disc {
+  position: absolute; inset: 0; border-radius: 999px; display: grid; place-items: center;
+  background:
+    conic-gradient(from 30deg, transparent 0 8%, rgba(255, 255, 255, .14) 12%, transparent 18% 52%, rgba(255, 255, 255, .1) 58%, transparent 64%),
+    repeating-radial-gradient(circle, #0b0a0e 0 2px, #17151c 2px 3px, #0d0c11 3px 5px);
+  box-shadow: 0 30px 60px -18px rgba(0, 0, 0, .9), 0 0 0 1px rgba(255, 255, 255, .06), 0 0 60px -10px color-mix(in srgb, var(--tint) 55%, transparent);
+  animation: spin 7s linear infinite; animation-play-state: paused;
+}
+.now-playing-screen .playing .disc { animation-play-state: running; }
+.now-playing-screen .disc img { width: 40%; aspect-ratio: 1; border-radius: 999px; object-fit: cover; box-shadow: 0 0 0 5px #0d0c11, 0 0 0 6px rgba(255, 255, 255, .1); }
+.now-playing-screen .spindle { position: absolute; width: 4.5%; aspect-ratio: 1; border-radius: 999px; background: #e9e6ee; box-shadow: inset 0 0 0 2px #9a95a3; }
+.now-playing-screen .arm { position: absolute; top: -4%; right: -2%; width: 30%; height: 62%; transform-origin: 78% 8%; transform: rotate(-22deg); transition: transform .8s cubic-bezier(.2, .8, .2, 1); }
+.now-playing-screen .playing .arm { transform: rotate(4deg); }
+.now-playing-screen .arm::before { content: ""; position: absolute; top: 0; right: 10%; width: 1.4rem; height: 1.4rem; border-radius: 999px; background: radial-gradient(circle, #f2eff6 30%, #8e879a 32% 60%, #3b3644 62%); box-shadow: 0 6px 12px rgba(0, 0, 0, .5); }
+.now-playing-screen .arm i { position: absolute; top: .7rem; right: calc(10% + .62rem); width: .22rem; height: 82%; border-radius: 999px; background: linear-gradient(180deg, #e9e6ee, #a9a3b2); transform: rotate(14deg); transform-origin: top; }
+.now-playing-screen .arm i::after { content: ""; position: absolute; bottom: -.4rem; left: -.38rem; width: 1rem; height: 1.3rem; border-radius: .25rem; background: var(--accent); }
+
+.now-playing-screen .np-title { display: flex; align-items: center; gap: 1rem; }
+.now-playing-screen .np-title div { flex: 1; min-width: 0; }
+.now-playing-screen .np-title h1 { font-size: 1.75rem; font-weight: 800; line-height: 1.05; }
+.now-playing-screen .np-title p { margin: .3rem 0 0; color: var(--muted); font-size: .92rem; }
+.now-playing-screen .like { appearance: none; border: 0; background: none; width: 2.9rem; height: 2.9rem; display: grid; place-items: center; color: var(--fg); }
+.now-playing-screen .like.on { color: var(--accent); }
+
+.now-playing-screen .scrub input {
+  appearance: none; -webkit-appearance: none; width: 100%; height: 1.6rem; background: transparent; margin: 0; cursor: pointer;
+}
+.now-playing-screen .scrub input::-webkit-slider-runnable-track { height: .3rem; border-radius: 999px; background: linear-gradient(90deg, var(--accent), var(--accent-2) var(--p), rgba(255, 255, 255, .16) var(--p)); }
+.now-playing-screen .scrub input::-moz-range-track { height: .3rem; border-radius: 999px; background: linear-gradient(90deg, var(--accent), var(--accent-2) var(--p), rgba(255, 255, 255, .16) var(--p)); }
+.now-playing-screen .scrub input::-webkit-slider-thumb { -webkit-appearance: none; width: 1rem; height: 1rem; margin-top: -.35rem; border-radius: 999px; background: #fff; box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 35%, transparent); }
+.now-playing-screen .scrub input::-moz-range-thumb { width: 1rem; height: 1rem; border: 0; border-radius: 999px; background: #fff; }
+.now-playing-screen .times { display: flex; justify-content: space-between; font-size: .74rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.now-playing-screen .controls { display: flex; align-items: center; justify-content: space-between; }
+.now-playing-screen .ctl { appearance: none; border: 0; background: none; width: 3rem; height: 3rem; border-radius: 999px; display: grid; place-items: center; color: var(--fg); }
+.now-playing-screen .ctl.on { color: var(--accent); }
+.now-playing-screen .play-big.main { width: 4.8rem; height: 4.8rem; }
+
+.now-playing-screen .lyrics { display: grid; gap: .45rem; padding: 1.15rem 1.2rem; border-radius: 1.4rem; background: linear-gradient(150deg, color-mix(in srgb, var(--tint) 55%, #241d30), #241d30); }
+.now-playing-screen .lyrics h2 { font-size: .8rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; margin-bottom: .2rem; opacity: .85; }
+.now-playing-screen .lyrics p { margin: 0; font-family: var(--font-display); font-size: 1.15rem; font-weight: 700; line-height: 1.3; color: rgba(255, 255, 255, .45); transition: color .3s ease; }
+.now-playing-screen .lyrics p.past { color: rgba(255, 255, 255, .7); }
+.now-playing-screen .lyrics p.now { color: #fff; }
+
+.now-playing-screen .up-next { display: flex; align-items: center; gap: .6rem; font-size: .8rem; color: var(--muted); }
+.now-playing-screen .up-next img { width: 2.2rem; height: 2.2rem; border-radius: .55rem; object-fit: cover; margin-left: auto; }
+.now-playing-screen .up-next strong { color: var(--fg); font-weight: 600; font-size: .85rem; }

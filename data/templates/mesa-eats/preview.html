@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Mesa preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 480px; height: 270px; overflow: hidden; position: relative;
+    background: radial-gradient(60% 80% at 50% 110%, rgba(232,68,46,.28), transparent 70%), #fff8f1;
+    font-family: "Inter", system-ui, sans-serif; color: #1f1a17;
+  }
+  .plate { position: absolute; left: 50%; top: 22px; width: 400px; height: 400px; margin-left: -200px; border-radius: 999px; background: #e8442e; box-shadow: inset 0 0 0 18px #f05a43, 0 0 0 10px #fff8f1, 0 0 0 12px rgba(232,68,46,.25); }
+  .sun { position: absolute; left: 22px; top: 12px; z-index: 1; width: 64px; height: 64px; border-radius: 999px; background: #ffc94d; }
+  .leaf { position: absolute; right: -14px; top: 168px; z-index: 1; width: 60px; height: 60px; border-radius: 0 60px 0 60px; background: #2f6f4f; transform: rotate(-12deg); }
+  .dev { position: absolute; width: 128px; height: 268px; border-radius: 22px; background: #fff8f1; border: 3px solid #1f1a17; overflow: hidden; box-shadow: 0 24px 44px -16px rgba(96,52,30,.55); }
+  .dev::before { content: ""; position: absolute; top: 6px; left: 50%; transform: translateX(-50%); width: 34px; height: 9px; border-radius: 99px; background: #1f1a17; z-index: 4; }
+  .l { left: 52px; top: 50px; transform: rotate(-8deg); }
+  .r { right: 52px; top: 50px; transform: rotate(8deg); }
+  .c { left: 50%; top: 34px; width: 142px; height: 300px; transform: translateX(-50%); z-index: 2; }
+  .s { padding: 22px 8px 0; display: grid; gap: 6px; }
+  .d { font-family: "Bricolage Grotesque", sans-serif; font-weight: 800; letter-spacing: -.03em; line-height: 1; }
+  .mu { color: #8a7f77; }
+  .pr { font-family: "Bricolage Grotesque"; font-weight: 700; font-size: 7px; } .pr small { font-family: "Inter"; font-size: 4px; color: #8a7f77; margin-left: 1px; }
+  .sh { box-shadow: 0 4px 10px -5px rgba(96,52,30,.4); }
+  /* home */
+  .dl { display: flex; align-items: center; gap: 4px; }
+  .pin { width: 13px; height: 13px; border-radius: 99px; background: #fde2dd; position: relative; }
+  .pin::after { content: ""; position: absolute; left: 4px; top: 3px; width: 5px; height: 5px; border-radius: 99px 99px 99px 0; transform: rotate(-45deg); background: #e8442e; }
+  .dl small { display: block; font-size: 3.6px; color: #8a7f77; } .dl b { font-size: 5px; }
+  .h { font-size: 13px; } .h span { color: #e8442e; }
+  .sr { height: 14px; border-radius: 99px; background: #fff; font-size: 4.2px; color: #8a7f77; display: flex; align-items: center; padding-left: 7px; }
+  .promo { display: grid; grid-template-columns: 1.2fr 1fr; height: 46px; border-radius: 9px; background: #ffc94d; overflow: hidden; }
+  .promo div { padding: 6px 0 0 6px; display: grid; align-content: start; gap: 2px; }
+  .promo em { justify-self: start; font-style: normal; font-size: 3.4px; font-weight: 700; background: #1f1a17; color: #ffc94d; padding: 1px 3px; border-radius: 9px; }
+  .promo b { font-family: "Bricolage Grotesque"; font-weight: 800; font-size: 9px; line-height: .95; letter-spacing: -.03em; }
+  .promo span { background: url("https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=300&q=60") center/cover; border-radius: 99px 0 0 99px; margin: -4px -6px -4px 0; }
+  .chips { display: flex; gap: 3px; }
+  .chips span { display: flex; align-items: center; gap: 2px; padding: 2px 4px 2px 2px; border-radius: 99px; background: #fff; font-size: 4px; font-weight: 600; white-space: nowrap; }
+  .chips span i { width: 7px; height: 7px; border-radius: 99px; background: #ffe7ad; }
+  .chips span.on { background: #1f1a17; color: #fff; } .chips span.on i { background: #e8442e; }
+  .card { display: grid; gap: 3px; }
+  .card .ph { height: 54px; border-radius: 9px; background: url("https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=400&q=60") center/cover; position: relative; }
+  .card .ph::after { content: ""; position: absolute; top: 4px; right: 4px; width: 11px; height: 11px; border-radius: 99px; background: rgba(255,255,255,.92); }
+  .card .t { display: flex; justify-content: space-between; align-items: center; }
+  .card .t b { font-family: "Bricolage Grotesque"; font-weight: 700; font-size: 7px; }
+  .rt { font-size: 4px; font-weight: 700; background: #ffe6a6; color: #7a5300; padding: 1px 3px; border-radius: 9px; }
+  .card small { font-size: 4px; color: #8a7f77; }
+  .cbar { position: absolute; left: 6px; right: 6px; bottom: 6px; height: 21px; border-radius: 99px; background: #e8442e; color: #fff; display: flex; align-items: center; gap: 4px; padding: 0 7px 0 3px; box-shadow: 0 8px 14px -6px rgba(232,68,46,.9); }
+  .cbar i { width: 15px; height: 15px; border-radius: 99px; background: rgba(255,255,255,.22); position: relative; }
+  .cbar i::after { content: "2"; position: absolute; top: -2px; right: -2px; width: 7px; height: 7px; border-radius: 99px; background: #ffc94d; color: #1f1a17; font-size: 4px; font-weight: 800; font-style: normal; display: grid; place-items: center; }
+  .cbar b { flex: 1; font-size: 5.4px; } .cbar span { font-family: "Bricolage Grotesque"; font-weight: 700; font-size: 6px; }
+  /* restaurant */
+  .hero { height: 78px; background: url("https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=400&q=60") center/cover; }
+  .info { margin: -14px 7px 0; position: relative; background: #fff; border-radius: 9px; padding: 6px; display: grid; gap: 2px; }
+  .info .k { font-size: 3.4px; font-weight: 700; letter-spacing: .12em; color: #e8442e; }
+  .info b { font-size: 10px; }
+  .facts { display: flex; gap: 2px; margin-top: 2px; } .facts span { font-size: 3.6px; font-weight: 700; padding: 1.5px 3px; border-radius: 9px; background: #f6ece2; } .facts span:first-child { background: #ffe6a6; color: #7a5300; }
+  .dish { display: flex; gap: 5px; margin: 6px 7px 0; padding: 5px; border-radius: 8px; background: #fff; }
+  .dish.in { box-shadow: inset 0 0 0 1px rgba(232,68,46,.5); }
+  .dish div { flex: 1; display: grid; gap: 2px; align-content: start; }
+  .dish b { font-size: 5.6px; } .dish p { font-size: 3.6px; color: #8a7f77; line-height: 1.3; }
+  .dish .im { width: 34px; height: 34px; border-radius: 7px; position: relative; flex-shrink: 0; background-size: cover; background-position: center; }
+  .st { position: absolute; left: 50%; bottom: -5px; transform: translateX(-50%); height: 10px; border-radius: 99px; background: #e8442e; color: #fff; font-size: 4.6px; font-weight: 700; display: flex; align-items: center; gap: 4px; padding: 0 3px; box-shadow: 0 0 0 1.5px #fff; white-space: nowrap; }
+  .st.add { width: 10px; padding: 0; justify-content: center; background: #1f1a17; }
+  /* orders */
+  .ao { border-radius: 10px; background: #fff; overflow: hidden; }
+  .ao .top { height: 50px; position: relative; background: url("https://images.unsplash.com/photo-1594212699903-ec8a3eca50f5?auto=format&fit=crop&w=400&q=60") center/cover; display: flex; align-items: flex-end; justify-content: space-between; padding: 5px; color: #fff; }
+  .ao .top::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent, rgba(31,26,23,.8)); }
+  .ao .top b { position: relative; font-size: 7px; } .ao .eta { position: relative; background: #ffc94d; color: #1f1a17; border-radius: 5px; padding: 2px 4px; font-family: "Bricolage Grotesque"; font-weight: 800; font-size: 8px; }
+  .tr { position: relative; display: grid; grid-template-columns: repeat(4,1fr); padding: 8px 5px 3px; }
+  .tr::before { content: ""; position: absolute; left: 17px; right: 17px; top: 13px; height: 2px; border-radius: 9px; background: #f6ece2; }
+  .tr::after { content: ""; position: absolute; left: 17px; width: 62%; top: 13px; height: 2px; border-radius: 9px; background: #e8442e; }
+  .tr span { position: relative; z-index: 1; display: grid; justify-items: center; gap: 2px; font-size: 3.2px; font-weight: 600; color: #8a7f77; }
+  .tr span i { width: 12px; height: 12px; border-radius: 99px; background: #f6ece2; border: 1.5px solid #fff; }
+  .tr span.on i { background: #e8442e; } .tr span.now i { box-shadow: 0 0 0 2.5px rgba(232,68,46,.22); }
+  .tr span.on { color: #1f1a17; }
+  .cr { display: flex; align-items: center; gap: 4px; margin: 3px 5px 5px; padding: 4px; border-radius: 7px; background: #fff8f1; font-size: 4.6px; }
+  .cr img { width: 14px; height: 14px; border-radius: 99px; object-fit: cover; } .cr div { flex: 1; } .cr small { display: block; font-size: 3.4px; color: #8a7f77; }
+  .cr span { width: 12px; height: 12px; border-radius: 99px; background: #2f6f4f; }
+  .past { display: flex; align-items: center; gap: 4px; padding: 4px; border-radius: 8px; background: #fff; }
+  .past img { width: 20px; height: 20px; border-radius: 5px; object-fit: cover; }
+  .past div { flex: 1; font-size: 4.4px; } .past b { display: block; font-size: 5px; } .past span { font-size: 3.6px; font-weight: 700; color: #c9341f; background: #fde2dd; padding: 2px 3px; border-radius: 9px; }
+  .tab { position: absolute; left: 0; right: 0; bottom: 0; height: 24px; background: #fff; border-radius: 9px 9px 0 0; box-shadow: 0 -4px 10px -4px rgba(96,52,30,.25); display: grid; grid-template-columns: repeat(4,1fr); justify-items: center; align-items: center; }
+  .tab i { width: 8px; height: 8px; border-radius: 2px; border: 1.2px solid #8a7f77; }
+  .tab i.on { width: 20px; height: 11px; border-radius: 99px; border: 0; background: #e8442e; box-shadow: 0 3px 6px -2px rgba(232,68,46,.9); }
+</style>
+</head>
+<body>
+  <div class="sun"></div>
+  <div class="leaf"></div>
+  <div class="plate"></div>
+
+  <div class="dev l">
+    <div class="hero"></div>
+    <div class="info sh">
+      <p class="k">PIZZA</p>
+      <b class="d">Napoli 72</b>
+      <div class="facts"><span>4.7 (860)</span><span>30-40 min</span><span>700 FCFA</span></div>
+    </div>
+    <div class="dish in sh">
+      <div><b>Margherita DOP</b><p>San Marzano, fior di latte, basil</p><span class="pr">7 500<small>FCFA</small></span></div>
+      <span class="im" style="background-image:url('https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=160&q=60')"><span class="st"><b>-</b>1<b>+</b></span></span>
+    </div>
+    <div class="dish sh">
+      <div><b>Pollo e cipolla</b><p>Roast chicken, red onion, provola</p><span class="pr">8 900<small>FCFA</small></span></div>
+      <span class="im" style="background-image:url('https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=160&q=60')"><span class="st add">+</span></span>
+    </div>
+    <div class="dish sh">
+      <div><b>Penne arrabbiata</b><p>Spicy tomato, garlic, parsley</p><span class="pr">6 200<small>FCFA</small></span></div>
+      <span class="im" style="background-image:url('https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?auto=format&fit=crop&w=160&q=60')"><span class="st add">+</span></span>
+    </div>
+  </div>
+
+  <div class="dev r">
+    <div class="s">
+      <b class="d" style="font-size:13px">Orders</b>
+      <div class="ao sh">
+        <div class="top"><b class="d">Moussa is on<br />the way</b><span class="eta">12:48</span></div>
+        <div class="tr"><span class="on"><i></i>Confirmed</span><span class="on"><i></i>Cooking</span><span class="on now"><i></i>On the way</span><span><i></i>Delivered</span></div>
+        <div class="cr"><img src="https://images.unsplash.com/photo-1506277886164-e25aa3f4ef7f?auto=format&fit=crop&w=80&q=60" alt="" /><div><b>Moussa Koné</b><small>4.9 · Yellow scooter</small></div><span></span></div>
+      </div>
+      <b class="d" style="font-size:8px">Past orders</b>
+      <div class="past sh"><img src="https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=80&q=60" alt="" /><div><b>Sora Ramen</b>18 400 FCFA</div><span>Reorder</span></div>
+      <div class="past sh"><img src="https://images.unsplash.com/photo-1551024601-bec78aea704b?auto=format&fit=crop&w=80&q=60" alt="" /><div><b>The Sweet Spot</b>6 500 FCFA</div><span>Reorder</span></div>
+    </div>
+    <div class="tab"><i></i><i></i><i class="on"></i><i></i></div>
+  </div>
+
+  <div class="dev c">
+    <div class="s">
+      <div class="dl"><span class="pin"></span><div><small>Deliver to Home</small><b>14 Rue des Jardins</b></div></div>
+      <b class="d h">Hungry, <span>Inès</span>?</b>
+      <div class="sr sh">Dishes, restaurants, cuisines</div>
+      <div class="promo sh"><div><em>TODAY ONLY</em><b>30% off bowls</b></div><span></span></div>
+      <div class="chips"><span class="on"><i></i>All</span><span><i></i>African</span><span><i></i>Burgers</span><span><i></i>Pizza</span></div>
+      <div class="card">
+        <div class="ph sh"></div>
+        <div class="t"><b>Smash Club</b><span class="rt">4.9</span></div>
+        <small>15-25 min · 500 FCFA</small>
+      </div>
+    </div>
+    <div class="cbar"><i></i><b>View cart</b><span>14 300 FCFA</span></div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Hearth preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 480px; height: 270px; overflow: hidden; position: relative;
+    background: #0d0f11; font-family: "Outfit", system-ui, sans-serif; color: #f2f2ef;
+  }
+  .bgphoto { position: absolute; inset: -20px; background: url("https://images.unsplash.com/photo-1772208392358-19e96bee3a73?auto=format&fit=crop&w=600&q=60") center/cover; filter: blur(14px) saturate(120%); opacity: .5; }
+  .shade { position: absolute; inset: 0; background: radial-gradient(55% 70% at 50% 100%, rgba(245,181,68,.32), transparent 70%), linear-gradient(180deg, rgba(13,15,17,.35), rgba(13,15,17,.85)); }
+  .dev { position: absolute; width: 128px; height: 268px; border-radius: 22px; background: #121417; border: 3px solid #2b2e33; overflow: hidden; box-shadow: 0 24px 50px rgba(0,0,0,.6); }
+  .dev::before { content: ""; position: absolute; top: 6px; left: 50%; transform: translateX(-50%); width: 34px; height: 9px; border-radius: 99px; background: #000; z-index: 9; }
+  .l { left: 52px; top: 42px; transform: rotate(-8deg); }
+  .r { right: 52px; top: 42px; transform: rotate(8deg); }
+  .c { left: 50%; top: 14px; width: 144px; height: 300px; transform: translateX(-50%); z-index: 2; border-color: #3a3d42; box-shadow: 0 26px 60px rgba(0,0,0,.65), 0 0 50px rgba(245,181,68,.18); }
+  .mu { color: #8c9096; }
+  .am { color: #f5b544; }
+  .glass { background: rgba(255,255,255,.09); border: 1px solid rgba(255,255,255,.14); backdrop-filter: blur(8px); }
+
+  /* home */
+  .hb { position: absolute; inset: 0 0 auto; height: 150px; background: url("https://images.unsplash.com/photo-1772208392358-19e96bee3a73?auto=format&fit=crop&w=400&q=60") center/cover; filter: blur(1.2px); }
+  .hb::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(18,20,23,.5), rgba(18,20,23,.15) 35%, rgba(18,20,23,.7) 72%, #121417); }
+  .s { position: relative; padding: 22px 9px 0; display: grid; gap: 6px; }
+  .top { display: flex; align-items: center; gap: 5px; }
+  .av { width: 17px; height: 17px; border-radius: 99px; border: 1px solid rgba(255,255,255,.4); background: url("https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=80&q=60") center/cover; }
+  .top small { display: block; font-size: 4.5px; opacity: .75; } .top b { font-size: 7px; font-weight: 500; }
+  .ic { margin-left: auto; width: 15px; height: 15px; border-radius: 99px; }
+  .hero { border-radius: 11px; padding: 7px 8px; margin-top: 8px; }
+  .k { font-size: 4.5px; letter-spacing: .12em; text-transform: uppercase; opacity: .8; }
+  .temp { font-size: 27px; font-weight: 300; letter-spacing: -.04em; line-height: 1; margin-top: 2px; }
+  .temp sup { font-size: 7px; color: #f5b544; vertical-align: 15px; }
+  .hm { font-size: 5px; opacity: .85; display: flex; align-items: center; gap: 3px; margin-top: 2px; }
+  .hm i { width: 4px; height: 4px; border-radius: 99px; background: #6ec6ff; box-shadow: 0 0 4px #6ec6ff; }
+  .pills { display: flex; gap: 3px; margin-top: 4px; } .pills span { font-size: 4.5px; padding: 2px 4px; border-radius: 99px; background: rgba(0,0,0,.28); }
+  .stat { display: grid; grid-template-columns: repeat(3,1fr); gap: 4px; }
+  .stat div { border-radius: 7px; padding: 4px; height: 25px; display: grid; align-content: space-between; }
+  .stat b { font-size: 9px; font-weight: 500; } .stat small { font-size: 4px; opacity: .75; }
+  .stat em { width: 6px; height: 6px; border-radius: 2px; border: 1.2px solid #f5b544; }
+  .h { font-size: 6.5px; font-weight: 500; display: flex; justify-content: space-between; } .h span { font-size: 5px; color: #f5b544; }
+  .chips { display: flex; gap: 3px; } .chips span { font-size: 5px; padding: 3px 5px; border-radius: 99px; white-space: nowrap; }
+  .chips .on { background: #f5b544; color: #1b1407; border-color: #f5b544; box-shadow: 0 3px 8px rgba(245,181,68,.5); }
+  .devs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+  .d { border-radius: 9px; padding: 5px; height: 40px; display: grid; align-content: space-between; }
+  .d .dt { display: flex; justify-content: space-between; }
+  .d .dt i { width: 11px; height: 11px; border-radius: 99px; background: rgba(255,255,255,.1); }
+  .d .dt u { width: 12px; height: 7px; border-radius: 99px; background: rgba(255,255,255,.18); position: relative; }
+  .d .dt u::after { content: ""; position: absolute; top: 1px; left: 1px; width: 5px; height: 5px; border-radius: 99px; background: #f2f2ef; }
+  .d b { font-size: 5.5px; font-weight: 500; } .d small { font-size: 4.2px; opacity: .65; display: block; }
+  .d.on { background: linear-gradient(160deg, rgba(245,181,68,.28), rgba(245,181,68,.06)); border-color: rgba(245,181,68,.45); box-shadow: 0 0 10px rgba(245,181,68,.35); }
+  .d.on .dt i { background: #f5b544; box-shadow: 0 0 6px #f5b544; }
+  .d.on .dt u { background: #f5b544; } .d.on .dt u::after { left: 6px; background: #1b1407; }
+  .d.on small { color: #f5b544; opacity: 1; }
+  .tab { position: absolute; left: 0; right: 0; bottom: 0; height: 26px; border-radius: 10px 10px 0 0; background: rgba(28,31,35,.85); border-top: 1px solid rgba(255,255,255,.12); display: grid; grid-template-columns: repeat(4,1fr); align-items: center; justify-items: center; }
+  .tab span { display: grid; justify-items: center; gap: 2px; font-size: 4px; color: #8c9096; }
+  .tab span i { width: 8px; height: 8px; border-radius: 2px; border: 1.3px solid currentColor; }
+  .tab span.on { color: #f2f2ef; } .tab span.on i { border-color: #f5b544; box-shadow: 0 0 6px #f5b544; }
+
+  /* climate */
+  .cl { padding: 22px 8px 0; display: grid; gap: 6px; align-content: start; height: 100%; background: radial-gradient(70% 35% at 50% 52%, rgba(110,198,255,.22), transparent 70%); }
+  .bar { display: flex; align-items: center; justify-content: space-between; font-size: 7px; font-weight: 500; }
+  .bk { width: 14px; height: 14px; border-radius: 99px; }
+  .rc span { background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12); }
+  .rc .w { background: #f2f2ef; color: #121417; }
+  .dial { position: relative; margin-top: 4px; }
+  .dial svg { width: 100%; display: block; overflow: visible; }
+  .dc { position: absolute; left: 0; right: 0; bottom: 0; text-align: center; }
+  .dc .k { color: #6ec6ff; opacity: 1; }
+  .dc .k, .dc small { display: block; line-height: 1.1; }
+  .dc b { display: block; font-size: 21px; font-weight: 300; letter-spacing: -.05em; line-height: .95; }
+  .dc small { font-size: 4.5px; color: #8c9096; }
+  .st { display: flex; align-items: center; gap: 4px; }
+  .st > i { width: 20px; height: 20px; border-radius: 99px; flex-shrink: 0; position: relative; }
+  .st > i::after { content: ""; position: absolute; left: 6px; right: 6px; top: 9px; height: 1.5px; background: #f2f2ef; }
+  .st > i.p::before { content: ""; position: absolute; top: 6px; bottom: 6px; left: 9px; width: 1.5px; background: #f2f2ef; }
+  .md { flex: 1; display: grid; grid-template-columns: repeat(3,1fr); padding: 2px; border-radius: 99px; background: #1b1e22; font-size: 4.5px; text-align: center; }
+  .md span { padding: 4px 0; border-radius: 99px; color: #8c9096; } .md .on { background: #6ec6ff; color: #10161b; box-shadow: 0 0 6px rgba(110,198,255,.6); }
+  .facts { display: grid; grid-template-columns: repeat(3,1fr); gap: 3px; }
+  .facts div { background: #1b1e22; border-radius: 6px; padding: 4px; }
+  .facts b { display: block; font-size: 7px; font-weight: 500; } .facts small { font-size: 4px; color: #8c9096; }
+  .facts i { display: block; height: 2px; border-radius: 9px; background: #24282d; margin-top: 2px; } .facts i::after { content: ""; display: block; width: 48%; height: 100%; background: #6ec6ff; border-radius: 9px; }
+
+  /* room */
+  .rh { position: relative; height: 112px; background: url("https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=400&q=60") center/cover; }
+  .rh::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(18,20,23,.4), transparent 30%, rgba(18,20,23,.6) 70%, #121417); }
+  .rh .bk { position: absolute; top: 20px; left: 8px; z-index: 1; }
+  .rt { position: absolute; left: 8px; bottom: 6px; z-index: 1; }
+  .rt .k { color: #f5b544; opacity: 1; } .rt b { display: block; font-size: 13px; font-weight: 600; letter-spacing: -.03em; }
+  .rs { display: flex; gap: 3px; margin-top: 3px; } .rs span { font-size: 4.5px; padding: 2px 5px; border-radius: 99px; }
+  .rb { padding: 6px 8px 0; display: grid; gap: 6px; }
+  .lt { background: #1b1e22; border: 1px solid rgba(255,255,255,.07); border-radius: 9px; padding: 5px; display: grid; gap: 5px; }
+  .lt.on { border-color: rgba(245,181,68,.4); box-shadow: 0 4px 10px -4px rgba(245,181,68,.5); }
+  .lt .row { display: flex; align-items: center; gap: 4px; }
+  .lt .row i { width: 12px; height: 12px; border-radius: 99px; background: #24282d; }
+  .lt.on .row i { background: #f5b544; box-shadow: 0 0 6px rgba(245,181,68,.8); }
+  .lt .row b { font-size: 5.5px; font-weight: 500; } .lt .row small { display: block; font-size: 4px; color: #8c9096; }
+  .lt .row em { margin-left: auto; font-style: normal; font-size: 7px; font-weight: 500; }
+  .sl { height: 3px; border-radius: 9px; background: rgba(255,255,255,.12); position: relative; }
+  .sl i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 9px; background: #f5b544; }
+  .sl i::after { content: ""; position: absolute; right: -4px; top: -2.5px; width: 8px; height: 8px; border-radius: 99px; background: #fff; box-shadow: 0 0 0 1.5px rgba(245,181,68,.4); }
+</style>
+</head>
+<body>
+  <div class="bgphoto"></div>
+  <div class="shade"></div>
+
+  <div class="dev l">
+    <div class="cl">
+      <div class="bar"><span class="bk glass"></span>Climate<span style="width:14px"></span></div>
+      <div class="chips rc"><span class="w">Living room</span><span>Bedroom</span><span>Kitchen</span></div>
+      <div class="dial">
+        <svg viewBox="0 0 300 168">
+          <defs><linearGradient id="cg" x1="0" x2="1"><stop offset="0" stop-color="#b7e6ff"/><stop offset="1" stop-color="#3aa8ef"/></linearGradient></defs>
+          <g stroke="rgba(255,255,255,.18)" stroke-width="3" stroke-linecap="round">
+            <path d="M6 150 h12 M17 92 l11 5 M47 46 l9 8 M92 16 l5 11 M150 4 v12 M208 16 l-5 11 M253 46 l-9 8 M283 92 l-11 5 M294 150 h-12"/>
+          </g>
+          <path d="M32 150 A118 118 0 0 1 268 150" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="18" stroke-linecap="round"/>
+          <path d="M32 150 A118 118 0 0 1 268 150" fill="none" stroke="url(#cg)" stroke-width="18" stroke-linecap="round" pathLength="100" stroke-dasharray="46 100"/>
+          <circle cx="138" cy="33" r="19" fill="rgba(110,198,255,.3)"/><circle cx="138" cy="33" r="11" fill="#fff" stroke="#121417" stroke-width="3"/>
+        </svg>
+        <div class="dc"><p class="k">Cooling to</p><b>22.5°</b><small>Room at 23.4°</small></div>
+      </div>
+      <div class="st"><i class="glass"></i><div class="md"><span>Heat</span><span class="on">Cool</span><span>Auto</span></div><i class="glass p"></i></div>
+      <div class="facts"><div><b>48%</b><small>Humidity</small><i></i></div><div><b>27°</b><small>Outside</small></div><div><b>Speed 2</b><small>Fan</small></div></div>
+    </div>
+  </div>
+
+  <div class="dev r">
+    <div class="rh"><span class="bk glass"></span><div class="rt"><p class="k">3 of 5 devices on</p><b>Living room</b><div class="rs"><span class="glass">22.5°</span><span class="glass">48%</span></div></div></div>
+    <div class="rb">
+      <div class="chips"><span class="glass">Relax</span><span class="on">Read</span><span class="glass">Bright</span><span class="glass">Night</span></div>
+      <div class="lt on"><div class="row"><i></i><div><b>Floor lamp</b><small>Warm white, 2700K</small></div><em>75%</em></div><div class="sl"><i style="width:75%"></i></div></div>
+      <div class="lt on"><div class="row"><i></i><div><b>Ceiling lights</b><small>Warm white, 2700K</small></div><em>75%</em></div><div class="sl"><i style="width:75%"></i></div></div>
+      <div class="devs"><div class="d glass"><div class="dt"><i></i><u></u></div><div><b>Smart TV</b><small>Off</small></div></div><div class="d glass on"><div class="dt"><i></i><u></u></div><div><b>Sonos One</b><small>Fela Kuti</small></div></div></div>
+    </div>
+  </div>
+
+  <div class="dev c">
+    <div class="hb"></div>
+    <div class="s">
+      <div class="top"><span class="av"></span><div><small>Villa Cocotiers, Cotonou</small><b>Good evening, Kofi</b></div><span class="ic glass"></span></div>
+      <div class="hero glass">
+        <p class="k">Living room</p>
+        <p class="temp">22.5<sup>°C</sup></p>
+        <p class="hm"><i></i>Cooling to 22.5°, room at 23.4°</p>
+        <div class="pills"><span>48% humidity</span><span>27° outside</span></div>
+      </div>
+      <div class="stat"><div class="glass"><b>6</b><small>Devices on</small></div><div class="glass"><em></em><small>Door locked</small></div><div class="glass"><em></em><small>68% solar</small></div></div>
+      <p class="h">Scenes</p>
+      <div class="chips"><span class="on">Evening</span><span class="glass">Movie</span><span class="glass">Away</span><span class="glass">Good night</span></div>
+      <p class="h">Favourites <span>All rooms</span></p>
+      <div class="devs">
+        <div class="d glass on"><div class="dt"><i></i><u></u></div><div><b>Floor lamp</b><small>On, 70%</small></div></div>
+        <div class="d glass on"><div class="dt"><i></i><u></u></div><div><b>Ceiling lights</b><small>On, 45%</small></div></div>
+        <div class="d glass"><div class="dt"><i></i><u></u></div><div><b>Ceiling fan</b><small>Off</small></div></div>
+        <div class="d glass on"><div class="dt"><i></i><u></u></div><div><b>Front door</b><small>Locked</small></div></div>
+      </div>
+    </div>
+    <div class="tab"><span class="on"><i></i>Home</span><span><i></i>Rooms</span><span><i></i>Energy</span><span><i></i>Settings</span></div>
+  </div>
+</body>
+</html>

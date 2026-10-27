@@ -1,0 +1,46 @@
+/* Energy tab. Scoped under .energy-screen. Amber = solar, cool blue = grid. */
+.energy-screen .periods { display: grid; grid-template-columns: repeat(3, 1fr); padding: .3rem; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); }
+.energy-screen .periods button { appearance: none; border: 0; background: transparent; color: var(--muted); min-height: 2.75rem; border-radius: 999px; font-weight: 500; }
+.energy-screen .periods button.on { background: var(--surface-2); color: var(--fg); box-shadow: inset 0 0 0 1px var(--glass-line); }
+
+.energy-screen .usage { display: grid; gap: .35rem; justify-items: start; }
+.energy-screen .usage-amt { margin: 0; font-family: var(--font-display); font-size: 3.6rem; font-weight: 300; line-height: 1; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+.energy-screen .usage-amt small { font-size: 1.05rem; font-weight: 400; color: var(--muted); margin-left: .35rem; letter-spacing: 0; }
+.energy-screen .trend { display: inline-flex; align-items: center; gap: .3rem; padding: .35rem .7rem; border-radius: 999px; font-size: .78rem; font-weight: 500; background: rgba(110, 198, 255, .12); color: var(--cool); }
+
+.energy-screen .chart { padding-bottom: .8rem; }
+.energy-screen .legend { display: flex; gap: 1rem; font-size: .76rem; color: var(--muted); margin-bottom: .6rem; }
+.energy-screen .legend span { display: inline-flex; align-items: center; gap: .35rem; }
+.energy-screen .legend i { width: .6rem; height: .6rem; border-radius: 999px; }
+.energy-screen .sol { background: var(--accent); }
+.energy-screen .grd { background: var(--cool); }
+.energy-screen .bars { display: grid; grid-template-columns: repeat(7, 1fr); gap: .3rem; height: 10rem; align-items: end; }
+.energy-screen .col { appearance: none; border: 0; background: none; padding: 0; height: 100%; min-height: 2.75rem; display: grid; grid-template-rows: 1fr auto; gap: .45rem; justify-items: center; color: inherit; }
+.energy-screen .stack { align-self: end; width: 68%; display: flex; flex-direction: column; border-radius: .7rem; overflow: hidden; opacity: .45; transition: opacity .2s ease, box-shadow .2s ease; }
+.energy-screen .stack i { display: block; width: 100%; }
+.energy-screen .col small { font-size: .74rem; color: var(--muted); }
+.energy-screen .col.on .stack { opacity: 1; box-shadow: 0 0 22px rgba(245, 181, 68, .45); }
+.energy-screen .col.on small { color: var(--fg); font-weight: 600; }
+
+.energy-screen .split { display: grid; gap: .8rem; }
+.energy-screen .split-bar { display: flex; gap: .3rem; height: .75rem; }
+.energy-screen .split-bar i { display: block; border-radius: 999px; transition: width .3s ease; }
+.energy-screen .split-legend { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; }
+.energy-screen .split-legend div { display: grid; gap: .15rem; justify-items: start; }
+.energy-screen .split-legend strong { font-family: var(--font-display); font-size: 1.35rem; font-weight: 500; }
+.energy-screen .split-legend span:last-child { font-size: .76rem; color: var(--muted); }
+.energy-screen .si { width: 2rem; height: 2rem; border-radius: .7rem; display: grid; place-items: center; color: var(--on-accent); margin-bottom: .3rem; }
+
+.energy-screen .savings {
+  display: flex; gap: .9rem; align-items: center; padding: 1.1rem 1.15rem; border-radius: var(--radius);
+  background: linear-gradient(135deg, rgba(245, 181, 68, .22), rgba(245, 181, 68, .04)); border: 1px solid rgba(245, 181, 68, .35);
+}
+.energy-screen .sv-icon { width: 3rem; height: 3rem; border-radius: 1rem; display: grid; place-items: center; background: var(--accent); color: var(--on-accent); flex-shrink: 0; box-shadow: 0 0 22px rgba(245, 181, 68, .5); }
+.energy-screen .savings div { display: grid; gap: .2rem; }
+.energy-screen .savings strong { font-family: var(--font-display); font-size: 1.15rem; font-weight: 600; }
+.energy-screen .savings span { font-size: .8rem; color: color-mix(in srgb, var(--fg) 75%, transparent); line-height: 1.45; }
+
+.energy-screen .consumers { padding-block: .3rem; }
+.energy-screen .c-bar { display: block; height: .3rem; border-radius: 999px; background: var(--surface-2); margin: .25rem 0 .1rem; }
+.energy-screen .c-bar i { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
+.energy-screen .kwh { font-family: var(--font-display); font-weight: 500; font-variant-numeric: tabular-nums; }

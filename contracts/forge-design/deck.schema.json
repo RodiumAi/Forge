@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge.rodiumai.io/contracts/forge-design/deck.schema.json",
+  "title": "Forge deck",
+  "description": "deck.json of a `slides` project: format, theme and the ordered slide list. Each slide body lives in slides/<id>.json (slide.schema.json), speaker notes in notes/<id>.md. Version 1. Rules JSON Schema cannot express (unique slide ids) are enforced by the API and web validators.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "format", "theme", "slides"],
+  "properties": {
+    "version": { "const": 1 },
+    "title": { "type": "string", "maxLength": 200 },
+    "format": { "$ref": "#/$defs/format" },
+    "theme": { "$ref": "#/$defs/theme" },
+    "slides": {
+      "type": "array",
+      "maxItems": 500,
+      "items": { "$ref": "#/$defs/slideRef" }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"
+    },
+    "format": {
+      "description": "Fixed canvas, scaled to the screen with letterboxing. 16:9 is the default.",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["ratio", "width", "height"],
+          "properties": {
+            "ratio": { "const": "16:9" },
+            "width": { "const": 1920 },
+            "height": { "const": 1080 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["ratio", "width", "height"],
+          "properties": {
+            "ratio": { "const": "4:3" },
+            "width": { "const": 1440 },
+            "height": { "const": 1080 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["ratio", "width", "height"],
+          "properties": {
+            "ratio": { "const": "1:1" },
+            "width": { "const": 1080 },
+            "height": { "const": 1080 }
+          }
+        }
+      ]
+    },
+    "theme": {
+      "description": "designSystem is `local` (the project's own DESIGN.md / design-system.json) or the id of an attached design system.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["designSystem", "tokens"],
+      "properties": {
+        "designSystem": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "tokens": { "type": "string", "minLength": 1, "maxLength": 200 }
+      }
+    },
+    "slideRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "layout"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "layout": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]{0,47}$"
+        },
+        "transition": { "$ref": "#/$defs/transition" },
+        "hidden": { "type": "boolean" }
+      }
+    },
+    "transition": {
+      "description": "Slide transition. `morph` moves and resizes elements sharing a matchKey between consecutive slides.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "enum": [
+            "none",
+            "fade",
+            "push",
+            "slide",
+            "wipe",
+            "zoom-in",
+            "zoom-out",
+            "dissolve",
+            "curtain",
+            "cube",
+            "morph"
+          ]
+        },
+        "durationMs": { "type": "integer", "minimum": 0, "maximum": 5000 },
+        "direction": { "enum": ["left", "right", "up", "down"] },
+        "easing": { "enum": ["linear", "ease", "ease-in", "ease-out", "ease-in-out"] }
+      }
+    }
+  }
+}

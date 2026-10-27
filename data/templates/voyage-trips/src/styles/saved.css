@@ -1,0 +1,16 @@
+/* Saved tab. Scoped under .saved-screen. */
+.saved-screen .summary { margin: 0; font-size: .9rem; color: var(--muted); }
+.saved-screen .summary strong { font-family: var(--font-display); font-size: 1.5rem; font-weight: 400; color: var(--fg); }
+.saved-screen .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: .8rem; }
+.saved-screen .grid > :nth-child(3n + 1) { grid-column: span 2; aspect-ratio: 16 / 11; }
+.saved-screen .grid > :nth-child(3n + 1) .dest-name { font-size: 2rem; }
+
+.saved-screen .empty { display: grid; justify-items: center; text-align: center; gap: .8rem; padding: 3rem 1rem; }
+.saved-screen .empty-mark { width: 5rem; height: 5rem; border-radius: 999px; display: grid; place-items: center; background: color-mix(in srgb, var(--love) 12%, var(--surface)); color: var(--love); margin-bottom: .4rem; }
+.saved-screen .empty h2 { font-size: 2rem; }
+.saved-screen .empty em { color: var(--accent); }
+.saved-screen .empty .btn-primary { max-width: 16rem; margin-top: .6rem; }
+
+@media (min-width: 560px) {
+  .saved-screen .grid { gap: 1rem; }
+}

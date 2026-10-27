@@ -72,8 +72,11 @@ export async function uploadPromptAttachments(
       const detail = res.body || `Upload failed (${res.status})`;
       let message = detail;
       try {
-        const parsed = JSON.parse(detail) as { detail?: string | { msg?: string }[] };
+        const parsed = JSON.parse(detail) as { detail?: string | { msg?: string }[] | { message?: string } };
         if (typeof parsed.detail === "string") message = parsed.detail;
+        else if (parsed.detail && !Array.isArray(parsed.detail) && typeof parsed.detail.message === "string") {
+          message = parsed.detail.message;
+        }
         else if (Array.isArray(parsed.detail) && parsed.detail[0]?.msg) {
           message = parsed.detail.map((d) => d.msg).filter(Boolean).join("; ");
         }

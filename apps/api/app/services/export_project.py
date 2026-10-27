@@ -47,6 +47,7 @@ SKIP_FILE_NAMES = {
     "ai_rules.md",
     "preview.html",
     "thumbnail.jpg",
+    "thumbnail.json",
 }
 SKIP_SUFFIXES = {".pyc", ".pyo", ".log"}
 ENV_PREFIX = ".env."

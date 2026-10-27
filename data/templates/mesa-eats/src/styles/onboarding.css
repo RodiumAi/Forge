@@ -1,0 +1,32 @@
+/* Onboarding (outside the tab shell). Scoped under .onboarding-screen. */
+.onboarding-screen { min-height: 100dvh; padding-bottom: calc(1.2rem + var(--safe-bottom)); }
+
+.onboarding-screen .onboard-photo { position: relative; height: 58dvh; min-height: 22rem; max-height: 34rem; border-radius: 0 0 2.4rem 2.4rem; overflow: hidden; background: var(--surface-2); }
+.onboarding-screen .onboard-photo > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transform: scale(1.06); transition: opacity .6s ease, transform 1.2s ease; }
+.onboarding-screen .onboard-photo > img.on { opacity: 1; transform: scale(1); }
+.onboarding-screen .photo-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(31, 26, 23, .45), transparent 28%, transparent 70%, rgba(31, 26, 23, .25)); }
+
+.onboarding-screen .onboard-top { position: absolute; top: 0; left: 0; right: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; padding: calc(.9rem + var(--safe-top)) 1.25rem 0; }
+.onboarding-screen .brand { font-family: var(--font-display); font-weight: 800; font-size: 1.7rem; letter-spacing: -.04em; color: #fff; display: flex; align-items: flex-end; gap: .15rem; }
+.onboarding-screen .brand i { width: .5rem; height: .5rem; border-radius: 999px; background: var(--saffron); margin-bottom: .45rem; }
+.onboarding-screen .skip { appearance: none; border: 0; min-height: 2.75rem; padding: 0 1.1rem; border-radius: 999px; background: rgba(255, 255, 255, .22); backdrop-filter: blur(10px); color: #fff; font-weight: 600; }
+
+.onboarding-screen .float { position: absolute; z-index: 2; display: flex; align-items: center; gap: .55rem; padding: .55rem .8rem .55rem .55rem; border-radius: 1.1rem; background: var(--surface); box-shadow: 0 18px 30px -14px rgba(31, 26, 23, .45); transition: transform .5s ease; }
+.onboarding-screen .float b { display: block; font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; line-height: 1.1; }
+.onboarding-screen .float small { display: block; font-size: .68rem; color: var(--muted); font-weight: 500; }
+.onboarding-screen .rate-chip { left: 1.1rem; bottom: 4.6rem; }
+.onboarding-screen .rate-ico { width: 2.1rem; height: 2.1rem; border-radius: .7rem; display: grid; place-items: center; background: var(--saffron); color: var(--fg); }
+.onboarding-screen .eta-chip { right: 1.1rem; bottom: 1.4rem; }
+.onboarding-screen .eta-chip img { width: 2.2rem; height: 2.2rem; border-radius: 999px; object-fit: cover; }
+.onboarding-screen .eta-bike { width: 2.1rem; height: 2.1rem; border-radius: 999px; display: grid; place-items: center; background: var(--accent); color: #fff; }
+.onboarding-screen.step-1 .rate-chip { transform: translateY(-1.4rem); }
+.onboarding-screen.step-2 .eta-chip { transform: translateY(-1.6rem) scale(1.05); }
+
+.onboarding-screen .onboard-body { padding: 1.8rem 1.5rem 0; display: grid; gap: .6rem; }
+.onboarding-screen .kicker { margin: 0; font-size: .74rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+.onboarding-screen h2 { font-size: 2.15rem; font-weight: 800; line-height: 1.04; letter-spacing: -.035em; }
+
+.onboarding-screen .onboard-actions { margin-top: auto; padding: 1.4rem 1.5rem 0; display: grid; gap: 1.1rem; }
+.onboarding-screen .dots { display: flex; gap: .4rem; }
+.onboarding-screen .dots i { width: .5rem; height: .5rem; border-radius: 999px; background: color-mix(in srgb, var(--fg) 15%, transparent); transition: width .3s ease, background .3s ease; }
+.onboarding-screen .dots i.on { width: 1.6rem; background: var(--accent); }

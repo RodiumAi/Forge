@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useId, useMemo, useRef, useState } from "react";
-import { ImagePlus, Palette, X } from "lucide-react";
+import { ImagePlus, Palette, Sparkles, X } from "lucide-react";
 import { api, apiBase, getToken } from "@/lib/api";
 import { getMediaToken } from "@/lib/media-token";
 import {
@@ -12,6 +12,11 @@ import {
   type CharterPalette,
 } from "@/lib/design-charter";
 import { Icon } from "@/components/ui/icon";
+import {
+  DesignSystemPicker,
+  dsTranslator,
+  type DesignSystemState,
+} from "@/components/design-system/DesignSystemPicker";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 
 type Props = {
@@ -54,7 +59,22 @@ function persistedLogoUrl(projectId: string, logoPath: string | null, bust: numb
   return `${apiBase()}/projects/${projectId}/design-charter/logo?access_token=${encodeURIComponent(token)}&v=${bust}`;
 }
 
-export function DesignCharterSlideover({ projectId, open, onClose, onColorsApplied }: Props) {
+/**
+ * The project's graphic charter (logo, brief, palette, DESIGN.md), shown in the
+ * Options "Marque" section and in the slide-over. Loads when `active` turns on.
+ */
+export function DesignCharterEditor({
+  projectId,
+  active = true,
+  onColorsApplied,
+  reloadKey = 0,
+}: {
+  projectId: string;
+  active?: boolean;
+  onColorsApplied?: () => void;
+  /** Bump to reload DESIGN.md after something else rewrote it. */
+  reloadKey?: number;
+}) {
   const { t, locale } = useI18n();
   const fileInputId = useId();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -73,7 +93,7 @@ export function DesignCharterSlideover({ projectId, open, onClose, onColorsAppli
   const [colorSaved, setColorSaved] = useState(false);
 
   useEffect(() => {
-    if (!open) return;
+    if (!active) return;
     setError(null);
     setSaved(false);
     setColorSaved(false);
@@ -88,7 +108,7 @@ export function DesignCharterSlideover({ projectId, open, onClose, onColorsAppli
         if (data.logo_path) setLogoBust(Date.now());
       })
       .catch((err) => setError(err instanceof Error ? err.message : t("errorGeneric")));
-  }, [open, projectId, t]);
+  }, [active, projectId, t, reloadKey]);
 
   useEffect(() => {
     if (!logoFile) {
@@ -100,20 +120,12 @@ export function DesignCharterSlideover({ projectId, open, onClose, onColorsAppli
     return () => URL.revokeObjectURL(url);
   }, [logoFile]);
 
-  useEffect(() => {
-    if (!open) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    document.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
+  useEffect(
+    () => () => {
       if (colorDebounceRef.current) clearTimeout(colorDebounceRef.current);
-    };
-  }, [open, onClose]);
+    },
+    [],
+  );
 
   const existingLogoPreview = useMemo(
     () => persistedLogoUrl(projectId, existingLogoPath, logoBust),
@@ -122,8 +134,6 @@ export function DesignCharterSlideover({ projectId, open, onClose, onColorsAppli
   const parsedPalette = useMemo(() => parseCharterPalette(markdown), [markdown]);
   const palette = paletteOverride ?? parsedPalette;
   const tone = useMemo(() => parseCharterTone(markdown), [markdown]);
-
-  if (!open) return null;
 
   function onPickLogo(file: File | null) {
     setError(null);
@@ -283,6 +293,220 @@ export function DesignCharterSlideover({ projectId, open, onClose, onColorsAppli
   const displayPreview = logoPreviewUrl || existingLogoPreview;
 
   return (
+    <div className="design-charter-editor">
+      {error && (
+        <div className="builder-error" role="alert">
+          {error}
+        </div>
+      )}
+      {saved && <p className="design-saved">{t("designSaved")}</p>}
+      {colorSaved && !saved ? (
+        <p className="design-saved">{t("designColorUpdated")}</p>
+      ) : null}
+
+      <form className="design-form" onSubmit={onGenerate}>
+        <div className="design-label">
+          <span>{t("designLogoFile")}</span>
+          <p className="design-logo-hint">{t("designLogoHint")}</p>
+          <input
+            ref={fileInputRef}
+            id={fileInputId}
+            type="file"
+            accept={LOGO_ACCEPT}
+            className="design-logo-input"
+            disabled={busy}
+            onChange={(e) => onPickLogo(e.target.files?.[0] ?? null)}
+          />
+          <label htmlFor={fileInputId} className="design-logo-drop">
+            {displayPreview ? (
+              <>
+                <img src={displayPreview} alt="" className="design-logo-preview" />
+                <span className="design-logo-filename">
+                  {logoFile?.name || existingLogoPath || t("designLogoChoose")}
+                </span>
+              </>
+            ) : (
+              <span className="design-logo-drop-inner">
+                <Icon icon={ImagePlus} className="ui-icon-md" />
+                <span>
+                  {existingLogoPath ? t("designLogoReplace") : t("designLogoChoose")}
+                </span>
+                {existingLogoPath ? (
+                  <span className="design-logo-existing">{existingLogoPath}</span>
+                ) : null}
+              </span>
+            )}
+          </label>
+          {logoFile ? (
+            <button
+              type="button"
+              className="btn btn-ghost design-logo-clear"
+              disabled={busy}
+              onClick={() => {
+                setLogoFile(null);
+                if (fileInputRef.current) fileInputRef.current.value = "";
+              }}
+            >
+              {t("designLogoClear")}
+            </button>
+          ) : null}
+        </div>
+
+        <label className="design-label">
+          {t("designBrief")}
+          <textarea
+            value={brief}
+            onChange={(e) => setBrief(e.target.value)}
+            rows={3}
+            placeholder={t("designBriefPlaceholder")}
+            disabled={busy}
+          />
+        </label>
+
+        <button type="submit" className="btn" disabled={!canGenerate}>
+          {busy ? t("designGenerating") : t("designGenerate")}
+        </button>
+      </form>
+
+      <div className="design-preview">
+        {palette.length > 0 && (
+          <div className="design-palette-block">
+            <p className="design-logo-hint">{t("designPaletteHint")}</p>
+            <div className="design-palette" aria-label={t("designPalette")}>
+              {palette.map((c) => {
+                const inputHex = hexForColorInput(c.hex);
+                const updating = colorBusy === c.name;
+                return (
+                  <label
+                    key={c.name}
+                    className={`design-swatch design-swatch-editable${updating ? " is-busy" : ""}`}
+                    title={`--${c.name}: ${c.hex}`}
+                  >
+                    <span className="design-swatch-picker-wrap">
+                      <input
+                        type="color"
+                        className="design-swatch-picker"
+                        value={inputHex}
+                        disabled={busy || Boolean(colorBusy)}
+                        aria-label={`--${c.name}`}
+                        onChange={(e) => queueColorChange(c.name, e.target.value)}
+                      />
+                      <i style={{ background: c.hex }} aria-hidden />
+                    </span>
+                    <small>
+                      {c.name} · {updating ? t("designColorUpdating") : c.hex}
+                    </small>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        )}
+        {tone && <p className="design-tone">{tone}</p>}
+        <label className="design-label">
+          {t("designContent")}
+          <p className="design-logo-hint">{t("designContentHint")}</p>
+          <textarea
+            value={markdown}
+            onChange={(e) => {
+              setMarkdown(e.target.value);
+              setPaletteOverride(null);
+              setSaved(false);
+            }}
+            rows={14}
+            placeholder={t("designContentPlaceholder")}
+            disabled={busy}
+          />
+        </label>
+        <button
+          type="button"
+          className="btn btn-ghost"
+          onClick={() => void onSaveMarkdown()}
+          disabled={!canSave}
+        >
+          {t("designSaveMd")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The project's brand, in Options > Marque and in the "Charte graphique"
+ * slide-over: the design system the project follows (Builder plan and
+ * up), or the project's own charter, the classic mode, edited in place.
+ */
+export function BrandPanel({ projectId, onDesignApplied }: { projectId: string; onDesignApplied?: () => void }) {
+  const { t, locale } = useI18n();
+  const dsT = useMemo(() => dsTranslator(locale), [locale]);
+  const [ds, setDs] = useState<DesignSystemState>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  return (
+    <div className="options-brand">
+      <section className="options-card options-brand-card">
+        <header className="options-card-head">
+          <span className="options-card-icon" aria-hidden>
+            <Icon icon={Sparkles} className="ui-icon-sm" />
+          </span>
+          <div>
+            <h4>{t("optionsBrandDsTitle")}</h4>
+            <p>{t("optionsBrandDsHint")}</p>
+          </div>
+        </header>
+        <DesignSystemPicker
+          projectId={projectId}
+          t={dsT}
+          onState={setDs}
+          onApplied={() => {
+            setReloadKey((n) => n + 1);
+            onDesignApplied?.();
+          }}
+        />
+      </section>
+
+      {ds?.linked ? (
+        <section className="options-card options-brand-card options-brand-linked">
+          <p className="options-help">{t("optionsBrandLinkedNote")}</p>
+        </section>
+      ) : (
+        <section className="options-card options-brand-card">
+          <header className="options-card-head">
+            <span className="options-card-icon" aria-hidden>
+              <Icon icon={Palette} className="ui-icon-sm" />
+            </span>
+            <div>
+              <h4>{t("optionsBrandClassicTitle")}</h4>
+              <p>{t("optionsBrandClassicHint")}</p>
+            </div>
+          </header>
+          <DesignCharterEditor projectId={projectId} reloadKey={reloadKey} onColorsApplied={onDesignApplied} />
+        </section>
+      )}
+    </div>
+  );
+}
+
+export function DesignCharterSlideover({ projectId, open, onClose, onColorsApplied }: Props) {
+  const { t } = useI18n();
+
+  useEffect(() => {
+    if (!open) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return (
     <div className="design-slideover-root">
       <button
         type="button"
@@ -317,139 +541,7 @@ export function DesignCharterSlideover({ projectId, open, onClose, onColorsAppli
         </header>
 
         <div className="design-slideover-body">
-          {error && (
-            <div className="builder-error" role="alert">
-              {error}
-            </div>
-          )}
-          {saved && <p className="design-saved">{t("designSaved")}</p>}
-          {colorSaved && !saved ? (
-            <p className="design-saved">{t("designColorUpdated")}</p>
-          ) : null}
-
-          <form className="design-form" onSubmit={onGenerate}>
-            <div className="design-label">
-              <span>{t("designLogoFile")}</span>
-              <p className="design-logo-hint">{t("designLogoHint")}</p>
-              <input
-                ref={fileInputRef}
-                id={fileInputId}
-                type="file"
-                accept={LOGO_ACCEPT}
-                className="design-logo-input"
-                disabled={busy}
-                onChange={(e) => onPickLogo(e.target.files?.[0] ?? null)}
-              />
-              <label htmlFor={fileInputId} className="design-logo-drop">
-                {displayPreview ? (
-                  <>
-                    <img src={displayPreview} alt="" className="design-logo-preview" />
-                    <span className="design-logo-filename">
-                      {logoFile?.name || existingLogoPath || t("designLogoChoose")}
-                    </span>
-                  </>
-                ) : (
-                  <span className="design-logo-drop-inner">
-                    <Icon icon={ImagePlus} className="ui-icon-md" />
-                    <span>
-                      {existingLogoPath ? t("designLogoReplace") : t("designLogoChoose")}
-                    </span>
-                    {existingLogoPath ? (
-                      <span className="design-logo-existing">{existingLogoPath}</span>
-                    ) : null}
-                  </span>
-                )}
-              </label>
-              {logoFile ? (
-                <button
-                  type="button"
-                  className="btn btn-ghost design-logo-clear"
-                  disabled={busy}
-                  onClick={() => {
-                    setLogoFile(null);
-                    if (fileInputRef.current) fileInputRef.current.value = "";
-                  }}
-                >
-                  {t("designLogoClear")}
-                </button>
-              ) : null}
-            </div>
-
-            <label className="design-label">
-              {t("designBrief")}
-              <textarea
-                value={brief}
-                onChange={(e) => setBrief(e.target.value)}
-                rows={3}
-                placeholder={t("designBriefPlaceholder")}
-                disabled={busy}
-              />
-            </label>
-
-            <button type="submit" className="btn" disabled={!canGenerate}>
-              {busy ? t("designGenerating") : t("designGenerate")}
-            </button>
-          </form>
-
-          <div className="design-preview">
-            {palette.length > 0 && (
-              <div className="design-palette-block">
-                <p className="design-logo-hint">{t("designPaletteHint")}</p>
-                <div className="design-palette" aria-label={t("designPalette")}>
-                  {palette.map((c) => {
-                    const inputHex = hexForColorInput(c.hex);
-                    const updating = colorBusy === c.name;
-                    return (
-                      <label
-                        key={c.name}
-                        className={`design-swatch design-swatch-editable${updating ? " is-busy" : ""}`}
-                        title={`--${c.name}: ${c.hex}`}
-                      >
-                        <span className="design-swatch-picker-wrap">
-                          <input
-                            type="color"
-                            className="design-swatch-picker"
-                            value={inputHex}
-                            disabled={busy || Boolean(colorBusy)}
-                            aria-label={`--${c.name}`}
-                            onChange={(e) => queueColorChange(c.name, e.target.value)}
-                          />
-                          <i style={{ background: c.hex }} aria-hidden />
-                        </span>
-                        <small>
-                          {c.name} · {updating ? t("designColorUpdating") : c.hex}
-                        </small>
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-            {tone && <p className="design-tone">{tone}</p>}
-            <label className="design-label">
-              {t("designContent")}
-              <p className="design-logo-hint">{t("designContentHint")}</p>
-              <textarea
-                value={markdown}
-                onChange={(e) => {
-                  setMarkdown(e.target.value);
-                  setPaletteOverride(null);
-                  setSaved(false);
-                }}
-                rows={14}
-                placeholder={t("designContentPlaceholder")}
-                disabled={busy}
-              />
-            </label>
-            <button
-              type="button"
-              className="btn btn-ghost"
-              onClick={() => void onSaveMarkdown()}
-              disabled={!canSave}
-            >
-              {t("designSaveMd")}
-            </button>
-          </div>
+          <BrandPanel projectId={projectId} onDesignApplied={onColorsApplied} />
         </div>
       </aside>
     </div>

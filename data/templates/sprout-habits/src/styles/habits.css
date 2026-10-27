@@ -1,0 +1,27 @@
+/* Habits tab. Scoped under .habits-screen. */
+.habits-screen .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: .6rem; }
+.habits-screen .summary div { display: grid; gap: .15rem; padding: .9rem .95rem; border-radius: 1.3rem; background: var(--surface); box-shadow: var(--shadow); }
+.habits-screen .summary div:nth-child(1) { background: var(--butter); box-shadow: none; }
+.habits-screen .summary div:nth-child(2) { background: var(--sky); box-shadow: none; }
+.habits-screen .summary div:nth-child(3) { background: var(--lilac); box-shadow: none; }
+.habits-screen .summary strong { font-family: var(--font-display); font-size: 1.6rem; font-weight: 800; letter-spacing: -.03em; }
+.habits-screen .summary span { font-size: .74rem; font-weight: 600; color: color-mix(in srgb, var(--fg) 60%, transparent); }
+
+.habits-screen .filters { display: flex; gap: .45rem; overflow-x: auto; scrollbar-width: none; margin-inline: -1.2rem; padding-inline: 1.2rem; }
+.habits-screen .filters::-webkit-scrollbar { display: none; }
+.habits-screen .filters .chip { flex-shrink: 0; }
+
+.habits-screen .rows { list-style: none; margin: 0; padding: 0; display: grid; gap: .65rem; }
+.habits-screen .row { display: grid; gap: .8rem; padding: .95rem 1rem; border-radius: 1.5rem; background: var(--surface); box-shadow: var(--shadow); text-decoration: none; color: var(--fg); }
+.habits-screen .row-top { display: flex; align-items: center; gap: .8rem; }
+.habits-screen .r-icon { width: 2.9rem; height: 2.9rem; border-radius: 1rem; display: grid; place-items: center; flex-shrink: 0; }
+.habits-screen .r-text { flex: 1; min-width: 0; display: grid; gap: .1rem; }
+.habits-screen .r-text strong { font-weight: 700; }
+.habits-screen .r-text span { font-size: .77rem; color: var(--muted); font-weight: 600; }
+.habits-screen .r-streak { display: inline-flex; align-items: center; gap: .15rem; padding: .3rem .55rem; border-radius: 999px; background: #ffe8da; color: var(--flame); font-weight: 800; font-size: .8rem; }
+.habits-screen .r-go { color: #b6bdb8; }
+.habits-screen .dots { display: grid; grid-template-columns: repeat(7, 1fr); gap: .35rem; }
+.habits-screen .dot-col { display: grid; justify-items: center; gap: .25rem; }
+.habits-screen .dot-col i { width: 100%; height: 1.55rem; border-radius: .6rem; }
+.habits-screen .dot-col small { font-size: .66rem; font-weight: 700; color: var(--muted); }
+.habits-screen .empty { padding: 1.5rem; text-align: center; }

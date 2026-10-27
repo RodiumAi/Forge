@@ -1,0 +1,43 @@
+/* Onboarding (first launch). Scoped under .onboarding-screen. */
+.onboarding-screen {
+  min-height: 100dvh;
+  padding: calc(1rem + var(--safe-top)) 1.4rem calc(1.4rem + var(--safe-bottom));
+  gap: 1.6rem; justify-content: space-between;
+  background: radial-gradient(90% 60% at 50% 18%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 70%), var(--bg);
+}
+.onboarding-screen .onboard-top { display: flex; align-items: center; justify-content: space-between; min-height: 2.75rem; }
+.onboarding-screen .brand { display: inline-flex; align-items: center; gap: .5rem; font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; }
+.onboarding-screen .brand i { width: 1.15rem; height: 1.15rem; border-radius: 999px; background: var(--accent); box-shadow: inset -.32rem .3rem 0 0 var(--bg); }
+.onboarding-screen .skip { appearance: none; border: 0; background: transparent; color: var(--muted); font-weight: 600; min-height: 2.75rem; padding: 0 .4rem; }
+
+.onboarding-screen .onboard-art { position: relative; height: 46vh; min-height: 280px; max-height: 360px; display: grid; place-items: center; }
+.onboarding-screen .glow { position: absolute; width: 70%; aspect-ratio: 1; border-radius: 999px; background: var(--accent); filter: blur(70px); opacity: .22; }
+.onboarding-screen .mini-card {
+  position: relative; width: min(78%, 290px); aspect-ratio: 1.6; border-radius: 1.5rem; padding: 1.15rem 1.2rem;
+  display: flex; flex-direction: column; justify-content: space-between; color: var(--on-accent);
+  background: linear-gradient(140deg, var(--accent), color-mix(in srgb, var(--accent) 55%, #3f6212));
+  box-shadow: 0 30px 60px rgba(0, 0, 0, .5); transform: rotate(-8deg); transition: transform .5s cubic-bezier(.2, .8, .2, 1);
+}
+.onboarding-screen .mini-card .row-top { display: flex; justify-content: space-between; font-family: var(--font-display); font-weight: 700; }
+.onboarding-screen .mini-amt { margin: 0; font-family: var(--font-display); font-size: 1.7rem; font-weight: 700; letter-spacing: -.03em; }
+.onboarding-screen .mini-amt small { font-size: .8rem; opacity: .7; }
+.onboarding-screen .mini-num { margin: 0; font-size: .82rem; font-weight: 600; opacity: .75; letter-spacing: .08em; }
+.onboarding-screen .step-1 .mini-card { transform: rotate(4deg) translateY(-6px); }
+.onboarding-screen .step-2 .mini-card { transform: rotate(-2deg) scale(.94); }
+
+.onboarding-screen .float-chip {
+  position: absolute; display: inline-flex; align-items: center; gap: .35rem; padding: .55rem .8rem; border-radius: 999px;
+  background: var(--surface-2); border: 1px solid var(--line); font-size: .78rem; font-weight: 600; box-shadow: 0 14px 30px rgba(0, 0, 0, .4);
+}
+.onboarding-screen .float-chip.a { top: 10%; right: 4%; color: var(--accent); }
+.onboarding-screen .float-chip.b { bottom: 8%; left: 2%; padding-left: .45rem; }
+.onboarding-screen .float-chip.b img { width: 1.6rem; height: 1.6rem; border-radius: 999px; object-fit: cover; margin-left: -.45rem; border: 2px solid var(--surface-2); }
+.onboarding-screen .float-chip.b img:first-child { margin-left: 0; }
+
+.onboarding-screen .kicker { margin: 0 0 .7rem; color: var(--accent); font-size: .76rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; }
+.onboarding-screen .onboard-body h2 { font-size: 2.15rem; line-height: 1.05; font-weight: 700; margin-bottom: .75rem; }
+.onboarding-screen .onboard-body .muted { font-size: .95rem; max-width: 30ch; }
+.onboarding-screen .onboard-actions { display: grid; gap: 1.1rem; }
+.onboarding-screen .dots { display: flex; gap: .4rem; }
+.onboarding-screen .dots i { width: .5rem; height: .5rem; border-radius: 999px; background: var(--surface-2); transition: width .3s ease, background .3s ease; }
+.onboarding-screen .dots i.on { width: 1.6rem; background: var(--accent); }

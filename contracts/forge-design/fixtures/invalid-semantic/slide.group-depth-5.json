@@ -1,0 +1,64 @@
+{
+  "id": "s9",
+  "elements": [
+    {
+      "id": "g4",
+      "type": "group",
+      "x": 0,
+      "y": 0,
+      "w": 100,
+      "h": 100,
+      "children": [
+        {
+          "id": "g3",
+          "type": "group",
+          "x": 0,
+          "y": 0,
+          "w": 100,
+          "h": 100,
+          "children": [
+            {
+              "id": "g2",
+              "type": "group",
+              "x": 0,
+              "y": 0,
+              "w": 100,
+              "h": 100,
+              "children": [
+                {
+                  "id": "g1",
+                  "type": "group",
+                  "x": 0,
+                  "y": 0,
+                  "w": 100,
+                  "h": 100,
+                  "children": [
+                    {
+                      "id": "g0",
+                      "type": "group",
+                      "x": 0,
+                      "y": 0,
+                      "w": 100,
+                      "h": 100,
+                      "children": [
+                        {
+                          "id": "leaf",
+                          "type": "icon",
+                          "icon": "star",
+                          "x": 0,
+                          "y": 0,
+                          "w": 100,
+                          "h": 100
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -53,9 +53,10 @@ def _save_index(project_id: str, index: dict[str, dict]) -> None:
     write_file(project_id, MEDIA_INDEX, json.dumps(index, ensure_ascii=False, indent=2) + "\n")
 
 
-def record_media(project_id: str, entry: MediaEntry) -> None:
+def record_media(project_id: str, entry: MediaEntry, extra: dict | None = None) -> None:
+    """Index ``entry``; ``extra`` adds fields such as a stock image's credit."""
     index = _load_index(project_id)
-    index[entry.path] = asdict(entry)
+    index[entry.path] = {**asdict(entry), **(extra or {})}
     _save_index(project_id, index)
 
 

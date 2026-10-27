@@ -1,0 +1,135 @@
+@import url("https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap");
+
+/* Foundation: tokens, reset, app shell (navbar, main, white tab bar with a top
+   indicator), doctor cards, chips, segmented control and buttons. Screen styles live in src/styles/<screen>.css. */
+:root {
+  color-scheme: light;
+  --bg: #f3f8f8;
+  --fg: #102a2b;
+  --muted: #6d8485;
+  --accent: #14907a;
+  --accent-deep: #0d6f5e;
+  --accent-soft: #dff3ef;
+  --on-accent: #ffffff;
+  --coral: #ff8a65;
+  --coral-soft: #ffe6dd;
+  --star: #f5a524;
+  --surface: #ffffff;
+  --surface-2: #eaf2f2;
+  --line: color-mix(in srgb, var(--fg) 8%, transparent);
+  --shadow: 0 1px 2px rgba(16, 42, 43, .04), 0 12px 30px -14px rgba(16, 42, 43, .16);
+  --font-display: "Figtree", system-ui, sans-serif;
+  --font-sans: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --radius: 1.4rem;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* { box-sizing: border-box; }
+html, body, #root { margin: 0; min-height: 100%; background: var(--bg); color: var(--fg); }
+body { font-family: var(--font-sans); font-size: 15px; -webkit-font-smoothing: antialiased; }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+h1, h2, h3 { font-family: var(--font-display); letter-spacing: -.02em; margin: 0; font-weight: 700; }
+img { display: block; max-width: 100%; }
+
+.app-shell { min-height: 100dvh; display: flex; flex-direction: column; max-width: 460px; margin-inline: auto; }
+
+/* Navbar */
+.app-navbar {
+  position: sticky; top: 0; z-index: 5;
+  display: flex; align-items: center; justify-content: space-between; gap: .75rem;
+  padding: calc(.8rem + var(--safe-top)) 1.2rem .8rem;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+}
+.app-navbar .who { display: flex; align-items: center; gap: .7rem; }
+.app-navbar .hello { margin: 0; font-size: .78rem; color: var(--muted); font-weight: 500; }
+.app-navbar h1 { font-size: 1.2rem; font-weight: 800; }
+.app-navbar .screen-title { font-size: 1.65rem; font-weight: 800; }
+.nav-actions { display: flex; gap: .5rem; }
+.nav-action {
+  position: relative; appearance: none; border: 1px solid var(--line); background: var(--surface);
+  width: 2.75rem; height: 2.75rem; border-radius: 999px; display: grid; place-items: center; color: var(--fg);
+}
+.nav-dot { position: absolute; top: .62rem; right: .7rem; width: .5rem; height: .5rem; border-radius: 999px; background: var(--coral); box-shadow: 0 0 0 2px var(--surface); }
+.pfp { width: 2.75rem; height: 2.75rem; border-radius: 1rem; overflow: hidden; flex-shrink: 0; background: var(--surface-2); }
+.pfp img { width: 100%; height: 100%; object-fit: cover; }
+
+/* Main: each screen renders <main class="app-main <name>-screen"> */
+.app-main { flex: 1; padding: .3rem 1.2rem calc(6.4rem + var(--safe-bottom)); display: grid; gap: 1.4rem; align-content: start; }
+
+.section-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: .75rem; }
+.section-head h2 { font-size: 1.1rem; font-weight: 800; }
+.link { color: var(--accent); font-size: .84rem; font-weight: 700; text-decoration: none; background: none; border: 0; padding: 0; }
+.muted { color: var(--muted); margin: 0; line-height: 1.5; font-size: .88rem; }
+
+.card { background: var(--surface); border-radius: var(--radius); padding: 1.1rem 1.15rem; box-shadow: var(--shadow); }
+
+/* Doctor cards (Home, Doctors) */
+.doc-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .7rem; }
+.doc-card { position: relative; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); }
+.doc-link { display: flex; gap: .9rem; padding: .8rem; text-decoration: none; color: var(--fg); }
+.doc-photo { position: relative; width: 5.4rem; height: 6rem; flex-shrink: 0; border-radius: 1.1rem; overflow: hidden; background: var(--accent-soft); }
+.doc-photo img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+.online { position: absolute; right: .35rem; bottom: .35rem; width: .8rem; height: .8rem; border-radius: 999px; background: #22c55e; box-shadow: 0 0 0 2.5px var(--surface); }
+.doc-body { flex: 1; min-width: 0; display: grid; gap: .3rem; align-content: center; padding-right: 2.4rem; }
+.doc-body strong { font-size: 1rem; font-weight: 800; }
+.spec-chip { justify-self: start; padding: .22rem .6rem; border-radius: 999px; font-size: .74rem; font-weight: 700; color: var(--fg); }
+.doc-meta { display: flex; align-items: center; gap: .3rem; font-size: .78rem; color: var(--muted); }
+.doc-meta span { display: inline-flex; align-items: center; gap: .2rem; }
+.rating { color: var(--fg); font-weight: 700; }
+.rating svg { color: var(--star); }
+.dot { width: .25rem; height: .25rem; border-radius: 999px; background: currentColor; opacity: .5; }
+.fee { font-size: .85rem; font-weight: 800; color: var(--accent-deep); }
+.fav { position: absolute; top: .6rem; right: .6rem; appearance: none; border: 0; width: 2.75rem; height: 2.75rem; border-radius: 999px; display: grid; place-items: center; background: var(--surface-2); color: var(--muted); transition: color .2s ease, background .2s ease, transform .2s ease; }
+.fav.on { color: var(--coral); background: var(--coral-soft); transform: scale(1.05); }
+
+/* Chips and segmented control */
+.chips { display: flex; gap: .5rem; overflow-x: auto; scrollbar-width: none; margin-inline: -1.2rem; padding-inline: 1.2rem; }
+.chips::-webkit-scrollbar { display: none; }
+.chip {
+  appearance: none; flex-shrink: 0; display: inline-flex; align-items: center; gap: .4rem; min-height: 2.75rem; padding: 0 1rem;
+  border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: .86rem; font-weight: 700; color: var(--fg);
+}
+.chip.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.segmented { display: grid; grid-template-columns: 1fr 1fr; padding: .3rem; border-radius: 999px; background: var(--surface-2); }
+.segmented button { appearance: none; border: 0; background: transparent; color: var(--muted); min-height: 2.75rem; border-radius: 999px; font-weight: 700; }
+.segmented button.on { background: var(--surface); color: var(--fg); box-shadow: 0 4px 12px -6px rgba(16, 42, 43, .3); }
+
+.toggle { appearance: none; width: 2.9rem; height: 1.7rem; border-radius: 999px; border: 0; background: #d5e0e0; position: relative; flex-shrink: 0; }
+.toggle::after { content: ""; position: absolute; top: .2rem; left: .2rem; width: 1.3rem; height: 1.3rem; border-radius: 999px; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .2); transition: transform .2s ease; }
+.toggle.on { background: var(--accent); }
+.toggle.on::after { transform: translateX(1.2rem); }
+
+/* Buttons */
+.btn-primary, .btn-ghost {
+  appearance: none; border: 0; border-radius: 1.1rem; min-height: 3.4rem;
+  font-weight: 700; font-size: 1rem; padding: .85rem 1.2rem; width: 100%;
+  display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+}
+.btn-primary { background: var(--accent); color: var(--on-accent); box-shadow: 0 14px 28px -14px rgba(20, 144, 122, .9); }
+.btn-primary:active { transform: scale(.98); }
+.btn-primary:disabled { opacity: .45; box-shadow: none; }
+.btn-ghost { background: transparent; color: var(--muted); }
+.icon-btn { appearance: none; border: 1px solid var(--line); background: var(--surface); color: var(--fg); width: 2.75rem; height: 2.75rem; border-radius: 999px; display: grid; place-items: center; flex-shrink: 0; }
+
+/* White docked tab bar, labels visible, top indicator on the active tab */
+.app-tabbar {
+  position: fixed; z-index: 6; left: 50%; transform: translateX(-50%); bottom: 0;
+  width: 100%; max-width: 460px; display: grid; grid-template-columns: repeat(4, 1fr);
+  padding: 0 .4rem calc(.45rem + var(--safe-bottom));
+  background: var(--surface); border-top: 1px solid var(--line);
+  box-shadow: 0 -10px 30px -16px rgba(16, 42, 43, .25);
+}
+.tab {
+  position: relative; text-decoration: none; color: #8fa3a4; display: grid; justify-items: center; align-content: center; gap: .22rem;
+  min-height: 3.6rem; padding-top: .55rem; font-size: .7rem; font-weight: 700; transition: color .2s ease;
+}
+.tab::before { content: ""; position: absolute; top: 0; left: 50%; width: 0; height: 3px; border-radius: 0 0 3px 3px; background: var(--accent); transform: translateX(-50%); transition: width .25s ease; }
+.tab.active { color: var(--accent); }
+.tab.active::before { width: 2.4rem; }
+
+@media (min-width: 768px) {
+  .app-main { padding-inline: 1.6rem; }
+}

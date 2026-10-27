@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Kin preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@500;600;700;800&display=swap" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 480px; height: 270px; overflow: hidden; position: relative;
+    background: radial-gradient(45% 60% at 10% 15%, #c9ece4, transparent 70%), radial-gradient(40% 55% at 95% 10%, #ffe1d6, transparent 70%), radial-gradient(60% 60% at 50% 120%, #a9dfd2, transparent 70%), #f3f8f8;
+    font-family: "Figtree", system-ui, sans-serif; color: #102a2b; font-weight: 600;
+  }
+  .grid-bg { position: absolute; inset: 0; background-image: linear-gradient(rgba(16,42,43,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(16,42,43,.05) 1px, transparent 1px); background-size: 18px 18px; mask-image: radial-gradient(65% 70% at 50% 45%, #000, transparent); }
+  .cross { position: absolute; width: 26px; height: 26px; }
+  .cross::before, .cross::after { content: ""; position: absolute; inset: 9px 0; border-radius: 3px; background: #14907a; opacity: .18; }
+  .cross::after { inset: 0 9px; }
+  .c1 { left: 20px; top: 196px; } .c2 { right: 26px; top: 26px; transform: rotate(18deg); }
+  .dev { position: absolute; width: 128px; height: 268px; border-radius: 22px; background: #f3f8f8; border: 3px solid #102a2b; overflow: hidden; box-shadow: 0 24px 44px -12px rgba(16,42,43,.45); }
+  .dev::before { content: ""; position: absolute; top: 6px; left: 50%; transform: translateX(-50%); width: 34px; height: 9px; border-radius: 99px; background: #102a2b; z-index: 9; }
+  .l { left: 54px; top: 44px; transform: rotate(-8deg); }
+  .r { right: 54px; top: 44px; transform: rotate(8deg); }
+  .c { left: 50%; top: 14px; width: 144px; height: 300px; transform: translateX(-50%); z-index: 2; box-shadow: 0 28px 54px -10px rgba(16,42,43,.5); }
+  .s { padding: 22px 8px 0; display: grid; gap: 6px; }
+  .mu { color: #6d8485; }
+  /* center: home */
+  .top { display: flex; align-items: center; gap: 5px; }
+  .top .av { width: 18px; height: 18px; border-radius: 6px; background: url("https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=160&q=70") center/cover; }
+  .top div { line-height: 1.2; } .top small { display: block; font-size: 4.5px; color: #6d8485; } .top b { font-size: 7.5px; font-weight: 800; }
+  .top .bt { margin-left: auto; width: 14px; height: 14px; border-radius: 99px; background: #fff; border: .8px solid rgba(16,42,43,.1); position: relative; }
+  .top .bt.d::after { content: ""; position: absolute; top: 3px; right: 3px; width: 3.5px; height: 3.5px; border-radius: 9px; background: #ff8a65; }
+  .top .bt + .bt { margin-left: 3px; }
+  .sr { display: flex; align-items: center; gap: 4px; height: 17px; background: #fff; border-radius: 7px; padding: 0 2px 0 6px; font-size: 4.8px; color: #6d8485; box-shadow: 0 4px 10px -6px rgba(16,42,43,.3); }
+  .sr i { width: 5px; height: 5px; border-radius: 9px; border: 1.1px solid #6d8485; }
+  .sr em { margin-left: auto; width: 13px; height: 13px; border-radius: 5px; background: #14907a; }
+  .hero { position: relative; overflow: hidden; border-radius: 11px; padding: 7px; color: #fff; display: grid; gap: 5px;
+    background: radial-gradient(120% 90% at 100% 0%, #2bb397 0%, transparent 55%), linear-gradient(150deg, #14907a, #0d6f5e); box-shadow: 0 10px 18px -10px rgba(13,111,94,.9); }
+  .hero::after { content: ""; position: absolute; right: -22px; bottom: -28px; width: 66px; height: 66px; border-radius: 99px; border: 10px solid rgba(255,255,255,.08); }
+  .hh { display: flex; justify-content: space-between; align-items: center; font-size: 4px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+  .hh span { opacity: .85; } .hh em { font-style: normal; letter-spacing: 0; text-transform: none; font-size: 4.3px; background: rgba(255,255,255,.2); padding: 1.5px 4px; border-radius: 99px; }
+  .hd { display: flex; align-items: center; gap: 5px; position: relative; z-index: 1; }
+  .hd .ph { width: 20px; height: 20px; border-radius: 6px; border: 1.2px solid rgba(255,255,255,.55); background: url("https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=160&q=70") center 15%/cover; }
+  .hd div { line-height: 1.2; } .hd b { display: block; font-size: 6.5px; font-weight: 800; } .hd small { display: block; font-size: 4.3px; opacity: .85; }
+  .hw { display: flex; gap: 3px; position: relative; z-index: 1; }
+  .hw span { flex: 1; text-align: center; font-size: 4.8px; font-weight: 700; background: rgba(255,255,255,.16); border-radius: 5px; padding: 3px 0; }
+  .hc { position: relative; z-index: 1; text-align: center; background: #fff; color: #0d6f5e; font-size: 5.3px; font-weight: 800; border-radius: 6px; padding: 4px 0; }
+  .h { font-size: 6.5px; font-weight: 800; display: flex; justify-content: space-between; align-items: baseline; } .h span { font-size: 4.5px; color: #14907a; }
+  .vt { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; }
+  .vt div { background: #fff; border-radius: 7px; padding: 4px; display: grid; gap: 2px; box-shadow: 0 4px 10px -7px rgba(16,42,43,.35); }
+  .vt i { width: 9px; height: 9px; border-radius: 3px; }
+  .vt b { font-size: 6.5px; font-weight: 800; line-height: 1; } .vt b small { font-size: 3.6px; color: #6d8485; }
+  .vt span { font-size: 3.6px; color: #6d8485; }
+  .vt svg { width: 100%; height: 9px; }
+  .vt svg path { fill: none; stroke: #ff8a65; stroke-width: 1.4; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+  .bars { height: 9px; display: flex; align-items: end; gap: 1px; } .bars em { flex: 1; border-radius: 1px; background: linear-gradient(#a58cf5, #6a4fd1); }
+  .mt { height: 9px; display: flex; align-items: center; } .mt::before { content: none; } .mt em { height: 3px; width: 84%; border-radius: 9px; background: linear-gradient(90deg, #4fc7ad, #14907a); }
+  .dc { position: relative; display: flex; gap: 5px; align-items: center; background: #fff; border-radius: 8px; padding: 4px; box-shadow: 0 4px 10px -7px rgba(16,42,43,.35); }
+  .dc .ph { width: 22px; height: 25px; border-radius: 6px; background-size: cover; background-position: center 15%; flex-shrink: 0; position: relative; }
+  .dc .ph.on::after { content: ""; position: absolute; right: 1.5px; bottom: 1.5px; width: 4px; height: 4px; border-radius: 9px; background: #22c55e; box-shadow: 0 0 0 1px #fff; }
+  .dc div { display: grid; gap: 1.5px; line-height: 1.15; }
+  .dc b { font-size: 5.5px; font-weight: 800; }
+  .dc .sp { justify-self: start; font-size: 3.8px; font-weight: 700; padding: 1px 3px; border-radius: 9px; }
+  .dc .mm { font-size: 3.8px; color: #6d8485; } .dc .mm em { font-style: normal; color: #f5a524; }
+  .dc .mm .dt { display: inline-block; width: 1.6px; height: 1.6px; border-radius: 9px; background: #6d8485; vertical-align: middle; margin: 0 2px; }
+  .dc .fe { font-size: 4.3px; font-weight: 800; color: #0d6f5e; }
+  .dc .hv { position: absolute; top: 4px; right: 4px; width: 9px; height: 9px; border-radius: 99px; background: #eaf2f2; }
+  .dc .hv.on { background: #ffe6dd; } .dc .hv.on::after { content: ""; position: absolute; inset: 2.6px; border-radius: 9px; background: #ff8a65; }
+  .tb { position: absolute; left: 0; right: 0; bottom: 0; height: 25px; background: #fff; border-top: .6px solid rgba(16,42,43,.08); box-shadow: 0 -4px 10px -6px rgba(16,42,43,.25); display: grid; grid-template-columns: repeat(4, 1fr); }
+  .tb span { position: relative; display: grid; justify-items: center; align-content: center; gap: 1.5px; font-size: 3.7px; color: #8fa3a4; font-weight: 700; padding-top: 2px; }
+  .tb span i { width: 7px; height: 7px; border-radius: 2px; border: 1.2px solid currentColor; }
+  .tb span.on { color: #14907a; } .tb span.on::before { content: ""; position: absolute; top: 0; left: 50%; width: 12px; height: 1.6px; transform: translateX(-50%); border-radius: 0 0 2px 2px; background: #14907a; }
+  /* left: doctor */
+  .cv { height: 104px; background: url("https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=600&q=70") center 18%/cover; position: relative; }
+  .cv::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(16,42,43,.35), transparent 35%); }
+  .cv i { position: absolute; z-index: 1; top: 20px; width: 14px; height: 14px; border-radius: 99px; background: rgba(255,255,255,.9); }
+  .cv .bk { left: 7px; } .cv .fv { right: 7px; } .cv .fv::after { content: ""; position: absolute; inset: 4px; border-radius: 9px; background: #ff8a65; }
+  .sh { grid-template-columns: minmax(0, 1fr); position: relative; margin-top: -10px; border-radius: 12px 12px 0 0; background: #f3f8f8; padding: 7px 7px 0; display: grid; gap: 5px; }
+  .sh .sp { justify-self: start; font-size: 4px; font-weight: 700; padding: 1.5px 4px; border-radius: 9px; background: #dff3ef; }
+  .sh h3 { font-size: 8.5px; font-weight: 800; letter-spacing: -.02em; line-height: 1; } .sh p { font-size: 4.2px; color: #6d8485; }
+  .sh > *, .st div { min-width: 0; }
+  .st { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px; }
+  .st div { background: #fff; border-radius: 6px; padding: 4px 2px; display: grid; justify-items: center; gap: 1px; box-shadow: 0 3px 8px -6px rgba(16,42,43,.35); }
+  .st i { width: 9px; height: 9px; border-radius: 3px; background: #dff3ef; } .st .y { background: #fff2d6; }
+  .st b { font-size: 6px; font-weight: 800; } .st small { font-size: 3.5px; color: #6d8485; }
+  .lb { font-size: 5.8px; font-weight: 800; display: flex; justify-content: space-between; } .lb span { font-size: 4px; color: #6d8485; font-weight: 600; }
+  .dy { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+  .dy span { background: #fff; border: .6px solid rgba(16,42,43,.08); border-radius: 5px; padding: 3px 0; display: grid; justify-items: center; font-size: 3.4px; color: #6d8485; }
+  .dy b { font-size: 5.6px; color: #102a2b; font-weight: 800; }
+  .dy .on { background: #14907a; border-color: #14907a; color: rgba(255,255,255,.8); transform: translateY(-1px); box-shadow: 0 4px 7px -4px rgba(20,144,122,.9); } .dy .on b { color: #fff; }
+  .dy .x { opacity: .4; background: transparent; }
+  .sl { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; }
+  .sl span { background: #fff; border: .6px solid rgba(16,42,43,.08); border-radius: 5px; text-align: center; font-size: 4.5px; font-weight: 700; padding: 3px 0; }
+  .sl .on { background: #dff3ef; border-color: #14907a; color: #0d6f5e; box-shadow: inset 0 0 0 .6px #14907a; }
+  .sl .x { color: #a9b8b9; text-decoration: line-through; background: transparent; }
+  .bb { position: absolute; left: 0; right: 0; bottom: 0; height: 28px; background: #fff; border-top: .6px solid rgba(16,42,43,.08); display: flex; align-items: center; gap: 5px; padding: 0 7px; }
+  .bb div { line-height: 1.1; } .bb small { display: block; font-size: 3.5px; color: #6d8485; } .bb b { font-size: 6px; font-weight: 800; }
+  .bb em { flex: 1; font-style: normal; text-align: center; font-size: 5.2px; font-weight: 800; color: #fff; background: #14907a; border-radius: 6px; padding: 5px 0; box-shadow: 0 5px 9px -5px rgba(20,144,122,.9); }
+  /* right: doctors */
+  .t { font-size: 10.5px; font-weight: 800; letter-spacing: -.02em; }
+  .ch { display: flex; gap: 2.5px; overflow: hidden; }
+  .ch span { flex-shrink: 0; font-size: 4.3px; font-weight: 700; padding: 3px 5px; border-radius: 99px; background: #fff; border: .6px solid rgba(16,42,43,.08); }
+  .ch .on { background: #14907a; color: #fff; border-color: #14907a; }
+  .cn { font-size: 4.3px; color: #6d8485; font-weight: 700; }
+  .ls { display: grid; gap: 4px; }
+</style>
+</head>
+<body>
+  <div class="grid-bg"></div>
+  <i class="cross c1"></i><i class="cross c2"></i>
+
+  <div class="dev l">
+    <div class="cv"><i class="bk"></i><i class="fv"></i></div>
+    <div class="sh">
+      <span class="sp">General practitioner</span>
+      <h3>Dr. Kwame Boateng</h3>
+      <p>Kin Health Centre, Haie Vive, 1.1 km</p>
+      <div class="st">
+        <div><i></i><b>9 yrs</b><small>Experience</small></div>
+        <div><i></i><b>5.6k</b><small>Patients</small></div>
+        <div><i class="y"></i><b>4.8</b><small>Rating</small></div>
+      </div>
+      <div class="lb">October 2026 <span>Pick a day</span></div>
+      <div class="dy">
+        <span><small>Mon</small><b>26</b></span><span class="on"><small>Tue</small><b>27</b></span><span class="x"><small>Wed</small><b>28</b></span><span><small>Thu</small><b>29</b></span><span><small>Fri</small><b>30</b></span><span><small>Sat</small><b>31</b></span><span class="x"><small>Sun</small><b>1</b></span>
+      </div>
+      <div class="lb">Available times <span>5 open</span></div>
+      <div class="sl">
+        <span>08:30</span><span class="x">09:00</span><span class="on">10:30</span><span>11:00</span><span class="x">14:00</span><span>15:30</span><span>16:00</span><span class="x">17:30</span>
+      </div>
+    </div>
+    <div class="bb"><div><small>Consultation fee</small><b>12 000 FCFA</b></div><em>Book for 10:30</em></div>
+  </div>
+
+  <div class="dev c">
+    <div class="s">
+      <div class="top"><span class="av"></span><div><small>Good morning</small><b>Aïcha Bello</b></div><span class="bt"></span><span class="bt d"></span></div>
+      <div class="sr"><i></i>Search doctors, specialties<em></em></div>
+      <div class="hero">
+        <div class="hh"><span>Next appointment</span><em>Video call</em></div>
+        <div class="hd"><span class="ph"></span><div><b>Dr. Amara Mensah</b><small>Cardiologist, BP follow-up</small></div></div>
+        <div class="hw"><span>Tue, 27 Oct</span><span>10:30</span></div>
+        <div class="hc">Join video call</div>
+      </div>
+      <div class="h">Today's vitals <span>Synced 8:12</span></div>
+      <div class="vt">
+        <div><i style="background:#ffe6dd"></i><svg viewBox="0 0 120 36" preserveAspectRatio="none"><path d="M0 22 H28 L33 22 L38 10 L44 32 L50 4 L56 26 L60 22 H84 L88 18 L92 24 L96 22 H120" /></svg><b>72<small> bpm</small></b><span>Heart rate</span></div>
+        <div><i style="background:#ece4ff"></i><div class="bars"><em style="height:62%"></em><em style="height:78%"></em><em style="height:54%"></em><em style="height:88%"></em><em style="height:70%"></em><em style="height:92%"></em><em style="height:80%"></em></div><b>7h 20m</b><span>Sleep</span></div>
+        <div><i style="background:#dff3ef"></i><div class="mt"><em></em></div><b>8,432</b><span>84% of goal</span></div>
+      </div>
+      <div class="h">Top doctors <span>See all</span></div>
+      <div class="dc">
+        <span class="ph on" style="background-image:url('https://images.unsplash.com/photo-1594824476967-48c8b964273f?auto=format&fit=crop&w=160&q=70')"></span>
+        <div><b>Dr. Lucia Moreno</b><span class="sp" style="background:#e3ecff">Pediatrician</span><span class="mm"><em>5.0</em> (198)<i class="dt"></i>3.8 km</span><span class="fe">18 000 FCFA</span></div>
+        <span class="hv"></span>
+      </div>
+    </div>
+    <div class="tb"><span class="on"><i></i>Home</span><span><i></i>Doctors</span><span><i></i>Appointments</span><span><i></i>Profile</span></div>
+  </div>
+
+  <div class="dev r">
+    <div class="s">
+      <div class="t">Find a doctor</div>
+      <div class="sr"><i></i>Name, specialty or clinic</div>
+      <div class="ch"><span>All</span><span class="on">Cardiology</span><span>General</span><span>Pediatrics</span></div>
+      <div class="cn">6 doctors near Cotonou</div>
+      <div class="ls">
+        <div class="dc">
+          <span class="ph on" style="background-image:url('https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=160&q=70')"></span>
+          <div><b>Dr. Amara Mensah</b><span class="sp" style="background:#ffe6dd">Cardiologist</span><span class="mm"><em>4.9</em> (312)<i class="dt"></i>2.4 km</span><span class="fe">25 000 FCFA</span></div>
+          <span class="hv on"></span>
+        </div>
+        <div class="dc">
+          <span class="ph" style="background-image:url('https://images.unsplash.com/photo-1651008376811-b90baee60c1f?auto=format&fit=crop&w=160&q=70')"></span>
+          <div><b>Dr. Nadia Okafor</b><span class="sp" style="background:#ece4ff">Neurologist</span><span class="mm"><em>4.9</em> (221)<i class="dt"></i>5.0 km</span><span class="fe">30 000 FCFA</span></div>
+          <span class="hv"></span>
+        </div>
+        <div class="dc">
+          <span class="ph on" style="background-image:url('https://images.unsplash.com/photo-1614608682850-e0d6ed316d47?auto=format&fit=crop&w=160&q=70')"></span>
+          <div><b>Dr. Priya Raman</b><span class="sp" style="background:#ffe4ee">Gynecologist</span><span class="mm"><em>4.8</em> (264)<i class="dt"></i>2.9 km</span><span class="fe">22 000 FCFA</span></div>
+          <span class="hv"></span>
+        </div>
+        <div class="dc">
+          <span class="ph on" style="background-image:url('https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&w=160&q=70')"></span>
+          <div><b>Dr. Rayan Haddad</b><span class="sp" style="background:#fff2d6">Dermatologist</span><span class="mm"><em>4.7</em> (143)<i class="dt"></i>4.2 km</span><span class="fe">20 000 FCFA</span></div>
+          <span class="hv"></span>
+        </div>
+      </div>
+    </div>
+    <div class="tb"><span><i></i>Home</span><span class="on"><i></i>Doctors</span><span><i></i>Appointments</span><span><i></i>Profile</span></div>
+  </div>
+</body>
+</html>

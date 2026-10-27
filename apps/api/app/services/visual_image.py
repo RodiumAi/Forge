@@ -6,7 +6,8 @@ from dataclasses import dataclass
 from urllib.parse import unquote, urlparse
 
 from app.config import get_settings
-from app.services.filesystem import write_file
+from app.services.edit_target import element_span, parse_forge_id
+from app.services.filesystem import read_file, write_file
 from app.services.source_edit import SourceVariant, collect_matches, select_unique
 
 _SOURCE_EXTS = (".tsx", ".ts", ".jsx", ".js", ".css", ".html", ".svg")
@@ -99,16 +100,77 @@ def _resolve_target(new_public_path: str) -> tuple[str, str]:
     return "public/" + value, "/" + value
 
 
+def _replacement_for(literal: str, source_path: str, web_path: str) -> str:
+    """The new src, written in the same form as the literal it replaces."""
+    if source_path.startswith(("http://", "https://")):
+        return source_path
+    if literal.startswith(("/", "http")):
+        return web_path
+    if literal.startswith("public/"):
+        return source_path
+    return web_path.lstrip("/")
+
+
+def _replace_inside_element(
+    project_id: str,
+    forge_id: str | None,
+    needles: list[SourceVariant],
+    source_path: str,
+    web_path: str,
+) -> VisualImageResult | None:
+    """Swap the src of the exact `<img>` the preview pointed at.
+
+    None (fall back to the project-wide search) when the id is stale or the
+    element does not hold one of the src forms exactly once (a src coming from
+    a variable, for instance).
+    """
+    loc = parse_forge_id(forge_id)
+    if loc is None or not loc.path.endswith(_SOURCE_EXTS):
+        return None
+    try:
+        content = read_file(project_id, loc.path)
+    except (OSError, ValueError):
+        return None
+    span = element_span(content, loc)
+    if span is None:
+        return None
+    start, end = span
+    region = content[start:end]
+    for variant in needles:
+        count = region.count(variant.literal)
+        if count > 1:
+            return None
+        if count == 1:
+            index = start + region.index(variant.literal)
+            replacement = _replacement_for(variant.literal, source_path, web_path)
+            updated = content[:index] + replacement + content[index + len(variant.literal) :]
+            if updated == content:
+                return None
+            write_file(project_id, loc.path, updated)
+            return VisualImageResult(path=loc.path, occurrences=1)
+    return None
+
+
 def apply_visual_image_replace(
     project_id: str,
     old_src: str,
     new_public_path: str,
+    forge_id: str | None = None,
 ) -> VisualImageResult:
+    """Point an image at a new file.
+
+    ``forge_id`` (the `<img>` element's ``data-forge-id``) pins the change to
+    that element; the project-wide unique-literal search is the fallback.
+    """
     source_path, web_path = _resolve_target(new_public_path)
 
     needles = _normalize_src(old_src)
     if not needles:
         raise ValueError("Missing old image src")
+
+    pinned = _replace_inside_element(project_id, forge_id, needles, source_path, web_path)
+    if pinned is not None:
+        return pinned
 
     matches = collect_matches(project_id, needles, _SOURCE_EXTS)
     if not matches:
@@ -117,14 +179,7 @@ def apply_visual_image_replace(
     match = select_unique(matches, "This image")
 
     literal = match.variant.literal
-    if source_path.startswith(("http://", "https://")):
-        replacement = source_path
-    elif literal.startswith(("/", "http")):
-        replacement = web_path
-    elif literal.startswith("public/"):
-        replacement = source_path
-    else:
-        replacement = web_path.lstrip("/")
+    replacement = _replacement_for(literal, source_path, web_path)
 
     updated = match.content.replace(literal, replacement, 1)
     if updated == match.content:

@@ -1,0 +1,513 @@
+{
+  "id": "s8",
+  "background": {
+    "type": "color",
+    "token": "--bg"
+  },
+  "elements": [
+    {
+      "id": "s8-ptv0",
+      "type": "shape",
+      "x": 120,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s8-ptv1",
+      "type": "shape",
+      "x": 240,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s8-ptv2",
+      "type": "shape",
+      "x": 360,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s8-ptv3",
+      "type": "shape",
+      "x": 480,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s8-ptv4",
+      "type": "shape",
+      "x": 600,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s8-ptv5",
+      "type": "shape",
+      "x": 720,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s8-ptv6",
+      "type": "shape",
+      "x": 840,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s8-ptv7",
+      "type": "shape",
+      "x": 960,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s8-ptv8",
+      "type": "shape",
+      "x": 1080,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s8-ptv9",
+      "type": "shape",
+      "x": 1200,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s8-ptv10",
+      "type": "shape",
+      "x": 1320,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s8-ptv11",
+      "type": "shape",
+      "x": 1440,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s8-ptv12",
+      "type": "shape",
+      "x": 1560,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s8-ptv13",
+      "type": "shape",
+      "x": 1680,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s8-ptv14",
+      "type": "shape",
+      "x": 1800,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s8-pth0",
+      "type": "shape",
+      "x": 0,
+      "y": 120,
+      "w": 1920,
+      "h": 1,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s8-pth1",
+      "type": "shape",
+      "x": 0,
+      "y": 240,
+      "w": 1920,
+      "h": 1,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s8-pth2",
+      "type": "shape",
+      "x": 0,
+      "y": 360,
+      "w": 1920,
+      "h": 1,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s8-pth3",
+      "type": "shape",
+      "x": 0,
+      "y": 480,
+      "w": 1920,
+      "h": 1,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s8-pth4",
+      "type": "shape",
+      "x": 0,
+      "y": 600,
+      "w": 1920,
+      "h": 1,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s8-pth5",
+      "type": "shape",
+      "x": 0,
+      "y": 720,
+      "w": 1920,
+      "h": 1,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s8-pth6",
+      "type": "shape",
+      "x": 0,
+      "y": 840,
+      "w": 1920,
+      "h": 1,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s8-pth7",
+      "type": "shape",
+      "x": 0,
+      "y": 960,
+      "w": 1920,
+      "h": 1,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s8-bar",
+      "type": "shape",
+      "x": 140,
+      "y": 302,
+      "w": 1640,
+      "h": 3,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 0,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s8-kicker",
+      "type": "text",
+      "role": "label",
+      "x": 140,
+      "y": 100,
+      "w": 1200,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Prototype"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 600,
+        "color": "--accent",
+        "align": "left",
+        "lineHeight": 1.4,
+        "letterSpacing": 3,
+        "uppercase": true
+      }
+    },
+    {
+      "id": "s8-heading",
+      "type": "text",
+      "role": "heading",
+      "x": 140,
+      "y": 146,
+      "w": 1640,
+      "h": 140,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Latence p99 par étape (ms)"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 64,
+        "weight": 700,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.1
+      }
+    },
+    {
+      "id": "s8-chart",
+      "type": "chart",
+      "x": 140,
+      "y": 350,
+      "w": 1080,
+      "h": 600,
+      "z": 2,
+      "chart": "bar",
+      "data": {
+        "labels": [
+          "Autorisation",
+          "Fraude",
+          "Règlement",
+          "Notification"
+        ],
+        "series": [
+          {
+            "name": "Monolithe",
+            "values": [
+              620,
+              540,
+              410,
+              230
+            ],
+            "color": "--accent"
+          },
+          {
+            "name": "Événements",
+            "values": [
+              210,
+              0,
+              0,
+              0
+            ],
+            "color": "--accent-2"
+          }
+        ]
+      },
+      "options": {
+        "legend": true,
+        "values": true
+      }
+    },
+    {
+      "id": "s8-icon",
+      "type": "icon",
+      "x": 1320,
+      "y": 380,
+      "w": 56,
+      "h": 56,
+      "z": 3,
+      "icon": "gauge",
+      "color": "--accent",
+      "strokeWidth": 1.75
+    },
+    {
+      "id": "s8-takeaway",
+      "type": "text",
+      "role": "heading",
+      "x": 1320,
+      "y": 460,
+      "w": 460,
+      "h": 130,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Un seul appel sur le chemin critique"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 40,
+        "weight": 700,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.2
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 1
+      }
+    },
+    {
+      "id": "s8-comment",
+      "type": "text",
+      "role": "body",
+      "x": 1320,
+      "y": 610,
+      "w": 460,
+      "h": 300,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Mesures sur le prototype en préproduction, 2 000 paiements par seconde pendant une heure."
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 26,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.5
+      },
+      "animation": {
+        "type": "appear",
+        "trigger": "after-previous",
+        "durationMs": 300,
+        "order": 2
+      }
+    },
+    {
+      "id": "s8-footer",
+      "type": "text",
+      "role": "caption",
+      "x": 140,
+      "y": 1000,
+      "w": 1100,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Lumio Pay · Revue d'architecture, paiements v3"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s8-page",
+      "type": "text",
+      "role": "caption",
+      "x": 1660,
+      "y": 1000,
+      "w": 120,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "08"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "right",
+        "lineHeight": 1.4
+      }
+    }
+  ]
+}

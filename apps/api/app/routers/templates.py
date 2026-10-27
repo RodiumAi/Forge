@@ -4,10 +4,26 @@ from fastapi import APIRouter, HTTPException, Request, status
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 
 from app.i18n import resolve_locale
+from app.kinds import get_kind, kind_enabled, resolve_kind
 from app.schemas import TemplateOut
-from app.services.templates import get_template, list_templates, preview_path
+from app.services.templates import (
+    get_template,
+    list_templates,
+    preview_image_path,
+    preview_path,
+    template_deck,
+    template_detail,
+)
 
 router = APIRouter(prefix="/templates", tags=["templates"])
+
+
+def _image_url(meta) -> str | None:
+    image = meta.path / "preview.png"
+    if not image.is_file():
+        return None
+    # The mtime busts the browser cache when the image is re-rendered.
+    return f"/templates/{meta.id}/preview.png?v={int(image.stat().st_mtime)}"
 
 
 def _to_out(meta, locale: str) -> TemplateOut:
@@ -20,7 +36,9 @@ def _to_out(meta, locale: str) -> TemplateOut:
         accent=meta.accent,
         bg=meta.bg,
         preview_url=f"/templates/{meta.id}/preview",
-        kind=meta.kind if meta.kind in ("web", "mobile") else "web",
+        preview_image_url=_image_url(meta),
+        kind=resolve_kind(meta.kind),
+        required_plan=meta.required_plan,
     )
 
 
@@ -29,9 +47,14 @@ def get_templates(request: Request, kind: str | None = None) -> JSONResponse:
     """Public catalogue — used on landing + dashboard."""
     locale = resolve_locale(request)
     filter_kind = kind.strip().lower() if kind else None
-    if filter_kind and filter_kind not in ("web", "mobile"):
+    if filter_kind and get_kind(filter_kind) is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid kind")
-    payload = [_to_out(meta, locale).model_dump() for meta in list_templates(kind=filter_kind)]
+    # Kits of a kind still behind its flag stay out of the public catalogue.
+    payload = [
+        _to_out(meta, locale).model_dump()
+        for meta in list_templates(kind=filter_kind)
+        if kind_enabled(meta.kind)
+    ]
     return JSONResponse(
         content=payload,
         headers={
@@ -54,6 +77,48 @@ def template_preview(template_id: str) -> FileResponse:
         media_type="text/html; charset=utf-8",
         headers={"Cache-Control": "public, max-age=300"},
     )
+
+
+@router.get("/{template_id}/preview.png")
+def template_preview_image(template_id: str) -> FileResponse:
+    meta = get_template(template_id)
+    if meta is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Unknown template")
+    path = preview_image_path(template_id)
+    if path is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Preview image missing")
+    return FileResponse(
+        path,
+        media_type="image/png",
+        headers={"Cache-Control": "public, max-age=86400", "Cross-Origin-Resource-Policy": "cross-origin"},
+    )
+
+
+@router.get("/{template_id}/deck")
+def template_deck_documents(template_id: str) -> JSONResponse:
+    """Deck, slide bodies and DESIGN.md of a slides kit, for the gallery cards
+    that play the deck on hover. Public like the rest of the catalogue."""
+    meta = get_template(template_id)
+    if meta is None or not kind_enabled(meta.kind):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Unknown template")
+    payload = template_deck(template_id)
+    if payload is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not a slides template")
+    return JSONResponse(content=payload, headers={"Cache-Control": "public, max-age=300"})
+
+
+@router.get("/{template_id}/detail")
+def template_detail_documents(template_id: str) -> JSONResponse:
+    """Kind-specific content of a kit for the public template page (site
+    sections, app screens, codelab steps and files, design system document).
+    Public like the rest of the catalogue."""
+    meta = get_template(template_id)
+    if meta is None or not kind_enabled(meta.kind):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Unknown template")
+    payload = template_detail(template_id)
+    if payload is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Unknown template")
+    return JSONResponse(content=payload, headers={"Cache-Control": "public, max-age=300"})
 
 
 @router.get("/{template_id}/media/{asset_path:path}")

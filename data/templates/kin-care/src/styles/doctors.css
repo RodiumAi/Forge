@@ -1,0 +1,15 @@
+/* Doctors: search field, specialty chips, results list and empty state. */
+.doctors-screen { gap: 1.1rem; }
+.doctors-screen .field {
+  display: flex; align-items: center; gap: .65rem; min-height: 3.3rem; padding: 0 .5rem 0 1rem;
+  background: var(--surface); border-radius: 1.1rem; box-shadow: var(--shadow); color: var(--muted);
+}
+.doctors-screen .field:focus-within { box-shadow: 0 0 0 2px var(--accent), var(--shadow); }
+.doctors-screen .field input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font-size: .95rem; color: var(--fg); min-height: 2.75rem; }
+.doctors-screen .field input::placeholder { color: var(--muted); }
+.doctors-screen .clear { appearance: none; border: 0; width: 2.75rem; height: 2.75rem; border-radius: 999px; background: var(--surface-2); color: var(--muted); display: grid; place-items: center; }
+.doctors-screen .count { margin: 0; font-size: .82rem; font-weight: 700; color: var(--muted); }
+.doctors-screen .empty { display: grid; justify-items: center; gap: .5rem; text-align: center; padding: 2.4rem 1rem; background: var(--surface); border-radius: var(--radius); }
+.doctors-screen .empty span { width: 3.6rem; height: 3.6rem; border-radius: 1.2rem; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); }
+.doctors-screen .empty strong { font-size: 1.05rem; }
+.doctors-screen .empty .link { min-height: 2.75rem; }

@@ -104,7 +104,7 @@ export function FileTypeIcon({
   const meta = metaForPath(path, isDir, open);
   return (
     <span
-      className={`file-type-icon file-type-icon-${size}`}
+      className={`f-bd-ficon f-bd-ficon-${size}`}
       style={{ color: meta.color }}
       title={meta.badge || undefined}
       aria-hidden

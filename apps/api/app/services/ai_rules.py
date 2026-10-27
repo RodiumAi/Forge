@@ -43,9 +43,14 @@ Standing conventions for this Forge project. Follow on every edit.
 - One section = TSX + CSS in the same turn (never orphan components)
 - Images: only files under `public/` (listed in context) with real width/height
 
-## Pages
-- Multi-page: react-router-dom, one page per file in `src/pages/`, a `path="*"` NotFound page
-- Per-page title/description with react-helmet-async
+## Pages and screens
+- Every page or app screen is a real route (react-router-dom): `<BrowserRouter>` in main.tsx,
+  `<Routes>` in App.tsx, one component per file (`src/pages/<Name>.tsx` for sites,
+  `src/screens/<Name>Screen.tsx` for apps), path = kebab name (`SearchScreen` -> `/search`)
+- Navigate with `<Link>` / `<NavLink>` / `useNavigate`; never switch pages with a
+  `useState` (`setTab`, `setScreen`, `setPage`...) and conditional rendering
+- Sheets, modals, toasts and in-page tabs are not pages: they stay as state
+- Sites: a `path="*"` NotFound page; per-page title/description with react-helmet-async
 
 ## Scroll
 - Never set `overflow: hidden` on `html`/`body` in live CSS (preview.html shells are not live)
@@ -75,6 +80,8 @@ Standing conventions for this Forge project. Follow on every edit.
 _LEGACY_DEFAULT_HASHES = frozenset(
     {
         "9915cc29a66aa9812231b8f142b62ad98b380d6432e86559759d10fc512b0884",
+        # Screens switched by state were allowed: apps never got real routes.
+        "614718c92503faa4ec464594d67ad4b6c6064df0e36fdf03355463b537994aa6",
         "e12a6507ab121b0451232d11196674eba722b5bc68d8746cc565546288a6b737",
         # Visitor forms through `@forge/forms`, a package the runtime no longer
         # ships: kept, it made new code import it and fail the preview.

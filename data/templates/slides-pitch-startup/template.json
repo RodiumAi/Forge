@@ -1,0 +1,49 @@
+{
+  "kind": "slides",
+  "id": "slides-pitch-startup",
+  "title": {
+    "fr": "Pitch deck startup",
+    "en": "Startup pitch deck"
+  },
+  "description": {
+    "fr": "Pitch deck sombre et énergique pour une levée de fonds : problème, solution, traction, modèle économique, équipe et usage des fonds, en 12 slides.",
+    "en": "Dark, energetic fundraising pitch deck: problem, solution, traction, business model, team and use of funds, in 12 slides."
+  },
+  "tags": [
+    "pitch",
+    "startup",
+    "fundraising",
+    "dark"
+  ],
+  "category": "business",
+  "preview": "preview.html",
+  "bootHint": {
+    "fr": "Adapte slides-pitch-startup : nom de la startup, problème, chiffres de traction, montant levé.",
+    "en": "Adapt slides-pitch-startup: startup name, problem, traction figures, amount raised."
+  },
+  "accent": "#4F7CFF",
+  "bg": "#0B1020",
+  "fg": "#F4F6FB",
+  "muted": "#9AA3BF",
+  "tone": "ambitious, crisp, data-driven",
+  "fonts": {
+    "display": "Sora",
+    "body": "Inter",
+    "mono": "JetBrains Mono"
+  },
+  "transitionPreset": "dynamic",
+  "layouts": {
+    "title": "s1",
+    "section": "s2",
+    "text": "s3",
+    "two-columns": "s4",
+    "image-text": "s5",
+    "quote": "s6",
+    "key-figures": "s7",
+    "chart": "s8",
+    "table": "s9",
+    "team": "s10",
+    "timeline": "s11",
+    "thank-you": "s12"
+  }
+}

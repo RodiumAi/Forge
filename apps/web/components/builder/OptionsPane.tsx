@@ -26,6 +26,7 @@ import { CustomDomainSection } from "@/components/builder/CustomDomainSection";
 import { HistoryPanel } from "@/components/builder/HistoryPanel";
 import { SeoOptionsSection } from "@/components/builder/SeoOptionsSection";
 import { SubscriptionPanel } from "@/components/builder/SubscriptionPanel";
+import { BrandPanel } from "@/components/DesignCharterSlideover";
 import { forgeFeatureEnabled, exportAllowed, useForgeStatus } from "@/lib/forge-status";
 import { sitesBaseDomain, sitesScheme, sitesUrlForSlug } from "@/lib/sites-url";
 
@@ -48,8 +49,11 @@ type Props = {
   section?: OptionsSection;
   onSectionChange?: (section: OptionsSection) => void;
   onNameSaved?: (meta: { name: string; slug?: string; sites_url?: string | null }) => void;
-  onOpenDesign: () => void;
+  /** Kept for callers; the Marque section now shows the charter in place. */
+  onOpenDesign?: () => void;
   onOpenHistory: () => void;
+  /** DESIGN.md or the colour tokens changed: refresh the preview. */
+  onDesignApplied?: () => void;
   /** Public URL and custom domain stay with the owner. */
   canManageSite?: boolean;
 };
@@ -75,8 +79,8 @@ export function OptionsPane({
   section: sectionProp,
   onSectionChange,
   onNameSaved,
-  onOpenDesign,
   onOpenHistory: _onOpenHistory,
+  onDesignApplied,
   canManageSite = true,
 }: Props) {
   const { t, locale } = useI18n();
@@ -435,15 +439,7 @@ export function OptionsPane({
         )}
 
         {section === "brand" && (
-          <div className="options-card">
-            <p className="options-help">{t("optionsBrandHelp")}</p>
-            <div className="options-actions">
-              <button type="button" className="btn" onClick={onOpenDesign}>
-                <Icon icon={Palette} className="ui-icon-sm" />
-                {t("designOpen")}
-              </button>
-            </div>
-          </div>
+          <BrandPanel projectId={projectId} onDesignApplied={onDesignApplied} />
         )}
 
         {section === "history" && (
@@ -584,3 +580,4 @@ export function OptionsPane({
     </section>
   );
 }
+

@@ -220,6 +220,50 @@ def test_forgot_password_sends_reset_after_verify_wipe(monkeypatch):
     assert sent[0].kind == "reset"
 
 
+def test_forgot_password_stops_mailing_an_address_silently_past_its_ceiling(monkeypatch):
+    """Past the per-address ceiling: same answer, no mail, last link kept valid."""
+    user = SimpleNamespace(
+        id=uuid.uuid4(),
+        email="user@example.com",
+        password_hash="h",
+        email_verified_at=datetime.now(UTC),
+    )
+
+    class _Q:
+        def filter(self, *_a, **_k):
+            return self
+
+        def first(self):
+            return user
+
+    db = MagicMock()
+    db.query.return_value = _Q()
+    sent: list = []
+    invalidated: list = []
+
+    monkeypatch.setattr(auth_mod.rate_limit, "enforce", lambda *a, **k: None)
+    monkeypatch.setattr(auth_mod.auth_tokens, "invalidate_outstanding", lambda *a, **k: invalidated.append(1))
+    monkeypatch.setattr(auth_mod.auth_tokens, "issue_password_reset", lambda *_a, **_k: "reset-raw")
+    monkeypatch.setattr(
+        auth_mod,
+        "get_settings",
+        lambda: SimpleNamespace(web_url=lambda path: f"https://forge.test{path}"),
+    )
+    monkeypatch.setattr(auth_mod.mail, "build_reset_password", lambda *a, **k: SimpleNamespace(kind="reset"))
+    monkeypatch.setattr(auth_mod.mail, "send", lambda msg: sent.append(msg))
+
+    answers = [
+        auth_mod.forgot_password(
+            body=ForgotPasswordRequest(email="user@example.com"), request=_request(), db=db
+        )
+        for _ in range(8)
+    ]
+
+    assert len(sent) == 6
+    assert len(invalidated) == 6
+    assert len({a.message for a in answers}) == 1
+
+
 def test_forgot_password_sso_hint_only_when_unverified_without_hash(monkeypatch):
     user = SimpleNamespace(
         id=uuid.uuid4(),

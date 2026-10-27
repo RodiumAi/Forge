@@ -1,0 +1,40 @@
+/* Onboarding: full-bleed editorial photo, crossfading per slide, copy set on a dark gradient. */
+.onboarding-screen { position: relative; min-height: 100dvh; overflow: hidden; color: #f8f4ee; background: var(--fg); }
+
+.onboarding-screen .onboard-photo { position: absolute; inset: 0; }
+.onboarding-screen .onboard-photo img {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  opacity: 0; transform: scale(1.06); transition: opacity .9s ease, transform 6s ease;
+}
+.onboarding-screen .onboard-photo img.on { opacity: 1; transform: scale(1); }
+.onboarding-screen .onboard-shade {
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(22, 20, 18, .45) 0%, rgba(22, 20, 18, 0) 26%, rgba(22, 20, 18, .2) 50%, rgba(22, 20, 18, .88) 82%);
+}
+
+.onboarding-screen .onboard-top {
+  position: relative; display: flex; align-items: center; justify-content: center;
+  padding: calc(1rem + var(--safe-top)) 1.25rem 0; min-height: 3.75rem;
+}
+.onboarding-screen .brand { font-family: var(--font-display); font-size: 1.8rem; font-weight: 600; letter-spacing: .26em; text-transform: uppercase; padding-left: .26em; }
+.onboarding-screen .skip {
+  position: absolute; right: .75rem; top: calc(.6rem + var(--safe-top)); appearance: none; background: none; border: 0; min-height: 2.75rem; padding: 0 .6rem;
+  font-size: .68rem; letter-spacing: .2em; text-transform: uppercase; color: rgba(248, 244, 238, .85);
+}
+
+.onboarding-screen .onboard-body {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  padding: 0 1.5rem calc(1.6rem + var(--safe-bottom)); display: grid; gap: .9rem;
+}
+.onboarding-screen .label { color: rgba(248, 244, 238, .75); }
+.onboarding-screen h2 { font-size: 2.85rem; line-height: .98; font-weight: 500; max-width: 15ch; }
+.onboarding-screen .lede { margin: 0; font-size: .95rem; line-height: 1.6; color: rgba(248, 244, 238, .82); max-width: 34ch; }
+
+.onboarding-screen .onboard-actions { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: .8rem; }
+.onboarding-screen .bars { display: flex; gap: .4rem; }
+.onboarding-screen .bars i { width: 1.6rem; height: 1px; background: rgba(248, 244, 238, .35); transition: background .3s ease; }
+.onboarding-screen .bars i.on { background: #f8f4ee; }
+.onboarding-screen .btn-light {
+  appearance: none; border: 0; min-height: 3.25rem; padding: 0 1.5rem; border-radius: 999px; background: #f8f4ee; color: var(--fg);
+  display: inline-flex; align-items: center; gap: .55rem; font-size: .72rem; font-weight: 500; letter-spacing: .2em; text-transform: uppercase;
+}

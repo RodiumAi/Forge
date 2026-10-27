@@ -1,0 +1,49 @@
+{
+  "kind": "slides",
+  "id": "slides-media-kit",
+  "title": {
+    "fr": "Kit média",
+    "en": "Media kit"
+  },
+  "description": {
+    "fr": "Kit média élégant pour un magazine et son podcast, framboise sur crème : audience, profils des lecteurs, formats publicitaires, tarifs et calendrier éditorial.",
+    "en": "Elegant media kit for a magazine and its podcast, raspberry on cream: audience, reader profile, ad formats, rates and editorial calendar."
+  },
+  "tags": [
+    "media-kit",
+    "advertising",
+    "magazine",
+    "warm"
+  ],
+  "category": "marketing",
+  "preview": "preview.html",
+  "bootHint": {
+    "fr": "Adapte slides-media-kit : média, audience, profil des lecteurs, formats, tarifs.",
+    "en": "Adapt slides-media-kit: outlet, audience, reader profile, formats, rates."
+  },
+  "accent": "#C2477A",
+  "bg": "#FDF8F4",
+  "fg": "#26201C",
+  "muted": "#7B6D63",
+  "tone": "polished, warm, confident",
+  "fonts": {
+    "display": "Fraunces",
+    "body": "Albert Sans",
+    "mono": "IBM Plex Mono"
+  },
+  "transitionPreset": "elegant",
+  "layouts": {
+    "title": "s1",
+    "key-figures": "s2",
+    "chart": "s3",
+    "section": "s4",
+    "two-columns": "s5",
+    "image-text": "s6",
+    "table": "s7",
+    "quote": "s8",
+    "timeline": "s9",
+    "text": "s10",
+    "team": "s11",
+    "thank-you": "s12"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "id": "s1",
+  "background": {
+    "type": "color",
+    "token": "--bg"
+  },
+  "elements": [
+    {
+      "id": "e1",
+      "type": "text",
+      "role": "title",
+      "x": 160,
+      "y": 380,
+      "w": 1600,
+      "h": 200,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Untitled presentation"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 96,
+        "weight": 700,
+        "color": "--fg",
+        "align": "left"
+      }
+    }
+  ]
+}

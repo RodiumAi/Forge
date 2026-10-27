@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "title": "Une app de dépenses avec Gemini",
+  "summary": "Un atelier pratique d'une heure.",
+  "level": "beginner",
+  "durationMinutes": 60,
+  "author": {
+    "name": "Ada Lovelace"
+  },
+  "cover": {
+    "eyebrow": "Workshop pratique",
+    "highlights": ["Next.js 16", "Gemini via RodiumAi"],
+    "showQr": true
+  },
+  "presenter": {
+    "name": "Ada Lovelace",
+    "role": "Développeuse",
+    "company": "RodiumAi",
+    "photo": "public/images/ada.webp",
+    "bio": "Construit des outils pour développeurs.",
+    "links": [
+      { "label": "GitHub", "url": "https://github.com/example" },
+      { "label": "LinkedIn", "url": "https://www.linkedin.com/in/example" }
+    ]
+  },
+  "setup": {
+    "intro": "Installe tout avant de commencer.",
+    "tools": [
+      { "name": "Node.js", "version": "22+", "url": "https://nodejs.org" },
+      { "name": "Git" }
+    ],
+    "groups": [
+      {
+        "title": "RodiumAi",
+        "items": [
+          { "text": "Crée un compte", "url": "https://rodiumai.io" },
+          { "text": "Applique le code promo", "code": "EXAMPLE10" }
+        ]
+      }
+    ],
+    "promo": { "code": "EXAMPLE10", "label": "300 RODI offerts", "url": "https://rodiumai.io" },
+    "commands": [
+      { "label": "Installer", "language": "bash", "code": "npm install" },
+      { "code": "npm run dev" }
+    ]
+  },
+  "pages": {
+    "presenter": true,
+    "setup": false
+  },
+  "steps": [
+    {
+      "id": "intro",
+      "file": "steps/01-intro.md",
+      "minutes": 5
+    }
+  ]
+}

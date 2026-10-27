@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
+from collections.abc import Collection
 from typing import Any
 
 from app.services import history
@@ -26,6 +27,16 @@ logger = logging.getLogger("apply_writes")
 
 _LOCKED_BRAND_RE = re.compile(
     r"^(DESIGN\.md|public/logo(?:\.(?:png|jpe?g|webp|gif))?)$",
+    re.IGNORECASE,
+)
+# AI_RULES.md is read as project law on every turn, so a write to it outlives
+# the turn: an instruction smuggled in a file or attachment would persist. The
+# agent only writes it when the user's own message asks to change the rules.
+_LOCKED_RULES_RE = re.compile(r"^AI_RULES\.md$", re.IGNORECASE)
+_RULES_CHANGE_RE = re.compile(
+    r"\bai[_ ]rules(?:\.md)?\b|"
+    r"\b(?:project|coding|standing)\s+(?:rules|conventions)\b|"
+    r"\b(?:r[èe]gles|conventions)\s+(?:du|de\s+ce|de\s+mon|de\s+notre)\s+projet\b",
     re.IGNORECASE,
 )
 _CSS_MERGE_MIN_EXISTING = 400
@@ -55,6 +66,63 @@ _NEGATION_BEFORE_RE = re.compile(
 _NEGATION_AFTER_RE = re.compile(r"^\s*(?:pas|plus|jamais)\b", re.IGNORECASE)
 
 
+# Preview-only element ids (runtime/transform.mjs). A model that copies one from
+# the targeted-edit snippet must not persist it in the sources.
+_FORGE_ID_ATTR_RE = re.compile(
+    r"""\s+data-forge-id\s*=\s*(?:"[^"\n]*"|'[^'\n]*'|\{\s*(?:"[^"\n]*"|'[^'\n]*')\s*\})"""
+)
+_JSX_SOURCE_EXTS = (".tsx", ".jsx", ".ts", ".js", ".mjs")
+
+
+def strip_forge_ids(path: str, content: str) -> str:
+    """Remove `data-forge-id="..."` attributes from a JSX/TS source file."""
+    if not str(path or "").lower().endswith(_JSX_SOURCE_EXTS) or "data-forge-id" not in content:
+        return content
+    return _FORGE_ID_ATTR_RE.sub("", content)
+
+
+def _norm_rel(path: str) -> str:
+    return (path or "").strip().lstrip("/").replace("\\", "/")
+
+
+def scope_violation(path: str, allowed_paths: Collection[str], *, op: str = "write") -> dict:
+    """Warning payload for a write or delete outside the targeted-edit scope.
+
+    ``widen: true`` tells the builder it can offer to resend without the limit.
+    """
+    allowed = sorted(_norm_rel(p) for p in allowed_paths)
+    verb = "delete" if op == "delete" else "write to"
+    return {
+        "code": "TARGET_SCOPE",
+        "path": path,
+        "specifier": "",
+        "message": (
+            f"Skipped {verb} `{path}`: this edit is limited to the selection "
+            f"({', '.join(allowed)}). Allow changes to other files to apply it."
+        ),
+        "scope": allowed,
+        "widen": True,
+    }
+
+
+def split_deletes_in_scope(
+    deletes: list[Any], allowed_paths: Collection[str] | None
+) -> tuple[list[Any], list[dict]]:
+    """(deletes to apply, violations) under an optional targeted-edit scope."""
+    if allowed_paths is None:
+        return list(deletes), []
+    allowed = {_norm_rel(p) for p in allowed_paths}
+    keep: list[Any] = []
+    refused: list[dict] = []
+    for op in deletes:
+        path = str(getattr(op, "path", "") or "")
+        if _norm_rel(path) in allowed:
+            keep.append(op)
+        else:
+            refused.append(scope_violation(path, allowed_paths, op="delete"))
+    return keep, refused
+
+
 def brand_change_requested(text: str) -> bool:
     """True when the user explicitly asks to change the brand / charter / logo.
 
@@ -69,6 +137,24 @@ def brand_change_requested(text: str) -> bool:
             continue
         return True
     return False
+
+
+def rules_change_requested(text: str) -> bool:
+    """True when the user's message names the project rules (AI_RULES.md).
+
+    A negated mention ("don't touch AI_RULES.md") keeps the lock.
+    """
+    body = text or ""
+    for match in _RULES_CHANGE_RE.finditer(body):
+        if _NEGATION_BEFORE_RE.search(body[max(0, match.start() - 40) : match.start()]):
+            continue
+        return True
+    return False
+
+
+def is_locked_rules_path(path: str) -> bool:
+    rel = (path or "").strip().lstrip("/").replace("\\", "/")
+    return bool(_LOCKED_RULES_RE.match(rel))
 
 
 def is_locked_brand_path(path: str) -> bool:
@@ -199,7 +285,9 @@ def apply_validated_writes(
     writes: list[Any],
     *,
     allow_brand_writes: bool = False,
+    allow_rules_writes: bool = False,
     snapshot_label: str | None = None,
+    allowed_paths: Collection[str] | None = None,
 ) -> tuple[list[dict], list[dict]]:
     """
     Write allowed files; return (applied, violations_as_dicts).
@@ -207,6 +295,10 @@ def apply_validated_writes(
 
     DESIGN.md and public/logo.* are locked by default so agent turns cannot
     silently reinvent the project brand after the user set a charter/logo.
+
+    ``allowed_paths``: targeted edit of a preview selection. Any op on another
+    path is refused with a ``TARGET_SCOPE`` violation (``widen: true``); None
+    means the whole project.
     """
     # --- Phase 1: validate everything, write nothing -------------------------
     accepted: list[tuple[str, str]] = []
@@ -215,10 +307,14 @@ def apply_validated_writes(
     # Latest accepted content per path in this batch: an edit may target a
     # file written (or edited) earlier in the same answer.
     batch_content: dict[str, str] = {}
+    scope = {_norm_rel(p) for p in allowed_paths} if allowed_paths is not None else None
 
     for op in writes:
         path = str(getattr(op, "path", "") or "")
         if not path:
+            continue
+        if scope is not None and _norm_rel(path) not in scope:
+            violations.append(scope_violation(path, allowed_paths or ()))
             continue
         is_edit = isinstance(op, EditOp)
         if is_edit:
@@ -241,12 +337,26 @@ def apply_validated_writes(
                 }
             )
             continue
+        if not allow_rules_writes and is_locked_rules_path(path):
+            violations.append(
+                {
+                    "code": "RULES_LOCKED",
+                    "path": path,
+                    "specifier": "",
+                    "message": (
+                        f"Skipped write to `{path}`: the project rules are locked. "
+                        "Ask explicitly to change the project rules (AI_RULES.md)."
+                    ),
+                }
+            )
+            continue
         found = _validate(path, content, allowlist)
         if found:
             violations.extend(v.as_dict() for v in found)
             continue
         # House typography: no long dashes on the generated site (text, SEO, alt…).
         content = strip_long_dashes_in_file(path, content)
+        content = strip_forge_ids(path, content)
         if not is_edit:
             content, merge_info = _css_preserving_content(project_id, path, content)
             if merge_info:
@@ -291,7 +401,9 @@ async def apply_validated_writes_async(
     writes: list[Any],
     *,
     allow_brand_writes: bool = False,
+    allow_rules_writes: bool = False,
     snapshot_label: str | None = None,
+    allowed_paths: Collection[str] | None = None,
 ) -> tuple[list[dict], list[dict]]:
     """Off-loop variant for the SSE generators.
 
@@ -305,5 +417,7 @@ async def apply_validated_writes_async(
         project_id,
         writes,
         allow_brand_writes=allow_brand_writes,
+        allow_rules_writes=allow_rules_writes,
         snapshot_label=snapshot_label,
+        allowed_paths=allowed_paths,
     )

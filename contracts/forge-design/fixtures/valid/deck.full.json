@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "title": "Rapport annuel 2026",
+  "format": {
+    "ratio": "4:3",
+    "width": 1440,
+    "height": 1080
+  },
+  "theme": {
+    "designSystem": "ds-acme",
+    "tokens": "DESIGN.md"
+  },
+  "slides": [
+    {
+      "id": "s1",
+      "layout": "title",
+      "transition": {
+        "type": "fade",
+        "durationMs": 500
+      }
+    },
+    {
+      "id": "s2",
+      "layout": "two-columns",
+      "transition": {
+        "type": "push",
+        "direction": "left",
+        "easing": "ease-out"
+      }
+    },
+    {
+      "id": "s3",
+      "layout": "key-numbers",
+      "transition": {
+        "type": "morph",
+        "durationMs": 800
+      },
+      "hidden": false
+    },
+    {
+      "id": "s4",
+      "layout": "thanks",
+      "transition": {
+        "type": "none"
+      },
+      "hidden": true
+    }
+  ]
+}

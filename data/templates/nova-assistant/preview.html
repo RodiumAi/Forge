@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Nova preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@500;600;700&display=swap" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 480px; height: 270px; overflow: hidden; position: relative;
+    background:
+      radial-gradient(45% 70% at 50% 62%, rgba(94,234,212,.22), transparent 70%),
+      radial-gradient(35% 50% at 92% 8%, rgba(240,171,252,.12), transparent 70%),
+      radial-gradient(35% 55% at 4% 100%, rgba(94,234,212,.1), transparent 70%),
+      #07090b;
+    font-family: "Inter", system-ui, sans-serif; color: #eceff3;
+  }
+  .stars { position: absolute; inset: 0; opacity: .5; background-image: radial-gradient(circle at 12% 30%, rgba(236,239,243,.5) 0 .6px, transparent 1px), radial-gradient(circle at 84% 62%, rgba(236,239,243,.4) 0 .6px, transparent 1px), radial-gradient(circle at 70% 14%, rgba(94,234,212,.6) 0 .7px, transparent 1.2px), radial-gradient(circle at 26% 84%, rgba(236,239,243,.35) 0 .6px, transparent 1px), radial-gradient(circle at 92% 88%, rgba(240,171,252,.5) 0 .7px, transparent 1.2px); }
+  .mark { position: absolute; left: 16px; top: 13px; display: flex; align-items: center; gap: 6px; font-family: "Sora", sans-serif; font-weight: 600; font-size: 15px; letter-spacing: -.03em; }
+  .tag { position: absolute; right: 16px; top: 18px; font-size: 6.5px; font-weight: 600; letter-spacing: .14em; color: #8a94a3; }
+
+  /* the orb */
+  .orb { position: relative; display: inline-block; flex-shrink: 0; width: 1em; height: 1em; border-radius: 99px; }
+  .orb::before { content: ""; position: absolute; inset: -20%; border-radius: inherit; background: radial-gradient(circle, rgba(94,234,212,.5), transparent 66%); filter: blur(.1em); }
+  .orb::after {
+    content: ""; position: absolute; inset: 0; border-radius: inherit;
+    background:
+      radial-gradient(circle at 30% 24%, rgba(255,255,255,.9) 0, rgba(255,255,255,0) 20%),
+      radial-gradient(circle at 66% 70%, rgba(240,171,252,.55), transparent 34%),
+      radial-gradient(circle at 70% 30%, rgba(15,118,110,.9), transparent 40%),
+      radial-gradient(circle at 38% 36%, #b8fff1 0, #5eead4 30%, #0f766e 72%, #0a3d39 100%);
+    box-shadow: inset -.06em -.08em .16em rgba(0,0,0,.45);
+  }
+
+  .dev { position: absolute; width: 128px; height: 268px; border-radius: 22px; background: #0b0d10; border: 3px solid #2a2f37; overflow: hidden; box-shadow: 0 26px 44px -14px rgba(0,0,0,.85), 0 0 0 .5px rgba(94,234,212,.18), 0 0 40px -18px rgba(94,234,212,.5); }
+  .dev::before { content: ""; position: absolute; top: 6px; left: 50%; transform: translateX(-50%); width: 34px; height: 9px; border-radius: 99px; background: #000; z-index: 5; }
+  .l { left: 52px; top: 46px; transform: rotate(-8deg); }
+  .r { right: 52px; top: 46px; transform: rotate(8deg); }
+  .c { left: 50%; top: 18px; width: 142px; height: 296px; transform: translateX(-50%); z-index: 2; }
+  .s { padding: 22px 9px 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 7px; }
+  .disp { font-family: "Sora", sans-serif; letter-spacing: -.025em; }
+  .mu { color: #8a94a3; }
+  .aq { color: #5eead4; }
+
+  /* center: home */
+  .nav { display: flex; align-items: center; justify-content: space-between; }
+  .wm { display: flex; align-items: center; gap: 3px; font-family: "Sora", sans-serif; font-weight: 600; font-size: 7.5px; }
+  .pfp { width: 13px; height: 13px; border-radius: 99px; background: url("https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=80&q=60") center/cover; box-shadow: 0 0 0 .6px rgba(236,239,243,.2); }
+  .stage { position: relative; display: grid; place-items: center; height: 70px; margin-top: 2px; }
+  .stage::before, .stage::after { content: ""; position: absolute; border-radius: 99px; border: .5px solid rgba(94,234,212,.18); }
+  .stage::before { width: 66px; height: 66px; }
+  .stage::after { width: 80px; height: 80px; border-color: rgba(236,239,243,.06); }
+  .greet { text-align: center; display: grid; gap: 2px; }
+  .greet small { font-size: 4.6px; font-weight: 500; color: #5eead4; }
+  .greet b { font-family: "Sora", sans-serif; font-weight: 600; font-size: 10px; line-height: 1.15; letter-spacing: -.03em; }
+  .ask { display: flex; align-items: center; justify-content: space-between; padding: 3px 3px 3px 7px; border-radius: 99px; border: .5px solid rgba(94,234,212,.35); background: #13161b; font-size: 4.8px; color: #8a94a3; box-shadow: 0 0 10px -4px rgba(94,234,212,.5); }
+  .ask i { width: 11px; height: 11px; border-radius: 99px; background: #1b1f26; display: grid; place-items: center; }
+  .wav { display: flex; align-items: center; gap: .6px; height: 5px; }
+  .wav u { width: .6px; background: #5eead4; border-radius: 1px; text-decoration: none; }
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 3.5px; }
+  .card { padding: 5px; border-radius: 6px; background: #13161b; border: .5px solid rgba(236,239,243,.07); display: grid; gap: 2px; }
+  .ic { width: 9px; height: 9px; border-radius: 3px; background: rgba(94,234,212,.14); display: grid; place-items: center; }
+  .ic.pk { background: rgba(240,171,252,.14); }
+  .ic s { width: 4px; height: 4px; border: .6px solid #5eead4; border-radius: 1px; text-decoration: none; }
+  .ic.pk s { border-color: #f0abfc; }
+  .card b { font-size: 5px; font-weight: 600; }
+  .card span { font-size: 3.6px; line-height: 1.3; color: #8a94a3; }
+  .tabs { position: absolute; left: 0; right: 0; bottom: 0; height: 30px; display: grid; grid-template-columns: repeat(4, 1fr); align-items: center; padding: 0 4px 5px; background: rgba(11,13,16,.95); border-top: .5px solid rgba(236,239,243,.08); }
+  .tab { display: grid; justify-items: center; gap: 1.5px; font-size: 3.6px; color: #8a94a3; }
+  .tab i { width: 15px; height: 7.5px; border-radius: 99px; display: grid; place-items: center; }
+  .tab i s { width: 3.6px; height: 3.6px; border: .6px solid currentColor; border-radius: 1px; text-decoration: none; }
+  .tab.on { color: #5eead4; font-weight: 600; }
+  .tab.on i { background: rgba(94,234,212,.16); box-shadow: 0 0 6px rgba(94,234,212,.5), inset 0 0 0 .4px rgba(94,234,212,.35); }
+
+  /* left: chat */
+  .bar { display: flex; align-items: center; gap: 5px; margin-top: 4px; padding-bottom: 5px; border-bottom: .5px solid rgba(236,239,243,.07); }
+  .back { flex-shrink: 0; width: 12px; height: 12px; border-radius: 99px; background: #13161b; border: .5px solid rgba(236,239,243,.08); }
+  .bar b { font-family: "Sora", sans-serif; font-size: 5.6px; font-weight: 600; display: block; }
+  .bar small { font-size: 3.6px; color: #8a94a3; }
+  .bar small::before { content: ""; display: inline-block; width: 2.4px; height: 2.4px; border-radius: 9px; background: #5eead4; margin-right: 1.5px; box-shadow: 0 0 3px #5eead4; }
+  .u { justify-self: end; max-width: 82%; padding: 4px 5px; border-radius: 6px 6px 2px 6px; background: #163a36; border: .5px solid rgba(94,234,212,.25); font-size: 4.4px; line-height: 1.4; }
+  .n { display: flex; gap: 3px; font-size: 4.4px; line-height: 1.45; }
+  .n .orb { font-size: 7px; margin-top: .5px; }
+  .n p + p { margin-top: 1.5px; }
+  .li { position: relative; padding-left: 6px; }
+  .li em { position: absolute; left: 0; top: .2px; width: 4.2px; height: 4.2px; border-radius: 99px; background: rgba(94,234,212,.16); color: #5eead4; font-style: normal; font-size: 2.8px; font-weight: 600; display: grid; place-items: center; }
+  .typing { display: inline-flex; gap: 1.2px; padding: 2.5px 4px; border-radius: 99px; background: #13161b; border: .5px solid rgba(236,239,243,.07); }
+  .typing i { width: 2px; height: 2px; border-radius: 9px; background: #5eead4; }
+  .typing i:nth-child(2) { opacity: .6; transform: translateY(-.6px); }
+  .typing i:nth-child(3) { opacity: .35; }
+  .comp { position: absolute; left: 7px; right: 7px; bottom: 9px; display: grid; gap: 3.5px; }
+  .chips { display: flex; gap: 2.5px; }
+  .chips span { padding: 2.5px 4px; border-radius: 99px; background: #13161b; border: .5px solid rgba(236,239,243,.08); font-size: 3.6px; color: #8a94a3; white-space: nowrap; }
+  .in { display: flex; align-items: center; justify-content: space-between; padding: 2.5px 2.5px 2.5px 6px; border-radius: 99px; background: #13161b; border: .5px solid rgba(236,239,243,.08); font-size: 4.2px; color: #8a94a3; }
+  .send { width: 10px; height: 10px; border-radius: 99px; background: #5eead4; box-shadow: 0 0 6px rgba(94,234,212,.6); position: relative; }
+  .send::after { content: ""; position: absolute; left: 3.4px; top: 3px; width: 3px; height: 3px; border-top: .8px solid #062621; border-left: .8px solid #062621; transform: rotate(45deg); }
+
+  /* right: voice */
+  .r { background: radial-gradient(80% 45% at 50% 40%, rgba(94,234,212,.18), transparent 70%), radial-gradient(60% 30% at 50% 100%, rgba(240,171,252,.1), transparent 70%), #0b0d10; }
+  .vtop { display: flex; justify-content: center; align-items: center; gap: 2.5px; font-family: "Sora", sans-serif; font-weight: 600; font-size: 5px; }
+  .vtop i { width: 2.6px; height: 2.6px; border-radius: 9px; background: #5eead4; box-shadow: 0 0 4px #5eead4; }
+  .vstage { position: relative; display: grid; place-items: center; height: 104px; }
+  .vstage::before, .vstage::after { content: ""; position: absolute; border-radius: 99px; border: .5px solid rgba(94,234,212,.3); }
+  .vstage::before { width: 86px; height: 86px; }
+  .vstage::after { width: 102px; height: 102px; border-color: rgba(94,234,212,.12); }
+  .vst { text-align: center; font-size: 3.6px; font-weight: 600; letter-spacing: .14em; color: #5eead4; }
+  .cap { text-align: center; font-family: "Sora", sans-serif; font-weight: 500; font-size: 6.4px; line-height: 1.35; letter-spacing: -.02em; padding: 0 4px; }
+  .wave { display: flex; justify-content: center; align-items: center; gap: 1.2px; height: 15px; }
+  .wave u { width: 1.3px; border-radius: 9px; background: linear-gradient(180deg, #5eead4, #b4c9f0); text-decoration: none; }
+  .ctl { display: flex; justify-content: center; gap: 9px; }
+  .ctl i { width: 19px; height: 19px; border-radius: 99px; background: #1b1f26; border: .5px solid rgba(236,239,243,.1); position: relative; }
+  .ctl i::after { content: ""; position: absolute; left: 50%; top: 50%; width: 3.4px; height: 5.4px; transform: translate(-50%, -60%); border: .7px solid #eceff3; border-radius: 9px; }
+  .ctl i.end { background: #ef4444; border-color: #ef4444; box-shadow: 0 5px 10px -4px rgba(239,68,68,.8); }
+  .ctl i.end::after { width: 7px; height: 2.6px; border-radius: 9px 9px 2px 2px; border-color: #fff; transform: translate(-50%, -50%) rotate(-135deg); }
+</style>
+</head>
+<body>
+  <div class="stars"></div>
+  <div class="mark"><span class="orb" style="font-size:14px"></span>Nova</div>
+  <div class="tag">AI ASSISTANT</div>
+
+  <!-- left: chat with numbered reply and typing -->
+  <div class="dev l">
+    <div class="s">
+      <div class="bar"><div><b>Dakar pitch deck</b><small>Writer online</small></div></div>
+      <div class="u">Outline a 10-slide pitch for a coworking space in Dakar.</div>
+      <div class="n"><span class="orb"></span><div>
+        <p>A structure bankers like:</p>
+        <p class="li"><em>1</em>The problem: 4 000 freelancers</p>
+        <p class="li"><em>2</em>The space: 140 seats, Plateau</p>
+        <p class="li"><em>3</em>Revenue from 45 000 FCFA</p>
+        <p class="li"><em>4</em>Traction: 86 pre-signed</p>
+      </div></div>
+      <div class="u">Add speaker notes, please.</div>
+      <div class="n"><span class="orb"></span><span class="typing"><i></i><i></i><i></i></span></div>
+    </div>
+    <div class="comp">
+      <div class="chips"><span>Make it shorter</span><span>An example</span><span>Bullets</span></div>
+      <div class="in">Message Writer<span class="send"></span></div>
+    </div>
+  </div>
+
+  <!-- center: home with the orb -->
+  <div class="dev c">
+    <div class="s">
+      <div class="nav"><span class="wm"><span class="orb" style="font-size:8px"></span>Nova</span><span class="pfp"></span></div>
+      <div class="stage"><span class="orb" style="font-size:54px"></span></div>
+      <div class="greet"><small>Good evening, Kwame</small><b>What can I take off<br />your plate?</b></div>
+      <div class="ask">Ask Nova anything<i><span class="wav"><u style="height:2px"></u><u style="height:4px"></u><u style="height:5px"></u><u style="height:3px"></u><u style="height:2px"></u></span></i></div>
+      <div class="cards">
+        <div class="card"><span class="ic"><s></s></span><b>Plan my week</b><span>A messy list into a calm schedule</span></div>
+        <div class="card"><span class="ic pk"><s></s></span><b>Summarize a PDF</b><span>The key points in 30 seconds</span></div>
+      </div>
+    </div>
+    <div class="tabs" style="bottom:42px">
+      <span class="tab on"><i><s></s></i>Home</span><span class="tab"><i><s></s></i>Chats</span><span class="tab"><i><s></s></i>Explore</span><span class="tab"><i><s></s></i>Profile</span>
+    </div>
+  </div>
+
+  <!-- right: voice mode -->
+  <div class="dev r">
+    <div class="s">
+      <div class="vtop"><i></i>Nova voice</div>
+      <div class="vstage"><span class="orb" style="font-size:66px"></span></div>
+      <div class="vst">NOVA IS SPEAKING</div>
+      <div class="cap">Dantokpa opens at seven, so let's start there.</div>
+      <div class="wave">
+        <u style="height:4px"></u><u style="height:9px"></u><u style="height:14px"></u><u style="height:7px"></u><u style="height:11px"></u><u style="height:5px"></u><u style="height:13px"></u><u style="height:15px"></u><u style="height:8px"></u><u style="height:12px"></u><u style="height:6px"></u><u style="height:10px"></u><u style="height:14px"></u><u style="height:7px"></u><u style="height:4px"></u><u style="height:9px"></u><u style="height:12px"></u><u style="height:5px"></u><u style="height:3px"></u>
+      </div>
+      <div class="ctl"><i></i><i class="end"></i></div>
+    </div>
+  </div>
+</body>
+</html>

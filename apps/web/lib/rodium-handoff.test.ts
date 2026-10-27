@@ -120,4 +120,25 @@ describe("finishRodiumHandoff", () => {
     ).rejects.toBeInstanceOf(HandoffMismatchError);
     expect(apiMock).not.toHaveBeenCalled();
   });
+
+  it("shares one redeem between concurrent finishes of the same code", async () => {
+    let release!: (value: { access_token: string }) => void;
+    apiMock.mockReturnValueOnce(
+      new Promise((resolve) => {
+        release = resolve;
+      }),
+    );
+    const fragment = { code: "d".repeat(43), next: null };
+
+    const first = finishRodiumHandoff(fragment);
+    const second = finishRodiumHandoff(fragment);
+    release({ access_token: "forge-jwt" });
+
+    await expect(Promise.all([first, second])).resolves.toEqual([
+      "/dashboard",
+      "/dashboard",
+    ]);
+    expect(apiMock).toHaveBeenCalledTimes(1);
+    expect(binding.consume).toHaveBeenCalledTimes(1);
+  });
 });

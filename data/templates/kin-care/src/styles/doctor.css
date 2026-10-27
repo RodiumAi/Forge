@@ -1,0 +1,87 @@
+/* Doctor profile: portrait cover, white sheet with stats, about, day and time pickers, sticky booking bar, success state. */
+.doctor-screen { position: relative; background: var(--bg); }
+.doctor-screen .cover { position: relative; height: 22rem; overflow: hidden; background: var(--accent-soft); }
+.doctor-screen .cover img { width: 100%; height: 100%; object-fit: cover; object-position: center 18%; }
+.doctor-screen .cover::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(16, 42, 43, .35) 0%, transparent 30%); }
+.doctor-screen .cover-bar {
+  position: absolute; z-index: 1; top: 0; left: 0; right: 0; display: flex; justify-content: space-between;
+  padding: calc(.8rem + var(--safe-top)) 1.1rem 0;
+}
+.doctor-screen .round {
+  appearance: none; border: 0; width: 2.9rem; height: 2.9rem; border-radius: 999px; display: grid; place-items: center;
+  background: rgba(255, 255, 255, .88); color: var(--fg); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+}
+.doctor-screen .fav-btn.on { color: var(--coral); }
+
+.doctor-screen .sheet {
+  position: relative; margin-top: -2rem; border-radius: 1.8rem 1.8rem 0 0; background: var(--bg);
+  padding: 1.4rem 1.2rem calc(7.2rem + var(--safe-bottom)); display: grid; gap: 1.4rem;
+}
+.doctor-screen .title { display: grid; gap: .45rem; }
+.doctor-screen .title h1 { font-size: 1.6rem; font-weight: 800; }
+.doctor-screen .title .muted { display: flex; align-items: center; gap: .3rem; }
+.doctor-screen h2 { font-size: 1.05rem; font-weight: 800; margin-bottom: .6rem; }
+.doctor-screen .row-head { display: flex; justify-content: space-between; align-items: baseline; }
+.doctor-screen .row-head .muted { font-size: .8rem; }
+
+.doctor-screen .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: .55rem; }
+.doctor-screen .stats span { display: grid; justify-items: center; gap: .2rem; padding: .85rem .3rem; background: var(--surface); border-radius: 1.2rem; box-shadow: var(--shadow); }
+.doctor-screen .stats i { width: 2.4rem; height: 2.4rem; border-radius: .85rem; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); margin-bottom: .2rem; }
+.doctor-screen .stats i.star { background: #fff2d6; color: var(--star); }
+.doctor-screen .stats strong { font-size: 1.05rem; font-weight: 800; }
+.doctor-screen .stats small { font-size: .72rem; color: var(--muted); font-weight: 600; }
+
+.doctor-screen .about { margin: 0 0 .3rem; color: var(--muted); line-height: 1.6; font-size: .92rem; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.doctor-screen .about.open { -webkit-line-clamp: unset; display: block; }
+.doctor-screen .link { min-height: 2.75rem; }
+
+.doctor-screen .kinds button { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; }
+
+.doctor-screen .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: .4rem; }
+.doctor-screen .day {
+  appearance: none; border: 1px solid var(--line); background: var(--surface); border-radius: 1rem; min-height: 4.2rem;
+  display: grid; align-content: center; justify-items: center; gap: .15rem; color: var(--fg); transition: background .2s ease, transform .2s ease;
+}
+.doctor-screen .day small { font-size: .7rem; font-weight: 700; color: var(--muted); }
+.doctor-screen .day strong { font-size: 1.05rem; font-weight: 800; }
+.doctor-screen .day.on { background: var(--accent); border-color: var(--accent); color: #fff; transform: translateY(-2px); box-shadow: 0 12px 20px -12px rgba(20, 144, 122, .9); }
+.doctor-screen .day.on small { color: rgba(255, 255, 255, .8); }
+.doctor-screen .day:disabled { opacity: .4; background: transparent; }
+
+.doctor-screen .slots { display: grid; grid-template-columns: repeat(4, 1fr); gap: .5rem; }
+.doctor-screen .slot {
+  appearance: none; border: 1px solid var(--line); background: var(--surface); border-radius: .95rem; min-height: 2.9rem;
+  font-weight: 700; font-size: .9rem; color: var(--fg); font-variant-numeric: tabular-nums;
+}
+.doctor-screen .slot.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-deep); box-shadow: inset 0 0 0 1px var(--accent); }
+.doctor-screen .slot:disabled { color: #a9b8b9; text-decoration: line-through; background: transparent; }
+
+.doctor-screen .book-bar {
+  position: fixed; z-index: 6; left: 50%; bottom: 0; transform: translateX(-50%); width: 100%; max-width: 460px;
+  display: flex; align-items: center; gap: 1rem; padding: .85rem 1.2rem calc(.85rem + var(--safe-bottom));
+  background: var(--surface); border-top: 1px solid var(--line); box-shadow: 0 -12px 30px -18px rgba(16, 42, 43, .3);
+}
+.doctor-screen .book-bar > span { display: grid; flex-shrink: 0; }
+.doctor-screen .book-bar small { font-size: .72rem; color: var(--muted); font-weight: 600; }
+.doctor-screen .book-bar strong { font-size: 1.1rem; font-weight: 800; }
+.doctor-screen .book-bar .btn-primary { flex: 1; width: auto; }
+
+/* Success */
+.doctor-screen .success {
+  min-height: 100dvh; display: grid; align-content: center; justify-items: center; gap: .9rem; text-align: center;
+  padding: calc(2rem + var(--safe-top)) 1.4rem calc(2rem + var(--safe-bottom));
+}
+.doctor-screen .ok-ring {
+  width: 6rem; height: 6rem; border-radius: 999px; display: grid; place-items: center; color: #fff; background: var(--accent);
+  box-shadow: 0 0 0 .8rem var(--accent-soft), 0 20px 36px -14px rgba(20, 144, 122, .9); animation: kin-pop .5s cubic-bezier(.2, 1.4, .4, 1) both;
+}
+.doctor-screen .success h1 { font-size: 1.7rem; font-weight: 800; margin-top: .6rem; }
+.doctor-screen .success .muted { max-width: 22rem; }
+.doctor-screen .summary { width: 100%; display: flex; align-items: center; gap: .75rem; padding: .8rem; background: var(--surface); border-radius: 1.2rem; box-shadow: var(--shadow); text-align: left; margin: .4rem 0; }
+.doctor-screen .summary img { width: 3rem; height: 3rem; border-radius: .9rem; object-fit: cover; object-position: top; }
+.doctor-screen .summary > span:nth-child(2) { flex: 1; display: grid; gap: .1rem; }
+.doctor-screen .summary small { font-size: .8rem; color: var(--muted); }
+.doctor-screen .summary .fee { font-size: .85rem; font-weight: 800; color: var(--accent-deep); }
+.doctor-screen .success .btn-primary, .doctor-screen .success .btn-ghost { text-decoration: none; }
+
+@keyframes kin-pop { from { transform: scale(.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }

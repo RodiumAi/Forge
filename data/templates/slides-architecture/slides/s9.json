@@ -1,0 +1,491 @@
+{
+  "id": "s9",
+  "background": {
+    "type": "color",
+    "token": "--bg"
+  },
+  "elements": [
+    {
+      "id": "s9-ptv0",
+      "type": "shape",
+      "x": 120,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s9-ptv1",
+      "type": "shape",
+      "x": 240,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s9-ptv2",
+      "type": "shape",
+      "x": 360,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s9-ptv3",
+      "type": "shape",
+      "x": 480,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s9-ptv4",
+      "type": "shape",
+      "x": 600,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s9-ptv5",
+      "type": "shape",
+      "x": 720,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s9-ptv6",
+      "type": "shape",
+      "x": 840,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s9-ptv7",
+      "type": "shape",
+      "x": 960,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s9-ptv8",
+      "type": "shape",
+      "x": 1080,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s9-ptv9",
+      "type": "shape",
+      "x": 1200,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s9-ptv10",
+      "type": "shape",
+      "x": 1320,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s9-ptv11",
+      "type": "shape",
+      "x": 1440,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s9-ptv12",
+      "type": "shape",
+      "x": 1560,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s9-ptv13",
+      "type": "shape",
+      "x": 1680,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s9-ptv14",
+      "type": "shape",
+      "x": 1800,
+      "y": 0,
+      "w": 1,
+      "h": 1080,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s9-pth0",
+      "type": "shape",
+      "x": 0,
+      "y": 120,
+      "w": 1920,
+      "h": 1,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s9-pth1",
+      "type": "shape",
+      "x": 0,
+      "y": 240,
+      "w": 1920,
+      "h": 1,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s9-pth2",
+      "type": "shape",
+      "x": 0,
+      "y": 360,
+      "w": 1920,
+      "h": 1,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s9-pth3",
+      "type": "shape",
+      "x": 0,
+      "y": 480,
+      "w": 1920,
+      "h": 1,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s9-pth4",
+      "type": "shape",
+      "x": 0,
+      "y": 600,
+      "w": 1920,
+      "h": 1,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s9-pth5",
+      "type": "shape",
+      "x": 0,
+      "y": 720,
+      "w": 1920,
+      "h": 1,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s9-pth6",
+      "type": "shape",
+      "x": 0,
+      "y": 840,
+      "w": 1920,
+      "h": 1,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s9-pth7",
+      "type": "shape",
+      "x": 0,
+      "y": 960,
+      "w": 1920,
+      "h": 1,
+      "z": 0,
+      "shape": "rect",
+      "fill": "--border",
+      "opacity": 0.8
+    },
+    {
+      "id": "s9-bar",
+      "type": "shape",
+      "x": 140,
+      "y": 302,
+      "w": 1640,
+      "h": 3,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 0,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s9-kicker",
+      "type": "text",
+      "role": "label",
+      "x": 140,
+      "y": 100,
+      "w": 1200,
+      "h": 44,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Composants"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 24,
+        "weight": 600,
+        "color": "--accent",
+        "align": "left",
+        "lineHeight": 1.4,
+        "letterSpacing": 3,
+        "uppercase": true
+      }
+    },
+    {
+      "id": "s9-heading",
+      "type": "text",
+      "role": "heading",
+      "x": 140,
+      "y": 146,
+      "w": 1640,
+      "h": 140,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Qui fait quoi dans la cible"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 64,
+        "weight": 700,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.1
+      }
+    },
+    {
+      "id": "s9-table",
+      "type": "table",
+      "x": 140,
+      "y": 360,
+      "w": 1640,
+      "h": 530,
+      "z": 2,
+      "rows": [
+        [
+          {
+            "text": "Service"
+          },
+          {
+            "text": "Rôle"
+          },
+          {
+            "text": "Stockage"
+          },
+          {
+            "text": "Équipe"
+          }
+        ],
+        [
+          {
+            "text": "authorize"
+          },
+          {
+            "text": "Décision en temps réel"
+          },
+          {
+            "text": "PostgreSQL"
+          },
+          {
+            "text": "Cœur paiement"
+          }
+        ],
+        [
+          {
+            "text": "settle"
+          },
+          {
+            "text": "Règlement et rapprochement"
+          },
+          {
+            "text": "PostgreSQL"
+          },
+          {
+            "text": "Finance tech"
+          }
+        ],
+        [
+          {
+            "text": "risk"
+          },
+          {
+            "text": "Score de fraude a posteriori"
+          },
+          {
+            "text": "ClickHouse"
+          },
+          {
+            "text": "Risque"
+          }
+        ],
+        [
+          {
+            "text": "notify"
+          },
+          {
+            "text": "SMS, mails et webhooks"
+          },
+          {
+            "text": "Redis"
+          },
+          {
+            "text": "Expérience"
+          }
+        ]
+      ],
+      "headerRow": true,
+      "style": {
+        "size": 28,
+        "color": "--fg",
+        "headerFill": "--surface",
+        "border": "--border"
+      },
+      "columnWidths": [
+        0.9,
+        1.6,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "s9-footer",
+      "type": "text",
+      "role": "caption",
+      "x": 140,
+      "y": 1000,
+      "w": 1100,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Lumio Pay · Revue d'architecture, paiements v3"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "left",
+        "lineHeight": 1.4
+      }
+    },
+    {
+      "id": "s9-page",
+      "type": "text",
+      "role": "caption",
+      "x": 1660,
+      "y": 1000,
+      "w": 120,
+      "h": 40,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "09"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 20,
+        "weight": 400,
+        "color": "--muted",
+        "align": "right",
+        "lineHeight": 1.4
+      }
+    }
+  ]
+}

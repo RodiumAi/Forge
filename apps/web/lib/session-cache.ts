@@ -174,8 +174,8 @@ export async function ensureSession(options?: { force?: boolean }): Promise<Sess
         };
         const distinctId = me.rodium_sub ?? (me.id ? String(me.id) : null);
         if (distinctId) {
+          // No email or name: the account id is enough to follow a person.
           identifyPosthogUser(distinctId, {
-            email: me.email,
             forge_user_id: me.id ? String(me.id) : null,
             rodium_linked: Boolean(me.rodium_linked),
           });

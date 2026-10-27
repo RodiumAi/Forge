@@ -230,3 +230,53 @@ class TestTokenRecovery:
 
         monkeypatch.setattr(rodium_generation, "ensure_rodium_access_token", busy)
         assert asyncio.run(rodium_generation.gateway_access_token(object(), object(), object())) is None
+
+
+class TestImageModelOnChat:
+    """A run routed to image generation must not reach the chat endpoint with
+    the image model: the provider refuses it and the user sees a server error."""
+
+    def _chat_with(self, auth: RodiumGenerationAuth, model: str) -> str:
+        async def run():
+            out = []
+            async for chunk in llm.stream_chat_completion(
+                auth=auth, model=model, messages=[{"role": "user", "content": "hi"}], locale="en"
+            ):
+                if chunk.kind == "token":
+                    out.append(chunk.content)
+            return "".join(out)
+
+        return asyncio.run(run())
+
+    def test_the_lane_gets_the_text_model(self, cloud):
+        from app.config import get_settings
+        from app.services import platform_settings
+
+        cloud.setattr(platform_settings, "get_platform_overrides", dict)
+        up = Upstream({"/internal/forge/chat/completions": _sse("ok")})
+        up.install(cloud)
+        no_token = RodiumGenerationAuth(mode="playground", billing_uid="u-1")
+        assert self._chat_with(no_token, "openai/gpt-image-2") == "ok"
+        assert up.calls[0][2]["model"] == get_settings().effective_default_model
+        assert up.calls[0][2]["model"] != "openai/gpt-image-2"
+
+    def test_text_models_are_kept(self, cloud):
+        from app.services import platform_settings
+
+        cloud.setattr(platform_settings, "get_platform_overrides", dict)
+        up = Upstream({"/v1/chat/completions": _sse("ok")})
+        up.install(cloud)
+        assert self._chat_with(_user(), "anthropic/claude-sonnet-4-6") == "ok"
+        assert up.calls[0][2]["model"] == "anthropic/claude-sonnet-4-6"
+
+    def test_image_models_are_recognised(self, monkeypatch):
+        from app.services import platform_settings
+        from app.services.orchestration.catalog import is_image_model
+
+        monkeypatch.setattr(
+            platform_settings, "get_platform_overrides", lambda: {"default_image_model": "acme/pixels-1"}
+        )
+        assert is_image_model("openai/gpt-image-2")
+        assert is_image_model("acme/pixels-1")
+        assert not is_image_model("google/gemini-3.7-flash")
+        assert not is_image_model("")

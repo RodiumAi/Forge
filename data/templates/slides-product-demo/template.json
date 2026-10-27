@@ -1,0 +1,49 @@
+{
+  "kind": "slides",
+  "id": "slides-product-demo",
+  "title": {
+    "fr": "Démo produit",
+    "en": "Product demo"
+  },
+  "description": {
+    "fr": "Présentation technique sombre pour une démo produit ou un webinaire : extrait de code, architecture, performances, offres et feuille de route.",
+    "en": "Dark technical deck for a product demo or webinar: code sample, architecture, performance, pricing tiers and roadmap."
+  },
+  "tags": [
+    "tech",
+    "demo",
+    "saas",
+    "dark"
+  ],
+  "category": "tech",
+  "preview": "preview.html",
+  "bootHint": {
+    "fr": "Adapte slides-product-demo : nom du produit, extrait de code, chiffres de performance, offres.",
+    "en": "Adapt slides-product-demo: product name, code sample, performance figures, pricing tiers."
+  },
+  "accent": "#22D3EE",
+  "bg": "#090D14",
+  "fg": "#E6EDF7",
+  "muted": "#8B98AD",
+  "tone": "precise, confident, developer-friendly",
+  "fonts": {
+    "display": "Space Grotesk",
+    "body": "Inter",
+    "mono": "JetBrains Mono"
+  },
+  "transitionPreset": "dynamic",
+  "layouts": {
+    "title": "s1",
+    "section": "s2",
+    "text": "s3",
+    "two-columns": "s4",
+    "image-text": "s5",
+    "quote": "s6",
+    "key-figures": "s7",
+    "chart": "s8",
+    "table": "s9",
+    "team": "s10",
+    "timeline": "s11",
+    "thank-you": "s12"
+  }
+}

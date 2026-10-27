@@ -1,0 +1,49 @@
+{
+  "kind": "slides",
+  "id": "slides-editorial",
+  "title": {
+    "fr": "Éditorial",
+    "en": "Editorial"
+  },
+  "description": {
+    "fr": "Présentation au style magazine : filets de journal, colonnes, grand serif, photo légendée et citation pleine page. Pour une enquête, un dossier ou une revue de presse.",
+    "en": "Magazine-style deck: newspaper rules, column grid, large serif, captioned photo and a full page quote. For an investigation, a feature or a press review."
+  },
+  "tags": [
+    "editorial",
+    "magazine",
+    "serif",
+    "light"
+  ],
+  "category": "minimal",
+  "preview": "preview.html",
+  "bootHint": {
+    "fr": "Adapte slides-editorial : titre de l'enquête, chiffres, témoignages, sources et rédaction.",
+    "en": "Adapt slides-editorial: feature title, figures, testimonies, sources and newsroom."
+  },
+  "accent": "#B3261E",
+  "bg": "#F7F3EC",
+  "fg": "#141414",
+  "muted": "#5C574F",
+  "tone": "literate, measured, curious",
+  "fonts": {
+    "display": "EB Garamond",
+    "body": "Newsreader",
+    "mono": "IBM Plex Mono"
+  },
+  "transitionPreset": "elegant",
+  "layouts": {
+    "title": "s1",
+    "section": "s2",
+    "text": "s3",
+    "two-columns": "s4",
+    "image-text": "s5",
+    "quote": "s6",
+    "key-figures": "s7",
+    "chart": "s8",
+    "table": "s9",
+    "team": "s10",
+    "timeline": "s11",
+    "thank-you": "s12"
+  }
+}

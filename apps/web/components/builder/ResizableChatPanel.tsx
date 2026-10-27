@@ -5,18 +5,16 @@ import {
   useEffect,
   useRef,
   useState,
-  type CSSProperties,
+  type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
-  type ReactNode,
 } from "react";
-import { ChevronsLeft, ChevronsRight, PanelLeft } from "lucide-react";
-import { Icon } from "@/components/ui/icon";
+import { cx } from "@/components/ui/cx";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 
 const WIDTH_KEY = "forge.builder.chatWidth";
 const OPEN_KEY = "forge.builder.chatOpen";
 const DEFAULT_WIDTH = 400;
-const MIN_WIDTH = 280;
+const MIN_WIDTH = 300;
 const MAX_WIDTH = 720;
 
 function clampWidth(raw: number): number {
@@ -48,18 +46,24 @@ function readStoredOpen(): boolean {
   return true;
 }
 
-type Props = {
-  children: ReactNode;
+export type ChatRail = {
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  width: number;
+  dragging: boolean;
+  onPointerDown: (event: ReactPointerEvent<HTMLElement>) => void;
+  onPointerMove: (event: ReactPointerEvent<HTMLElement>) => void;
+  onPointerUp: (event: ReactPointerEvent<HTMLElement>) => void;
+  onKeyDown: (event: ReactKeyboardEvent<HTMLElement>) => void;
 };
 
 /**
- * Desktop chat rail: drag the right edge to resize, collapse to a thin strip,
- * reopen from the strip. Width/open persist in localStorage. Mobile keeps the
- * existing chat/workspace tab switcher (this rail stays full-width there).
+ * Desktop chat rail state: width (dragged, or arrow keys on the handle) and
+ * open/closed (the assistant toggle in the top bar). Both persist in
+ * localStorage. Phones ignore it: chat and stage are tabs there.
  */
-export function ResizableChatPanel({ children }: Props) {
-  const { t } = useI18n();
-  const [open, setOpen] = useState(true);
+export function useChatRail(): ChatRail {
+  const [open, setOpenState] = useState(true);
   const [width, setWidth] = useState(DEFAULT_WIDTH);
   const [dragging, setDragging] = useState(false);
   const dragStartX = useRef(0);
@@ -67,7 +71,7 @@ export function ResizableChatPanel({ children }: Props) {
 
   useEffect(() => {
     setWidth(readStoredWidth());
-    setOpen(readStoredOpen());
+    setOpenState(readStoredOpen());
   }, []);
 
   useEffect(() => {
@@ -78,98 +82,81 @@ export function ResizableChatPanel({ children }: Props) {
     }
   }, [width]);
 
-  useEffect(() => {
+  const setOpen = useCallback((next: boolean) => {
+    setOpenState(next);
     try {
-      window.localStorage.setItem(OPEN_KEY, open ? "1" : "0");
+      window.localStorage.setItem(OPEN_KEY, next ? "1" : "0");
     } catch {
       /* ignore */
     }
-  }, [open]);
+  }, []);
 
-  const onResizePointerDown = useCallback(
-    (event: ReactPointerEvent<HTMLDivElement>) => {
-      if (!open) return;
+  const onPointerDown = useCallback(
+    (event: ReactPointerEvent<HTMLElement>) => {
       event.preventDefault();
       dragStartX.current = event.clientX;
       dragStartWidth.current = width;
       setDragging(true);
       event.currentTarget.setPointerCapture(event.pointerId);
     },
-    [open, width],
+    [width],
   );
 
-  const onResizePointerMove = useCallback(
-    (event: ReactPointerEvent<HTMLDivElement>) => {
+  const onPointerMove = useCallback(
+    (event: ReactPointerEvent<HTMLElement>) => {
       if (!dragging) return;
-      const delta = event.clientX - dragStartX.current;
-      setWidth(clampWidth(dragStartWidth.current + delta));
+      setWidth(clampWidth(dragStartWidth.current + event.clientX - dragStartX.current));
     },
     [dragging],
   );
 
-  const endDrag = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
-    if (!dragging) return;
-    setDragging(false);
-    try {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    } catch {
-      /* ignore */
-    }
-  }, [dragging]);
+  const onPointerUp = useCallback(
+    (event: ReactPointerEvent<HTMLElement>) => {
+      if (!dragging) return;
+      setDragging(false);
+      try {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      } catch {
+        /* ignore */
+      }
+    },
+    [dragging],
+  );
 
+  const onKeyDown = useCallback((event: ReactKeyboardEvent<HTMLElement>) => {
+    const step = event.shiftKey ? 64 : 16;
+    if (event.key === "ArrowLeft") setWidth((w) => clampWidth(w - step));
+    else if (event.key === "ArrowRight") setWidth((w) => clampWidth(w + step));
+    else if (event.key === "Home") setWidth(clampWidth(MIN_WIDTH));
+    else if (event.key === "End") setWidth(clampWidth(MAX_WIDTH));
+    else return;
+    event.preventDefault();
+  }, []);
+
+  return { open, setOpen, width, dragging, onPointerDown, onPointerMove, onPointerUp, onKeyDown };
+}
+
+/** The draggable edge between the chat and the stage (focusable, arrow keys resize). */
+export function ChatResizeHandle({ rail }: { rail: ChatRail }) {
+  const { t } = useI18n();
+  if (!rail.open) return null;
   return (
-    <aside
-      className={`builder-sidebar${open ? "" : " is-collapsed"}${dragging ? " is-resizing" : ""}`}
-      style={open ? ({ ["--builder-chat-width"]: `${width}px` } as CSSProperties) : undefined}
-      data-chat-open={open ? "1" : "0"}
-    >
-      <div className="builder-sidebar-body">
-        {open ? (
-          <div className="builder-chat-toolbar">
-            <span className="builder-chat-toolbar-label">{t("chatLogLabel")}</span>
-            <button
-              type="button"
-              className="builder-chat-collapse"
-              title={t("chatPanelCollapse")}
-              aria-label={t("chatPanelCollapse")}
-              onClick={() => setOpen(false)}
-            >
-              <Icon icon={ChevronsLeft} className="ui-icon-sm" />
-            </button>
-          </div>
-        ) : null}
-        {children}
-      </div>
-
-      {open ? (
-        <div
-          className="builder-chat-resize"
-          role="separator"
-          aria-orientation="vertical"
-          aria-valuenow={width}
-          aria-valuemin={MIN_WIDTH}
-          aria-valuemax={MAX_WIDTH}
-          aria-label={t("chatPanelResize")}
-          title={t("chatPanelResizeHint")}
-          onPointerDown={onResizePointerDown}
-          onPointerMove={onResizePointerMove}
-          onPointerUp={endDrag}
-          onPointerCancel={endDrag}
-          onDoubleClick={() => setOpen(false)}
-        />
-      ) : (
-        <button
-          type="button"
-          className="builder-chat-expand"
-          title={t("chatPanelExpand")}
-          aria-label={t("chatPanelExpand")}
-          onClick={() => setOpen(true)}
-        >
-          <Icon icon={PanelLeft} className="ui-icon-md" />
-          <Icon icon={ChevronsRight} className="ui-icon-sm builder-chat-expand-chevron" />
-          <span className="builder-chat-expand-label">{t("builderTabChat")}</span>
-        </button>
-      )}
-    </aside>
+    <div
+      className={cx("f-bd-resize", rail.dragging && "is-drag")}
+      role="separator"
+      tabIndex={0}
+      aria-orientation="vertical"
+      aria-valuenow={rail.width}
+      aria-valuemin={MIN_WIDTH}
+      aria-valuemax={MAX_WIDTH}
+      aria-label={t("chatPanelResize")}
+      title={t("chatPanelResizeHint")}
+      onPointerDown={rail.onPointerDown}
+      onPointerMove={rail.onPointerMove}
+      onPointerUp={rail.onPointerUp}
+      onPointerCancel={rail.onPointerUp}
+      onKeyDown={rail.onKeyDown}
+      onDoubleClick={() => rail.setOpen(false)}
+    />
   );
 }

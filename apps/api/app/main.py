@@ -15,13 +15,19 @@ from app.middleware import MAX_BODY_BYTES, MaxBodySizeMiddleware
 from app.routers import (
     auth,
     chats,
+    codelab,
     comments,
     design,
+    design_systems,
+    documents,
     domains,
+    exports,
     files,
     history,
+    images,
     integrations,
     internal_admin,
+    kinds,
     plugins,
     preview,
     projects,
@@ -30,6 +36,7 @@ from app.routers import (
     sites_v1,
     team,
     templates,
+    workspace,
 )
 from app.routers import settings as settings_router
 from app.services.preview_babel import render_runner_shell, runtime_public_dir
@@ -123,6 +130,8 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    # Document editors read the ETag; downloads read the file name and export warnings.
+    expose_headers=["ETag", "Content-Disposition", "X-Forge-Export-Warnings"],
 )
 
 
@@ -170,8 +179,14 @@ app.include_router(team.router)
 app.include_router(settings_router.router)
 app.include_router(plugins.router)
 app.include_router(templates.router)
+app.include_router(kinds.router)
 app.include_router(integrations.router)
 app.include_router(projects.router)
+app.include_router(workspace.router)
+app.include_router(documents.router)
+app.include_router(codelab.router)
+app.include_router(design_systems.router)
+app.include_router(images.router)
 app.include_router(design.router)
 app.include_router(seo.router)
 app.include_router(chats.router)
@@ -179,6 +194,7 @@ app.include_router(files.router)
 app.include_router(history.router)
 app.include_router(comments.router)
 app.include_router(publish.router)
+app.include_router(exports.router)
 app.include_router(domains.router)
 app.include_router(sites_v1.router)
 app.include_router(preview.router)

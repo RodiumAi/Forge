@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "title": "Analyser des ventes avec pandas",
+  "summary": "À partir d'un fichier CSV de ventes, vous répondez à trois questions : combien vend-on par mois, quels produits marchent le mieux, et comment le montrer en un graphique.",
+  "level": "intermediate",
+  "durationMinutes": 37,
+  "prerequisites": [
+    "Python 3.12",
+    "Des bases en Python"
+  ],
+  "learn": [
+    "Charger un CSV",
+    "Nettoyer des dates et des valeurs manquantes",
+    "Agréger avec groupby",
+    "Tracer un graphique"
+  ],
+  "author": {
+    "name": "Forge par RodiumAi"
+  },
+  "theme": {
+    "designSystem": "local",
+    "tokens": "DESIGN.md"
+  },
+  "steps": [
+    {
+      "id": "intro",
+      "title": "Introduction",
+      "file": "steps/01-intro.md",
+      "minutes": 3
+    },
+    {
+      "id": "load",
+      "title": "Charger les données",
+      "file": "steps/02-load.md",
+      "minutes": 8
+    },
+    {
+      "id": "clean",
+      "title": "Nettoyer",
+      "file": "steps/03-clean.md",
+      "minutes": 8
+    },
+    {
+      "id": "aggregate",
+      "title": "Agréger",
+      "file": "steps/04-aggregate.md",
+      "minutes": 10
+    },
+    {
+      "id": "chart",
+      "title": "Tracer un graphique",
+      "file": "steps/05-chart.md",
+      "minutes": 8
+    }
+  ],
+  "downloads": [
+    {
+      "id": "data",
+      "label": "Jeu de données",
+      "path": "files/data/ventes.csv"
+    },
+    {
+      "id": "solution",
+      "label": "Script d'analyse",
+      "path": "files/solution",
+      "zip": true
+    }
+  ]
+}

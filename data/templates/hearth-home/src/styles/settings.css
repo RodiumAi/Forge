@@ -1,0 +1,19 @@
+/* Settings tab. Scoped under .settings-screen. */
+.settings-screen .me { display: flex; align-items: center; gap: 1rem; }
+.settings-screen .me img { width: 4.2rem; height: 4.2rem; border-radius: 999px; object-fit: cover; box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--accent), 0 0 26px rgba(245, 181, 68, .4); }
+.settings-screen .me h2 { font-size: 1.35rem; }
+
+.settings-screen .home-card {
+  display: flex; align-items: center; gap: .85rem; padding: 1rem 1.1rem; border-radius: var(--radius);
+  background: linear-gradient(120deg, rgba(110, 198, 255, .14), rgba(245, 181, 68, .12)); border: 1px solid var(--glass-line);
+}
+.settings-screen .hc-icon { width: 2.75rem; height: 2.75rem; border-radius: 999px; display: grid; place-items: center; background: rgba(255, 255, 255, .1); color: var(--accent); flex-shrink: 0; }
+.settings-screen .home-card div { flex: 1; display: grid; gap: .1rem; }
+.settings-screen .home-card strong { font-weight: 600; }
+.settings-screen .home-card span { font-size: .78rem; color: var(--muted); }
+.settings-screen .hc-btn { appearance: none; border: 0; min-height: 2.75rem; padding: 0 1rem; border-radius: 999px; background: var(--accent); color: var(--on-accent); font-weight: 600; font-size: .82rem; }
+
+.settings-screen .list { padding-block: .3rem; }
+.settings-screen .row { color: var(--fg); }
+.settings-screen .row > svg { color: var(--muted); }
+.settings-screen .sign-out { margin-top: -.4rem; }

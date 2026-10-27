@@ -93,14 +93,16 @@ def render_runner_shell(
   </script>
   <style id="forge-tokens"></style>
   <style id="forge-app-css"></style>
+  <!-- Phones use overlay scrollbars: none in the phone-width preview. -->
+  <style data-forge-phone>@media (max-width: 480px) {{ html, body {{ scrollbar-width: none; }} ::-webkit-scrollbar {{ display: none; width: 0; height: 0; }} }}</style>
   <script>window.__FORGE_PARENT_ORIGINS = {origins};window.__FORGE_CSS_IMPORTS__ = {package_css};</script>
   <script>(function(){{var m=location.pathname.match(/^(\\/projects\\/[0-9a-f-]{{36}}\\/draft)/i);if(m)window.__FORGE_PREVIEW_SHELL_BASE__=m[1];}})();</script>
   {thumb_css}{draft}<script src="/runner/babel.min.js?v=7.26.9"></script>
 </head>
 <body>
   <div id="root"></div>
-  <script src="/runner/bridge.js?v=thumb-persist1"></script>
-  <script type="module" src="/runner/runner.js?v=assets-css1"></script>
+  <script src="/runner/bridge.js?v=context-menu1"></script>
+  <script type="module" src="/runner/runner.js?v=pages-rail1"></script>
 </body>
 </html>
 """

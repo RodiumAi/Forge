@@ -1,0 +1,43 @@
+/* Restaurant detail (stack screen, no tab bar). Scoped under .restaurant-screen. */
+.restaurant-screen { min-height: 100dvh; padding-bottom: calc(2rem + var(--safe-bottom)); }
+.restaurant-screen.has-cart { padding-bottom: calc(7rem + var(--safe-bottom)); }
+
+.restaurant-screen .hero { position: relative; height: 18rem; overflow: hidden; }
+.restaurant-screen .hero img { width: 100%; height: 100%; object-fit: cover; }
+.restaurant-screen .hero-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(31, 26, 23, .35), transparent 35%); }
+.restaurant-screen .hero-bar { position: absolute; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; padding: calc(.8rem + var(--safe-top)) 1.15rem 0; }
+.restaurant-screen .hero-actions { display: flex; gap: .5rem; }
+
+.restaurant-screen .info {
+  position: relative; z-index: 1; margin: -2.2rem 1.15rem 0; padding: 1.15rem 1.15rem 1rem; border-radius: var(--radius);
+  background: var(--surface); box-shadow: var(--shadow); display: grid; gap: .3rem;
+}
+.restaurant-screen .cuisine { margin: 0; font-size: .72rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+.restaurant-screen .info h1 { font-size: 1.95rem; font-weight: 800; line-height: 1.02; letter-spacing: -.035em; }
+.restaurant-screen .facts { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: .55rem; }
+.restaurant-screen .fact { display: inline-flex; align-items: center; gap: .35rem; padding: .4rem .7rem; border-radius: 999px; background: var(--surface-2); font-size: .8rem; }
+.restaurant-screen .fact b { font-weight: 700; }
+.restaurant-screen .fact small { color: var(--muted); font-size: .74rem; }
+.restaurant-screen .fact.rate { background: color-mix(in srgb, var(--saffron) 45%, var(--surface)); color: #7a5300; }
+.restaurant-screen .fact.rate small { color: #8a6a20; }
+
+.restaurant-screen .menu-tabs {
+  position: sticky; top: 0; z-index: 4; display: flex; gap: .5rem; overflow-x: auto; scrollbar-width: none;
+  padding: calc(.7rem + var(--safe-top)) 1.15rem .7rem; margin-top: .6rem; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(14px);
+}
+.restaurant-screen .menu-tabs::-webkit-scrollbar { display: none; }
+.restaurant-screen .menu-tabs .chip { padding: 0 1.1rem; }
+
+.restaurant-screen .menu { padding: .4rem 1.15rem 0; display: grid; gap: 1.6rem; }
+.restaurant-screen .menu-section { display: grid; gap: .8rem; scroll-margin-top: calc(4.4rem + var(--safe-top)); }
+.restaurant-screen .menu-section h2 { font-size: 1.35rem; }
+.restaurant-screen .dish { display: flex; gap: 1rem; padding: .85rem; border-radius: 1.4rem; background: var(--surface); box-shadow: var(--shadow-soft); border: 1.5px solid transparent; transition: border-color .2s ease; }
+.restaurant-screen .dish.in { border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+.restaurant-screen .d-text { flex: 1; min-width: 0; display: grid; align-content: start; gap: .3rem; }
+.restaurant-screen .popular { justify-self: start; display: inline-flex; align-items: center; gap: .25rem; padding: .18rem .5rem; border-radius: 999px; background: color-mix(in srgb, var(--accent) 12%, var(--surface)); color: var(--accent-deep); font-size: .68rem; font-weight: 700; }
+.restaurant-screen .d-text h3 { font-size: 1.05rem; font-weight: 700; letter-spacing: -.01em; }
+.restaurant-screen .d-text p { margin: 0; font-size: .8rem; color: var(--muted); line-height: 1.45; }
+.restaurant-screen .d-text .price { margin-top: .2rem; font-size: 1.02rem; }
+.restaurant-screen .d-photo { position: relative; width: 7.4rem; flex-shrink: 0; padding-bottom: 1.2rem; }
+.restaurant-screen .d-photo img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 1.1rem; }
+.restaurant-screen .d-photo .stepper { position: absolute; bottom: 0; right: 50%; transform: translateX(50%); box-shadow: 0 0 0 3px var(--surface), 0 10px 20px -10px rgba(31, 26, 23, .6); }

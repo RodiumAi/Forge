@@ -1,0 +1,26 @@
+/* Room (stack screen, no tab bar). Scoped under .room-screen. */
+.room-screen { padding-bottom: calc(1.6rem + var(--safe-bottom)); }
+.room-screen .room-hero { position: relative; height: 22rem; overflow: hidden; }
+.room-screen .room-hero img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.room-screen .room-hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(18, 20, 23, .5) 0%, rgba(18, 20, 23, 0) 30%, rgba(18, 20, 23, .55) 68%, var(--bg) 100%); }
+.room-screen .rh-bar { position: absolute; z-index: 1; top: 0; inset-inline: 0; display: flex; justify-content: space-between; padding: calc(.85rem + var(--safe-top)) 1.2rem 0; }
+.room-screen .rh-title { position: absolute; z-index: 1; inset: auto 1.2rem 1rem; display: grid; gap: .3rem; }
+.room-screen .rh-title .kicker { color: var(--accent); }
+.room-screen .rh-title h1 { font-size: 2.3rem; font-weight: 600; letter-spacing: -.03em; }
+.room-screen .rh-stats { display: flex; gap: .5rem; margin-top: .35rem; }
+.room-screen .rh-stats > * { display: inline-flex; align-items: center; gap: .35rem; min-height: 2.75rem; padding: 0 .9rem; border-radius: 999px; font-size: .84rem; color: var(--fg); text-decoration: none; }
+
+.room-screen .room-body { display: grid; gap: 1.5rem; padding: .6rem 1.2rem 0; }
+.room-screen .chip small { font-size: .72rem; opacity: .65; }
+
+.room-screen .lights { display: grid; gap: .7rem; }
+.room-screen .light { padding: .9rem 1rem .4rem; border-radius: 1.4rem; background: var(--surface); border: 1px solid var(--line); transition: border-color .25s ease, box-shadow .25s ease; }
+.room-screen .light.on { border-color: rgba(245, 181, 68, .35); box-shadow: 0 10px 30px -14px rgba(245, 181, 68, .55); }
+.room-screen .light-top { display: flex; align-items: center; gap: .85rem; }
+.room-screen .light-icon { appearance: none; border: 0; width: 2.75rem; height: 2.75rem; border-radius: 999px; display: grid; place-items: center; background: var(--surface-2); color: var(--muted); flex-shrink: 0; transition: background .25s ease, box-shadow .25s ease; }
+.room-screen .light.on .light-icon { background: var(--accent); color: var(--on-accent); box-shadow: 0 0 18px rgba(245, 181, 68, .65); }
+.room-screen .light-name { flex: 1; display: grid; gap: .1rem; }
+.room-screen .light-name strong { font-weight: 500; }
+.room-screen .light-name span { font-size: .76rem; color: var(--muted); }
+.room-screen .light-pct { font-family: var(--font-display); font-size: 1.25rem; font-weight: 500; font-variant-numeric: tabular-nums; }
+.room-screen .light:not(.on) .light-pct { color: var(--muted); }

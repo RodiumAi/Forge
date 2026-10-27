@@ -5,7 +5,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from app.services.filesystem import write_file
+from app.services.edit_target import element_span, parse_forge_id
+from app.services.filesystem import read_file, write_file
 from app.services.source_edit import SourceMatch, SourceVariant, collect_matches, select_unique
 
 _SOURCE_EXTS = (".tsx", ".ts", ".jsx", ".js", ".css")
@@ -100,13 +101,78 @@ def _collect_ws_matches(project_id: str, text: str) -> list[SourceMatch]:
     return matches
 
 
-def apply_visual_text_edit(project_id: str, old_text: str, new_text: str) -> VisualEditResult:
+def _edit_inside_element(
+    project_id: str, forge_id: str | None, old_text: str, new_text: str
+) -> VisualEditResult | None:
+    """Replace `old_text` inside the element the preview pointed at.
+
+    Exact where the literal search is ambiguous (the same label in a header and
+    a footer). None when the id is stale, the element does not hold the text
+    literally (it comes from a prop or a data array), or holds it more than
+    once: the caller then falls back to the project-wide search.
+    """
+    loc = parse_forge_id(forge_id)
+    if loc is None or not loc.path.endswith(_SOURCE_EXTS):
+        return None
+    try:
+        content = read_file(project_id, loc.path)
+    except (OSError, ValueError):
+        return None
+    span = element_span(content, loc)
+    if span is None:
+        return None
+    start, end = span
+    region = content[start:end]
+
+    hit: tuple[int, SourceVariant] | None = None
+    for variant in _candidate_variants(old_text):
+        count = region.count(variant.literal)
+        if count > 1:
+            return None
+        if count == 1:
+            hit = (start + region.index(variant.literal), variant)
+            break
+    if hit is None:
+        html = old_text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+        for kind, needle in (("raw", old_text), ("html", html)):
+            found = list(_ws_flexible_pattern(needle).finditer(region))
+            if len(found) > 1:
+                return None
+            if found:
+                hit = (start + found[0].start(), SourceVariant(found[0].group(0), kind))
+                break
+    if hit is None:
+        return None
+    index, variant = hit
+    updated = content[:index] + _encode_like(variant, new_text) + content[index + len(variant.literal) :]
+    if updated == content:
+        return None
+    write_file(project_id, loc.path, updated)
+    return VisualEditResult(path=loc.path, occurrences=1)
+
+
+def apply_visual_text_edit(
+    project_id: str,
+    old_text: str,
+    new_text: str,
+    forge_id: str | None = None,
+) -> VisualEditResult:
+    """Replace edited preview text in the source.
+
+    ``forge_id`` (the element's ``data-forge-id``) pins the edit to that JSX
+    element; without it, or when the text is not literally inside it, the
+    literal is searched across the project and must be unique.
+    """
     old_text = (old_text or "").strip()
     new_text = new_text or ""
     if len(old_text) < 2:
         raise ValueError("Text too short to edit safely")
     if old_text == new_text.strip():
         raise ValueError("No change")
+
+    pinned = _edit_inside_element(project_id, forge_id, old_text, new_text)
+    if pinned is not None:
+        return pinned
 
     matches = collect_matches(project_id, _candidate_variants(old_text), _SOURCE_EXTS)
     if not matches:

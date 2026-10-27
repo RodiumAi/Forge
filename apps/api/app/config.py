@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     posthog_enabled: bool = False
     posthog_api_key: str = ""
     posthog_host: str = "https://eu.i.posthog.com"
+    # Tag sent as `environment` on every event. The production task still runs
+    # ENVIRONMENT=staging (the KMS/Secrets Manager providers are not wired), so
+    # events were all labelled staging; this decouples the analytics label.
+    posthog_environment: str = ""
     api_base_url: str = "http://localhost:8100"
     sites_base_domain: str = "lvh.me:8080"
 
@@ -145,6 +149,9 @@ class Settings(BaseSettings):
     # Claude/Gemini output at 4096 tokens, far below a multi-file task.
     generation_max_output_tokens: int = 32_000
     generation_temperature: float = 0.4
+    # Effort for code and document generation on Claude models (low|medium|high|xhigh|max).
+    # Short calls (planner, naming, compaction) use low. Ignored by non-Claude models.
+    generation_effort: str = "medium"
     # Wall-clock ceiling for one plan task, continuations included.
     forge_task_budget_seconds: float = 600.0
     # Full-content layer of every code prompt (characters). index.css gets its
@@ -158,6 +165,14 @@ class Settings(BaseSettings):
     # Publish: render every route to HTML in headless Chromium (falls back to a
     # client-rendered site when no browser is available).
     forge_prerender_enabled: bool = True
+    # Forge Design project kinds (docs/plans/forge-design-plan.md). Each new
+    # kind ships dark: creation and its routes stay closed until its flag is on.
+    forge_kind_slides_enabled: bool = False
+    forge_kind_codelab_enabled: bool = False
+    forge_kind_design_system_enabled: bool = False
+    # Free image bank behind the image panel's "Libres" tab (Pixabay). Server
+    # side only, never sent to the browser. Empty = the search answers 503.
+    pixabay_api_key: str = ""
     access_token_expire_minutes: int = 60 * 24 * 7
     preview_port_start: int = 5200
     preview_port_end: int = 5299

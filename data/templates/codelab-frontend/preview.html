@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<title>Votre première interface React preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { width: 480px; height: 300px; overflow: hidden; display: flex; background: #FBFAFF; color: #1B1630;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+  aside { width: 150px; background: #F3F0FF; border-right: 1px solid #E2DCF7; padding: 14px 10px; }
+  .bar { height: 4px; border-radius: 4px; background: #E2DCF7; margin: 8px 0 12px; }
+  .bar i { display: block; width: 35%; height: 100%; border-radius: 4px; background: #6D4AFF; }
+  aside b { font-size: 11px; line-height: 1.2; display: block; }
+  ol { list-style: none; display: grid; gap: 5px; }
+  li { font-size: 9px; display: flex; gap: 6px; align-items: center; color: #5B6170; }
+  li span { width: 14px; height: 14px; border-radius: 50%; border: 1px solid #E2DCF7; display: grid;
+    place-items: center; font-size: 8px; flex-shrink: 0; }
+  li.on { color: #1B1630; font-weight: 600; }
+  li.on span { background: #6D4AFF; border-color: #6D4AFF; color: #fff; }
+  main { flex: 1; padding: 18px 18px 0; min-width: 0; }
+  .meta { font-size: 9px; color: #5B6170; margin-bottom: 6px; }
+  h1 { font-size: 17px; line-height: 1.15; margin-bottom: 8px; }
+  p { font-size: 10px; color: #5B6170; line-height: 1.4; margin-bottom: 10px; }
+  .code { border: 1px solid #E2DCF7; border-radius: 6px; overflow: hidden; }
+  .head { font: 9px ui-monospace, monospace; padding: 4px 8px; border-bottom: 1px solid #E2DCF7;
+    background: #F3F0FF; display: flex; justify-content: space-between; }
+  .head em { color: #6D4AFF; font-style: normal; }
+  pre { font: 9px/1.5 ui-monospace, monospace; padding: 6px 8px; white-space: pre; overflow: hidden; }
+</style>
+</head>
+<body>
+<aside>
+  <b>Votre première interface React</b>
+  <div class="bar"><i></i></div>
+  <ol><li><span>1</span>Introduction</li><li class="on"><span>2</span>Créer le projet</li><li><span>3</span>Un composant compteur</li><li><span>4</span>Une liste filtrable</li><li><span>5</span>Charger des données</li><li><span>6</span>Construire et publier</li></ol>
+</aside>
+<main>
+  <div class="meta">Étape 2 sur 6 · 41 min</div>
+  <h1>Créer le projet</h1>
+  <p>Vous créez une petite application React avec Vite et TypeScript : un compteur, puis une liste de films filtrable alimentée par une API.</p>
+  <div class="code"><div class="head"><span>code</span><em>Copier</em></div>
+  <pre>import { useState } from &quot;react&quot;;
+
+export function Counter({ start = 0 }: { start?: number }) {
+  const [count, setCount] = useState(start);
+  return (
+    &lt;div className=&quot;counter&quot;&gt;</pre></div>
+</main>
+</body>
+</html>

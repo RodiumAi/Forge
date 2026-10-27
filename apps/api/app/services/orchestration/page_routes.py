@@ -102,3 +102,45 @@ def component_file_candidates(name: str) -> list[str]:
 
 def component_exists(name: str, files: dict[str, str]) -> bool:
     return any(candidate in files for candidate in component_file_candidates(name))
+
+
+def _route_key(route: str) -> str:
+    return (normalize_route(route) or "").lower()
+
+
+def page_file_for_route(route: str, files: dict[str, str]) -> str | None:
+    """Source file that renders `route` in the preview, or None.
+
+    Order: an explicit `<Route path="/x" element={<X />}>` pairing, then a
+    `src/pages/<x>` file (file-based or state-based navigation), then
+    `src/App.tsx` for the home route.
+    """
+    key = _route_key(route)
+    if not key:
+        return None
+    for content in files.values():
+        for path, component in route_component_pairs(content):
+            if path.lower() != key:
+                continue
+            for candidate in component_file_candidates(component):
+                if candidate in files:
+                    return candidate
+    segment = key.strip("/")
+    wanted = (
+        {segment.replace("-", ""), f"{segment.replace('-', '')}page"}
+        if segment
+        else {"home", "homepage", "index"}
+    )
+    for path in sorted(files):
+        norm = path.replace("\\", "/")
+        if not norm.lower().startswith("src/pages/") or not norm.endswith(SOURCE_EXTS):
+            continue
+        stem = re.sub(r"\.(tsx|jsx|ts|js)$", "", norm[len("src/pages/") :], flags=re.I)
+        stem = re.sub(r"/index$", "", stem, flags=re.I).lower().replace("-", "").replace("_", "")
+        if stem in wanted:
+            return path
+    if key == "/":
+        for candidate in ("src/App.tsx", "src/App.jsx"):
+            if candidate in files:
+                return candidate
+    return None

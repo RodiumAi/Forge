@@ -1,0 +1,432 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge.rodiumai.io/contracts/forge-design/slide.schema.json",
+  "title": "Forge slide",
+  "description": "slides/<id>.json: one slide as a list of absolutely positioned elements, in canvas pixels of the deck format (1920 x 1080 for 16:9). Colors are theme tokens (`--fg`) or hex values; fonts are theme roles. Rules JSON Schema cannot express (element ids unique across the slide, group nesting depth) are enforced by the API and web validators.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "elements"],
+  "properties": {
+    "id": { "$ref": "#/$defs/id" },
+    "background": { "$ref": "#/$defs/background" },
+    "elements": {
+      "type": "array",
+      "maxItems": 200,
+      "items": { "$ref": "#/$defs/element" }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"
+    },
+    "colorRef": {
+      "description": "A theme token (`--fg`, `--accent`) or a hex color.",
+      "type": "string",
+      "pattern": "^(--[A-Za-z0-9-]{1,48}|#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8}))$"
+    },
+    "assetPath": {
+      "description": "A file inside the project, e.g. public/images/hero.webp.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 400,
+      "pattern": "^(?!.*\\.\\.)(?!/)[A-Za-z0-9_./-]+$"
+    },
+    "httpsUrl": {
+      "type": "string",
+      "maxLength": 2000,
+      "pattern": "^https://"
+    },
+    "background": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "token"],
+          "properties": {
+            "type": { "const": "color" },
+            "token": { "$ref": "#/$defs/colorRef" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "src"],
+          "properties": {
+            "type": { "const": "image" },
+            "src": { "$ref": "#/$defs/assetPath" },
+            "fit": { "enum": ["cover", "contain", "fill"] },
+            "overlay": { "$ref": "#/$defs/colorRef" },
+            "overlayOpacity": { "type": "number", "minimum": 0, "maximum": 1 },
+            "credit": { "$ref": "#/$defs/credit" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "stops"],
+          "properties": {
+            "type": { "const": "gradient" },
+            "angle": { "type": "number", "minimum": 0, "maximum": 360 },
+            "stops": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 8,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["color", "at"],
+                "properties": {
+                  "color": { "$ref": "#/$defs/colorRef" },
+                  "at": { "type": "number", "minimum": 0, "maximum": 1 }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "credit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source"],
+      "properties": {
+        "source": { "enum": ["pixabay", "openverse", "upload", "generated", "other"] },
+        "author": { "type": "string", "maxLength": 200 },
+        "url": { "$ref": "#/$defs/httpsUrl" }
+      }
+    },
+    "animation": {
+      "description": "Element entrance animation. on-click steps are consumed before the slide changes.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "trigger"],
+      "properties": {
+        "type": {
+          "enum": [
+            "appear",
+            "rise",
+            "drop",
+            "slide",
+            "pop",
+            "zoom",
+            "typewriter",
+            "mask-reveal",
+            "bounce",
+            "pulse"
+          ]
+        },
+        "trigger": { "enum": ["on-enter", "on-click", "after-previous"] },
+        "delayMs": { "type": "integer", "minimum": 0, "maximum": 10000 },
+        "durationMs": { "type": "integer", "minimum": 0, "maximum": 10000 },
+        "direction": { "enum": ["left", "right", "up", "down"] },
+        "order": { "type": "integer", "minimum": 0, "maximum": 999 }
+      }
+    },
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text"],
+      "properties": {
+        "text": { "type": "string", "maxLength": 5000 },
+        "bold": { "type": "boolean" },
+        "italic": { "type": "boolean" },
+        "underline": { "type": "boolean" },
+        "link": { "$ref": "#/$defs/httpsUrl" },
+        "color": { "$ref": "#/$defs/colorRef" }
+      }
+    },
+    "inline": {
+      "description": "Either plain `text` or rich `runs`.",
+      "type": "object",
+      "properties": {
+        "text": { "type": "string", "maxLength": 5000 },
+        "runs": {
+          "type": "array",
+          "maxItems": 100,
+          "items": { "$ref": "#/$defs/run" }
+        }
+      }
+    },
+    "textBlock": {
+      "oneOf": [
+        {
+          "allOf": [{ "$ref": "#/$defs/inline" }],
+          "required": ["type"],
+          "properties": { "type": { "const": "paragraph" } },
+          "unevaluatedProperties": false
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "items"],
+          "properties": {
+            "type": { "enum": ["bullet-list", "ordered-list"] },
+            "items": {
+              "type": "array",
+              "maxItems": 50,
+              "items": {
+                "allOf": [{ "$ref": "#/$defs/inline" }],
+                "properties": {
+                  "level": { "type": "integer", "minimum": 0, "maximum": 4 }
+                },
+                "unevaluatedProperties": false
+              }
+            }
+          }
+        }
+      ]
+    },
+    "textStyle": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "font": { "enum": ["display", "body", "mono"] },
+        "size": { "type": "number", "minimum": 6, "maximum": 400 },
+        "weight": { "type": "integer", "minimum": 100, "maximum": 900 },
+        "color": { "$ref": "#/$defs/colorRef" },
+        "align": { "enum": ["left", "center", "right", "justify"] },
+        "valign": { "enum": ["top", "middle", "bottom"] },
+        "lineHeight": { "type": "number", "minimum": 0.5, "maximum": 4 },
+        "letterSpacing": { "type": "number", "minimum": -20, "maximum": 100 },
+        "italic": { "type": "boolean" },
+        "underline": { "type": "boolean" },
+        "uppercase": { "type": "boolean" }
+      }
+    },
+    "elementBase": {
+      "type": "object",
+      "required": ["id", "type", "x", "y", "w", "h"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "type": "string", "maxLength": 120 },
+        "x": { "type": "number", "minimum": -10000, "maximum": 10000 },
+        "y": { "type": "number", "minimum": -10000, "maximum": 10000 },
+        "w": { "type": "number", "exclusiveMinimum": 0, "maximum": 10000 },
+        "h": { "type": "number", "exclusiveMinimum": 0, "maximum": 10000 },
+        "rotation": { "type": "number", "minimum": -360, "maximum": 360 },
+        "z": { "type": "integer", "minimum": 0, "maximum": 10000 },
+        "opacity": { "type": "number", "minimum": 0, "maximum": 1 },
+        "locked": { "type": "boolean" },
+        "hidden": { "type": "boolean" },
+        "matchKey": {
+          "description": "Elements with the same matchKey on consecutive slides are tweened by the morph transition.",
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"
+        },
+        "link": { "$ref": "#/$defs/httpsUrl" },
+        "animation": { "$ref": "#/$defs/animation" }
+      }
+    },
+    "textElement": {
+      "allOf": [{ "$ref": "#/$defs/elementBase" }],
+      "required": ["content"],
+      "properties": {
+        "type": { "const": "text" },
+        "role": { "enum": ["title", "subtitle", "heading", "body", "caption", "quote", "label"] },
+        "content": {
+          "type": "array",
+          "maxItems": 50,
+          "items": { "$ref": "#/$defs/textBlock" }
+        },
+        "style": { "$ref": "#/$defs/textStyle" }
+      },
+      "unevaluatedProperties": false
+    },
+    "imageElement": {
+      "allOf": [{ "$ref": "#/$defs/elementBase" }],
+      "required": ["src"],
+      "properties": {
+        "type": { "const": "image" },
+        "src": { "$ref": "#/$defs/assetPath" },
+        "alt": { "type": "string", "maxLength": 300 },
+        "fit": { "enum": ["cover", "contain", "fill"] },
+        "radius": { "type": "number", "minimum": 0, "maximum": 2000 },
+        "crop": {
+          "description": "Visible part of the source image, as fractions of its size.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["x", "y", "w", "h"],
+          "properties": {
+            "x": { "type": "number", "minimum": 0, "maximum": 1 },
+            "y": { "type": "number", "minimum": 0, "maximum": 1 },
+            "w": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 },
+            "h": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 }
+          }
+        },
+        "credit": { "$ref": "#/$defs/credit" }
+      },
+      "unevaluatedProperties": false
+    },
+    "shapeElement": {
+      "allOf": [{ "$ref": "#/$defs/elementBase" }],
+      "required": ["shape"],
+      "properties": {
+        "type": { "const": "shape" },
+        "shape": { "enum": ["rect", "ellipse", "line", "arrow"] },
+        "fill": { "$ref": "#/$defs/colorRef" },
+        "stroke": { "$ref": "#/$defs/colorRef" },
+        "strokeWidth": { "type": "number", "minimum": 0, "maximum": 200 },
+        "radius": { "type": "number", "minimum": 0, "maximum": 2000 }
+      },
+      "unevaluatedProperties": false
+    },
+    "iconElement": {
+      "allOf": [{ "$ref": "#/$defs/elementBase" }],
+      "required": ["icon"],
+      "properties": {
+        "type": { "const": "icon" },
+        "icon": {
+          "description": "A lucide icon name in kebab case.",
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+          "maxLength": 64
+        },
+        "color": { "$ref": "#/$defs/colorRef" },
+        "strokeWidth": { "type": "number", "minimum": 0.5, "maximum": 4 }
+      },
+      "unevaluatedProperties": false
+    },
+    "tableElement": {
+      "allOf": [{ "$ref": "#/$defs/elementBase" }],
+      "required": ["rows"],
+      "properties": {
+        "type": { "const": "table" },
+        "rows": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 50,
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 20,
+            "items": { "allOf": [{ "$ref": "#/$defs/inline" }], "unevaluatedProperties": false }
+          }
+        },
+        "headerRow": { "type": "boolean" },
+        "columnWidths": {
+          "description": "Relative widths, one per column.",
+          "type": "array",
+          "maxItems": 20,
+          "items": { "type": "number", "exclusiveMinimum": 0 }
+        },
+        "style": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "size": { "type": "number", "minimum": 6, "maximum": 200 },
+            "color": { "$ref": "#/$defs/colorRef" },
+            "headerFill": { "$ref": "#/$defs/colorRef" },
+            "border": { "$ref": "#/$defs/colorRef" }
+          }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "chartElement": {
+      "allOf": [{ "$ref": "#/$defs/elementBase" }],
+      "required": ["chart", "data"],
+      "properties": {
+        "type": { "const": "chart" },
+        "chart": { "enum": ["bar", "line", "pie"] },
+        "data": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["labels", "series"],
+          "properties": {
+            "labels": {
+              "type": "array",
+              "maxItems": 100,
+              "items": { "type": "string", "maxLength": 120 }
+            },
+            "series": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 12,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["name", "values"],
+                "properties": {
+                  "name": { "type": "string", "maxLength": 120 },
+                  "values": {
+                    "type": "array",
+                    "maxItems": 100,
+                    "items": { "type": "number" }
+                  },
+                  "color": { "$ref": "#/$defs/colorRef" }
+                }
+              }
+            }
+          }
+        },
+        "options": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "stacked": { "type": "boolean" },
+            "legend": { "type": "boolean" },
+            "values": { "type": "boolean" }
+          }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "videoElement": {
+      "allOf": [{ "$ref": "#/$defs/elementBase" }],
+      "required": ["url"],
+      "properties": {
+        "type": { "const": "video" },
+        "url": { "$ref": "#/$defs/httpsUrl" },
+        "poster": { "$ref": "#/$defs/assetPath" },
+        "autoplay": { "type": "boolean" },
+        "muted": { "type": "boolean" }
+      },
+      "unevaluatedProperties": false
+    },
+    "codeElement": {
+      "allOf": [{ "$ref": "#/$defs/elementBase" }],
+      "required": ["code"],
+      "properties": {
+        "type": { "const": "code" },
+        "language": { "type": "string", "pattern": "^[a-z0-9+#-]{1,32}$" },
+        "code": { "type": "string", "maxLength": 20000 },
+        "lineNumbers": { "type": "boolean" },
+        "highlight": {
+          "description": "Highlighted lines, e.g. `3-5,8`.",
+          "type": "string",
+          "pattern": "^[0-9]+(-[0-9]+)?(,[0-9]+(-[0-9]+)?)*$"
+        },
+        "size": { "type": "number", "minimum": 6, "maximum": 200 }
+      },
+      "unevaluatedProperties": false
+    },
+    "groupElement": {
+      "allOf": [{ "$ref": "#/$defs/elementBase" }],
+      "required": ["children"],
+      "properties": {
+        "type": { "const": "group" },
+        "children": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 100,
+          "items": { "$ref": "#/$defs/element" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "element": {
+      "oneOf": [
+        { "$ref": "#/$defs/textElement" },
+        { "$ref": "#/$defs/imageElement" },
+        { "$ref": "#/$defs/shapeElement" },
+        { "$ref": "#/$defs/iconElement" },
+        { "$ref": "#/$defs/tableElement" },
+        { "$ref": "#/$defs/chartElement" },
+        { "$ref": "#/$defs/videoElement" },
+        { "$ref": "#/$defs/codeElement" },
+        { "$ref": "#/$defs/groupElement" }
+      ]
+    }
+  }
+}

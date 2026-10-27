@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Folio preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700&family=Newsreader:ital,wght@0,400;0,500;1,400;1,500&display=swap" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 480px; height: 270px; overflow: hidden; position: relative;
+    background:
+      radial-gradient(55% 75% at 50% 105%, rgba(156,61,46,.28), transparent 70%),
+      radial-gradient(45% 60% at 8% 0%, rgba(201,154,59,.32), transparent 70%),
+      radial-gradient(40% 55% at 96% 20%, rgba(201,154,59,.18), transparent 70%),
+      #efe5d3;
+    font-family: "Inter", system-ui, sans-serif; color: #231c16;
+  }
+  .grain { position: absolute; inset: 0; opacity: .5; background-image: repeating-linear-gradient(0deg, rgba(35,28,22,.025) 0 1px, transparent 1px 3px), repeating-linear-gradient(90deg, rgba(35,28,22,.02) 0 1px, transparent 1px 4px); }
+  .mark { position: absolute; left: 16px; top: 12px; font-family: "Newsreader", serif; font-style: italic; font-weight: 500; font-size: 17px; letter-spacing: -.02em; }
+  .mark i { color: #9c3d2e; font-style: normal; }
+  .tag { position: absolute; right: 16px; top: 16px; font-size: 6.5px; font-weight: 600; letter-spacing: .14em; color: #8a7d6e; }
+  .dev { position: absolute; width: 128px; height: 268px; border-radius: 22px; background: #f7f1e6; border: 3px solid #231c16; overflow: hidden; box-shadow: 0 26px 44px -14px rgba(60,32,20,.55), 0 4px 10px rgba(60,32,20,.15); }
+  .dev::before { content: ""; position: absolute; top: 6px; left: 50%; transform: translateX(-50%); width: 34px; height: 9px; border-radius: 99px; background: #231c16; z-index: 5; }
+  .l { left: 52px; top: 46px; transform: rotate(-8deg); }
+  .r { right: 52px; top: 46px; transform: rotate(8deg); }
+  .c { left: 50%; top: 18px; width: 142px; height: 296px; transform: translateX(-50%); z-index: 2; }
+  .s { padding: 22px 9px 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 7px; }
+  .disp { font-family: "Newsreader", serif; }
+  .mu { color: #8a7d6e; }
+  .kick { font-size: 4.5px; font-weight: 600; letter-spacing: .12em; color: #8a7d6e; }
+  /* covers */
+  .cv { position: relative; display: block; flex-shrink: 0; aspect-ratio: 2/3; border-radius: 1px 3px 3px 1px; background-size: cover; background-position: center; color: #fbf6ec; overflow: hidden; box-shadow: 1px .6px 0 -.3px #fbf6ec, 2px 1.2px 0 -.3px #e3d6c0, 0 4px 6px -2px rgba(35,28,22,.45); }
+  .cv::before { content: ""; position: absolute; inset: 0; z-index: 2; background: linear-gradient(90deg, rgba(0,0,0,.3) 0, rgba(255,255,255,.22) 2.5%, rgba(0,0,0,.12) 5%, transparent 10%); }
+  .cv b { position: absolute; z-index: 1; left: 13%; right: 8%; bottom: 11%; font-family: "Newsreader", serif; font-weight: 500; line-height: 1; }
+  .cv.t b { top: 12%; bottom: auto; text-align: center; left: 8%; }
+  .p-har { background-image: linear-gradient(180deg, transparent 12%, rgba(90,42,24,.6) 42%, rgba(90,42,24,.95) 82%), url("https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?auto=format&fit=crop&w=300&q=60"); }
+  .p-salt { background-image: linear-gradient(180deg, transparent 12%, rgba(107,52,24,.6) 42%, rgba(107,52,24,.95) 82%), url("https://images.unsplash.com/photo-1509316785289-025f5b846b35?auto=format&fit=crop&w=200&q=60"); }
+  .p-fog { background-image: linear-gradient(180deg, transparent 12%, rgba(31,42,48,.6) 42%, rgba(31,42,48,.95) 82%), url("https://images.unsplash.com/photo-1505765050516-f72dcac9c60e?auto=format&fit=crop&w=200&q=60"); }
+  .p-bao { background-image: linear-gradient(180deg, transparent 12%, rgba(92,42,18,.6) 42%, rgba(92,42,18,.95) 82%), url("https://images.unsplash.com/photo-1547471080-7cc2caa01a7e?auto=format&fit=crop&w=200&q=60"); }
+  .p-tide { background-image: linear-gradient(180deg, transparent 12%, rgba(14,42,51,.6) 42%, rgba(14,42,51,.95) 82%), url("https://images.unsplash.com/photo-1518837695005-2083093ee35b?auto=format&fit=crop&w=200&q=60"); }
+  .p-ferry { background-image: linear-gradient(180deg, transparent 12%, rgba(15,29,51,.6) 42%, rgba(15,29,51,.95) 82%), url("https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=200&q=60"); }
+  .t-rain { background: #2f4a3a; color: #f1e6cf; }
+  .t-rain::after { content: ""; position: absolute; left: 15%; right: 15%; top: 58%; height: 26%; opacity: .45; background: repeating-linear-gradient(105deg, #f1e6cf 0 .5px, transparent .5px 3px); }
+  .t-cart { background: #9c3d2e; color: #f7f1e6; }
+  .t-cart::after { content: ""; position: absolute; left: 50%; top: 66%; transform: translate(-50%, -50%); width: 40%; height: 40%; border: .7px solid #f7f1e6; border-bottom: 0; border-radius: 99px 99px 0 0; background: radial-gradient(circle at 50% 80%, rgba(201,154,59,.8) 0 18%, transparent 20%); }
+  .t-light { background: #c99a3b; color: #231c16; }
+  .t-light::after { content: ""; position: absolute; left: 50%; top: 62%; transform: translate(-50%, -50%); width: 30%; aspect-ratio: 1; border-radius: 99px; background: #231c16; }
+  /* tab bar */
+  .tabs { position: absolute; left: 0; right: 0; bottom: 0; height: 24px; background: #fbf6ec; border-top: .6px solid rgba(35,28,22,.12); display: grid; grid-template-columns: repeat(4,1fr); align-items: center; justify-items: center; padding-bottom: 3px; z-index: 4; }
+  .tabs span { display: grid; justify-items: center; gap: 1.5px; font-size: 3.6px; font-weight: 600; color: #8a7d6e; position: relative; }
+  .tabs span i { width: 7px; height: 7px; border: 1px solid currentColor; border-radius: 2px; }
+  .tabs span.on { color: #9c3d2e; }
+  .tabs span.on::before { content: ""; position: absolute; top: -5px; width: 9px; height: 1.5px; border-radius: 0 0 1px 1px; background: #9c3d2e; }
+  /* home */
+  .date { font-size: 4.2px; font-weight: 600; letter-spacing: .1em; }
+  .hi { font-size: 10.5px; font-weight: 500; line-height: 1.05; }
+  .hi em { color: #9c3d2e; }
+  .hero { position: relative; margin-top: 9px; border-radius: 11px; padding: 0 8px 8px; color: #fbf6ec; display: grid; grid-template-columns: auto 1fr; gap: 6px 7px; background: radial-gradient(90% 70% at 100% 0%, rgba(201,154,59,.4), transparent 65%), linear-gradient(155deg, #ad4a38, #7a2a1e 70%, #5e1f16); box-shadow: 0 10px 16px -10px rgba(94,31,22,.9); }
+  .hero .cv { width: 44px; margin-top: -10px; transform: rotate(-3deg); }
+  .hero .cv b { font-size: 7px; }
+  .hb { padding-top: 7px; display: grid; gap: 1.5px; align-content: start; }
+  .hb .kick { color: rgba(251,246,236,.7); }
+  .hb h4 { font-family: "Newsreader", serif; font-weight: 500; font-size: 12px; line-height: 1; }
+  .hb em { font-family: "Newsreader", serif; font-size: 6px; opacity: .85; }
+  .hb small { font-size: 4.2px; opacity: .75; margin-top: 2px; }
+  .bar { height: 2px; border-radius: 9px; background: rgba(251,246,236,.22); margin-top: 2px; } .bar i { display: block; width: 42%; height: 100%; border-radius: 9px; background: #c99a3b; }
+  .hb .pc { font-size: 4.2px; } .hb .pc b { font-family: "Newsreader", serif; font-size: 6.5px; }
+  .btns { grid-column: 1 / -1; display: grid; grid-template-columns: 1.4fr 1fr; gap: 4px; }
+  .btns span { height: 14px; border-radius: 5px; display: grid; place-items: center; font-size: 5px; font-weight: 600; }
+  .btns .p { background: #fbf6ec; color: #9c3d2e; } .btns .g { border: .7px solid rgba(251,246,236,.4); }
+  .quote { border-left: 1.2px solid #c99a3b; padding-left: 6px; display: grid; gap: 2px; }
+  .quote p { font-family: "Newsreader", serif; font-style: italic; font-size: 9px; line-height: 1.15; }
+  .quote small { font-size: 4px; }
+  .h { font-family: "Newsreader", serif; font-size: 7.5px; font-weight: 500; display: flex; justify-content: space-between; align-items: baseline; }
+  .h span { font-family: "Inter", sans-serif; font-size: 4.2px; color: #9c3d2e; font-weight: 600; }
+  .row { display: flex; gap: 8px; }
+  .row .cv { width: 32px; } .row .cv b { font-size: 4.6px; }
+  .pg { height: 1.5px; background: rgba(35,28,22,.1); border-radius: 9px; margin-top: 4px; } .pg i { display: block; height: 100%; background: #9c3d2e; border-radius: 9px; }
+  /* discover */
+  .search { height: 15px; border-radius: 5px; background: #fffaf2; border: .6px solid rgba(35,28,22,.1); font-size: 4.6px; color: #8a7d6e; display: flex; align-items: center; padding: 0 6px; gap: 3px; }
+  .search i { width: 4.5px; height: 4.5px; border: .8px solid #8a7d6e; border-radius: 99px; }
+  .chips { display: flex; gap: 3px; overflow: hidden; }
+  .chips span { font-size: 4.4px; font-weight: 500; padding: 3px 5px; border-radius: 99px; background: #fffaf2; border: .5px solid rgba(35,28,22,.12); }
+  .chips span.on { background: #231c16; color: #f7f1e6; }
+  .ledge { position: relative; display: flex; gap: 6px; padding-bottom: 4px; }
+  .ledge::after { content: ""; position: absolute; left: -9px; right: -9px; top: 42px; height: 2.4px; background: linear-gradient(180deg, #dcc194, #b08650); box-shadow: 0 2px 3px -1px rgba(90,60,25,.5); }
+  .ledge .cv { width: 28px; } .ledge .cv b { font-size: 4.6px; }
+  .chart { display: flex; align-items: center; gap: 5px; padding: 3px 0; border-bottom: .5px solid rgba(35,28,22,.1); }
+  .chart .n { font-family: "Newsreader", serif; font-style: italic; font-size: 9px; color: #9c3d2e; width: 6px; }
+  .chart .cv { width: 15px; } .chart .cv b { font-size: 2.6px; }
+  .chart strong { font-family: "Newsreader", serif; font-weight: 500; font-size: 6px; display: block; line-height: 1.1; }
+  .chart small { font-size: 4px; color: #8a7d6e; }
+  .st { display: flex; gap: .8px; margin-top: 1.5px; }
+  .st i { width: 4px; height: 4px; background: #c99a3b; clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); }
+  .st i.o { background: rgba(138,125,110,.4); }
+  /* reader */
+  .rd { height: 100%; background: #efe2c8; color: #3a2c1e; }
+  .rbar { display: flex; align-items: center; justify-content: space-between; padding: 20px 9px 5px; border-bottom: .6px solid rgba(58,44,30,.14); }
+  .rbar .ar { width: 8px; height: 1px; background: #3a2c1e; }
+  .rbar .tt { text-align: center; } .rbar .tt b { font-family: "Newsreader", serif; font-weight: 500; font-size: 7px; display: block; } .rbar .tt small { font-size: 3.6px; color: #8c7556; }
+  .rbar .aa { font-family: "Newsreader", serif; font-size: 7px; }
+  .rtext { padding: 9px 11px 0; }
+  .rtext .ch { font-size: 3.8px; font-weight: 600; letter-spacing: .16em; color: #9c3d2e; margin-bottom: 6px; }
+  .rtext p { font-family: "Newsreader", serif; font-size: 6.2px; line-height: 1.6; margin-bottom: 4px; }
+  .rtext p + p { text-indent: 8px; }
+  .rtext .ch + p { text-indent: 0; }
+  .rtext .dc::first-letter { float: left; font-size: 20px; line-height: .8; padding: 1px 2px 0 0; color: #9c3d2e; }
+  .rfoot { position: absolute; left: 0; right: 0; bottom: 0; padding: 6px 12px 9px; border-top: .6px solid rgba(58,44,30,.14); background: #efe2c8; text-align: center; }
+  .rfoot .pg { margin: 0 0 3px; } .rfoot .pg i { width: 42%; }
+  .rfoot small { font-size: 3.8px; color: #8c7556; }
+  .aapanel { position: absolute; left: 7px; right: 7px; top: 40px; z-index: 3; background: #fffaf2; border-radius: 7px; padding: 6px; box-shadow: 0 10px 18px -8px rgba(35,28,22,.6); display: grid; gap: 5px; }
+  .sizer { display: flex; align-items: center; gap: 4px; font-family: "Newsreader", serif; }
+  .sizer span { width: 13px; height: 13px; border-radius: 4px; border: .6px solid rgba(35,28,22,.12); display: grid; place-items: center; background: #f7f1e6; }
+  .sizer i { flex: 1; height: 1.5px; border-radius: 9px; background: #efe6d6; } .sizer i.on { background: #9c3d2e; }
+  .sw { display: grid; grid-template-columns: repeat(3,1fr); gap: 3px; }
+  .sw span { height: 15px; border-radius: 4px; display: grid; place-items: center; font-family: "Newsreader", serif; font-size: 6px; border: .8px solid transparent; }
+</style>
+</head>
+<body>
+  <div class="grain"></div>
+  <span class="mark">Folio<i>.</i></span>
+  <span class="tag">BOOKS AND AUDIOBOOKS</span>
+
+  <div class="dev l">
+    <div class="s">
+      <b class="disp" style="font-size:12px;font-weight:500">Discover</b>
+      <div class="search"><i></i>Titles, authors, narrators</div>
+      <div class="chips"><span class="on">All</span><span>Literary</span><span>Mystery</span><span>History</span></div>
+      <div class="h">Editors' picks <span>Autumn</span></div>
+      <div class="ledge">
+        <span class="cv t t-rain"><b>A Small Grammar of Rain</b></span>
+        <span class="cv p-bao"><b>Under the Baobab</b></span>
+        <span class="cv p-tide"><b>The Quiet Tide</b></span>
+      </div>
+      <div class="h" style="margin-top:2px">Top charts <span>8 titles</span></div>
+      <div>
+        <div class="chart"><span class="n">1</span><span class="cv p-ferry"><b>Night Ferry</b></span><div><strong>Night Ferry to Lomé</strong><small>Yaw Mensah</small><div class="st"><i></i><i></i><i></i><i></i><i class="o"></i></div></div></div>
+        <div class="chart"><span class="n">2</span><span class="cv t t-cart"><b>Daughter</b></span><div><strong>The Cartographer's Daughter</strong><small>Inès Marchetti</small><div class="st"><i></i><i></i><i></i><i></i><i></i></div></div></div>
+      </div>
+    </div>
+    <div class="tabs"><span><i></i>Home</span><span class="on"><i></i>Discover</span><span><i></i>Library</span><span><i></i>Profile</span></div>
+  </div>
+
+  <div class="dev r">
+    <div class="rd">
+      <div class="rbar"><span class="ar"></span><div class="tt"><b>Harmattan</b><small>Chapter 4 &middot; What the radio said</small></div><span class="aa">Aa</span></div>
+      <div class="aapanel">
+        <div class="sizer"><span style="font-size:5px">A</span><i class="on"></i><i class="on"></i><i></i><i></i><i></i><span style="font-size:8px">A</span></div>
+        <div class="sw"><span style="background:#f7f1e6;border-color:rgba(35,28,22,.12)">Aa</span><span style="background:#efe2c8;border-color:#9c3d2e">Aa</span><span style="background:#16130f;color:#d9cdb8">Aa</span></div>
+      </div>
+      <div class="rtext" style="padding-top:44px">
+        <p class="ch">CHAPTER 4</p>
+        <p class="dc">The radio was the only thing in the house that did not mind the dust. It sat on the kitchen shelf between the sugar and the matches.</p>
+        <p>Her father listened to it with his eyes closed, the way some men pray. He had been back for eleven days.</p>
+      </div>
+      <div class="rfoot"><div class="pg"><i></i></div><small>Page 120 of 284 &middot; 14 min left in chapter</small></div>
+    </div>
+  </div>
+
+  <div class="dev c">
+    <div class="s">
+      <div><p class="date mu">SATURDAY, 25 OCTOBER</p><p class="hi disp">Good morning, <em>Adjoa</em></p></div>
+      <div class="hero">
+        <span class="cv p-har"><b>Harmattan</b></span>
+        <div class="hb">
+          <span class="kick">CONTINUE READING</span>
+          <h4>Harmattan</h4>
+          <em>Kossi Amedzro</em>
+          <small>Chapter 4 &middot; What the radio said</small>
+          <div class="bar"><i></i></div>
+          <span class="pc"><b>42%</b> &middot; 5 h 20 min left</span>
+        </div>
+        <div class="btns"><span class="p">Resume</span><span class="g">Listen</span></div>
+      </div>
+      <div class="quote"><span class="kick">QUOTE OF THE DAY</span><p>There is no Frigate like a Book, to take us Lands away.</p><small class="mu">Emily Dickinson</small></div>
+      <div class="h">On your nightstand <span>Library</span></div>
+      <div class="row">
+        <div><span class="cv p-salt"><b>The Salt Road</b></span><div class="pg"><i style="width:22%"></i></div></div>
+        <div><span class="cv p-fog"><b>What the Fog Keeps</b></span><div class="pg"><i style="width:41%"></i></div></div>
+        <div><span class="cv t t-light"><b>Ordinary Light</b></span></div>
+      </div>
+    </div>
+    <div class="tabs"><span class="on"><i></i>Home</span><span><i></i>Discover</span><span><i></i>Library</span><span><i></i>Profile</span></div>
+  </div>
+</body>
+</html>

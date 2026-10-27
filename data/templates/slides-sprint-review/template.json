@@ -1,0 +1,49 @@
+{
+  "kind": "slides",
+  "id": "slides-sprint-review",
+  "title": {
+    "fr": "Revue de sprint",
+    "en": "Sprint review"
+  },
+  "description": {
+    "fr": "Revue de sprint claire et rythmée : objectif, stories livrées avec un extrait de code, démo, vélocité, burndown, risques et sprint suivant.",
+    "en": "Clear, upbeat sprint review: goal, delivered stories with a code excerpt, demo, velocity, burndown, risks and next sprint."
+  },
+  "tags": [
+    "tech",
+    "agile",
+    "sprint",
+    "light"
+  ],
+  "category": "tech",
+  "preview": "preview.html",
+  "bootHint": {
+    "fr": "Adapte slides-sprint-review : équipe, numéro de sprint, stories livrées, chiffres et risques.",
+    "en": "Adapt slides-sprint-review: team, sprint number, delivered stories, figures and risks."
+  },
+  "accent": "#8250DF",
+  "bg": "#F6F8FA",
+  "fg": "#1F2328",
+  "muted": "#59636E",
+  "tone": "concrete, upbeat, transparent",
+  "fonts": {
+    "display": "Figtree",
+    "body": "Inter",
+    "mono": "JetBrains Mono"
+  },
+  "transitionPreset": "sober",
+  "layouts": {
+    "title": "s1",
+    "section": "s2",
+    "text": "s3",
+    "two-columns": "s4",
+    "image-text": "s5",
+    "quote": "s6",
+    "key-figures": "s7",
+    "chart": "s8",
+    "table": "s9",
+    "team": "s10",
+    "timeline": "s11",
+    "thank-you": "s12"
+  }
+}

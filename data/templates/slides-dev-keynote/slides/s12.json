@@ -1,0 +1,191 @@
+{
+  "id": "s12",
+  "background": {
+    "type": "image",
+    "src": "public/images/hall.webp",
+    "fit": "cover",
+    "overlay": "--bg",
+    "overlayOpacity": 0.82,
+    "credit": {
+      "source": "pixabay",
+      "author": "StockSnap",
+      "url": "https://pixabay.com/photos/auditorium-stadium-bench-chairs-2603163/"
+    }
+  },
+  "elements": [
+    {
+      "id": "s12-bar",
+      "type": "shape",
+      "x": 900,
+      "y": 260,
+      "w": 120,
+      "h": 10,
+      "z": 2,
+      "shape": "rect",
+      "fill": "--accent",
+      "radius": 5,
+      "matchKey": "accent-bar"
+    },
+    {
+      "id": "s12-title",
+      "type": "text",
+      "role": "title",
+      "x": 140,
+      "y": 300,
+      "w": 1640,
+      "h": 230,
+      "z": 3,
+      "matchKey": "slide-title",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "npm i nebula@4"
+        }
+      ],
+      "style": {
+        "font": "display",
+        "size": 128,
+        "weight": 700,
+        "color": "--fg",
+        "align": "center",
+        "lineHeight": 1.05,
+        "letterSpacing": -2
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "on-enter",
+        "durationMs": 500
+      }
+    },
+    {
+      "id": "s12-subtitle",
+      "type": "text",
+      "role": "subtitle",
+      "x": 140,
+      "y": 550,
+      "w": 1640,
+      "h": 110,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Merci DevDays ! Code, slides et benchmarks sont en ligne."
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 38,
+        "weight": 400,
+        "color": "--muted",
+        "align": "center",
+        "lineHeight": 1.35
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 80,
+        "durationMs": 450
+      }
+    },
+    {
+      "id": "s12-icon1",
+      "type": "icon",
+      "x": 779,
+      "y": 730,
+      "w": 48,
+      "h": 48,
+      "z": 3,
+      "icon": "globe",
+      "color": "--accent",
+      "strokeWidth": 1.75,
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 0
+      }
+    },
+    {
+      "id": "s12-contact1",
+      "type": "text",
+      "role": "body",
+      "x": 855,
+      "y": 730,
+      "w": 362,
+      "h": 52,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "nebula.example/v4"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 32,
+        "weight": 500,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.5
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 0
+      }
+    },
+    {
+      "id": "s12-icon2",
+      "type": "icon",
+      "x": 779,
+      "y": 810,
+      "w": 48,
+      "h": 48,
+      "z": 3,
+      "icon": "at-sign",
+      "color": "--accent",
+      "strokeWidth": 1.75,
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 1
+      }
+    },
+    {
+      "id": "s12-contact2",
+      "type": "text",
+      "role": "body",
+      "x": 855,
+      "y": 810,
+      "w": 362,
+      "h": 52,
+      "z": 3,
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "@nebulajs.example"
+        }
+      ],
+      "style": {
+        "font": "body",
+        "size": 32,
+        "weight": 500,
+        "color": "--fg",
+        "align": "left",
+        "lineHeight": 1.5
+      },
+      "animation": {
+        "type": "rise",
+        "trigger": "after-previous",
+        "delayMs": 60,
+        "durationMs": 400,
+        "order": 1
+      }
+    }
+  ]
+}

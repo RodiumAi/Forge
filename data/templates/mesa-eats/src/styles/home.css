@@ -1,0 +1,40 @@
+/* Home tab. Scoped under .home-screen. */
+.home-screen { padding-bottom: calc(11rem + var(--safe-bottom)); gap: 1.5rem; }
+
+.home-screen .hello { display: grid; gap: 1rem; }
+.home-screen .hello h1 { font-size: 2.15rem; font-weight: 800; line-height: 1.02; letter-spacing: -.035em; }
+.home-screen .hello h1 span { color: var(--accent); }
+.home-screen .search-entry {
+  display: flex; align-items: center; gap: .7rem; min-height: 3.3rem; padding: 0 1.1rem; border-radius: 999px;
+  background: var(--surface); color: var(--muted); text-decoration: none; font-size: .92rem; box-shadow: var(--shadow-soft); border: 1px solid var(--line);
+}
+.home-screen .search-entry svg { color: var(--fg); }
+
+.home-screen .live-order {
+  display: flex; align-items: center; gap: .75rem; padding: .65rem .8rem .65rem .65rem; border-radius: 1.3rem;
+  background: var(--basil); color: #fff; text-decoration: none; box-shadow: 0 14px 28px -14px rgba(47, 111, 79, .8);
+}
+.home-screen .live-ico { width: 2.75rem; height: 2.75rem; border-radius: .95rem; display: grid; place-items: center; background: rgba(255, 255, 255, .16); flex-shrink: 0; }
+.home-screen .live-text { flex: 1; min-width: 0; display: grid; gap: .1rem; }
+.home-screen .live-text small { font-size: .74rem; opacity: .8; }
+.home-screen .live-text strong { font-size: .92rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.home-screen .live-order img { width: 2.2rem; height: 2.2rem; border-radius: 999px; object-fit: cover; box-shadow: 0 0 0 2px var(--basil), 0 0 0 3.5px var(--saffron); }
+
+.home-screen .promo {
+  position: relative; display: grid; grid-template-columns: 1.2fr 1fr; align-items: stretch; min-height: 10rem; border-radius: var(--radius); overflow: hidden;
+  background: var(--saffron); color: var(--fg); text-decoration: none; box-shadow: var(--shadow);
+}
+.home-screen .promo-text { display: grid; align-content: center; gap: .3rem; padding: 1.1rem 0 1.1rem 1.15rem; position: relative; z-index: 1; }
+.home-screen .promo-tag { display: inline-flex; align-items: center; gap: .3rem; justify-self: start; padding: .25rem .55rem; border-radius: 999px; background: var(--fg); color: var(--saffron); font-size: .7rem; font-weight: 700; }
+.home-screen .promo strong { font-family: var(--font-display); font-weight: 800; font-size: 1.65rem; line-height: 1; letter-spacing: -.03em; }
+.home-screen .promo small { font-size: .78rem; color: color-mix(in srgb, var(--fg) 72%, transparent); }
+.home-screen .promo-cta { display: inline-flex; align-items: center; gap: .3rem; margin-top: .35rem; font-size: .84rem; font-weight: 700; color: var(--accent-deep); }
+.home-screen .promo img { width: 100%; height: 100%; object-fit: cover; border-radius: 999px 0 0 999px; transform: translateX(.8rem) scale(1.1); }
+
+.home-screen .chips { padding-bottom: .3rem; }
+.home-screen .count { font-size: .8rem; color: var(--basil); font-weight: 600; }
+.home-screen .r-list { display: grid; gap: 1.5rem; }
+
+@media (min-width: 560px) {
+  .home-screen .promo { min-height: 11rem; }
+}

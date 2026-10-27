@@ -1,0 +1,25 @@
+/* Home tab. Scoped under .home-screen. */
+.home-screen .feature {
+  position: relative; overflow: hidden; border-radius: 1.75rem; padding: 1.1rem; min-height: 15rem;
+  display: grid; grid-template-columns: 7.5rem 1fr; grid-template-rows: auto 1fr; gap: .9rem 1rem; align-items: end;
+  background: #1a1222; isolation: isolate;
+}
+.home-screen .feature-bg { position: absolute; inset: -20%; width: 140%; height: 140%; max-width: none; object-fit: cover; filter: blur(34px) saturate(1.5); opacity: .7; z-index: -2; }
+.home-screen .feature::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(160deg, rgba(13, 11, 18, .15), rgba(13, 11, 18, .75)); }
+.home-screen .feature-cover { grid-row: 1 / 3; align-self: start; width: 7.5rem; aspect-ratio: 1; border-radius: 1rem; overflow: hidden; box-shadow: 0 20px 34px -12px rgba(0, 0, 0, .8); transform: rotate(-4deg); }
+.home-screen .feature-cover img { width: 100%; height: 100%; object-fit: cover; }
+.home-screen .feature-text { grid-column: 2; align-self: start; display: grid; gap: .35rem; }
+.home-screen .feature-kicker { justify-self: start; font-size: .66rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; padding: .3rem .6rem; border-radius: 999px; background: rgba(255, 255, 255, .14); }
+.home-screen .feature h2 { font-size: 1.55rem; font-weight: 800; line-height: 1.02; }
+.home-screen .feature p { margin: 0; font-size: .8rem; color: rgba(247, 244, 250, .75); }
+.home-screen .feature .play-big { grid-column: 2; justify-self: end; }
+
+.home-screen .jump { display: grid; grid-template-columns: 1fr 1fr; gap: .55rem; }
+.home-screen .jump-tile { display: flex; align-items: center; gap: .65rem; min-height: 3.3rem; border-radius: .8rem; overflow: hidden; background: var(--surface); text-decoration: none; color: var(--fg); font-size: .82rem; font-weight: 600; padding-right: .5rem; }
+.home-screen .jump-tile img { width: 3.3rem; height: 3.3rem; object-fit: cover; flex-shrink: 0; }
+.home-screen .jump-tile span { line-height: 1.2; }
+
+.home-screen .artists { gap: 1.1rem; }
+.home-screen .artist { display: grid; justify-items: center; gap: .5rem; width: 5.8rem; }
+.home-screen .artist img { width: 5.8rem; height: 5.8rem; border-radius: 999px; object-fit: cover; box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px color-mix(in srgb, var(--accent) 60%, transparent); }
+.home-screen .artist strong { font-size: .8rem; font-weight: 600; text-align: center; }

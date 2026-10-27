@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Stride preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@500;600;700&display=swap" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 480px; height: 270px; overflow: hidden; position: relative;
+    background: radial-gradient(50% 70% at 50% 100%, rgba(255,90,31,.35), transparent 70%), #0b0b0c;
+    font-family: "Inter", system-ui, sans-serif; color: #fafafa;
+  }
+  .slab { position: absolute; left: -40px; right: -40px; top: 128px; height: 92px; background: linear-gradient(90deg, #ff5a1f, #ff7a2f 60%, #ffd23f); transform: rotate(-9deg); box-shadow: 0 0 60px rgba(255,90,31,.45); }
+  .big { position: absolute; left: 0; right: 0; top: 2px; text-align: center; font-family: "Barlow Condensed"; font-weight: 800; font-style: italic; font-size: 118px; line-height: 1; letter-spacing: .02em; color: transparent; -webkit-text-stroke: 1px rgba(250,250,250,.09); }
+  .dev { position: absolute; width: 128px; height: 268px; border-radius: 22px; background: #0b0b0c; border: 3px solid #2a2a2e; overflow: hidden; box-shadow: 0 24px 50px rgba(0,0,0,.7); }
+  .dev::before { content: ""; position: absolute; top: 6px; left: 50%; transform: translateX(-50%); width: 34px; height: 9px; border-radius: 99px; background: #000; z-index: 4; }
+  .l { left: 56px; top: 44px; transform: rotate(-8deg); }
+  .r { right: 56px; top: 44px; transform: rotate(8deg); }
+  .c { left: 50%; top: 14px; width: 142px; height: 300px; transform: translateX(-50%); z-index: 2; border-color: #3a3a3f; }
+  .s { padding: 22px 9px 0; display: grid; gap: 7px; }
+  .d { font-family: "Barlow Condensed", sans-serif; font-weight: 800; text-transform: uppercase; line-height: .9; }
+  .n { font-family: "Barlow Condensed", sans-serif; font-weight: 700; line-height: .9; }
+  .k { font-size: 4.2px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: #8a8a8e; }
+  .mu { color: #8a8a8e; }
+  .box { background: #161618; border: 1px solid #222225; border-radius: 9px; }
+  /* today */
+  .top { display: flex; align-items: center; gap: 5px; }
+  .av { width: 16px; height: 16px; border-radius: 99px; background: url("https://images.unsplash.com/photo-1522529599102-193c0d76b5b6?auto=format&fit=crop&w=80&q=60") center/cover; box-shadow: 0 0 0 1px #0b0b0c, 0 0 0 2px #ff5a1f; }
+  .top .k { color: #ff5a1f; } .top b { font-size: 11px; display: block; }
+  .fl { margin-left: auto; font-family: "Barlow Condensed"; font-weight: 700; font-size: 7px; color: #ff5a1f; background: rgba(255,90,31,.16); border-radius: 99px; padding: 2px 5px; }
+  .rc { display: flex; align-items: center; gap: 7px; padding: 8px 7px; border-radius: 12px; background: radial-gradient(90% 120% at 0% 0%, rgba(255,90,31,.25), transparent 60%), #161618; border: 1px solid #222225; }
+  .lg { display: grid; gap: 4px; }
+  .lg .n { font-size: 13px; } .lg small { font-size: 5px; color: #8a8a8e; font-family: "Barlow Condensed"; }
+  .wk { display: flex; justify-content: space-between; align-items: flex-end; }
+  .wk b { font-size: 9px; } .wk .n { font-size: 15px; color: #ffd23f; }
+  .days { display: grid; grid-template-columns: repeat(7,1fr); gap: 2px; }
+  .days i { height: 15px; border-radius: 99px; background: #222225; font-style: normal; font-family: "Barlow Condensed"; font-weight: 700; font-size: 6px; display: grid; place-items: center; }
+  .days i.e { background: none; border: 1px dashed #333; } .days i.t { background: #ff5a1f; color: #0b0b0c; }
+  .wc { position: relative; height: 66px; border-radius: 10px; background: url("https://images.unsplash.com/photo-1461896836934-ffe607ba8211?auto=format&fit=crop&w=300&q=60") center/cover; overflow: hidden; }
+  .wc::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(11,11,12,.05) 30%, rgba(11,11,12,.92)); }
+  .wc span { position: absolute; top: 5px; left: 5px; z-index: 1; font-size: 3.6px; font-weight: 700; letter-spacing: .1em; background: #ff5a1f; color: #0b0b0c; padding: 1.5px 4px; border-radius: 99px; }
+  .wc b { position: absolute; left: 6px; bottom: 6px; z-index: 1; font-size: 13px; }
+  .tab { position: absolute; left: 0; right: 0; bottom: 0; height: 24px; background: #111113; border-top: 1px solid #222225; display: grid; grid-template-columns: repeat(5,1fr); justify-items: center; align-items: center; }
+  .tab i { width: 7px; height: 7px; border-radius: 2px; border: 1.2px solid #8a8a8e; } .tab i.on { border-color: #ff5a1f; }
+  .tab .run { width: 22px; height: 22px; border: 0; border-radius: 99px; background: #ff5a1f; margin-top: -12px; box-shadow: 0 0 0 2.5px #0b0b0c, 0 6px 12px rgba(255,90,31,.6); }
+  /* run */
+  .gps { text-align: center; font-size: 4.2px; font-weight: 600; letter-spacing: .1em; }
+  .gps i { display: inline-block; width: 3px; height: 3px; border-radius: 9px; background: #3ee0cf; margin-right: 2px; }
+  .tm { text-align: center; font-size: 25px; font-weight: 800; }
+  .route { height: 34px; border-radius: 8px; background-color: #161618; background-image: linear-gradient(#222225 1px, transparent 1px), linear-gradient(90deg, #222225 1px, transparent 1px); background-size: 8px 8px; }
+  .route svg { width: 100%; height: 100%; display: block; }
+  .km { background: #ff5a1f; color: #0b0b0c; border-radius: 9px; padding: 6px 8px; display: flex; align-items: baseline; gap: 3px; }
+  .km .n { font-size: 24px; font-weight: 800; } .km small { font-size: 5px; font-weight: 700; opacity: .7; }
+  .mt { display: grid; grid-template-columns: repeat(3,1fr); gap: 3px; }
+  .mt div { padding: 4px; } .mt .n { font-size: 10px; } .mt small { font-size: 3.6px; color: #8a8a8e; font-weight: 600; letter-spacing: .08em; }
+  .ctl { display: flex; justify-content: center; margin-top: 10px; }
+  .ctl span { width: 30px; height: 30px; border-radius: 99px; background: #fafafa; display: grid; place-items: center; }
+  .ctl span i { width: 2.5px; height: 10px; background: #0b0b0c; box-shadow: 5px 0 0 #0b0b0c; margin-left: -5px; border-radius: 1px; }
+  /* stats */
+  .seg { display: flex; background: #161618; border-radius: 99px; padding: 2px; font-size: 5px; font-weight: 600; }
+  .seg span { flex: 1; text-align: center; padding: 3.5px 0; border-radius: 99px; color: #8a8a8e; } .seg .on { background: #222225; color: #fafafa; }
+  .tot .n { font-size: 34px; font-weight: 800; } .tot .n small { font-size: 9px; color: #ff5a1f; }
+  .bars { display: flex; align-items: flex-end; gap: 3px; height: 54px; padding: 5px 6px 4px; }
+  .bars i { flex: 1; border-radius: 3px 3px 2px 2px; background: #222225; } .bars i.p { background: linear-gradient(180deg,#ffd23f,#ff5a1f); }
+  .pr { display: flex; align-items: center; justify-content: space-between; padding: 5px 6px; }
+  .pr b { font-size: 8px; color: #ff5a1f; } .pr .n { font-size: 10px; }
+</style>
+</head>
+<body>
+  <div class="big">STRIDE</div>
+  <div class="slab"></div>
+
+  <div class="dev l">
+    <div class="s">
+      <p class="gps"><i></i>GPS LOCKED</p>
+      <p class="k" style="text-align:center;margin-bottom:-4px">Time</p>
+      <p class="n tm">00:24:37</p>
+      <div class="route"><svg viewBox="0 0 320 150" preserveAspectRatio="none"><path d="M12 120 C 60 120, 70 40, 120 52 S 170 130, 210 96 S 260 24, 308 30" fill="none" stroke="#222225" stroke-width="10" stroke-linecap="round"/><path d="M12 120 C 60 120, 70 40, 120 52 S 170 130, 210 96" fill="none" stroke="#ff5a1f" stroke-width="10" stroke-linecap="round"/></svg></div>
+      <div class="km"><span class="n">5.09</span><small>KM</small></div>
+      <div class="mt"><div class="box"><p class="n">4:47</p><small>PACE</small></div><div class="box"><p class="n">315</p><small>KCAL</small></div><div class="box"><p class="n">151</p><small>BPM</small></div></div>
+      <div class="ctl"><span><i></i></span></div>
+    </div>
+  </div>
+
+  <div class="dev r">
+    <div class="s">
+      <p class="k" style="color:#ff5a1f;margin-bottom:-5px">Stride</p>
+      <b class="d" style="font-size:13px">Stats</b>
+      <div class="seg"><span class="on">Week</span><span>Month</span><span>Year</span></div>
+      <div class="tot"><p class="k">Distance this week</p><p class="n">42.6<small>km</small></p></div>
+      <div class="box bars"><i style="height:41%"></i><i style="height:3%"></i><i style="height:48%"></i><i style="height:25%"></i><i style="height:67%"></i><i class="p" style="height:100%"></i><i style="height:58%"></i></div>
+      <div class="box pr"><b class="d">5K</b><span class="n">22:48</span></div>
+      <div class="box pr"><b class="d">10K</b><span class="n">48:31</span></div>
+    </div>
+    <div class="tab"><i></i><i></i><i class="run"></i><i class="on"></i><i></i></div>
+  </div>
+
+  <div class="dev c">
+    <div class="s">
+      <div class="top"><span class="av"></span><div><p class="k">Sat 25 Oct</p><b class="d">Hey, Kwame</b></div><span class="fl">21</span></div>
+      <div class="rc">
+        <svg viewBox="0 0 180 180" width="58" height="58"><g fill="none" stroke-width="15" stroke-linecap="round" transform="rotate(-90 90 90)"><circle cx="90" cy="90" r="76" stroke="#ff5a1f" stroke-opacity=".16"/><circle cx="90" cy="90" r="76" stroke="#ff5a1f" stroke-dasharray="477.5" stroke-dashoffset="90.7"/><circle cx="90" cy="90" r="58" stroke="#ffd23f" stroke-opacity=".16"/><circle cx="90" cy="90" r="58" stroke="#ffd23f" stroke-dasharray="364.4" stroke-dashoffset="56.7"/><circle cx="90" cy="90" r="40" stroke="#3ee0cf" stroke-opacity=".16"/><circle cx="90" cy="90" r="40" stroke="#3ee0cf" stroke-dasharray="251.3" stroke-dashoffset="62.8"/></g></svg>
+        <div class="lg">
+          <div><p class="k" style="color:#ff5a1f">Move</p><p class="n">486<small>/600 kcal</small></p></div>
+          <div><p class="k" style="color:#ffd23f">Exercise</p><p class="n">38<small>/45 min</small></p></div>
+          <div><p class="k" style="color:#3ee0cf">Stand</p><p class="n">9<small>/12 hrs</small></p></div>
+        </div>
+      </div>
+      <div class="wk"><b class="d">This week</b><span class="n">42.6</span></div>
+      <div class="days"><i>5</i><i class="e"></i><i>6</i><i>3</i><i>8</i><i class="t">13</i><i>7</i></div>
+      <b class="d" style="font-size:9px">Up next</b>
+      <div class="wc"><span>RUN</span><b class="d">Tempo intervals</b></div>
+    </div>
+    <div class="tab"><i class="on"></i><i></i><i class="run"></i><i></i><i></i></div>
+  </div>
+</body>
+</html>

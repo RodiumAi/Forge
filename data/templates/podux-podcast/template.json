@@ -1,6 +1,7 @@
 {
   "kind": "web",
   "id": "podux-podcast",
+  "free": true,
   "title": {
     "en": "Podux Podcast",
     "fr": "Podcast Podux"

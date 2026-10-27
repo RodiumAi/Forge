@@ -1,0 +1,3 @@
+# Copied from apps/web/components/deck-player by the API Dockerfile.
+player-src/
+node_modules/
