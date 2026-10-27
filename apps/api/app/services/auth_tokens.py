@@ -52,7 +52,7 @@ def issue_email_verify(db: Session, user_id: UUID) -> str:
     return issue(db, user_id, AuthToken.KIND_EMAIL_VERIFY, EMAIL_VERIFY_TTL)
 
 
-def issue_password_reset(db: Session, user_id: UUID) -> str:
+def issue_reset_link(db: Session, user_id: UUID) -> str:
     return issue(db, user_id, AuthToken.KIND_PASSWORD_RESET, PASSWORD_RESET_TTL)
 
 

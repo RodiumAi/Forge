@@ -239,7 +239,7 @@ class TestAuthTokens:
 
     def test_a_reset_link_cannot_be_spent_as_a_verification_link(self):
         db = _FakeSession()
-        raw = auth_tokens.issue_password_reset(db, uuid.uuid4())
+        raw = auth_tokens.issue_reset_link(db, uuid.uuid4())
 
         assert auth_tokens.consume(db, raw, AuthToken.KIND_EMAIL_VERIFY) is None
 

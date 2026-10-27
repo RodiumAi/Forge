@@ -192,7 +192,7 @@ def test_forgot_password_sends_reset_after_verify_wipe(monkeypatch):
 
     monkeypatch.setattr(auth_mod.rate_limit, "enforce", lambda *a, **k: None)
     monkeypatch.setattr(auth_mod.auth_tokens, "invalidate_outstanding", lambda *a, **k: None)
-    monkeypatch.setattr(auth_mod.auth_tokens, "issue_password_reset", lambda *_a, **_k: "reset-raw")
+    monkeypatch.setattr(auth_mod.auth_tokens, "issue_reset_link", lambda *_a, **_k: "reset-raw")
     monkeypatch.setattr(
         auth_mod,
         "get_settings",
@@ -243,7 +243,7 @@ def test_forgot_password_stops_mailing_an_address_silently_past_its_ceiling(monk
 
     monkeypatch.setattr(auth_mod.rate_limit, "enforce", lambda *a, **k: None)
     monkeypatch.setattr(auth_mod.auth_tokens, "invalidate_outstanding", lambda *a, **k: invalidated.append(1))
-    monkeypatch.setattr(auth_mod.auth_tokens, "issue_password_reset", lambda *_a, **_k: "reset-raw")
+    monkeypatch.setattr(auth_mod.auth_tokens, "issue_reset_link", lambda *_a, **_k: "reset-raw")
     monkeypatch.setattr(
         auth_mod,
         "get_settings",
