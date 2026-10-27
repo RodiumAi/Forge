@@ -39,11 +39,11 @@ One example slide per layout; reuse these positions when adding slides.
 - image-text (s5): rounded photo inset on the left, kicker, heading, paragraph and list on the right
 - timeline (s6): heading and four numbered milestone cards linked by chevrons
 - table (s7): heading and a full width table with a header row
-- key-figures (s8): heading and three or four figure cards
+- key-numbers (s8): heading and three or four figure cards
 - chart (s9): heading, editable chart on the left, takeaway on the right
 - quote (s10): large quote mark, quote, author and role
 - team (s11): heading and four members (initials avatar, name, role, one line)
-- thank-you (s12): closing title, subtitle and two contact lines with icons
+- thanks (s12): closing title, subtitle and two contact lines with icons
 
 ## Style
 - Header accent: a hairline across the slide top with a short --accent segment.

@@ -1,4 +1,4 @@
-"""Codelab exports and their plan gating (docs/plans/forge-design-plan.md, section 8).
+"""Codelab exports and their plan gating.
 
 | Export          | Free | Starter | Builder and up | Open source |
 |-----------------|------|---------|----------------|-------------|

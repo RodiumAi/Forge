@@ -67,7 +67,7 @@
     },
     {
       "id": "s7",
-      "layout": "key-figures",
+      "layout": "key-numbers",
       "transition": {
         "type": "morph",
         "durationMs": 800,
@@ -112,7 +112,7 @@
     },
     {
       "id": "s12",
-      "layout": "thank-you",
+      "layout": "thanks",
       "transition": {
         "type": "morph",
         "durationMs": 800,

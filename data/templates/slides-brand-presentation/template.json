@@ -40,10 +40,10 @@
     "two-columns": "s5",
     "text": "s6",
     "table": "s7",
-    "key-figures": "s8",
+    "key-numbers": "s8",
     "chart": "s9",
     "team": "s10",
     "timeline": "s11",
-    "thank-you": "s12"
+    "thanks": "s12"
   }
 }

@@ -35,7 +35,7 @@ One example slide per layout; reuse these positions when adding slides.
 - title (s1): cover: photo background with a --bg veil, label, title, subtitle and meta centered
 - quote (s2): centered quote, author and role on --surface
 - section (s3): centered section number, title and one line
-- key-figures (s4): heading and three or four figures under accent rules, no cards
+- key-numbers (s4): heading and three or four figures under accent rules, no cards
 - chart (s5): heading, takeaway on the left, editable chart on the right
 - table (s6): heading and a full width table with a header row
 - image-text (s7): rounded photo inset on the left, kicker, heading, paragraph and list on the right
@@ -43,7 +43,7 @@ One example slide per layout; reuse these positions when adding slides.
 - team (s9): heading and four members (initials avatar, name, role, one line)
 - timeline (s10): heading and four milestones on a horizontal line
 - text (s11): heading, bullet or numbered list, side panel with icon and callout (or code)
-- thank-you (s12): closing title and subtitle centered, two contacts side by side
+- thanks (s12): closing title and subtitle centered, two contacts side by side
 
 ## Style
 - Header accent: a hairline across the slide top with a short --accent segment.

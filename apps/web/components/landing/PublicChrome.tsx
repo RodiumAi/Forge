@@ -259,7 +259,6 @@ export function PublicFooter() {
         </div>
         <div className="f-lp-footer-bottom">
           <span>{t("lndRights").replace("{y}", String(year))}</span>
-          <span>{t("lndMadeIn")}</span>
           <div className="f-lp-socials">
             {SOCIALS.map((s) => (
               <IconButton key={s.label} icon={s.glyph} label={s.label} href={s.href} external size="sm" />

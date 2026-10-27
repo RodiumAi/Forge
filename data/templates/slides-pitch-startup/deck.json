@@ -72,7 +72,7 @@
     },
     {
       "id": "s7",
-      "layout": "key-figures",
+      "layout": "key-numbers",
       "transition": {
         "type": "push",
         "direction": "left",
@@ -122,7 +122,7 @@
     },
     {
       "id": "s12",
-      "layout": "thank-you",
+      "layout": "thanks",
       "transition": {
         "type": "push",
         "direction": "left",

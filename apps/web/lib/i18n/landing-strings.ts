@@ -164,7 +164,6 @@ export const landingEn = {
   lndFPrivacy: "Privacy",
   lndFTrust: "Security",
   lndRights: "© {y} RodiumAi. All rights reserved.",
-  lndMadeIn: "Built in Lomé, for Africa and beyond.",
 
   lndTdBack: "Templates",
   lndTdCrumbs: "Breadcrumb",
@@ -431,7 +430,6 @@ export const landingFr: Record<keyof typeof landingEn, string> = {
   lndFPrivacy: "Confidentialité",
   lndFTrust: "Sécurité",
   lndRights: "© {y} RodiumAi. Tous droits réservés.",
-  lndMadeIn: "Conçu à Lomé, pour l'Afrique et au-delà.",
 
   lndTdBack: "Modèles",
   lndTdCrumbs: "Fil d'Ariane",

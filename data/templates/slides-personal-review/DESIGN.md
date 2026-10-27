@@ -38,12 +38,12 @@ One example slide per layout; reuse these positions when adding slides.
 - two-columns (s4): heading, two columns each with icon, subheading and paragraph
 - image-text (s5): photo on the left half, kicker, heading, paragraph and list on the right
 - quote (s6): large quote mark, quote, author and role
-- key-figures (s7): heading and three or four figure cards
+- key-numbers (s7): heading and three or four figure cards
 - chart (s8): heading, editable chart on the left, takeaway on the right
 - table (s9): heading and a full width table with a header row
 - team (s10): heading and four members (initials avatar, name, role, one line)
 - timeline (s11): heading and four milestones on a horizontal line
-- thank-you (s12): closing title, subtitle and two contact lines with icons
+- thanks (s12): closing title, subtitle and two contact lines with icons
 
 ## Transitions
 - Preset: Dynamique (dynamic): push to the left between slides (600 ms), titles rise, figures pop.

@@ -716,7 +716,11 @@ async def _targeted_edit(ctx: DeckContext) -> AsyncIterator[Event]:
         notes = store.write_notes(pid, slide_id, result.notes)
         applied.append({"op": "write", "path": store.notes_path(slide_id)})
         yield {"type": "file_write", "path": store.notes_path(slide_id)}
-    if result.layout and not element_id and normalize_layout(result.layout) != ref["layout"]:
+    if (
+        result.layout
+        and not element_id
+        and normalize_layout(result.layout) != normalize_layout(ref["layout"])
+    ):
         # The only deck.json change a slide target may make: its own layout name.
         ref["layout"] = normalize_layout(result.layout)
         deck = store.write_deck(pid, deck)

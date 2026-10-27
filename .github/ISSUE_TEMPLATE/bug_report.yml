@@ -2,6 +2,19 @@ name: Bug report
 description: Something is broken. (Français accepté / French is welcome)
 labels: ["bug"]
 body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Project kind
+      description: Which kind of project shows the bug?
+      options:
+        - Site / App
+        - Slides
+        - Codelab
+        - Design system
+        - Not specific
+    validations:
+      required: true
   - type: textarea
     id: description
     attributes:
@@ -34,11 +47,12 @@ body:
         - Docker (docker compose up)
         - Local (host API/web)
         - Mixed (Docker services + host API)
+        - Forge Cloud (forge.rodiumai.io)
     validations:
       required: true
   - type: textarea
     id: logs
     attributes:
       label: Logs
-      description: Relevant output (docker compose logs, browser console, pytest…). Will be formatted as code.
+      description: Relevant output (docker compose logs, browser console, pytest…). Will be formatted as code. Remove any key, token or personal data first.
       render: shell

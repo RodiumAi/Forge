@@ -48,12 +48,12 @@ LAYOUT_DESC = {
     "two-columns": "heading, two columns each with icon, subheading and paragraph",
     "image-text": "photo on the left half, kicker, heading, paragraph and list on the right",
     "quote": "large quote mark, quote, author and role",
-    "key-figures": "heading and three or four figure cards",
+    "key-numbers": "heading and three or four figure cards",
     "chart": "heading, editable chart on the left, takeaway on the right",
     "table": "heading and a full width table with a header row",
     "team": "heading and four members (initials avatar, name, role, one line)",
     "timeline": "heading and four milestones on a horizontal line",
-    "thank-you": "closing title, subtitle and two contact lines with icons",
+    "thanks": "closing title, subtitle and two contact lines with icons",
 }
 PRESET_NAMES = {"sober": "Sobre", "dynamic": "Dynamique", "elegant": "Élégant"}
 PRESET_DESC = {
