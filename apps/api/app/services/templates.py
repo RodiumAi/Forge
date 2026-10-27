@@ -460,7 +460,9 @@ def _snapshot(project_id: str, template_id: str) -> None:
 def _is_generic_project_name(name: str) -> bool:
     from app.i18n import MESSAGES
 
-    generic = {messages["new_project"].casefold() for messages in MESSAGES.values() if "new_project" in messages}
+    generic = {
+        messages["new_project"].casefold() for messages in MESSAGES.values() if "new_project" in messages
+    }
     return name.strip().casefold() in generic
 
 

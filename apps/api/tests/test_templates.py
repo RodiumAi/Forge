@@ -203,6 +203,10 @@ class TestCatalog:
             preview = (template.path / "preview.html").read_text(encoding="utf-8")
             assert "<script" not in preview.lower(), template.id
             urls = re.findall(r"https?://[^\s\"')]+", preview)
-            allowed = ("https://images.unsplash.com/", "https://fonts.googleapis.com/", "https://fonts.gstatic.com")
+            allowed = (
+                "https://images.unsplash.com/",
+                "https://fonts.googleapis.com/",
+                "https://fonts.gstatic.com",
+            )
             offsite = [u for u in urls if not u.startswith(allowed)]
             assert offsite == [], f"{template.id} references {offsite}"

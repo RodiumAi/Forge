@@ -57,7 +57,12 @@ def test_summarize_runs_keeps_the_latest_run_per_project():
     p1, p2, p3 = (SimpleNamespace(id=uuid.uuid4(), name=n, platform="web") for n in ("A", "B", "C"))
     projects = {str(p.id): p for p in (p1, p2, p3)}
     runs = [
-        _run(p1.id, "running", 2, plan=[{"title": "One", "status": "done"}, {"title": "Two", "status": "running"}]),
+        _run(
+            p1.id,
+            "running",
+            2,
+            plan=[{"title": "One", "status": "done"}, {"title": "Two", "status": "running"}],
+        ),
         _run(p2.id, "error", 10),
         _run(p1.id, "done", 60),  # older run of p1: ignored
         _run(p3.id, "running", 60 * 5),  # stale: state kept, not active

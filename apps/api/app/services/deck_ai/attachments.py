@@ -103,6 +103,7 @@ def _document_blocks(prompt: str) -> list[tuple[re.Match[str], str, int, int]]:
         blocks.append((head, prompt[head.end() : end.start()], head.start(), end.end()))
         pos = end.end()
 
+
 SLIDE_HEAD_RE = re.compile(r"^--- Slide (\d+) ---$", re.MULTILINE)
 MAX_DOCUMENTS = 6
 #: Characters of document text per prompt: outline, deck edit, one slide.

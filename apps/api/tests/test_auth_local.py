@@ -477,7 +477,9 @@ class TestRateLimit:
         with pytest.raises(HTTPException):
             rate_limit.enforce(attacker, bucket, limit=1, window_seconds=60, subject=email, per_ip=True)
         # The owner, from their own address, still has their whole budget.
-        rate_limit.enforce(self._request("203.0.113.10"), bucket, limit=1, window_seconds=60, subject=email, per_ip=True)
+        rate_limit.enforce(
+            self._request("203.0.113.10"), bucket, limit=1, window_seconds=60, subject=email, per_ip=True
+        )
 
     def test_refunded_hits_do_not_count(self):
         bucket = f"test-{uuid.uuid4()}"

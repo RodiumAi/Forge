@@ -153,7 +153,9 @@ def test_forking_a_slides_kit_gives_a_valid_slides_project(projects_tmp):
 def test_a_broken_slides_kit_is_not_listed(monkeypatch, tmp_path):
     kit = tmp_path / "slides-broken"
     kit.mkdir()
-    (kit / "template.json").write_text(json.dumps({"id": "slides-broken", "kind": "slides"}), encoding="utf-8")
+    (kit / "template.json").write_text(
+        json.dumps({"id": "slides-broken", "kind": "slides"}), encoding="utf-8"
+    )
     monkeypatch.setenv("TEMPLATES_ROOT", str(tmp_path))
     clear_settings_cache()
     try:

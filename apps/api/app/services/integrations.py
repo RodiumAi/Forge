@@ -324,7 +324,9 @@ def format_selected_integrations_block(text: str, locale: str = "en") -> str:
         if len(guide) > _GUIDE_LIMIT:
             guide = guide[:_GUIDE_LIMIT] + "\n[...]"
         docs = f"\nDocs: {meta.docs_url}" if meta.docs_url else ""
-        parts.append(f'<integration id="{meta.id}" name="{meta.name}">{docs}\n{guide.strip()}\n</integration>')
+        parts.append(
+            f'<integration id="{meta.id}" name="{meta.name}">{docs}\n{guide.strip()}\n</integration>'
+        )
     return "\n\n".join(parts)
 
 

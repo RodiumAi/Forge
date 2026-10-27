@@ -533,7 +533,10 @@ async def build_llm_messages(
     integrations = format_selected_integrations_block(last_user, locale)
     if integrations:
         messages.append(
-            {"role": "system", "content": _gateway_safe_content(integrations, fallback="Selected integrations.")}
+            {
+                "role": "system",
+                "content": _gateway_safe_content(integrations, fallback="Selected integrations."),
+            }
         )
 
     compacted_summary: str | None = None

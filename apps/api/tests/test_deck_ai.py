@@ -234,7 +234,9 @@ class TestOutline:
         # Nothing written before confirmation.
         assert len(store.read_deck(deck)["slides"]) == 1
 
-    async def test_outline_prompt_gets_the_imported_powerpoint_in_its_own_section(self, deck, monkeypatch, run_log):
+    async def test_outline_prompt_gets_the_imported_powerpoint_in_its_own_section(
+        self, deck, monkeypatch, run_log
+    ):
         calls = script(monkeypatch, json.dumps(OUTLINE))
         prompt = (
             "Recrée cette présentation\n\n[Document: ancien.pptx | pptx]\n"

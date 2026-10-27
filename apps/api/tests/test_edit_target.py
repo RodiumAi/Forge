@@ -78,7 +78,15 @@ class TestForgeId:
 
     @pytest.mark.parametrize(
         "raw",
-        ["", "src/App.tsx", "src/App.tsx:0:1", "../etc/passwd.ts:1:1", "/abs/App.tsx:1:1", "src/a.css:1:1", None],
+        [
+            "",
+            "src/App.tsx",
+            "src/App.tsx:0:1",
+            "../etc/passwd.ts:1:1",
+            "/abs/App.tsx:1:1",
+            "src/a.css:1:1",
+            None,
+        ],
     )
     def test_rejects_malformed_or_escaping_ids(self, raw):
         assert parse_forge_id(raw) is None
@@ -158,12 +166,16 @@ class TestResolveTarget:
 
     def test_explicit_file_path(self, project):
         _site(project)
-        resolved = resolve_target(MessageTarget(filePath="src/pages/About.tsx", restrict=True), list_files(project))
+        resolved = resolve_target(
+            MessageTarget(filePath="src/pages/About.tsx", restrict=True), list_files(project)
+        )
         assert resolved is not None and resolved.allowed_paths == ["src/pages/About.tsx"]
 
     def test_pages_from_the_rail_focus_their_files(self, project):
         _site(project)
-        target = MessageTarget(route="/", pages=["/", "a-propos", "/a-propos/", "/missing", "*"], restrict=True)
+        target = MessageTarget(
+            route="/", pages=["/", "a-propos", "/a-propos/", "/missing", "*"], restrict=True
+        )
         resolved = resolve_target(target, list_files(project))
         assert resolved is not None and not resolved.scoped
         assert resolved.pages == [
@@ -299,7 +311,9 @@ class TestVisualEditByForgeId:
 
         write_file(project, "src/Card.tsx", "export const Card = ({ t }) => <h3>{t}</h3>;\n")
         write_file(project, "src/data.ts", 'export const items = [{ t: "Offre unique" }];\n')
-        result = apply_visual_text_edit(project, "Offre unique", "Offre spéciale", forge_id="src/Card.tsx:1:32")
+        result = apply_visual_text_edit(
+            project, "Offre unique", "Offre spéciale", forge_id="src/Card.tsx:1:32"
+        )
         assert result.path == "src/data.ts"
 
     def test_multiline_text_inside_the_element(self, project):
@@ -308,7 +322,10 @@ class TestVisualEditByForgeId:
         src = "const A = () => <p>\n    Une phrase\n    longue\n  </p>;\nconst B = () => <p>Une phrase longue</p>;\n"
         write_file(project, "src/A.tsx", src)
         apply_visual_text_edit(project, "Une phrase longue", "Courte", forge_id="src/A.tsx:1:17")
-        assert read_file(project, "src/A.tsx") == "const A = () => <p>\n    Courte\n  </p>;\n" + src.split("\n", 4)[4]
+        assert (
+            read_file(project, "src/A.tsx")
+            == "const A = () => <p>\n    Courte\n  </p>;\n" + src.split("\n", 4)[4]
+        )
 
     def test_image_replace_targets_the_exact_img(self, project):
         from app.services.visual_image import apply_visual_image_replace
@@ -317,7 +334,9 @@ class TestVisualEditByForgeId:
         write_file(project, "src/G.tsx", src)
         with pytest.raises(AmbiguousMatch):
             apply_visual_image_replace(project, "/images/a.webp", "/images/b.webp")
-        result = apply_visual_image_replace(project, "/images/a.webp", "/images/b.webp", forge_id="src/G.tsx:3:3")
+        result = apply_visual_image_replace(
+            project, "/images/a.webp", "/images/b.webp", forge_id="src/G.tsx:3:3"
+        )
         assert result.path == "src/G.tsx"
         assert read_file(project, "src/G.tsx") == src.replace(
             '  <img src="/images/a.webp" />\n</div>', '  <img src="/images/b.webp" />\n</div>'
@@ -357,7 +376,7 @@ def _run_single_pass(monkeypatch, project, target, answer: str):
             run_pk=uuid.uuid4(),
             project_id_str=project,
             chat_id_pk=uuid.uuid4(),
-            user_content="[Sélection: h1 | text:\"Bienvenue\"]\n\nmets Bonjour",
+            user_content='[Sélection: h1 | text:"Bienvenue"]\n\nmets Bonjour',
             model="m",
             auth=None,
             locale="fr",
@@ -383,7 +402,8 @@ class TestSinglePassScope:
     def test_restricted_selection_refuses_other_files(self, monkeypatch, project):
         _site(project)
         target = resolve_target(
-            MessageTarget(route="/", forgeId="src/components/Hero.tsx:5:7", restrict=True), list_files(project)
+            MessageTarget(route="/", forgeId="src/components/Hero.tsx:5:7", restrict=True),
+            list_files(project),
         )
         frames, seen = _run_single_pass(monkeypatch, project, target, ANSWER)
 
@@ -407,7 +427,8 @@ class TestSinglePassScope:
     def test_widened_resend_applies_everything(self, monkeypatch, project):
         _site(project)
         target = resolve_target(
-            MessageTarget(route="/", forgeId="src/components/Hero.tsx:5:7", restrict=False), list_files(project)
+            MessageTarget(route="/", forgeId="src/components/Hero.tsx:5:7", restrict=False),
+            list_files(project),
         )
         frames, _ = _run_single_pass(monkeypatch, project, target, ANSWER)
         assert not [f for f in frames if f["type"] == "warning"]

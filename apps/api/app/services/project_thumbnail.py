@@ -178,7 +178,9 @@ border:10px solid #1b1e25;box-shadow:0 40px 90px rgba(0,0,0,.6),0 0 0 2px rgba(2
 {device}</body></html>"""
 
 
-def _render_sync(shell: Path, project_public: Path, runner_dir: Path, kind: str, name: str, out: Path) -> None:
+def _render_sync(
+    shell: Path, project_public: Path, runner_dir: Path, kind: str, name: str, out: Path
+) -> None:
     from playwright.sync_api import sync_playwright
 
     shell_html = shell.read_bytes()
@@ -194,12 +196,16 @@ def _render_sync(shell: Path, project_public: Path, runner_dir: Path, kind: str,
                 elif "/public/" in path and path.startswith("/projects/"):
                     file = _safe_file(project_public, path.split("/public/", 1)[1])
                 else:
-                    route.fulfill(status=200, body=shell_html, headers={"Content-Type": "text/html; charset=utf-8"})
+                    route.fulfill(
+                        status=200, body=shell_html, headers={"Content-Type": "text/html; charset=utf-8"}
+                    )
                     return
                 if file is None:
                     route.fulfill(status=404, body=b"")
                 else:
-                    route.fulfill(status=200, body=file.read_bytes(), headers={"Content-Type": _content_type(file)})
+                    route.fulfill(
+                        status=200, body=file.read_bytes(), headers={"Content-Type": _content_type(file)}
+                    )
             elif (parsed.hostname or "") in _ALLOWED_HOSTS and route.request.method == "GET":
                 route.continue_()
             else:
@@ -247,7 +253,15 @@ def _render_sync(shell: Path, project_public: Path, runner_dir: Path, kind: str,
 
             # The card itself at 1x, whatever the capture's pixel ratio.
             card = browser.new_page(viewport={"width": _CARD_W, "height": _CARD_H}, device_scale_factor=1)
-            card.route("**/*", lambda r: r.continue_() if (urlparse(r.request.url).hostname or "") in _ALLOWED_HOSTS or r.request.url.startswith("data:") else r.abort())
+            card.route(
+                "**/*",
+                lambda r: (
+                    r.continue_()
+                    if (urlparse(r.request.url).hostname or "") in _ALLOWED_HOSTS
+                    or r.request.url.startswith("data:")
+                    else r.abort()
+                ),
+            )
             card.set_content(_card_html(shot, kind, name, _accent(shot)), wait_until="load", timeout=15_000)
             card.evaluate("document.fonts.ready")
             card.screenshot(path=str(out), type="jpeg", quality=82)
@@ -313,7 +327,9 @@ def render_thumbnail(project_id: str, kind: str, name: str) -> bool:
             logger.warning("thumbnail timed out for %s", project_id)
             return False
         if proc.returncode != 0 or not out.is_file():
-            logger.warning("thumbnail failed for %s: %s", project_id, proc.stderr.decode("utf-8", "replace")[-400:])
+            logger.warning(
+                "thumbnail failed for %s: %s", project_id, proc.stderr.decode("utf-8", "replace")[-400:]
+            )
             return False
         data = out.read_bytes()
     from app.services.filesystem import write_bytes

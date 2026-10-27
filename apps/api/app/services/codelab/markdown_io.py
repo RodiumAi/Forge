@@ -123,7 +123,9 @@ def _strip_tags(text: str) -> str:
         if start < 0:
             break
         nxt = text[start + 1 : start + 3]
-        is_tag = nxt[:1].isascii() and nxt[:1].isalpha() or (nxt[:1] == "/" and nxt[1:2].isascii() and nxt[1:2].isalpha())
+        is_tag = (nxt[:1].isascii() and nxt[:1].isalpha()) or (
+            nxt[:1] == "/" and nxt[1:2].isascii() and nxt[1:2].isalpha()
+        )
         if not is_tag:
             out.append(text[pos : start + 1])
             pos = start + 1

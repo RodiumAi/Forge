@@ -91,7 +91,9 @@ export default function App() {
 def test_state_screens_critical_when_written_this_run(project):
     write_file(project, "src/App.tsx", _STATE_APP)
     findings = state_screen_findings(project, {"src/App.tsx"})
-    assert [(f.code, f.severity, f.path) for f in findings] == [("route.state_screens", "critical", "src/App.tsx")]
+    assert [(f.code, f.severity, f.path) for f in findings] == [
+        ("route.state_screens", "critical", "src/App.tsx")
+    ]
     assert "home, library, search" in findings[0].message
 
 

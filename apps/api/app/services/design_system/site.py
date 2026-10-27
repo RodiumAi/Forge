@@ -521,7 +521,7 @@ def brand_site_html(
         f'<!doctype html><html lang="{"fr" if lang == "fr" else "en"}"><head><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width,initial-scale=1">'
         # The page is static: no script may run, whatever ends up in the tokens.
-        '<meta http-equiv="Content-Security-Policy" content="script-src \'none\'; object-src \'none\'; base-uri \'none\'">'
+        "<meta http-equiv=\"Content-Security-Policy\" content=\"script-src 'none'; object-src 'none'; base-uri 'none'\">"
         f"<title>{name} · {labels['guidelines']}</title>"
         f'<meta name="description" content="{description or name}">'
         f"{fonts_link}<style>:root{{{root}}}{_STYLE}</style></head><body>"

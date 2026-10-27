@@ -231,7 +231,9 @@ def test_uploaded_image_is_copied_into_the_project_as_webp(bank, monkeypatch):
 def test_uploaded_image_refuses_unreadable_bytes(bank, monkeypatch):
     client = _client(monkeypatch)
     monkeypatch.setattr(images_mod, "_stored_asset_bytes", lambda *_a: b"not an image")
-    r = client.post(f"/projects/{client.project_id}/images/from-upload", json={"object_id": str(uuid.uuid4())})
+    r = client.post(
+        f"/projects/{client.project_id}/images/from-upload", json={"object_id": str(uuid.uuid4())}
+    )
     assert r.status_code == 422
     assert r.json()["detail"]["code"] == "IMAGE_UNREADABLE"
 

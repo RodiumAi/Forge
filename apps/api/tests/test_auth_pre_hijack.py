@@ -253,7 +253,9 @@ def test_forgot_password_stops_mailing_an_address_silently_past_its_ceiling(monk
     monkeypatch.setattr(auth_mod.mail, "send", lambda msg: sent.append(msg))
 
     answers = [
-        auth_mod.forgot_password(body=ForgotPasswordRequest(email="user@example.com"), request=_request(), db=db)
+        auth_mod.forgot_password(
+            body=ForgotPasswordRequest(email="user@example.com"), request=_request(), db=db
+        )
         for _ in range(8)
     ]
 

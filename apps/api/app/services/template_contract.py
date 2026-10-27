@@ -16,7 +16,9 @@ from pathlib import Path
 ALLOWED_BARE_IMPORTS = frozenset({"react", "react-dom/client", "react-router-dom", "lucide-react"})
 # The one @import a kit may have: its Google Fonts, first line of src/index.css,
 # which is where the agent is told to load fonts too.
-_FONT_IMPORT_RE = re.compile(r"""\A@import url\(["']https://fonts\.googleapis\.com/css2\?[^"')\s]+["']\);[ \t]*\r?\n""")
+_FONT_IMPORT_RE = re.compile(
+    r"""\A@import url\(["']https://fonts\.googleapis\.com/css2\?[^"')\s]+["']\);[ \t]*\r?\n"""
+)
 TOOLCHAIN = {
     "vite": "^5.4.21",
     "@vitejs/plugin-react": "^4.3.4",
@@ -90,7 +92,9 @@ def kit_violations(kit: Path, kind: str = "web") -> list[str]:
         if css.name == "index.css" and css.parent == src:
             text = _FONT_IMPORT_RE.sub("", text, count=1)
         if "@import" in text:
-            problems.append(f"{rel} must not use @import (only the Google Fonts line at the top of src/index.css)")
+            problems.append(
+                f"{rel} must not use @import (only the Google Fonts line at the top of src/index.css)"
+            )
         if _MAX_WIDTH_MEDIA_RE.search(text):
             problems.append(f"{rel} has max-width media queries (write mobile-first min-width)")
     all_tsx = "\n".join(p.read_text(encoding="utf-8") for p in sources)

@@ -947,14 +947,18 @@ def resend_verification(
 
     if body.token:
         rate_subject = auth_tokens.hash_token(body.token)[:32]
-        rate_limit.enforce(request, "verify-resend", limit=3, window_seconds=900, subject=rate_subject, per_ip=True)
+        rate_limit.enforce(
+            request, "verify-resend", limit=3, window_seconds=900, subject=rate_subject, per_ip=True
+        )
         user_id = auth_tokens.lookup_user_id(db, body.token, AuthToken.KIND_EMAIL_VERIFY)
         if user_id is not None:
             user = db.get(User, user_id)
     elif body.email:
         email = body.email.strip().lower()
         rate_subject = email
-        rate_limit.enforce(request, "verify-resend", limit=3, window_seconds=900, subject=rate_subject, per_ip=True)
+        rate_limit.enforce(
+            request, "verify-resend", limit=3, window_seconds=900, subject=rate_subject, per_ip=True
+        )
         user = db.query(User).filter(User.email == email).first()
     else:
         raise HTTPException(status_code=422, detail="email or token is required")
@@ -964,7 +968,9 @@ def resend_verification(
     if (
         user is not None
         and user.email_verified_at is None
-        and rate_limit.allow(request, "verify-resend-address", limit=6, window_seconds=3600, subject=str(user.id))
+        and rate_limit.allow(
+            request, "verify-resend-address", limit=6, window_seconds=3600, subject=str(user.id)
+        )
     ):
         _send_verification_email(db, user, locale)
     return SimpleOkResponse(message=t("verify_email_sent", locale))

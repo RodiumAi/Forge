@@ -690,7 +690,11 @@ async def _targeted_edit(ctx: DeckContext) -> AsyncIterator[Event]:
             result = dataclasses.replace(
                 result,
                 slide=set_image(
-                    result.slide, element_id, uploads.pop(0), str(target.get("alt") or ""), {"source": "upload"}
+                    result.slide,
+                    element_id,
+                    uploads.pop(0),
+                    str(target.get("alt") or ""),
+                    {"source": "upload"},
                 ),
             )
     slide, image_path = await _place_visual(

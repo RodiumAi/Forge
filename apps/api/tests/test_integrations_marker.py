@@ -21,7 +21,9 @@ def test_parse_marker_reads_ids_in_both_languages():
 
 
 def test_block_carries_the_guide_and_the_missing_snippet_rule():
-    block = integ.format_selected_integrations_block("[Integrations: Google Maps Embed (google-maps)]\n\nadd a map")
+    block = integ.format_selected_integrations_block(
+        "[Integrations: Google Maps Embed (google-maps)]\n\nadd a map"
+    )
     assert 'id="google-maps"' in block
     assert "never invent an id" in block
     assert "placeholder" in block
