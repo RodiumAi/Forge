@@ -171,7 +171,11 @@
 .f-pcard.is-new a { color: inherit; }
 .f-pcard.is-new:hover .f-pthumb { color: var(--f-accent-text); border-color: var(--f-orange); }
 .f-pcard.is-new .f-pthumb div { display: grid; justify-items: center; gap: 10px; font-weight: 600; }
-.f-plist { border-radius: 20px; border: 1px solid var(--f-line); background: var(--f-surface); overflow: hidden; }
+.f-plist { border-radius: 20px; border: 1px solid var(--f-line); background: var(--f-surface); }
+/* No overflow clip on the list: a row menu opens below its row. The end rows keep the corners. */
+.f-plist > .f-prow:first-child { border-radius: 19px 19px 0 0; }
+.f-plist > .f-prow:last-child { border-radius: 0 0 19px 19px; }
+.f-plist > .f-prow:first-child:last-child { border-radius: 19px; }
 .f-prow {
   display: grid; grid-template-columns: 74px minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) 140px 88px; align-items: center; gap: 16px;
   padding: 10px 16px; border-bottom: 1px solid var(--f-line); font-size: 14px; position: relative;
@@ -193,6 +197,8 @@
   .f-prow { grid-template-columns: 64px minmax(0, 1fr) auto; }
   .f-prow > :nth-child(3), .f-prow > :nth-child(4), .f-prow > :nth-child(5) { display: none; }
   .f-prow.head { display: none; }
+  .f-plist > .f-prow.head + .f-prow { border-radius: 19px 19px 0 0; }
+  .f-plist > .f-prow.head + .f-prow:last-child { border-radius: 19px; }
   .f-pgrid { grid-template-columns: minmax(0, 1fr); }
   .f-toolbar .f-chip-row { flex-wrap: nowrap; overflow-x: auto; width: 100%; scrollbar-width: none; padding-bottom: 2px; }
   .f-toolbar .f-search { flex: 1 1 100%; min-width: 0; }
