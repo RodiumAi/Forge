@@ -129,7 +129,7 @@ def test_brand_and_icon_survive_the_round_trip_and_a_logo_edit():
 def test_markdown_guide_follows_the_guidelines_outline():
     md = brand_guide_md(_document(), "fr")
     assert md.startswith("# Verdant: Charte graphique")
-    assert "*Money that grows with the season.*" in md and "https://verdant.example" in md
+    assert "*Money that grows with the season.*" in md and re.search(r"https://verdant\.example", md)
     headings = re.findall(r"^## \d+\. (.+)$", md, flags=re.M)
     for title in ("Le logo", "L'icône d'application", "Couleurs", "Typographie", "Ton de voix", "Fichiers"):
         assert title in headings

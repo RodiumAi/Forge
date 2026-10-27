@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import uuid
 from pathlib import Path
 
@@ -161,7 +162,7 @@ def test_renderings():
     document, _ = build_document(Spec.model_validate(SPEC))
     md = design_md(document)
     assert "- `--accent`: #1f7a4d" in md and "- Display font: Fraunces" in md
-    assert "fonts.googleapis.com" in md and "```css" in md
+    assert re.search(r"https://fonts\.googleapis\.com/", md) and "```css" in md
     # Only the CSS block declares variables, so a parser reading "--x: value" gets real values.
     block = md.split("```css", 1)[1]
     head = md.split("```css", 1)[0]

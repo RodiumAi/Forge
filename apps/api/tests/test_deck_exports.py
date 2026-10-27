@@ -216,7 +216,7 @@ def test_single_file_html_is_self_contained(deck_project):
     src = load_deck(deck_project, include_notes=True)
     html = single_file_html(deck_project, src, FAKE_BUNDLE, title="Deck", lang="en", badge=False, notes=False)
     # One inline script, allowed by its hash; nothing loaded from a server.
-    scripts = re.findall(r"<script>(.*?)</script>", html, re.S)
+    scripts = re.findall(r"<script>(.*?)</script>", html, re.S | re.I)
     assert len(scripts) == 1
     digest = base64.b64encode(hashlib.sha256(scripts[0].encode("utf-8")).digest()).decode()
     assert f"'sha256-{digest}'" in htmllib.unescape(html)
