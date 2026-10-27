@@ -1,4 +1,4 @@
-"""The chat flows of a codelab project (contract: docs/plans/codelab-ai-events.md).
+"""The chat flows of a codelab project (contract: docs/contracts/codelab-ai-events.md).
 
 Picked by ``codelab_stream``:
 

@@ -1,6 +1,6 @@
 # Slides templates: style guide
 
-Specification of the 36 Forge Design slides templates (plan section 5.8). The six marked **built** ship in `data/templates/`; the 30 others are specified here for wave 2 (agent F). Sources and licences: [slides-sources.md](./slides-sources.md).
+Specification of the 36 Forge slides kits, all shipped in `data/templates/`. The general starter kit contract and the checks run by `apps/api/tests/test_template_slides.py` are in [TEMPLATES.md](../TEMPLATES.md). Sources and licences: [slides-sources.md](./slides-sources.md). The build scripts are in `apps/api/scripts/slides_kits/`.
 
 ## 1. Kit format
 
@@ -8,17 +8,19 @@ Specification of the 36 Forge Design slides templates (plan section 5.8). The si
 data/templates/slides-<name>/
 ├── template.json      kind "slides", bilingual title/description/bootHint, palette, fonts, transitionPreset, layouts
 ├── DESIGN.md          charter: tokens, fonts, layouts, transitions, imagery, credits, do/don't
-├── deck.json          contract deck.schema.json (16:9 by default)
+├── deck.json          contract deck.schema.json (16:9, 1920 x 1080)
 ├── slides/s1.json ... one file per slide, contract slide.schema.json
 ├── notes/s1.md ...    speaker notes, French, two or three sentences
-├── public/images/     WebP only, 1280 to 1600 px on the long side
-└── preview.html       static 480 x 300 thumbnail, no script, no remote URL (inline data: image allowed)
+├── public/images/     WebP only, 1280 px on the long side in the current kits
+├── preview.html       static mockup laid out at 480 x 300, no script, no remote URL (inline data: images allowed)
+└── preview.png        gallery card: the top 480 x 270 of preview.html at 2x (scripts/render_template_previews.py)
 ```
 
 - Id: `slides-<name>`, matching `^[a-z0-9][a-z0-9-]{1,62}$`.
-- 8 to 12 slides. Each of the 12 layouts below appears at least once; `template.json` maps every layout to its example slide: `"layouts": { "title": "s1", "section": "s2", ... }`. The deck generator (agent C) and the editor "add slide" menu reuse these slides as layout prototypes.
+- 8 to 12 slides. Each of the 12 layouts below appears at least once; `template.json` maps every layout to its example slide: `"layouts": { "title": "s1", "section": "s2", ... }`. The current kits have exactly 12 slides, one per layout.
+- The AI and the editor's "add slide" menu do not read these example slides: they use their own layout list (`apps/api/app/services/deck_ai/layouts.py`, mirrored by `apps/web/components/deck-editor/layouts.ts`), which names two layouts differently (`key-numbers`, `thanks`).
 - Example content in French, realistic and specific (names, figures, dates). Contact details use the reserved `.example` domain.
-- Every color is a theme token (`--bg`, `--accent`...). Every image is credited (`credit.source`, `author`, `url`). Every icon is a lucide name.
+- Every color is a theme token (`--bg`, `--accent`...). Every image, background images included, is credited (`credit.source`, `author`, `url`). Every icon is a lucide name.
 - Kit under 3 MB. No U+2014 long dash anywhere.
 - `template.json` example:
 
@@ -76,7 +78,9 @@ Safe margins 140 px left and right. Content slides share a header: accent bar (8
 | `timeline` | 4 milestones: date, title, one line | line x 140 y 598 w 1640 h 4 `--border`; dots 32 px `--accent`; date 34 px above, title 30 px and line 24 px below. |
 | `thank-you` | closing title, subtitle, 2 contact lines | gradient `--bg` to `--surface` or photo with overlay; title 112 to 180 px at y 300; contacts with lucide icons at y 730 and 810. |
 
-Templates may add extra layouts (`agenda`, `big-number`, `comparison`, `code`, `gallery`, `carousel-cover`...) on top of the 12.
+This is the base geometry of `apps/api/scripts/slides_kits/kitlib.py`. Many kits change the decoration on top of it (cover variant, header accent, background pattern, card or circle treatments) through `kitvariants.py` or `kitstyle_f2.py`, keeping the same element ids.
+
+The deck contract accepts other layout names (lowercase letters, digits and hyphens), so a kit may add extra layouts on top of the 12; none of the current kits does.
 
 Text sizes never go under 22 px on the 1920 canvas; split a slide instead of shrinking.
 
@@ -98,9 +102,9 @@ Columns: colors in order `--bg` / `--surface` / `--fg` / `--muted` / `--accent` 
 
 | Id | Title fr / en | Colors | Fonts | Hero, preset | Pixabay search terms |
 |---|---|---|---|---|---|
-| `slides-pitch-startup` **built** | Pitch deck startup / Startup pitch deck | #0B1020 / #151C33 / #F4F6FB / #9AA3BF / #4F7CFF / #22D3A6 / #283152 | Sora / Inter / JetBrains Mono | full, dynamic | abstract blue technology network, city night skyline, smartphone app hand, fintech mobile payment |
+| `slides-pitch-startup` | Pitch deck startup / Startup pitch deck | #0B1020 / #151C33 / #F4F6FB / #9AA3BF / #4F7CFF / #22D3A6 / #283152 | Sora / Inter / JetBrains Mono | full, dynamic | abstract blue technology network, city night skyline, smartphone app hand, fintech mobile payment |
 | `slides-fundraising` | Levée de fonds / Fundraising round | #0E0F12 / #1A1C22 / #F5F5F2 / #9C9FA8 / #C9F24D / #6EE7F9 / #2B2E36 | Unbounded / Manrope / JetBrains Mono | full, dynamic | growth abstract dark, handshake business, rocket launch, coins stack |
-| `slides-quarterly-review` **built** | Revue trimestrielle / Quarterly review | #F7F8FA / #FFFFFF / #111827 / #5B6474 / #2457D6 / #F59E0B / #DDE2EA | Plus Jakarta Sans / Inter / IBM Plex Mono | split, sober | modern office building glass, business meeting office table, white architecture abstract, warehouse logistics |
+| `slides-quarterly-review` | Revue trimestrielle / Quarterly review | #F7F8FA / #FFFFFF / #111827 / #5B6474 / #2457D6 / #F59E0B / #DDE2EA | Plus Jakarta Sans / Inter / IBM Plex Mono | split, sober | modern office building glass, business meeting office table, white architecture abstract, warehouse logistics |
 | `slides-annual-report` | Rapport annuel / Annual report | #FBFAF7 / #F1EDE4 / #1F1D1A / #6A655C / #1E5B4F / #C08A2E / #DDD6C8 | Newsreader / Public Sans / IBM Plex Mono | full, elegant | aerial landscape fields, city sunrise, factory modern, people working together from behind |
 | `slides-sales-proposal` | Proposition commerciale / Sales proposal | #FFFFFF / #F3F6FB / #0F172A / #5A6578 / #0F766E / #F97316 / #E2E8F0 | Outfit / Inter / JetBrains Mono | split, sober | handshake meeting, contract signing desk, team workshop sticky notes, customer service |
 | `slides-strategic-plan` | Plan stratégique / Strategic plan | #10141C / #1A2030 / #EEF1F6 / #95A0B4 / #F2A93B / #5EA0FF / #2A3346 | Archivo / IBM Plex Sans / IBM Plex Mono | full, elegant | mountain summit path, chess strategy, compass map, road horizon |
@@ -122,7 +126,7 @@ Columns: colors in order `--bg` / `--surface` / `--fg` / `--muted` / `--accent` 
 
 | Id | Title fr / en | Colors | Fonts | Hero, preset | Pixabay search terms |
 |---|---|---|---|---|---|
-| `slides-course-lesson` **built** | Cours / Lesson | #FFF8EE / #FBEBD4 / #2B2118 / #6E5E4E / #2F7D4F / #E8833A / #EAD3B4 | Fraunces / Nunito Sans / JetBrains Mono | split, sober | green leaf macro, forest sunlight trees, seedling plant soil, microscope laboratory |
+| `slides-course-lesson` | Cours / Lesson | #FFF8EE / #FBEBD4 / #2B2118 / #6E5E4E / #2F7D4F / #E8833A / #EAD3B4 | Fraunces / Nunito Sans / JetBrains Mono | split, sober | green leaf macro, forest sunlight trees, seedling plant soil, microscope laboratory |
 | `slides-thesis-defense` | Soutenance / Thesis defense | #FFFFFF / #F2F4F7 / #101828 / #556070 / #1D3E8C / #B42318 / #D9DEE6 | Source Serif 4 / IBM Plex Sans / IBM Plex Mono | split, sober | university library, laboratory research, books stack, graduation |
 | `slides-school-presentation` | Exposé scolaire / School presentation | #FFFBEA / #FFF0B3 / #1E2A3A / #586474 / #FF6B35 / #2EC4B6 / #F2DE8C | Fredoka / Nunito / Space Mono | full, dynamic | planet earth space, volcano, animals wildlife, world map |
 | `slides-workshop` | Atelier / Workshop | #F4F1FF / #E7E0FF / #1F1937 / #625A80 / #6D28D9 / #F59E0B / #D7CCF7 | Lexend / Lexend / JetBrains Mono | split, dynamic | workshop sticky notes, hands brainstorming, whiteboard markers, coffee break table |
@@ -133,7 +137,7 @@ Columns: colors in order `--bg` / `--surface` / `--fg` / `--muted` / `--accent` 
 
 | Id | Title fr / en | Colors | Fonts | Hero, preset | Pixabay search terms |
 |---|---|---|---|---|---|
-| `slides-product-demo` **built** | Démo produit / Product demo | #090D14 / #111826 / #E6EDF7 / #8B98AD / #22D3EE / #A78BFA / #1F2A3C | Space Grotesk / Inter / JetBrains Mono | full, dynamic | laptop code dark, server data center, circuit board macro, fiber optic network |
+| `slides-product-demo` | Démo produit / Product demo | #090D14 / #111826 / #E6EDF7 / #8B98AD / #22D3EE / #A78BFA / #1F2A3C | Space Grotesk / Inter / JetBrains Mono | full, dynamic | laptop code dark, server data center, circuit board macro, fiber optic network |
 | `slides-architecture` | Architecture technique / Architecture overview | #0F1419 / #182029 / #E6E1CF / #9A9583 / #FFB454 / #59C2FF / #253040 | Space Grotesk / IBM Plex Sans / JetBrains Mono | full, sober | server rack, network cables, building blueprint, bridge structure |
 | `slides-sprint-review` | Revue de sprint / Sprint review | #F6F8FA / #FFFFFF / #1F2328 / #59636E / #8250DF / #1A7F37 / #D1D9E0 | Figtree / Inter / JetBrains Mono | split, sober | kanban board sticky notes, team standup, laptop desk, running track |
 | `slides-dev-keynote` | Keynote développeurs / Developer keynote | #282A36 / #343746 / #F8F8F2 / #A4A8BE / #FF79C6 / #50FA7B / #44475A | Unbounded / Inter / JetBrains Mono | full, dynamic | conference stage lights, code screen, audience hall, neon lights |
@@ -144,7 +148,7 @@ Columns: colors in order `--bg` / `--surface` / `--fg` / `--muted` / `--accent` 
 
 | Id | Title fr / en | Colors | Fonts | Hero, preset | Pixabay search terms |
 |---|---|---|---|---|---|
-| `slides-portfolio` **built** | Portfolio / Portfolio | #F4EFE8 / #EAE1D4 / #1C1A17 / #675E55 / #A84B25 / #5B6B4E / #D6CAB9 | Playfair Display / DM Sans / IBM Plex Mono | split, elegant | interior design living room, ceramic vase still life, minimal architecture concrete, design studio desk |
+| `slides-portfolio` | Portfolio / Portfolio | #F4EFE8 / #EAE1D4 / #1C1A17 / #675E55 / #A84B25 / #5B6B4E / #D6CAB9 | Playfair Display / DM Sans / IBM Plex Mono | split, elegant | interior design living room, ceramic vase still life, minimal architecture concrete, design studio desk |
 | `slides-visual-resume` | CV visuel / Visual resume | #FFFFFF / #F4F4F5 / #18181B / #61616B / #2563EB / #F43F5E / #E4E4E7 | Urbanist / Urbanist / JetBrains Mono | split, elegant | workspace desk minimal, city walk, notebook coffee, mountain hike |
 | `slides-wedding-event` | Mariage ou événement / Wedding or event | #FBF7F2 / #F3EAE0 / #3A2E2A / #8A7A70 / #B07D62 / #8DA399 / #E8DACB | Cormorant Garamond / Lora / IBM Plex Mono | full, elegant | wedding flowers table, rings bouquet, garden party lights, champagne glasses |
 | `slides-travel` | Voyage / Travel journal | #F5F1E8 / #EAE2D2 / #23302A / #687466 / #D9822B / #2F6F8F / #D9CFBC | Young Serif / Nunito Sans / Space Mono | full, dynamic | mountain lake, beach sunset, old town street, road trip van |
@@ -156,14 +160,14 @@ Columns: colors in order `--bg` / `--surface` / `--fg` / `--muted` / `--accent` 
 | Id | Title fr / en | Colors | Fonts | Hero, preset | Pixabay search terms |
 |---|---|---|---|---|---|
 | `slides-minimal-light` | Minimal clair / Minimal light | #FFFFFF / #F5F5F5 / #111111 / #6B6B6B / #111111 / #9A9A9A / #E5E5E5 | Instrument Sans / Instrument Sans / JetBrains Mono | split, elegant | minimal white wall shadow, paper texture, white architecture |
-| `slides-minimal-dark` **built** | Minimal sombre / Minimal dark | #0A0A0A / #141414 / #F2F2F2 / #8F8F8F / #E8C468 / #BDBDBD / #2A2A2A | Instrument Serif / Instrument Sans / JetBrains Mono | full, elegant | black and white architecture, minimal shadow light, minimal horizon sea, sand dune texture |
+| `slides-minimal-dark` | Minimal sombre / Minimal dark | #0A0A0A / #141414 / #F2F2F2 / #8F8F8F / #E8C468 / #BDBDBD / #2A2A2A | Instrument Serif / Instrument Sans / JetBrains Mono | full, elegant | black and white architecture, minimal shadow light, minimal horizon sea, sand dune texture |
 | `slides-editorial` | Éditorial / Editorial | #F7F3EC / #EFE8DC / #141414 / #5C574F / #B3261E / #141414 / #DDD4C4 | EB Garamond / Newsreader / IBM Plex Mono | split, elegant | newspaper texture, reading room, ink pen paper, black and white portrait from behind |
 | `slides-monochrome` | Monochrome / Monochrome | #1E2A44 / #26365A / #F1F4FA / #A9B6D1 / #FFFFFF / #7F95C4 / #34466E | Archivo / Archivo / IBM Plex Mono | full, sober | blue monochrome architecture, ocean waves blue, blue sky minimal |
 
 ## 6. Imagery rules
 
 - Pixabay only, `image_type=photo`, `safesearch=true`; prefer photos without recognizable faces or brands (no logos on products, people from behind or at a distance).
-- 2 to 4 photos per kit, 1280 to 1600 px on the long side, WebP quality about 80; the whole kit stays under 3 MB.
+- 2 to 4 photos per kit, 1280 px on the long side in the current kits (the size the Pixabay API returns, see [slides-sources.md](./slides-sources.md)), WebP quality about 80; the whole kit stays under 3 MB.
 - Full-bleed photos always sit under a `--bg` overlay (0.6 to 0.85) so text keeps AA contrast.
 - Credit every image: `{ "source": "pixabay", "author": "<user>", "url": "<pixabay page>" }`, and list files with authors in `DESIGN.md ## Imagery`.
 - Team slides use initials avatars, not stock portraits.

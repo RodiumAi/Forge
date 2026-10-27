@@ -3,7 +3,7 @@
  *
  * The document routes use ETags (optimistic concurrency), which `api()` does
  * not expose, so they go through `authFetch`; everything else uses `api()`.
- * Contract of the routes: `docs/plans/design-system-ai-events.md`.
+ * Contract of the routes: `docs/contracts/design-system-ai-events.md`.
  */
 
 import { ApiError, api, apiBase, getToken, readApiError } from "@/lib/api";

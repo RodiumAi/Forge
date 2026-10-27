@@ -1,42 +1,71 @@
 name: Template proposal
-description: Propose a new starter kit for the gallery. See docs/TEMPLATES.md. (Français accepté / French is welcome)
+description: Propose a new starter kit for the gallery (site, app, slides, codelab or design system). See docs/TEMPLATES.md. (Français accepté / French is welcome)
 labels: ["template"]
 body:
+  - type: markdown
+    attributes:
+      value: |
+        Each kit lives in `data/templates/<id>/` and declares its `kind` in `template.json`. Required files per kind:
+
+        | Kind | Required files |
+        | --- | --- |
+        | Site / App (`web`, `mobile`) | `template.json`, `DESIGN.md`, `README.md`, `index.html`, `package.json`, `preview.html`, `src/main.tsx`, `src/App.tsx`, `src/index.css`, `src/styles/*.css`, `src/components/` (or `src/screens/`) |
+        | Slides (`slides`) | `template.json`, `DESIGN.md`, `deck.json`, `slides/*.json`, `notes/*.md`, `preview.html`, `public/images/` |
+        | Codelab (`codelab`) | `template.json`, `DESIGN.md`, `codelab.json`, `steps/*.md`, `preview.html`, optional `files/` (starter, solution) |
+        | Design system (`design_system`) | `template.json`, `DESIGN.md`, `design-system.json`, `preview.html`, the logo it points to |
+
+        Full contract in `docs/TEMPLATES.md`. Slides kits also follow `docs/templates/slides-style-guide.md`.
   - type: input
     id: name
     attributes:
       label: Kit name and id
       description: "Proposed id must match ^[a-z0-9][a-z0-9-]{1,62}$"
-      placeholder: "aurora-ai — Aurora AI"
+      placeholder: "aurora-ai: Aurora AI"
     validations:
       required: true
   - type: dropdown
     id: kind
     attributes:
       label: Kind
-      description: "Gallery filter + project.platform on fork. See docs/TEMPLATES.md (`kind`)."
+      description: The `kind` field of template.json.
       options:
-        - web
-        - mobile
-      default: 0
+        - Site (web)
+        - App (mobile)
+        - Slides (slides)
+        - Codelab (codelab)
+        - Design system (design_system)
     validations:
       required: true
   - type: textarea
     id: universe
     attributes:
       label: Universe
-      description: What is this kit for? (SaaS landing, portfolio, e-commerce, mobile app shell…)
+      description: What is this kit for? (SaaS landing, portfolio, mobile app shell, pitch deck, workshop, brand identity…)
     validations:
       required: true
   - type: textarea
     id: style
     attributes:
       label: Visual style
-      description: Palette, tone, signature elements (glassmorphism, brutalist, editorial…).
+      description: Palette, typography, tone, signature elements (glassmorphism, brutalist, editorial…).
     validations:
       required: true
+  - type: textarea
+    id: content
+    attributes:
+      label: Content outline
+      description: "Site or app: pages or screens. Slides: the slides and their layouts. Codelab: the steps and the starter or solution files. Design system: tokens and components."
   - type: textarea
     id: inspiration
     attributes:
       label: Inspiration links
-      description: Sites, dribbble shots, existing kits…
+      description: Sites, design shots, existing kits… Images must be free to reuse (for slides, see docs/templates/slides-sources.md).
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you build
+      options:
+        - label: I read docs/TEMPLATES.md and the required files for this kind.
+          required: true
+        - label: The title and description will be provided in English and French.
+          required: true

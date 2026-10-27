@@ -2,6 +2,19 @@ name: Feature request
 description: Suggest an improvement. (Français accepté / French is welcome)
 labels: ["enhancement"]
 body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Project kind
+      description: Which kind of project is this about?
+      options:
+        - Site / App
+        - Slides
+        - Codelab
+        - Design system
+        - Not specific
+    validations:
+      required: true
   - type: textarea
     id: problem
     attributes:

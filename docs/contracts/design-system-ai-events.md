@@ -1,6 +1,6 @@
 # Design system AI: request fields and SSE events
 
-Contract delivered by wave 2 agent H (`apps/api/app/services/design_system/`). The design system editor (`apps/web/components/design-system/`) builds on it. Same transport and conventions as the slides one (`docs/plans/deck-ai-events.md`).
+Served by `apps/api/app/services/design_system/`. The design system editor (`apps/web/components/design-system/`) builds on it. Same transport and conventions as the slides one ([deck-ai-events.md](deck-ai-events.md)).
 
 ## Request (backward compatible)
 

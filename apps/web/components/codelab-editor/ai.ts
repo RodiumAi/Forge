@@ -1,6 +1,6 @@
 /**
  * Codelab chat: the request body and a pure reducer over the SSE events of
- * `docs/plans/codelab-ai-events.md`. The reducer returns the chat panel state
+ * `docs/contracts/codelab-ai-events.md`. The reducer returns the chat panel state
  * plus effects for the editor (streamed text, written steps, new codelab.json).
  */
 

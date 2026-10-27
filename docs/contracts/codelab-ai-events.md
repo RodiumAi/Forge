@@ -1,6 +1,6 @@
 # Codelab AI: request fields and SSE events
 
-Contract delivered by wave 2 agent G (`apps/api/app/services/codelab/`). It mirrors the slides contract (`deck-ai-events.md`); the codelab editor (`apps/web/components/codelab-editor/`) builds on it.
+Served by `apps/api/app/services/codelab/`. It mirrors the slides contract (`deck-ai-events.md`); the codelab editor (`apps/web/components/codelab-editor/`) builds on it.
 
 ## Request (backward compatible)
 
@@ -91,7 +91,7 @@ step codelab_files, `file_write` per file (under `files/starter/` or `files/solu
 
 ## Routes beside the chat
 
-- `GET/PUT /projects/{id}/codelab`, `GET/PUT /projects/{id}/steps/{sid}` (wave 0, ETag + If-Match).
+- `GET/PUT /projects/{id}/codelab`, `GET/PUT /projects/{id}/steps/{sid}` (ETag + If-Match).
 - `GET /projects/{id}/codelab/files`, `POST` (multipart `file`, optional `folder`), `DELETE ?path=files/...`, `GET /files/raw?path=` (always a download).
 - `POST /projects/{id}/codelab/import/claat` `{"markdown": "..."}` replaces the steps (history checkpoint first).
 - `GET /projects/{id}/codelab/export/markdown`, `/export/sources` (ZIP of `files/`), `/export/pdf`: Starter and up (PDF needs `export_pdf`), open source unrestricted.

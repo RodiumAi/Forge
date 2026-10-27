@@ -1,6 +1,6 @@
 # Slides templates: open sources and licences
 
-Research for the Forge Design slides templates (plan section 5.8). We write our own templates in the Forge JSON format (`deck.json`, `slides/*.json`); the sources below are inspiration or MIT/CC0 bases. Nothing is copied from Canva, Slidesgo, Envato, SlideModel, Beautiful.ai or any source whose licence forbids redistribution in another product.
+Sources behind the Forge slides kits. We write our own templates in the Forge JSON format (`deck.json`, `slides/*.json`); the sources below are inspiration or MIT/CC0 bases. Nothing is copied from Canva, Slidesgo, Envato, SlideModel, Beautiful.ai or any source whose licence forbids redistribution in another product.
 
 Licences were checked on 2026-10-24 on the source repository itself (GitHub licence file through `gh api repos/<repo>/license`, or the licence file read directly). A repository without a licence file is "all rights reserved" by default: listed only to say it is excluded.
 
@@ -66,9 +66,8 @@ Licences were checked on 2026-10-24 on the source repository itself (GitHub lice
 | slidev-theme-penguin, slidev-theme-dracula (jd-solanki), slidev-theme-unicorn, slidev-theme-light-icons, slidev-theme-purplin, slidev-theme-takahashi | No licence file in the repository: all rights reserved. Look only, copy nothing. |
 | slidev-theme-meetup | CC BY-SA 4.0: share-alike would force our derived templates under the same licence. |
 | rnd195/my-marp-themes | Mixed licences per file (NOASSERTION): only the files marked MIT could be used, check each one. |
-| Unsplash | Dropped by the plan (section 4.3) in favor of Pixabay. |
+| Unsplash | Not used for slides kits: their photos come from Pixabay only. |
 
-## Open questions
+## Image size
 
-- Pixabay: the API returns 1280 px images (`largeImageURL`) without full API access. Full-bleed backgrounds are upscaled to 1920 px. Request full API access (`fullHDURL`) if the quality is not enough.
-- Pixabay standalone rule: shipping photos inside forkable templates is a use "with creative effort applied", but a legal check before the public launch would remove any doubt.
+The Pixabay API returns 1280 px images (`largeImageURL`) without full API access, so full-bleed backgrounds are scaled up to the 1920 px canvas. Full API access (`fullHDURL`) would give larger files.
