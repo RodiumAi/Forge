@@ -301,6 +301,8 @@ export function DeckChat(props: DeckChatProps) {
   );
   const cutDocs = fittedDocs.filter((doc) => doc.truncated);
   const canImport = !!client && !readOnly;
+  // Attachment previews are object URLs made here from the picked file; nothing else is shown.
+  const safePreviewSrc = (src: string | undefined) => (src && src.startsWith("blob:") ? src : undefined);
 
   const attach = (files: File[]) => {
     if (!canImport || !files.length) return;
@@ -675,7 +677,7 @@ export function DeckChat(props: DeckChatProps) {
               }
               return (
                 <li key={a.key} className={`de-attachment${a.failed ? " is-failed" : ""}`} title={a.failed ? t("attachFailed") : a.name}>
-                  <img src={a.preview} alt={a.name} />
+                  <img src={safePreviewSrc(a.preview)} alt={a.name} />
                   {busyItem ? (
                     <span className="de-attachment-busy">
                       <Loader2 size={14} className="de-spin" aria-hidden />
