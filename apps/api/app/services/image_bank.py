@@ -78,11 +78,16 @@ Orientation = Literal["all", "horizontal", "vertical"]
 _KEY_PARAM_RE = re.compile(r"([?&]key=)[^&\s\"']+")
 
 
+def _is_pixabay_url(value: str) -> bool:
+    host = (urlparse(value).hostname or "").lower()
+    return host == "pixabay.com" or host.endswith(".pixabay.com")
+
+
 class _RedactPixabayKey(logging.Filter):
     """httpx logs every request URL at INFO, and Pixabay wants the key in it."""
 
     def filter(self, record: logging.LogRecord) -> bool:
-        if isinstance(record.args, tuple) and any("pixabay.com" in str(arg) for arg in record.args):
+        if isinstance(record.args, tuple) and any(_is_pixabay_url(str(arg)) for arg in record.args):
             record.args = tuple(_KEY_PARAM_RE.sub(r"\1***", str(arg)) for arg in record.args)
         return True
 

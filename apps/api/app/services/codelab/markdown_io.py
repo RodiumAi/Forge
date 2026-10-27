@@ -40,7 +40,7 @@ from app.services.codelab.store import slugify, step_filename, unique_step_id
 MAX_IMPORT_CHARS = 500_000
 MAX_STEPS = 200
 
-_META_RE = re.compile(r"^([A-Za-z][A-Za-z ]{0,30}):\s*(.*)$")
+_META_RE = re.compile(r"^([A-Za-z][A-Za-z ]{0,30}):(.*)$")
 _DURATION_RE = re.compile(r"^\s*duration:\s*([0-9:.]+)\s*$", re.I)
 _FENCE_RE = re.compile(r"^\s{0,3}(`{3,}|~{3,})(.*)$")
 # The HTML left in a claat export is handled by the scanners below rather than
@@ -49,7 +49,9 @@ _FENCE_RE = re.compile(r"^\s{0,3}(`{3,}|~{3,})(.*)$")
 _ASIDE_OPEN_RE = re.compile(r'<aside\s+class="?(positive|negative|special|warning)"?\s*>', re.I)
 _ASIDE_CLOSE_RE = re.compile(r"</aside>", re.I)
 _BUTTON_OPEN_RE = re.compile(r"<button\b", re.I)
-_BUTTON_LINK_RE = re.compile(r"\s*(\[[^\]\n]{0,500}\]\([^)\n]{0,2000}\))\s*</button>", re.I)
+_BUTTON_LINK_RE = re.compile(
+    r"[ \t\n]{0,40}(\[[^\]\n]{0,500}\]\([^)\n]{0,2000}\))[ \t\n]{0,40}</button>", re.I
+)
 _IMG_OPEN_RE = re.compile(r"<img\b", re.I)
 _IMG_SRC_RE = re.compile(r'\bsrc="([^"]+)"', re.I)
 _IMG_ALT_RE = re.compile(r'\balt="([^"]*)"', re.I)
@@ -233,7 +235,7 @@ def _convert_body(body: str) -> str:
             skip_until = j - 1
             continue
         # Headings inside a step move up one level (the step title is the #).
-        heading = re.match(r"^(#{3,6})\s+(.*)$", line)
+        heading = re.match(r"^(#{3,6})[ \t]+(\S.*)$", line)
         if heading:
             line = f"{heading.group(1)[1:]} {heading.group(2)}"
         out.append(html.unescape(_strip_tags(line)) if "<" in line else line)
@@ -298,7 +300,7 @@ def parse_claat(markdown: str) -> ImportedCodelab:
         )
     if len(starts) > MAX_STEPS:
         result.warnings.append(f"Only the first {MAX_STEPS} steps were imported.")
-    if re.search(r"!\[[^\]]*\]\((?!https?://)(?!public/)[^)]+\)", text):
+    if re.search(r"!\[[^\]\n]{0,500}\]\((?!https?://)(?!public/)[^)\n]{1,2000}\)", text):
         result.warnings.append("Relative images were kept as written: upload them to public/images/.")
     return result
 

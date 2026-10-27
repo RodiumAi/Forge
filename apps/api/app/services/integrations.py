@@ -270,7 +270,9 @@ def embed_hosts(meta: IntegrationMeta) -> tuple[str, ...]:
 
 # Line the composer puts at the top of a message when the user picked
 # integrations from the + menu: "[Integrations: Google Maps Embed (google-maps)]".
-INTEGRATIONS_MARKER_RE = re.compile(r"\[(?:Integrations|Intégrations)\s*:\s*([^\]]*)\]", re.I)
+INTEGRATIONS_MARKER_RE = re.compile(
+    r"\[(?:Integrations|Intégrations)[ \t]{0,8}:[ \t]{0,8}([^\]\n]{0,2000})\]", re.I
+)
 _MARKER_ID_RE = re.compile(r"\(([a-z0-9][a-z0-9-]{1,62})\)")
 _GUIDE_LIMIT = 6000
 
