@@ -42,6 +42,7 @@ export function Glyph({ name, size = "md", className, style, label, strokeWidth 
       aria-hidden={label ? undefined : true}
       focusable="false"
       // Static path markup from glyph-paths.ts, never user input.
+      // nosemgrep: rodiumai-dangerous-innerhtml-without-sanitize-import, typescript.react.security.audit.react-dangerouslysetinnerhtml.react-dangerouslysetinnerhtml
       dangerouslySetInnerHTML={{ __html: GLYPH_PATHS[name] ?? GLYPH_PATHS.file }}
     />
   );
