@@ -207,18 +207,128 @@ async function zipText(bytes: Uint8Array, entries: Map<string, ZipEntry>, name: 
   return new TextDecoder("utf-8").decode(await zipRead(bytes, entry));
 }
 
-function parseXml(text: string): Document | null {
-  const doc = new DOMParser().parseFromString(text, "application/xml");
-  return doc.getElementsByTagName("parsererror").length ? null : doc;
+/** A parsed XML element: only what the slide reader needs. */
+type XmlNode = {
+  localName: string;
+  namespaceURI: string | null;
+  attributes: Map<string, string>;
+  children: XmlNode[];
+  /** Text directly inside the element, entities decoded. */
+  text: string;
+};
+
+const XML_ENTITIES: Record<string, string> = { lt: "<", gt: ">", amp: "&", quot: '"', apos: "'" };
+
+function decodeXmlEntities(text: string): string {
+  return text.replace(/&(#x[0-9a-fA-F]{1,6}|#[0-9]{1,7}|[a-zA-Z]{2,4});/g, (whole, ref: string) => {
+    if (ref[0] === "#") {
+      const code = ref[1] === "x" ? parseInt(ref.slice(2), 16) : parseInt(ref.slice(1), 10);
+      return code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : whole;
+    }
+    return XML_ENTITIES[ref] ?? whole;
+  });
+}
+
+function parseAttributes(source: string): Map<string, string> {
+  const out = new Map<string, string>();
+  let i = 0;
+  while (i < source.length) {
+    while (i < source.length && /\s/.test(source[i])) i++;
+    const eq = source.indexOf("=", i);
+    if (eq < 0) break;
+    const name = source.slice(i, eq).trim();
+    let j = eq + 1;
+    while (j < source.length && /\s/.test(source[j])) j++;
+    const quote = source[j];
+    if (quote !== '"' && quote !== "'") break;
+    const end = source.indexOf(quote, j + 1);
+    if (end < 0) break;
+    if (name) out.set(name, decodeXmlEntities(source.slice(j + 1, end)));
+    i = end + 1;
+  }
+  return out;
+}
+
+/**
+ * Reads an Office XML part into a light tree. Office parts are plain, well formed XML,
+ * so declarations, comments and doctypes are skipped and nothing is ever fetched or expanded.
+ * Returns null when the tags do not match.
+ */
+function parseXml(text: string): XmlNode | null {
+  const root: XmlNode = { localName: "#document", namespaceURI: null, attributes: new Map(), children: [], text: "" };
+  const stack: { node: XmlNode; name: string; scope: Map<string, string> }[] = [{ node: root, name: "", scope: new Map() }];
+  let i = 0;
+  while (i < text.length) {
+    const lt = text.indexOf("<", i);
+    const top = stack[stack.length - 1];
+    if (lt < 0) {
+      top.node.text += decodeXmlEntities(text.slice(i));
+      break;
+    }
+    if (lt > i) top.node.text += decodeXmlEntities(text.slice(i, lt));
+    if (text.startsWith("<![CDATA[", lt)) {
+      const end = text.indexOf("]]>", lt + 9);
+      if (end < 0) return null;
+      top.node.text += text.slice(lt + 9, end);
+      i = end + 3;
+      continue;
+    }
+    if (text.startsWith("<!--", lt)) {
+      const end = text.indexOf("-->", lt + 4);
+      if (end < 0) return null;
+      i = end + 3;
+      continue;
+    }
+    const gt = text.indexOf(">", lt + 1);
+    if (gt < 0) return null;
+    const tag = text.slice(lt + 1, gt);
+    i = gt + 1;
+    if (tag[0] === "?" || tag[0] === "!") continue;
+    if (tag[0] === "/") {
+      if (stack.length < 2 || stack[stack.length - 1].name !== tag.slice(1).trim()) return null;
+      stack.pop();
+      continue;
+    }
+    const selfClosing = tag.endsWith("/");
+    const body = selfClosing ? tag.slice(0, -1) : tag;
+    const space = body.search(/\s/);
+    const name = space < 0 ? body : body.slice(0, space);
+    const attributes = parseAttributes(space < 0 ? "" : body.slice(space));
+    const scope = new Map(top.scope);
+    for (const [key, value] of attributes) {
+      if (key === "xmlns") scope.set("", value);
+      else if (key.startsWith("xmlns:")) scope.set(key.slice(6), value);
+    }
+    const colon = name.indexOf(":");
+    const prefix = colon < 0 ? "" : name.slice(0, colon);
+    const node: XmlNode = {
+      localName: colon < 0 ? name : name.slice(colon + 1),
+      namespaceURI: scope.get(prefix) ?? null,
+      attributes,
+      children: [],
+      text: "",
+    };
+    top.node.children.push(node);
+    if (!selfClosing) stack.push({ node, name, scope });
+  }
+  return stack.length === 1 ? root : null;
 }
 
 /** Elements named `local` under `root`, whatever their namespace prefix. */
-function byName(root: Element | Document, local: string): Element[] {
-  return Array.from(root.getElementsByTagName("*")).filter((el) => el.localName === local);
+function byName(root: XmlNode, local: string): XmlNode[] {
+  const out: XmlNode[] = [];
+  const walk = (node: XmlNode) => {
+    for (const c of node.children) {
+      if (c.localName === local) out.push(c);
+      walk(c);
+    }
+  };
+  walk(root);
+  return out;
 }
 
-function child(el: Element, local: string): Element | undefined {
-  return Array.from(el.children).find((c) => c.localName === local);
+function child(el: XmlNode, local: string): XmlNode | undefined {
+  return el.children.find((c) => c.localName === local);
 }
 
 function relationships(xml: string | null): Map<string, { target: string; type: string }> {
@@ -226,7 +336,7 @@ function relationships(xml: string | null): Map<string, { target: string; type: 
   const doc = xml ? parseXml(xml) : null;
   if (!doc) return out;
   for (const rel of byName(doc, "Relationship")) {
-    out.set(rel.getAttribute("Id") ?? "", { target: rel.getAttribute("Target") ?? "", type: rel.getAttribute("Type") ?? "" });
+    out.set(rel.attributes.get("Id") ?? "", { target: rel.attributes.get("Target") ?? "", type: rel.attributes.get("Type") ?? "" });
   }
   return out;
 }
@@ -242,26 +352,26 @@ function resolvePath(base: string, target: string): string {
   return parts.join("/");
 }
 
-function paragraphs(el: Element): string[] {
+function paragraphs(el: XmlNode): string[] {
   return byName(el, "p")
     .filter((p) => p.namespaceURI?.includes("drawingml") ?? true)
-    .map((p) => byName(p, "t").map((t) => t.textContent ?? "").join("").replace(/\s+/g, " ").trim())
+    .map((p) => byName(p, "t").map((t) => t.text).join("").replace(/\s+/g, " ").trim())
     .filter(Boolean);
 }
 
 const SKIPPED_PLACEHOLDERS = new Set(["dt", "ftr", "sldNum", "hdr", "sldImg"]);
 
-function placeholderType(shape: Element): string | null {
+function placeholderType(shape: XmlNode): string | null {
   const nv = child(shape, "nvSpPr");
   const nvPr = nv ? child(nv, "nvPr") : undefined;
   const ph = nvPr ? child(nvPr, "ph") : undefined;
   if (!ph) return null;
-  return ph.getAttribute("type") ?? "body";
+  return ph.attributes.get("type") ?? "body";
 }
 
 type SlideText = { title: string[]; subtitle: string[]; body: string[] };
 
-function slideText(doc: Document): SlideText {
+function slideText(doc: XmlNode): SlideText {
   const out: SlideText = { title: [], subtitle: [], body: [] };
   for (const shape of byName(doc, "sp")) {
     const type = placeholderType(shape);
@@ -282,7 +392,7 @@ function slideText(doc: Document): SlideText {
   return out;
 }
 
-function notesText(doc: Document): string {
+function notesText(doc: XmlNode): string {
   const lines: string[] = [];
   for (const shape of byName(doc, "sp")) {
     const type = placeholderType(shape);
@@ -301,7 +411,7 @@ async function slideOrder(bytes: Uint8Array, entries: Map<string, ZipEntry>): Pr
   const ordered: string[] = [];
   if (doc) {
     for (const id of byName(doc, "sldId")) {
-      const rid = Array.from(id.attributes).find((a) => a.localName === "id" && a.name !== "id")?.value;
+      const rid = Array.from(id.attributes).find(([name]) => name.endsWith(":id"))?.[1];
       const rel = rid ? rels.get(rid) : undefined;
       if (rel) {
         const path = resolvePath("ppt", rel.target);

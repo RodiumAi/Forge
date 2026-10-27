@@ -150,6 +150,13 @@ describe("PowerPoint import", () => {
     );
   });
 
+  it("reads tables, entities and CDATA, and skips comments", async () => {
+    const table = `<p:graphicFrame><a:graphic><a:graphicData><a:tbl><a:tr><a:tc><a:txBody><a:p><a:r><a:t>Q1</a:t></a:r></a:p></a:txBody></a:tc><a:tc><a:txBody><a:p><a:r><a:t>R&amp;D &lt;10&gt;</a:t></a:r></a:p></a:txBody></a:tc></a:tr></a:tbl></a:graphicData></a:graphic></p:graphicFrame>`;
+    const title = `<p:sp><p:nvSpPr><p:nvPr><p:ph type="title"/></p:nvPr></p:nvSpPr><p:txBody><!-- note --><a:p><a:r><a:t><![CDATA[A & B]]> &#233;t&#xE9;</a:t></a:r></a:p></p:txBody></p:sp>`;
+    const bytes = await zip({ "ppt/slides/slide1.xml": slideXml(title, table) }, []);
+    expect(await pptxText(bytes)).toBe("--- Slide 1 ---\nTitle: A & B été\n- Q1 | R&D <10>");
+  });
+
   it("counts the slides of an imported file", async () => {
     const file = new File([(await samplePptx()) as BlobPart], "deck.pptx");
     const doc = await extractDocument(file, "pptx");
