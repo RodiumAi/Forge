@@ -38,12 +38,12 @@ One example slide per layout; reuse these positions when adding slides.
 - section (s4): big section number, title and one line
 - image-text (s5): photo on the left half, kicker, heading, paragraph and list on the right
 - timeline (s6): heading and four milestones on a horizontal line
-- key-figures (s7): heading and three or four figure cards
+- key-numbers (s7): heading and three or four figure cards
 - chart (s8): heading, editable chart on the left, takeaway on the right
 - table (s9): heading and a full width table with a header row
 - team (s10): heading and four --surface cards (square initials avatar, name, role, one line)
 - quote (s11): large quote mark, quote, author and role
-- thank-you (s12): closing title, subtitle and two contact lines with icons
+- thanks (s12): closing title, subtitle and two contact lines with icons
 
 ## Style
 - Header accent: the kicker set in --accent-contrast inside an --accent pill.

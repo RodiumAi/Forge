@@ -38,12 +38,12 @@
     "text": "s3",
     "image-text": "s4",
     "two-columns": "s5",
-    "key-figures": "s6",
+    "key-numbers": "s6",
     "chart": "s7",
     "quote": "s8",
     "table": "s9",
     "team": "s10",
     "timeline": "s11",
-    "thank-you": "s12"
+    "thanks": "s12"
   }
 }

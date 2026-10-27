@@ -40,10 +40,10 @@
     "image-text": "s5",
     "timeline": "s6",
     "table": "s7",
-    "key-figures": "s8",
+    "key-numbers": "s8",
     "chart": "s9",
     "quote": "s10",
     "team": "s11",
-    "thank-you": "s12"
+    "thanks": "s12"
   }
 }

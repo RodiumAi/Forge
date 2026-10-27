@@ -257,8 +257,8 @@ What `test_template_slides.py` checks:
   slide files and `deck.json` list the same ids; each slide has
   `notes/<id>.md`;
 - the 12 layouts of `SLIDES_LAYOUTS` (`title`, `section`, `text`,
-  `two-columns`, `image-text`, `quote`, `key-figures`, `chart`, `table`, `team`,
-  `timeline`, `thank-you`) are all used, and `layouts` maps each one to a slide
+  `two-columns`, `image-text`, `quote`, `key-numbers`, `chart`, `table`, `team`,
+  `timeline`, `thanks`) are all used, and `layouts` maps each one to a slide
   of that layout;
 - images are `public/images/*.webp`, exist, and carry a `credit` with `source`
   and `author` (background images too); icons are lucide names;

@@ -431,10 +431,10 @@ LAYOUTS = {
     "two-columns": two_columns,
     "image-text": image_text,
     "quote": quote,
-    "key-figures": key_figures,
+    "key-numbers": key_figures,
     "chart": chart,
     "table": table,
     "team": team,
     "timeline": timeline,
-    "thank-you": thank_you,
+    "thanks": thank_you,
 }

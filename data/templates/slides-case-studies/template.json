@@ -39,11 +39,11 @@
     "two-columns": "s4",
     "chart": "s5",
     "quote": "s6",
-    "key-figures": "s7",
+    "key-numbers": "s7",
     "image-text": "s8",
     "table": "s9",
     "team": "s10",
     "timeline": "s11",
-    "thank-you": "s12"
+    "thanks": "s12"
   }
 }

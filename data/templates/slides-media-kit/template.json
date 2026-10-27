@@ -34,7 +34,7 @@
   "transitionPreset": "elegant",
   "layouts": {
     "title": "s1",
-    "key-figures": "s2",
+    "key-numbers": "s2",
     "chart": "s3",
     "section": "s4",
     "two-columns": "s5",
@@ -44,6 +44,6 @@
     "timeline": "s9",
     "text": "s10",
     "team": "s11",
-    "thank-you": "s12"
+    "thanks": "s12"
   }
 }

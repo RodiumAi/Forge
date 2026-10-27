@@ -12,7 +12,7 @@ from __future__ import annotations
 from kitlib import CONTENT_W, H, M, W, shape, text
 from kitlib import image as image_el
 
-HEADER_LAYOUTS = {"text", "two-columns", "key-figures", "chart", "table", "team", "timeline"}
+HEADER_LAYOUTS = {"text", "two-columns", "key-numbers", "chart", "table", "team", "timeline"}
 CONTENT_LAYOUTS = HEADER_LAYOUTS | {"quote"}
 CLEAR = "#0000"  # transparent fill for outlined shapes (shapes default to --accent)
 
@@ -453,11 +453,11 @@ def make_post(style):
             els = image_text(s.get("image", "default"), t, els, sid, s)
         elif layout == "quote":
             els = quote(s.get("quote", "default"), els, sid)
-        elif layout == "key-figures":
+        elif layout == "key-numbers":
             els = figures(s.get("figures", "default"), t, els, sid)
         elif layout == "team":
             els = team(s.get("avatar", "ring"), els, sid)
-        elif layout == "thank-you":
+        elif layout == "thanks":
             els = closing(s.get("closing", "default"), els, sid)
         elif layout == "text":
             els = code_panel(els, sid, s)

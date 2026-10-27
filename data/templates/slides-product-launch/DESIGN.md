@@ -37,13 +37,13 @@ One example slide per layout; reuse these positions when adding slides.
 - text (s3): heading, bullet or numbered list, side panel with icon and callout (or code)
 - image-text (s4): rounded photo inset on the left, kicker, heading, paragraph and list on the right
 - two-columns (s5): heading and two --surface cards, each with an icon badge, subheading and paragraph
-- key-figures (s6): heading and figure cards, the first card filled with --accent
+- key-numbers (s6): heading and figure cards, the first card filled with --accent
 - chart (s7): heading, editable chart on the left, takeaway on the right
 - quote (s8): full --accent background, quote in --accent-contrast
 - table (s9): heading and a full width table with a header row
 - team (s10): heading and four --surface cards (square initials avatar, name, role, one line)
 - timeline (s11): heading and four numbered milestone cards linked by chevrons
-- thank-you (s12): closing title and subtitle centered, two contacts side by side
+- thanks (s12): closing title and subtitle centered, two contacts side by side
 
 ## Style
 - Header accent: an 80 x 8 accent bar above the kicker.

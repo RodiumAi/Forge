@@ -22,12 +22,12 @@ SLIDES_LAYOUTS: tuple[str, ...] = (
     "two-columns",
     "image-text",
     "quote",
-    "key-figures",
+    "key-numbers",
     "chart",
     "table",
     "team",
     "timeline",
-    "thank-you",
+    "thanks",
 )
 
 

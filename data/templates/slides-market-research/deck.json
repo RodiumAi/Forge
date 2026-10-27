@@ -31,7 +31,7 @@
     },
     {
       "id": "s3",
-      "layout": "key-figures",
+      "layout": "key-numbers",
       "transition": {
         "type": "fade",
         "durationMs": 500,
@@ -112,7 +112,7 @@
     },
     {
       "id": "s12",
-      "layout": "thank-you",
+      "layout": "thanks",
       "transition": {
         "type": "fade",
         "durationMs": 500,
