@@ -7,6 +7,7 @@ ownership and team queries are the ones production runs.
 from __future__ import annotations
 
 import json
+import re
 import uuid
 from datetime import UTC, datetime
 from types import SimpleNamespace
@@ -261,7 +262,7 @@ def test_attach_dresses_a_site_and_resync_is_proposed_not_applied(env):
     body = r.json()
     assert body["outdated"] is False and set(body["written"]) == {"DESIGN.md", "src/index.css"}
     assert "--accent: #c2410c" in _disk(site.id, "src/index.css")
-    assert "fonts.googleapis.com" in _disk(site.id, "src/index.css")
+    assert re.search(r"https://fonts\.googleapis\.com/", _disk(site.id, "src/index.css"))
     assert "Acme" in _disk(site.id, "DESIGN.md")
 
     _set_accent(client, ds.id, "#15803d")
