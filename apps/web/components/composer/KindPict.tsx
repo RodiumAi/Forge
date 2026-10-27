@@ -27,6 +27,7 @@ export function KindPict({ id, className }: { id: HomeTileId; className?: string
       aria-hidden="true"
       focusable="false"
       // Static pictogram markup above, never user input.
+      // nosemgrep: rodiumai-dangerous-innerhtml-without-sanitize-import, typescript.react.security.audit.react-dangerouslysetinnerhtml.react-dangerouslysetinnerhtml
       dangerouslySetInnerHTML={{ __html: `<g ${S}>${PICT[id] ?? PICT.blank}</g>` }}
     />
   );
