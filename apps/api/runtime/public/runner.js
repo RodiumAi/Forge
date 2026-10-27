@@ -240,11 +240,21 @@ function needsRouterBasename(code) {
 }
 
 function resolveAssetUrl(src, assets) {
-  if (!assets || !assets.base || typeof src !== "string") return null;
+  if (!assets || typeof assets.base !== "string" || typeof src !== "string") return null;
   if (!src.startsWith("/") || src.startsWith("//")) return null;
-  const base = assets.base.replace(/\/+$/, "");
+  let base;
+  try {
+    base = new URL(assets.base, location.href);
+  } catch {
+    return null;
+  }
+  // The runner is served by the API that also serves project assets, so only
+  // that origin is used; any other base is ignored.
+  if (base.origin !== location.origin) return null;
+  const path = base.pathname.replace(/\/+$/, "") + src;
   const sep = src.includes("?") ? "&" : "?";
-  return assets.token ? `${base}${src}${sep}access_token=${encodeURIComponent(assets.token)}` : `${base}${src}`;
+  const query = assets.token ? `${sep}access_token=${encodeURIComponent(assets.token)}` : "";
+  return location.origin + path + query;
 }
 
 function rewriteImageEl(el) {

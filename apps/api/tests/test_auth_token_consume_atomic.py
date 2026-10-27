@@ -83,7 +83,7 @@ class _FakeSession:
 def test_consume_is_single_winner_under_concurrent_calls():
     db = _FakeSession()
     user_id = uuid.uuid4()
-    raw = auth_tokens.issue_password_reset(db, user_id)
+    raw = auth_tokens.issue_reset_link(db, user_id)
     lock = threading.Lock()
     results: list[uuid.UUID | None] = []
 

@@ -1006,7 +1006,7 @@ def forgot_password(
     # invite seats that never completed email proof).
     if user is not None and (user.password_hash or user.email_verified_at):
         auth_tokens.invalidate_outstanding(db, user.id, AuthToken.KIND_PASSWORD_RESET)
-        raw = auth_tokens.issue_password_reset(db, user.id)
+        raw = auth_tokens.issue_reset_link(db, user.id)
         db.commit()
         url = get_settings().web_url(f"/reset-password?token={quote(raw)}")
         mail.send(mail.build_reset_password(user.email, url, locale))
