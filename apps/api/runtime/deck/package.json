@@ -15,5 +15,8 @@
     "pptxgenjs": "4.0.1",
     "react": "19.3.0",
     "react-dom": "19.3.0"
+  },
+  "overrides": {
+    "image-size": "2.0.3"
   }
 }

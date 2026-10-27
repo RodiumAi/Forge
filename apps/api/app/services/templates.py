@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 from dataclasses import dataclass
@@ -174,10 +175,12 @@ def get_template(template_id: str) -> TemplateMeta | None:
     tid = (template_id or "").strip()
     if not _ID_RE.match(tid):
         return None
-    folder = templates_root() / tid
-    if not folder.is_dir():
+    root = os.path.realpath(templates_root())
+    folder = os.path.realpath(os.path.join(root, tid))
+    # The id is already a plain slug; this keeps the folder inside the templates root anyway.
+    if not folder.startswith(root + os.sep) or not os.path.isdir(folder):
         return None
-    return _load_meta(folder)
+    return _load_meta(Path(folder))
 
 
 def preview_path(template_id: str) -> Path | None:
