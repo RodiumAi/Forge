@@ -7,18 +7,7 @@ body:
     attributes:
       label: Integration name and id
       description: "Proposed id must match ^[a-z0-9][a-z0-9-]{1,62}$"
-      placeholder: "tally — Tally"
-    validations:
-      required: true
-  - type: dropdown
-    id: access
-    attributes:
-      label: Access
-      description: "yes = drop-in widget/iframe/script · partial = needs server verify or custom UI"
-      options:
-        - yes
-        - partial
-      default: 0
+      placeholder: "tally: Tally"
     validations:
       required: true
   - type: dropdown
@@ -31,7 +20,6 @@ body:
         - chat
         - payments
         - data
-        - auth
         - email
         - maps
         - media
@@ -48,15 +36,27 @@ body:
       placeholder: "https://…"
     validations:
       required: true
-  - type: textarea
+  - type: dropdown
     id: methods
     attributes:
       label: Embed methods
-      description: iframe, script, sdk, form-action, link…
+      description: The catalog only accepts drop-in embeds that work on a static site by paste.
+      multiple: true
+      options:
+        - iframe
+        - script
+        - link
     validations:
       required: true
+  - type: checkboxes
+    id: dropin
+    attributes:
+      label: Drop-in only
+      options:
+        - label: It works by pasting an iframe, a script tag or a link, with no server code, SDK or secret (auth/BaaS SDKs and partial form-action APIs are out of scope).
+          required: true
   - type: textarea
     id: notes
     attributes:
-      label: Caveats for Forge (frontend-only prototypes)
-      description: CSP, sandbox, secrets, webhooks…
+      label: Caveats for Forge (static sites)
+      description: CSP, sandbox, cookies, limits on the vendor side…

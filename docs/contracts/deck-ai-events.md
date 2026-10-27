@@ -1,6 +1,6 @@
 # Slides AI: request fields and SSE events
 
-Contract delivered by wave 1 agent C (`apps/api/app/services/deck_ai/`). The deck editor (agent B) builds on it.
+Served by `apps/api/app/services/deck_ai/`. The deck editor (`apps/web/components/deck-editor/`) builds on it.
 
 ## Request (backward compatible)
 

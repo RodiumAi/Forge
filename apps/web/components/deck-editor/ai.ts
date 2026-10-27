@@ -1,5 +1,5 @@
 /**
- * The deck editor side of the slides AI contract (docs/plans/deck-ai-events.md):
+ * The deck editor side of the slides AI contract (docs/contracts/deck-ai-events.md):
  * request bodies with a target and quick actions, and the `deck.*` events
  * applied to the local document.
  */

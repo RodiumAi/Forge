@@ -4,7 +4,7 @@
  * The AI chat beside the deck: messages, the target chip (whole deck, a
  * slide or one element), quick actions, the outline confirmation of a new
  * deck, and the stream of `deck.*` events applied to the editor as they
- * arrive (docs/plans/deck-ai-events.md).
+ * arrive (docs/contracts/deck-ai-events.md).
  */
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";

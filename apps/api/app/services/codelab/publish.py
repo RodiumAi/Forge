@@ -2,7 +2,7 @@
 
 The published page is the Forge codelab player (bundled once from
 ``apps/web/components/codelab-player`` into ``runtime/codelab/dist`` by
-``apps/web/scripts/build-codelab-player.mjs``) plus the codelab data:
+``apps/api/runtime/codelab/build.mjs``) plus the codelab data:
 
     index.html                  shell, metadata, noscript summary
     codelab-data.json           codelab.json, every step, DESIGN.md, downloads

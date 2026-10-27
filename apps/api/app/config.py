@@ -165,7 +165,7 @@ class Settings(BaseSettings):
     # Publish: render every route to HTML in headless Chromium (falls back to a
     # client-rendered site when no browser is available).
     forge_prerender_enabled: bool = True
-    # Forge Design project kinds (docs/plans/forge-design-plan.md). Each new
+    # Forge Design project kinds. Each new
     # kind ships dark: creation and its routes stay closed until its flag is on.
     forge_kind_slides_enabled: bool = False
     forge_kind_codelab_enabled: bool = False

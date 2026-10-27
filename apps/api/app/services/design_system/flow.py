@@ -12,7 +12,7 @@ Two flows, picked by ``document_stream``:
 
 Both write ``design-system.json`` and the generated DESIGN.md after a history
 checkpoint, and stream the events described in
-``docs/plans/design-system-ai-events.md`` (``design_system.findings``,
+``docs/contracts/design-system-ai-events.md`` (``design_system.findings``,
 ``design_system.document``, ``design_system.done`` on top of the usual
 ``user_message``, ``route``, ``step``, ``file_write``, ``warning``,
 ``error`` and ``done``).
