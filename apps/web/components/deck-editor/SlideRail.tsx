@@ -7,7 +7,7 @@
  */
 
 import { memo, useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent } from "react";
-import { AlertTriangle, Copy, EyeOff, Eye, MoreHorizontal, PanelBottom, PanelLeft, Plus, Trash2, ArrowUp, ArrowDown } from "lucide-react";
+import { AlertTriangle, Copy, EyeOff, Eye, FileUp, MoreHorizontal, PanelBottom, PanelLeft, Plus, Trash2, ArrowUp, ArrowDown } from "lucide-react";
 import { canvasSize, SlideView, type AssetUrl, type ThemeTokens } from "@/components/deck-player";
 import type { Deck, Slide } from "@/lib/contracts/forge-design";
 import type { SlideNotice } from "./ai";
@@ -100,6 +100,7 @@ export function SlideRail({
   onSlideContextMenu,
   pickerAt,
   onPickerAtDone,
+  onImport,
 }: {
   deck: Deck;
   slides: Record<string, Slide>;
@@ -126,6 +127,8 @@ export function SlideRail({
   pickerAt?: { index: number; nonce: number } | null;
   /** Called once `pickerAt` opened the picker, so a remount does not open it again. */
   onPickerAtDone?: () => void;
+  /** Import slides from a PowerPoint file; no button when absent. */
+  onImport?: () => void;
 }) {
   const horizontal = orientation === "horizontal";
   const [drag, setDrag] = useState<{ from: number; over: number } | null>(null);
@@ -316,6 +319,11 @@ export function SlideRail({
               aria-expanded={picker !== null}
             >
               <Plus size={16} aria-hidden /> <span className="de-rail-add-label">{t("addSlide")}</span>
+            </button>
+          ) : null}
+          {onImport ? (
+            <button type="button" className="de-button de-rail-import" onClick={onImport} title={t("importSlidesHint")} aria-label={t("importSlides")}>
+              <FileUp size={16} aria-hidden />
             </button>
           ) : null}
           {picker !== null ? (

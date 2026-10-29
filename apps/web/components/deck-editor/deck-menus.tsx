@@ -23,6 +23,7 @@ import {
   CopyPlus,
   Eye,
   EyeOff,
+  FileUp,
   Group,
   ImageIcon,
   ImagePlus,
@@ -312,6 +313,8 @@ export type SlideMenuInput = {
     present: () => void;
     askAi: () => void;
     remove: () => void;
+    /** Import the slides of a PowerPoint file; the entry is hidden when absent. */
+    importSlides?: () => void;
   };
 };
 
@@ -321,6 +324,7 @@ export function slideMenu(input: SlideMenuInput): ContextMenuEntry[] {
     { id: "add-before", label: t("newSlideBefore"), icon: ico(Plus), disabled: ro, onSelect: act.addBefore },
     { id: "add-after", label: t("newSlideAfter"), icon: ico(Plus), disabled: ro, onSelect: act.addAfter },
     { id: "duplicate", label: t("duplicateSlide"), icon: ico(CopyPlus), disabled: ro, onSelect: act.duplicate },
+    ...(act.importSlides ? [{ id: "import", label: `${t("importSlides")}...`, icon: ico(FileUp), disabled: ro, onSelect: act.importSlides }] : []),
     { id: "hide", label: input.hidden ? t("showSlide") : t("hideSlide"), icon: ico(input.hidden ? Eye : EyeOff), disabled: ro, onSelect: act.toggleHidden },
     SEP,
     { id: "up", label: t("moveUp"), icon: ico(ArrowUp), shortcut: "Alt+↑", disabled: ro || index === 0, onSelect: () => act.move(-1) },

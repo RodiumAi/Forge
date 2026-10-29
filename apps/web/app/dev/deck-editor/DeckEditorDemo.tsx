@@ -6,6 +6,7 @@ import type { ChatClient, StreamHandler } from "@/components/deck-editor/chat-cl
 import { slideFromLayout } from "@/components/deck-editor/layouts";
 import { MemoryDocServer } from "@/components/deck-editor/memory-transport";
 import type { DeckPublisher } from "@/components/deck-editor/PublishMenu";
+import type { ImportedSlide, SlideImport, SlideImportClient } from "@/components/deck-editor/slide-import";
 import { copyFor } from "@/components/deck-editor/strings";
 import type { Deck, Slide } from "@/lib/contracts/forge-design";
 
@@ -37,6 +38,29 @@ function demoDoc(): { deck: Deck; slides: Record<string, Slide> } {
 }
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Offline stand-in for the PowerPoint import: a conversion set on
+ * `window.__forgeSlideImport` (a server response) when there is one, else a
+ * few slides drawn from the layouts.
+ */
+const demoSlideImport: SlideImportClient = {
+  importPptx: async () => {
+    await wait(400);
+    const preset = (window as { __forgeSlideImport?: SlideImport }).__forgeSlideImport;
+    if (preset) return preset;
+    const copy = copyFor("fr");
+    const slides = (["title", "quote", "key-numbers"] as const).map((layout, i): ImportedSlide => ({
+      index: i + 1,
+      title: layout,
+      hidden: false,
+      slide: { ...slideFromLayout(`imported-${i + 1}`, layout, "16:9", copy), background: { type: "color" as const, token: "#1C1F26" } },
+      notes: `Notes de la slide ${i + 1}.`,
+      warnings: i === 1 ? { shape_approximated: 2 } : ({} as Record<string, number>),
+    }));
+    return { canvas: { width: 1920, height: 1080 }, slides, warnings: {} };
+  },
+};
 
 /**
  * A fake AI: a targeted message rewrites the target slide's title (and warns
@@ -122,6 +146,7 @@ export function DeckEditorDemo({ designSystem }: { designSystem: string }) {
       assetUrl={placeholderAsset}
       chat={chat}
       images={null}
+      slideImport={demoSlideImport}
       badgeRemovable
       publisher={demoPublisher}
       backHref="/dev/deck-player"
