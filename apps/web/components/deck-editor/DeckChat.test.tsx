@@ -238,6 +238,19 @@ describe("DeckChat", () => {
     expect(sent[0].content).toBe("Un deck de 5 slides\n\n[Document: rapport.pdf | pdf]\nChiffres du rapport\n[/Document]");
   });
 
+  it("sends an imported PowerPoint to the whole deck even with a slide selected", async () => {
+    const { c, sent } = client();
+    renderChat({ client: c, target: { slideId: "s1" }, targetLabel: "Slide 1" });
+    expect(screen.getByTestId("deck-target")).toHaveTextContent("Slide 1");
+    fireEvent.change(screen.getByTestId("deck-attach-input"), { target: { files: [new File(["x"], "ancien.pptx")] } });
+    const list = await screen.findByRole("list", { name: t("attachList") });
+    await waitFor(() => expect(list).toHaveTextContent(t("attachSlides", { n: 1 })));
+    expect(screen.getByTestId("deck-target")).toHaveTextContent(t("targetDeck"));
+    fireEvent.click(screen.getByRole("button", { name: t("send") }));
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0].target).toBeUndefined();
+  });
+
   it("refuses a file over 5 MB and an unsupported type", async () => {
     const { c } = client();
     renderChat({ client: c });

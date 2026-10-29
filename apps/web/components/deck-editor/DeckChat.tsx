@@ -300,6 +300,9 @@ export function DeckChat(props: DeckChatProps) {
     input.length,
   );
   const cutDocs = fittedDocs.filter((doc) => doc.truncated);
+  // An imported PowerPoint or PDF rebuilds the whole deck, whatever is selected.
+  const deckWide = attachments.some((a) => a.kind !== "image");
+  const target = deckWide ? undefined : props.target;
   const canImport = !!client && !readOnly;
   // Attachment previews are object URLs made here from the picked file; nothing else is shown.
   const safePreviewSrc = (src: string | undefined) => (src && src.startsWith("blob:") ? src : undefined);
@@ -373,7 +376,7 @@ export function DeckChat(props: DeckChatProps) {
     for (const a of attachments) if (a.preview) URL.revokeObjectURL(a.preview);
     setAttachments([]);
     setImportErrors([]);
-    void send(messageBody(content, { target: props.target }));
+    void send(messageBody(content, { target }));
   };
 
   const quick = (action: QuickAction, value?: string) => {
@@ -643,9 +646,9 @@ export function DeckChat(props: DeckChatProps) {
       >
         <div className="de-target">
           <span className="de-target-chip" data-testid="deck-target">
-            {props.targetLabel}
+            {target ? props.targetLabel : t("targetDeck")}
           </span>
-          {props.target ? (
+          {target ? (
             <button type="button" className="de-icon-button" onClick={props.onClearTarget} aria-label={t("targetClear")} title={t("targetClear")}>
               <X size={12} aria-hidden />
             </button>
@@ -712,7 +715,7 @@ export function DeckChat(props: DeckChatProps) {
             }
           }}
           onChange={(e) => setInput(e.target.value)}
-          placeholder={props.target ? t("chatPlaceholderTarget", { target: props.targetLabel }) : t("chatPlaceholder")}
+          placeholder={target ? t("chatPlaceholderTarget", { target: props.targetLabel }) : t("chatPlaceholder")}
           aria-label={t("chatPlaceholder")}
           rows={3}
           maxLength={50000}
