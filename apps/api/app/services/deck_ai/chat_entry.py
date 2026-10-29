@@ -55,6 +55,15 @@ def message_target(body: Any, content: str) -> tuple[str | None, str | None, str
     return target_slide, target_element, action
 
 
+def rebuilds_from_powerpoint(content: str) -> bool:
+    """True when the message brings a PowerPoint: the deck is rebuilt from it.
+
+    Rebuilding goes through the outline, slide by slide: a deck edit asks for
+    every slide in one answer, which a long PowerPoint does not fit in.
+    """
+    return any(doc.kind == "pptx" for doc in attachments.documents(content))
+
+
 def start_document_message(
     *,
     db: Session,
@@ -120,7 +129,7 @@ def start_document_message(
     writing, editing = deck_routes()
     writing = route_for_request(writing, db, user, getattr(body, "model", None))
     editing = route_for_request(editing, db, user, getattr(body, "model", None))
-    fresh = not targeted and store.is_blank_deck(pid)
+    fresh = not targeted and (store.is_blank_deck(pid) or rebuilds_from_powerpoint(content))
     route = editing if targeted else writing
     task_class = "deck.edit.target" if targeted else (DECK_OUTLINE_TASK if fresh else "deck.edit")
 

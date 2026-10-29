@@ -216,6 +216,13 @@ class TestRouting:
         codelab = SimpleNamespace(target=None, action="check_code")
         assert chat_entry.message_target(codelab, "hi") == (None, None, None)
 
+    def test_a_powerpoint_goes_through_the_outline(self):
+        pptx = "Refais\n[Document: deck.pptx | pptx]\n--- Slide 1 ---\nTitle: Hello\n[/Document]"
+        pdf = "Ajoute\n[Document: brief.pdf | pdf]\nChiffres\n[/Document]"
+        assert chat_entry.rebuilds_from_powerpoint(pptx)
+        assert not chat_entry.rebuilds_from_powerpoint(pdf)
+        assert not chat_entry.rebuilds_from_powerpoint("Plus court")
+
 
 # ── outline and confirmation ───────────────────────────────────────────────
 
