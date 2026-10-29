@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 from app.i18n import t
 from app.kinds import kind_enabled
 from app.models import AgentRun, Chat, Message, Project, User
-from app.services.deck_ai import store
+from app.services.deck_ai import attachments, store
 from app.services.deck_ai.flow import DeckContext, document_stream, spawn_deck_write_job, unavailable_stream
 from app.services.deck_ai.outline import outline_from_plan, plan_tasks
 from app.services.deck_ai.routing import ai_available, deck_routes, document_kind
@@ -35,6 +35,24 @@ def _history(db: Session, chat_id) -> list[tuple[str, str]]:
 
 def is_document_project(project: Project) -> bool:
     return document_kind(project.platform) is not None
+
+
+def message_target(body: Any, content: str) -> tuple[str | None, str | None, str | None]:
+    """(slide, element, action) the message applies to.
+
+    An imported PowerPoint or PDF is material for the whole deck: the slide
+    or element selected in the editor when it was sent does not narrow it.
+    Quick actions keep their target.
+    """
+    target = getattr(body, "target", None)
+    target_slide = getattr(target, "slideId", None) if target else None
+    target_element = getattr(target, "elementId", None) if target else None
+    action = getattr(body, "action", None)
+    if action in ("check_code", "make_files"):  # codelab actions mean nothing on a deck
+        action = None
+    if not action and attachments.documents(content):
+        return None, None, None
+    return target_slide, target_element, action
 
 
 def start_document_message(
@@ -95,12 +113,7 @@ def start_document_message(
     if not ai_available(kind_id):
         return event_stream(unavailable_stream(kind_id, locale))
 
-    target = getattr(body, "target", None)
-    target_slide = getattr(target, "slideId", None) if target else None
-    target_element = getattr(target, "elementId", None) if target else None
-    action = getattr(body, "action", None)
-    if action in ("check_code", "make_files"):  # codelab actions mean nothing on a deck
-        action = None
+    target_slide, target_element, action = message_target(body, content)
     targeted = bool(target_slide or target_element or action)
     pid = str(project.id)
 
