@@ -2316,7 +2316,15 @@ export default function ProjectPage() {
       setStreamActive(true);
       await readSseStream(res, async (payloadEvent) => {
         const type = String(payloadEvent.type || "");
-        if (type === "done" || type === "error") sawTerminal = true;
+        if (type === "done" || type === "error") {
+          sawTerminal = true;
+          // The "starting" placeholder is client-only: nothing on the server
+          // ever closes it, so it spun forever after a stopped plan.
+          const status = type === "done" ? "done" : "error";
+          setStreamSteps((prev) =>
+            prev.map((s) => (s.id === "plan-exec" && s.status === "running" ? { ...s, status } : s)),
+          );
+        }
         handleStreamEvent(payloadEvent, {
           stateRef,
           userPayload: "",
@@ -2358,9 +2366,14 @@ export default function ProjectPage() {
         streamAbortRef.current = null;
         setStreamActive(false);
         setBusy(false);
+        setStreamSteps((prev) =>
+          prev.map((s) =>
+            s.id === "plan-exec" && s.status === "running" ? { ...s, status: sawTerminal ? "done" : "error" } : s,
+          ),
+        );
       }
       void refreshRodiumWallet();
-        void refreshForgeStatus({ fresh: true });
+      void refreshForgeStatus({ fresh: true });
     }
   }, [activeRunId, chatId, handleStreamEvent, locale, planTasks, projectId, pushStreamError, seedStreamState, subscribeRunEvents, t]);
 
@@ -2949,6 +2962,9 @@ export default function ProjectPage() {
                       planTasks.some((task) => task.status === "running" || task.status === "pending")
                     }
                     onExecute={() => void executePlan()}
+                    taskCost={forge?.plan_task_frodi ?? null}
+                    available={forge?.frodi == null ? null : forge.frodi + (forge.rodi ?? 0)}
+                    rechargeHref={rodiumRechargeUrl(getSessionSnapshot()?.profile?.rodium_sub, typeof window === "undefined" ? undefined : window.location.href)}
                     onExecuteStep={() => void executePlan(true)}
                     onDismiss={() => void dismissPlan()}
                     onStop={() => void stopGeneration()}

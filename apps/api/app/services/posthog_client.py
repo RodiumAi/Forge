@@ -57,7 +57,8 @@ def capture_event(
         **(properties or {}),
     }
     try:
-        client.capture(distinct_id, event, payload)
+        # posthog>=6: the event is the only positional argument.
+        client.capture(event, distinct_id=distinct_id, properties=payload)
     except Exception as exc:
         logger.warning("PostHog capture failed event=%s: %s", event, exc)
 

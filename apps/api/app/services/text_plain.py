@@ -62,31 +62,42 @@ def build_run_summary(
     applied: list[dict[str, Any]] | None,
     locale: Locale = "fr",
 ) -> str:
-    """Deterministic plain confirmation — never reuse LLM marketing prose."""
-    done_titles = [
-        str(t.get("title") or "").strip()
-        for t in (tasks or [])
-        if str(t.get("status") or "") in ("done", "pending", "running", "")
-        and str(t.get("title") or "").strip()
-    ]
-    # Prefer completed tasks; if statuses missing, keep all titles.
-    completed = [
-        str(t.get("title") or "").strip()
-        for t in (tasks or [])
-        if str(t.get("status") or "") == "done" and str(t.get("title") or "").strip()
-    ]
-    titles = completed or done_titles
+    """Deterministic plain confirmation — never reuse LLM marketing prose.
+
+    Only completed tasks are listed. When the plan carries statuses and none of
+    them is `done`, the summary says nothing was built instead of listing the
+    planned titles: a plan stopped on its first task used to read
+    "Here is what was put in place" followed by eight steps that never ran.
+    """
+    task_list = [t for t in (tasks or []) if str(t.get("title") or "").strip()]
+    completed = [str(t.get("title") or "").strip() for t in task_list if str(t.get("status") or "") == "done"]
+    has_statuses = any(str(t.get("status") or "") for t in task_list)
+    # A plan without any status at all predates status tracking: keep its titles.
+    titles = completed if has_statuses else [str(t.get("title") or "").strip() for t in task_list]
     file_count = len(applied or [])
+    nothing_done = bool(task_list) and not titles
 
     if locale == "fr":
-        lines = ["Voici ce qui a été mis en place."]
+        if nothing_done:
+            head = "Aucune étape du plan n'a abouti, rien n'a été construit."
+            if file_count:
+                head = "Aucune étape du plan n'a abouti."
+            lines = [head]
+        else:
+            lines = ["Voici ce qui a été mis en place."]
         for title in titles[:8]:
             lines.append(f"- {to_plain_text(title)}")
         if file_count:
             lines.append(f"{file_count} fichier(s) mis à jour.")
         return "\n".join(lines)
 
-    lines = ["Here is what was put in place."]
+    if nothing_done:
+        head = "No plan step completed; nothing was built."
+        if file_count:
+            head = "No plan step completed."
+        lines = [head]
+    else:
+        lines = ["Here is what was put in place."]
     for title in titles[:8]:
         lines.append(f"- {to_plain_text(title)}")
     if file_count:
