@@ -206,6 +206,23 @@ class TestRouting:
         downgraded = _apply_tier_entitlements(writing, cached)
         assert downgraded.tier == "primary" and downgraded.model != writing.model
 
+    def test_an_imported_document_rebuilds_the_whole_deck(self):
+        doc = "Refais ces slides\n[Document: deck.pptx | pptx]\n--- Slide 1 ---\nTitle: Hello\n[/Document]"
+        selected = SimpleNamespace(target=SimpleNamespace(slideId="s1", elementId="title"), action=None)
+        assert chat_entry.message_target(selected, doc) == (None, None, None)
+        assert chat_entry.message_target(selected, "Plus court") == ("s1", "title", None)
+        quick = SimpleNamespace(target=SimpleNamespace(slideId="s2", elementId=None), action="shorten")
+        assert chat_entry.message_target(quick, doc) == ("s2", None, "shorten")
+        codelab = SimpleNamespace(target=None, action="check_code")
+        assert chat_entry.message_target(codelab, "hi") == (None, None, None)
+
+    def test_a_powerpoint_goes_through_the_outline(self):
+        pptx = "Refais\n[Document: deck.pptx | pptx]\n--- Slide 1 ---\nTitle: Hello\n[/Document]"
+        pdf = "Ajoute\n[Document: brief.pdf | pdf]\nChiffres\n[/Document]"
+        assert chat_entry.rebuilds_from_powerpoint(pptx)
+        assert not chat_entry.rebuilds_from_powerpoint(pdf)
+        assert not chat_entry.rebuilds_from_powerpoint("Plus court")
+
 
 # ── outline and confirmation ───────────────────────────────────────────────
 
