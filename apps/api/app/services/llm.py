@@ -70,7 +70,10 @@ ERR_INTERNAL = "internal"
 # not a 5-minute cap on a request — it was "wait five minutes for each next
 # token, forever". A stream that has sent nothing for a minute is dead; the
 # dispatcher's own wall-clock budget covers the legitimately-slow case.
-_STREAM_TIMEOUT = httpx.Timeout(60.0, connect=15.0, pool=30.0)
+# 60s was too short: reasoning models (Claude Sonnet 5.5 on a large plan task)
+# think silently for over a minute before the first token, and the gateway does
+# not forward reasoning deltas, so a healthy request looked dead.
+_STREAM_TIMEOUT = httpx.Timeout(180.0, connect=15.0, pool=30.0)
 
 
 class RodiumError(Exception):
@@ -242,6 +245,10 @@ def is_transient_network_error(exc: BaseException) -> bool:
         return True
 
     if isinstance(exc, RodiumError) and exc.status_code is None:
+        # `_network_rodium_error` already classified the httpx failure; its
+        # message often carries no marker (str(ReadTimeout()) is empty).
+        if exc.code in (ERR_TIMEOUT, ERR_NETWORK):
+            return True
         return any(marker in str(exc).lower() for marker in _TRANSIENT_NETWORK_MARKERS)
 
     text = str(exc).lower()

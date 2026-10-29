@@ -154,6 +154,12 @@ class Settings(BaseSettings):
     generation_effort: str = "medium"
     # Wall-clock ceiling for one plan task, continuations included.
     forge_task_budget_seconds: float = 600.0
+    # Typical FRODI cost of one plan task (low and high end), measured on the
+    # gateway. The builder multiplies them by the tasks left to show an
+    # estimate before "Run plan", and blocks the run when the balance is
+    # below the low end. 0 turns the estimate off.
+    forge_plan_task_frodi_low: float = 110.0
+    forge_plan_task_frodi_high: float = 270.0
     # Full-content layer of every code prompt (characters). index.css gets its
     # own reserved share so later tasks always see the foundation in full.
     context_full_files_max_chars: int = 160_000

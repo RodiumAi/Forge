@@ -36,7 +36,29 @@ type Props = {
   /** Cancel the run mid-execution (Stop button in the footer). */
   onStop?: () => void;
   onOpenFile?: (path: string) => void;
+  /** Typical FRODI cost of one task (Forge Cloud only). */
+  taskCost?: { low: number; high: number } | null;
+  /** FRODI plus fallback RODI the account can spend right now. */
+  available?: number | null;
+  rechargeHref?: string;
 };
+
+/** Cost estimate for the tasks still to run, and whether the balance can start them. */
+export function planCostState(
+  tasks: PlanTask[],
+  taskCost: { low: number; high: number } | null | undefined,
+  available: number | null | undefined,
+): { remaining: number; low: number; high: number; blocked: boolean; short: boolean } | null {
+  if (!taskCost || taskCost.high <= 0 || available == null) return null;
+  const remaining = tasks.filter((task) => task.status !== "done").length;
+  if (!remaining) return null;
+  const low = Math.round(taskCost.low * remaining);
+  const high = Math.round(taskCost.high * remaining);
+  // One task is the smallest unit the user can run (step by step), so only a
+  // balance that cannot cover even that blocks the run.
+  const blocked = available < taskCost.low;
+  return { remaining, low, high, blocked, short: !blocked && available < low };
+}
 
 /**
  * The "Plan" card: numbered steps (done, running, waiting), the done count on
@@ -52,8 +74,11 @@ function PlanPanelInner({
   onExecuteStep,
   onDismiss,
   onStop,
+  taskCost = null,
+  available = null,
+  rechargeHref,
 }: Props) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [expanded, setExpanded] = useState(true);
   if (!tasks.length) return null;
 
@@ -67,6 +92,8 @@ function PlanPanelInner({
   const isExecuting = executing || Boolean(runningTask) || (busy && !needsConfirm);
   const isAwaiting = needsConfirm && !isExecuting && !partialProgress;
   const isDone = doneCount === total && total > 0;
+  const cost = showExecute ? planCostState(tasks, taskCost, available) : null;
+  const fmt = (n: number) => Math.round(n).toLocaleString(locale === "fr" ? "fr-FR" : "en-US");
 
   let statusLabel = t("planStatusReady");
   if (errorTask) statusLabel = t("planStatusError");
@@ -111,6 +138,25 @@ function PlanPanelInner({
           </div>
         ) : null}
         {isAwaiting ? <p className="f-bd-plan-hint">{t("planAwaitHint")}</p> : null}
+        {cost ? (
+          <p className="f-bd-plan-hint">
+            {t("planCostEstimate")
+              .replace("{low}", fmt(cost.low))
+              .replace("{high}", fmt(cost.high))
+              .replace("{n}", String(cost.remaining))
+              .replace("{balance}", fmt(available ?? 0))}
+          </p>
+        ) : null}
+        {cost && (cost.blocked || cost.short) ? (
+          <p className="f-bd-hint warn" role={cost.blocked ? "alert" : undefined}>
+            {t(cost.blocked ? "planCostBlocked" : "planCostShort")}{" "}
+            {rechargeHref ? (
+              <a href={rechargeHref} target="_blank" rel="noreferrer">
+                {t("planCostTopUp")}
+              </a>
+            ) : null}
+          </p>
+        ) : null}
         {partialProgress && !isExecuting && canResume ? <p className="f-bd-plan-hint">{t("planResumeHint")}</p> : null}
         {!listOpen ? <p className="f-bd-plan-hint">{statusLabel}</p> : null}
         {listOpen ? (
@@ -137,12 +183,12 @@ function PlanPanelInner({
       {showExecute || (isExecuting && onStop) ? (
         <div className="f-bd-card-actions">
           {showExecute ? (
-            <Button size="sm" icon="play" loading={busy} onClick={onExecute}>
+            <Button size="sm" icon="play" loading={busy} disabled={cost?.blocked} onClick={onExecute}>
               {busy ? t("planExecuting") : canResume ? t("planResume") : t("planExecute")}
             </Button>
           ) : null}
           {showExecute && onExecuteStep ? (
-            <Button size="sm" variant="ghost" icon="arrow-right" disabled={busy} onClick={onExecuteStep}>
+            <Button size="sm" variant="ghost" icon="arrow-right" disabled={busy || cost?.blocked} onClick={onExecuteStep}>
               {partialProgress ? t("planNextStep") : t("planExecuteStep")}
             </Button>
           ) : null}

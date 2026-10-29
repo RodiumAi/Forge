@@ -37,6 +37,7 @@ from app.schemas import (
     OAuthStartResponse,
     PasswordChangeRequest,
     PasswordChangeResponse,
+    PlanTaskCostOut,
     RegisterRequest,
     RegistrationResponse,
     ResendVerificationRequest,
@@ -1408,6 +1409,12 @@ async def forge_status(
         if frodi is None:
             frodi = float(row.frodi_balance)
 
+    settings = get_settings()
+    plan_task_frodi: PlanTaskCostOut | None = None
+    if frodi is not None and settings.forge_plan_task_frodi_high > 0:
+        low = max(0.0, settings.forge_plan_task_frodi_low)
+        plan_task_frodi = PlanTaskCostOut(low=low, high=max(low, settings.forge_plan_task_frodi_high))
+
     return ForgeStatusOut(
         frodi=frodi,
         rodi=rodi,
@@ -1415,6 +1422,7 @@ async def forge_status(
         frodi_resets_at=frodi_resets_at,
         plan=plan,
         entitlements=entitlements,
+        plan_task_frodi=plan_task_frodi,
     )
 
 
