@@ -222,6 +222,11 @@ class ForgeModelChoicesOut(BaseModel):
     models: list[ForgeModelChoice] = Field(default_factory=list)
 
 
+class PlanTaskCostOut(BaseModel):
+    low: float
+    high: float
+
+
 class ForgeStatusOut(BaseModel):
     """Builder-header snapshot: live credit reservoirs plus cached plan.
 
@@ -239,6 +244,9 @@ class ForgeStatusOut(BaseModel):
     frodi_resets_at: datetime | None = None
     plan: str | None = None
     entitlements: ForgeEntitlementsOut | None = None
+    #: Typical FRODI cost of one plan task, low and high end. ``None`` off
+    #: Forge Cloud (BYOK and self-hosted runs are not billed in FRODI).
+    plan_task_frodi: PlanTaskCostOut | None = None
 
 
 class ProjectCollaboratorOut(BaseModel):

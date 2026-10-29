@@ -49,6 +49,8 @@ export type ForgeStatus = {
   frodi_resets_at?: string | null;
   plan: string | null;
   entitlements: ForgeEntitlements | null;
+  /** Typical FRODI cost of one plan task; null off Forge Cloud. */
+  plan_task_frodi?: { low: number; high: number } | null;
 };
 
 type Listener = (status: ForgeStatus | null) => void;
