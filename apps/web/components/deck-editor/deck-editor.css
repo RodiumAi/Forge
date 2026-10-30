@@ -528,10 +528,64 @@
 .de-canvas-area {
   position: absolute;
   inset: 0;
+  overflow: hidden;
+}
+
+/* Zoomed past the area: scroll around the slide. */
+.de-canvas-area.is-zoomed {
+  overflow: auto;
+}
+
+.de-canvas-content {
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
+}
+
+.de-zoom {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--f-line, var(--de-line));
+  border-radius: 999px;
+  background: var(--f-bg, var(--de-bg, #fff));
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.de-zoom button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.de-zoom button:hover:not(:disabled),
+.de-zoom button[aria-pressed="true"] {
+  background: var(--f-bg-soft, rgba(127, 127, 127, 0.15));
+}
+
+.de-zoom button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.de-zoom .de-zoom-value {
+  min-width: 52px;
+  font-variant-numeric: tabular-nums;
 }
 
 .de-stage {

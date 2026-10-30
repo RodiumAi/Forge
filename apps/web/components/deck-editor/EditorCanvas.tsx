@@ -2,14 +2,14 @@
 
 /**
  * The central canvas: the slide rendered by the deck player (mode "edit"),
- * scaled to fit, with an interaction layer on top for selection, move,
+ * scaled to fit (or zoomed, then the area scrolls), with an interaction layer on top for selection, move,
  * resize, rotation, marquee selection, snapping guides and inline text
  * editing. No responsive layout: the slide keeps its canvas size and is
  * only scaled.
  */
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
-import { AlertTriangle, X } from "lucide-react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { AlertTriangle, Maximize, Minus, Plus, X } from "lucide-react";
 import { canvasSize, SlideCanvas, type AssetUrl, type ThemeTokens } from "@/components/deck-player";
 import type { Deck, Slide, SlideElement } from "@/lib/contracts/forge-design";
 import type { SlideNotice } from "./ai";
@@ -71,6 +71,21 @@ export type CanvasProps = {
 
 const PADDING = 32;
 const SNAP_PX = 6;
+const MIN_ZOOM = 0.05;
+const MAX_ZOOM = 4;
+/** Steps of the + and - buttons and shortcuts, as slide scale. */
+const ZOOM_STEPS = [0.1, 0.25, 0.33, 0.5, 0.67, 0.75, 1, 1.25, 1.5, 2, 3, 4];
+
+const clampZoom = (z: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z));
+
+export function nextZoomStep(current: number, direction: 1 | -1): number {
+  const eps = 0.001;
+  if (direction > 0) return ZOOM_STEPS.find((s) => s > current + eps) ?? MAX_ZOOM;
+  return [...ZOOM_STEPS].reverse().find((s) => s < current - eps) ?? MIN_ZOOM;
+}
+
+/** Where to keep a slide point under the pointer while the scale changes. */
+type ZoomAnchor = { point: Point; clientX: number; clientY: number };
 
 /** Elements that can be picked at the current scope, with their slide boxes. */
 function scopeItems(slide: Slide, groupScope: string | null) {
@@ -104,8 +119,82 @@ export function EditorCanvas(props: CanvasProps) {
   const { deck, slide, tokens, assetUrl, selection, groupScope, editingText, readOnly, dispatch, t } = props;
   const size = canvasSize(deck);
   const [containerRef, container] = useContainerSize<HTMLDivElement>();
-  const scale = Math.max(0.05, Math.min((container.width - PADDING * 2) / size.width, (container.height - PADDING * 2) / size.height));
+  const fit = Math.max(MIN_ZOOM, Math.min((container.width - PADDING * 2) / size.width, (container.height - PADDING * 2) / size.height));
+  /** null: fit the slide to the area. Otherwise the slide scale, kept across slides. */
+  const [zoom, setZoom] = useState<number | null>(null);
+  const scale = zoom ?? fit;
   const stage = { width: size.width * scale, height: size.height * scale };
+  /** Scrollable content: at least the area, large enough for the zoomed slide. */
+  const content = {
+    width: Math.max(container.width, stage.width + PADDING * 2),
+    height: Math.max(container.height, stage.height + PADDING * 2),
+  };
+  const anchor = useRef<ZoomAnchor | null>(null);
+  const scaleRef = useRef(scale);
+  scaleRef.current = scale;
+
+  /** Zooms to `next`, keeping the slide point under (clientX, clientY), or the area centre. */
+  const zoomTo = useCallback(
+    (next: number | null, client?: { clientX: number; clientY: number }) => {
+      const area = containerRef.current;
+      const stageEl = area?.querySelector<HTMLElement>(".de-stage");
+      if (area && stageEl) {
+        const box = area.getBoundingClientRect();
+        const at = client ?? { clientX: box.left + area.clientWidth / 2, clientY: box.top + area.clientHeight / 2 };
+        const s = stageEl.getBoundingClientRect();
+        const current = scaleRef.current;
+        anchor.current = { point: { x: (at.clientX - s.left) / current, y: (at.clientY - s.top) / current }, clientX: at.clientX, clientY: at.clientY };
+      }
+      setZoom(next == null ? null : clampZoom(next));
+    },
+    [containerRef],
+  );
+
+  // After a zoom, scroll so the anchored slide point stays where it was.
+  useLayoutEffect(() => {
+    const a = anchor.current;
+    const area = containerRef.current;
+    if (!a || !area) return;
+    anchor.current = null;
+    const box = area.getBoundingClientRect();
+    const stageLeft = (content.width - stage.width) / 2;
+    const stageTop = (content.height - stage.height) / 2;
+    area.scrollLeft = stageLeft + a.point.x * scale - (a.clientX - box.left);
+    area.scrollTop = stageTop + a.point.y * scale - (a.clientY - box.top);
+  }, [scale, content.width, content.height, stage.width, stage.height, containerRef]);
+
+  // Ctrl + wheel and trackpad pinch (a wheel event with ctrlKey) zoom around the pointer.
+  useEffect(() => {
+    const area = containerRef.current;
+    if (!area) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      const delta = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+      zoomTo(scaleRef.current * Math.exp(-delta * 0.0025), e);
+    };
+    area.addEventListener("wheel", onWheel, { passive: false });
+    return () => area.removeEventListener("wheel", onWheel);
+  }, [containerRef, zoomTo]);
+
+  // Ctrl + / Ctrl - / Ctrl 0, instead of the browser zoom, while the editor is open.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+      if (e.key === "+" || e.key === "=") {
+        e.preventDefault();
+        zoomTo(nextZoomStep(scaleRef.current, 1));
+      } else if (e.key === "-" || e.key === "_") {
+        e.preventDefault();
+        zoomTo(nextZoomStep(scaleRef.current, -1));
+      } else if (e.key === "0") {
+        e.preventDefault();
+        zoomTo(null);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [zoomTo]);
 
   const overlayRef = useRef<HTMLDivElement | null>(null);
   const gesture = useRef<Gesture | null>(null);
@@ -350,65 +439,83 @@ export function EditorCanvas(props: CanvasProps) {
   });
 
   return (
-    <div ref={containerRef} className="de-canvas-area">
-      <div className="de-stage" style={{ width: stage.width, height: stage.height }}>
-        <div className="de-stage-canvas" style={{ width: size.width, height: size.height, transform: `scale(${scale})` }}>
-          <SlideCanvas slide={displaySlide} size={size} tokens={tokens} mode="edit" assetUrl={assetUrl} />
-        </div>
-        <div
-          ref={overlayRef}
-          className="de-overlay"
-          role="presentation"
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerUp}
-          onPointerLeave={() => setHover(null)}
-          onDoubleClick={onDoubleClick}
-          onContextMenu={onContextMenu}
-          data-testid="deck-canvas-overlay"
-        >
-          {scopeBox ? <div className="de-scope" style={boxStyle(scopeBox)} /> : null}
-          {hoverBox ? <div className="de-hover" style={boxStyle(hoverBox)} /> : null}
-          {selected.map((s) => (
-            <div key={s.id} className={`de-selection${s.locked ? " is-locked" : ""}`} style={boxStyle(s.box)} data-selected={s.id}>
-              {single && single.id === s.id && !s.locked && !readOnly && editingText !== s.id
-                ? [
-                    ...Object.keys(HANDLES).map((name) => <span key={name} className={`de-handle de-handle-${name}`} data-handle={name} />),
-                    <span key="rotate" className="de-handle de-handle-rotate" data-handle="rotate" />,
-                  ]
-                : null}
+    <>
+      <div ref={containerRef} className={`de-canvas-area${zoom != null && zoom > fit ? " is-zoomed" : ""}`}>
+        <div className="de-canvas-content" style={{ width: content.width, height: content.height }}>
+          <div className="de-stage" style={{ width: stage.width, height: stage.height }}>
+            <div className="de-stage-canvas" style={{ width: size.width, height: size.height, transform: `scale(${scale})` }}>
+              <SlideCanvas slide={displaySlide} size={size} tokens={tokens} mode="edit" assetUrl={assetUrl} />
             </div>
-          ))}
-          {multiBounds ? <div className="de-multi" style={boxStyle(multiBounds)} /> : null}
-          {marquee ? <div className="de-marquee" style={boxStyle(marquee)} /> : null}
-          {guides.map((g, i) =>
-            g.axis === "x" ? (
-              <div key={i} className="de-guide de-guide-x" style={{ left: g.at * scale, top: 0, height: stage.height }} />
-            ) : (
-              <div key={i} className="de-guide de-guide-y" style={{ top: g.at * scale, left: 0, width: stage.width }} />
-            ),
-          )}
-        </div>
-        {props.textEditor ? (
-          <div className="de-text-layer" style={{ width: size.width, height: size.height, transform: `scale(${scale})` }}>
-            {props.textEditor}
+            <div
+              ref={overlayRef}
+              className="de-overlay"
+              role="presentation"
+              onPointerDown={onPointerDown}
+              onPointerMove={onPointerMove}
+              onPointerUp={onPointerUp}
+              onPointerCancel={onPointerUp}
+              onPointerLeave={() => setHover(null)}
+              onDoubleClick={onDoubleClick}
+              onContextMenu={onContextMenu}
+              data-testid="deck-canvas-overlay"
+            >
+              {scopeBox ? <div className="de-scope" style={boxStyle(scopeBox)} /> : null}
+              {hoverBox ? <div className="de-hover" style={boxStyle(hoverBox)} /> : null}
+              {selected.map((s) => (
+                <div key={s.id} className={`de-selection${s.locked ? " is-locked" : ""}`} style={boxStyle(s.box)} data-selected={s.id}>
+                  {single && single.id === s.id && !s.locked && !readOnly && editingText !== s.id
+                    ? [
+                        ...Object.keys(HANDLES).map((name) => <span key={name} className={`de-handle de-handle-${name}`} data-handle={name} />),
+                        <span key="rotate" className="de-handle de-handle-rotate" data-handle="rotate" />,
+                      ]
+                    : null}
+                </div>
+              ))}
+              {multiBounds ? <div className="de-multi" style={boxStyle(multiBounds)} /> : null}
+              {marquee ? <div className="de-marquee" style={boxStyle(marquee)} /> : null}
+              {guides.map((g, i) =>
+                g.axis === "x" ? (
+                  <div key={i} className="de-guide de-guide-x" style={{ left: g.at * scale, top: 0, height: stage.height }} />
+                ) : (
+                  <div key={i} className="de-guide de-guide-y" style={{ top: g.at * scale, left: 0, width: stage.width }} />
+                ),
+              )}
+            </div>
+            {props.textEditor ? (
+              <div className="de-text-layer" style={{ width: size.width, height: size.height, transform: `scale(${scale})` }}>
+                {props.textEditor}
+              </div>
+            ) : null}
+            {slideNotices.length ? (
+              <ul className="de-notices" aria-live="polite">
+                {slideNotices.map((notice) => (
+                  <li key={notice.code} className="de-notice">
+                    <AlertTriangle size={14} aria-hidden />
+                    <span>{notice.code === "SLIDE_FALLBACK" ? t("noticeFallback") : t("noticeScope", { detail: notice.detail ?? "" })}</span>
+                    <button type="button" onClick={() => props.onDismissNotice(notice)} aria-label={t("dismiss")} title={t("dismiss")}>
+                      <X size={12} aria-hidden />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </div>
-        ) : null}
-        {slideNotices.length ? (
-          <ul className="de-notices" aria-live="polite">
-            {slideNotices.map((notice) => (
-              <li key={notice.code} className="de-notice">
-                <AlertTriangle size={14} aria-hidden />
-                <span>{notice.code === "SLIDE_FALLBACK" ? t("noticeFallback") : t("noticeScope", { detail: notice.detail ?? "" })}</span>
-                <button type="button" onClick={() => props.onDismissNotice(notice)} aria-label={t("dismiss")} title={t("dismiss")}>
-                  <X size={12} aria-hidden />
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : null}
+        </div>
       </div>
-    </div>
+      <div className="de-zoom" role="group" aria-label={t("zoom")}>
+        <button type="button" onClick={() => zoomTo(nextZoomStep(scale, -1))} disabled={scale <= MIN_ZOOM} aria-label={t("zoomOut")} title={`${t("zoomOut")} (Ctrl -)`}>
+          <Minus size={14} aria-hidden />
+        </button>
+        <button type="button" className="de-zoom-value" onClick={() => zoomTo(1)} title={t("zoomActual")}>
+          {Math.round(scale * 100)} %
+        </button>
+        <button type="button" onClick={() => zoomTo(nextZoomStep(scale, 1))} disabled={scale >= MAX_ZOOM} aria-label={t("zoomIn")} title={`${t("zoomIn")} (Ctrl +)`}>
+          <Plus size={14} aria-hidden />
+        </button>
+        <button type="button" onClick={() => zoomTo(null)} aria-pressed={zoom == null} aria-label={t("zoomFit")} title={`${t("zoomFit")} (Ctrl 0)`}>
+          <Maximize size={14} aria-hidden />
+        </button>
+      </div>
+    </>
   );
 }
