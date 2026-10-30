@@ -2389,4 +2389,3 @@ body.de-resizing iframe { pointer-events: none; }
 .de-import-warnings p { margin: 0 0 4px; }
 .de-import-warnings ul { margin: 0; padding-left: 18px; }
 .de-import .de-row { display: flex; gap: 8px; margin-top: 0; }
-.de-rail-add > .de-rail-import { flex: none; width: auto; padding: 0 10px; }

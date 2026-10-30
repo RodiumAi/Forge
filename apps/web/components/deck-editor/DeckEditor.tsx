@@ -74,6 +74,7 @@ import {
   patchElements,
   setFields,
   setStyle,
+  setStyleOnSlides,
   ungroup,
   zOrder,
   type InsertKind,
@@ -92,6 +93,7 @@ import type { TextCommands, TextMarks } from "./text-style";
 import { useDeckDocument } from "./useDeckDocument";
 import { WorkspaceBar, type WorkspacePerson } from "@/components/builder/WorkspaceBar";
 import { Button, IconButton } from "@/components/ui/Button";
+import { MenuItem, MenuSeparator } from "@/components/ui/Popover";
 import { centerOf, ContextMenu, isContextMenuKey, useContextMenu, type ContextMenuEntry, type Point } from "@/components/ui/ContextMenu";
 import "./deck-editor.css";
 
@@ -784,7 +786,6 @@ export function DeckEditor(props: DeckEditorProps) {
       onSlideContextMenu={openSlideMenu}
       pickerAt={pickerAt}
       onPickerAtDone={() => setPickerAt(null)}
-      onImport={importer ? openImport : undefined}
     />
   );
 
@@ -832,21 +833,64 @@ export function DeckEditor(props: DeckEditorProps) {
                 </div>
               ) : null}
             </div>
-            <IconButton
-              icon="layers"
-              size="sm"
-              plain
-              onClick={() => {
-                setImageTarget(null);
-                togglePanel(true);
-                setTab("layers");
-              }}
-              aria-pressed={panelOpen && !imageTarget && tab === "layers"}
-              label={t("layers")}
-            />
-            <IconButton icon="layout" size="sm" plain onClick={() => setTab("deck")} label={t("deckSettings")} />
           </div>
         }
+        menu={(close) => {
+          // Share, Publish and Export keep their own dialogs: the row opens the bar's button.
+          const openSlot = (selector: string) => {
+            close();
+            requestAnimationFrame(() => document.querySelector<HTMLElement>(`${selector} button`)?.click());
+          };
+          const presentNow = () => {
+            close();
+            dispatch({ type: "editText", id: null });
+            setPresenting(presentIndex(doc.deck, state.slideId));
+          };
+          return (
+            <>
+              {importer && !readOnly ? (
+                <MenuItem icon="upload" onClick={() => { close(); openImport(); }}>
+                  {t("importPptx")}
+                </MenuItem>
+              ) : null}
+              {props.exportMenu ? (
+                <MenuItem icon="download" onClick={() => openSlot(".de-export-slot")}>
+                  {t("menuExport")}
+                </MenuItem>
+              ) : null}
+              <MenuItem icon="play" disabled={visibleCount === 0} onClick={presentNow}>
+                {t("presentFromHere")}
+              </MenuItem>
+              {props.share ? (
+                <MenuItem icon="share" onClick={() => openSlot(".de-share-slot")}>
+                  {t("menuShare")}
+                </MenuItem>
+              ) : null}
+              {props.publisher && !readOnly ? (
+                <MenuItem icon="globe" onClick={() => openSlot(".de-publish-slot")}>
+                  {t("publishTitle")}
+                </MenuItem>
+              ) : null}
+              <MenuSeparator />
+              <MenuItem icon="undo" disabled={!canUndo(state) || readOnly} meta="Ctrl+Z" onClick={() => { close(); dispatch({ type: "undo" }); }}>
+                {t("undo")}
+              </MenuItem>
+              <MenuItem icon="redo" disabled={!canRedo(state) || readOnly} meta="Ctrl+Shift+Z" onClick={() => { close(); dispatch({ type: "redo" }); }}>
+                {t("redo")}
+              </MenuItem>
+              <MenuSeparator />
+              <MenuItem icon="sparkles" selected={chatOpen} onClick={() => { close(); setChatOpen(!chatOpen); }}>
+                {t("menuAssistant")}
+              </MenuItem>
+              <MenuItem icon="layers" onClick={() => { close(); setImageTarget(null); togglePanel(true); setTab("layers"); }}>
+                {t("layers")}
+              </MenuItem>
+              <MenuItem icon="settings" onClick={() => { close(); togglePanel(true); setTab("deck"); }}>
+                {t("menuDeckSettings")}
+              </MenuItem>
+            </>
+          );
+        }}
         tools={
           <IconButton
             icon="sparkles"
@@ -859,9 +903,11 @@ export function DeckEditor(props: DeckEditorProps) {
         }
         actions={
           <>
-            {props.share}
+            {props.share ? <span className="de-share-slot">{props.share}</span> : null}
             {props.publisher && !readOnly ? (
-              <PublishMenu publisher={props.publisher} badge={keepBadge} onBadgeChange={setKeepBadge} beforePublish={docState.flush} disabled={visibleCount === 0} t={t} />
+              <span className="de-publish-slot">
+                <PublishMenu publisher={props.publisher} badge={keepBadge} onBadgeChange={setKeepBadge} beforePublish={docState.flush} disabled={visibleCount === 0} t={t} />
+              </span>
             ) : null}
             <Button
               variant="ghost"
@@ -895,6 +941,7 @@ export function DeckEditor(props: DeckEditorProps) {
             onClearTarget={() => dispatch({ type: "focusDeck" })}
             onEvent={docState.applyEvent}
             onNotice={docState.addNotice}
+            onThemeChanged={() => setThemeNonce((n) => n + 1)}
             beforeSend={docState.flush}
             t={t}
             locale={locale}
@@ -953,6 +1000,15 @@ export function DeckEditor(props: DeckEditorProps) {
               disabled={readOnly}
               onEdit={() => dispatch({ type: "editText", id: textSelected.id })}
               onStyle={(patch) => run(setStyle(sid, [textSelected.id], patch), `style:${textSelected.id}`)}
+              onFont={(choice, scope) => {
+                if (scope === "text") {
+                  run(setStyle(sid, [textSelected.id], { font: choice.font, family: choice.family }), `style:${textSelected.id}`);
+                  return;
+                }
+                // Many texts: a family goes on each, a theme role clears them (each text keeps its own role).
+                const ids = scope === "slide" ? [sid] : (doc?.deck.slides ?? []).map((ref) => ref.id);
+                run(setStyleOnSlides(ids, { family: choice.family }));
+              }}
             />
           ) : (
             <div className="de-format de-format-empty">
@@ -964,7 +1020,9 @@ export function DeckEditor(props: DeckEditorProps) {
                   </button>
                 </>
               ) : (
-                <span className="de-hint">{t("shortcuts")}</span>
+                <span className="de-hint" title={t("shortcuts")}>
+                  {t("formatEmpty")}
+                </span>
               )}
             </div>
           )}
@@ -1151,7 +1209,11 @@ export function DeckEditor(props: DeckEditorProps) {
           startAt={presenting}
           badge={badge}
           locale={locale}
-          onClose={() => setPresenting(null)}
+          onClose={(slideId) => {
+            // Back on the slide the presentation stopped at: "Present" resumes there.
+            if (slideId) dispatch({ type: "selectSlide", id: slideId });
+            setPresenting(null);
+          }}
           t={t}
         />
       ) : null}

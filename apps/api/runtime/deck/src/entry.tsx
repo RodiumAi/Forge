@@ -11,7 +11,7 @@ import { useEffect, useMemo } from "react";
 import { createRoot } from "react-dom/client";
 import { DeckPlayer, PresenterView, themeTokensFromDesign } from "@forge/deck-player";
 import { assetResolver, loadData, readConfig, type DeckConfig, type DeckData } from "./data";
-import { googleFamilies, googleFontsHrefs } from "./fonts";
+import { googleFamilies, googleFontsHrefs, slideFamilies } from "./fonts";
 import { PrintPages } from "./print";
 import { installExportApi } from "./extract";
 
@@ -77,9 +77,10 @@ function App({ data, config }: { data: DeckData; config: DeckConfig }) {
   const tokens = useMemo(() => themeTokensFromDesign(data.design), [data.design]);
   const assetUrl = useMemo(() => assetResolver(data, config), [data, config]);
   useEffect(() => {
+    const extra = slideFamilies(Object.values(data.slides));
     const fontsLoading =
       config.webFonts !== false
-        ? addFontLinks(googleFontsHrefs(tokens)).then(() => loadFamilies(googleFamilies(tokens)))
+        ? addFontLinks(googleFontsHrefs(tokens, extra)).then(() => loadFamilies(googleFamilies(tokens, extra)))
         : Promise.resolve();
     let cancelled = false;
     // Two frames so the first layout (and its <img> tags) exists before waiting.
@@ -93,7 +94,7 @@ function App({ data, config }: { data: DeckData; config: DeckConfig }) {
     return () => {
       cancelled = true;
     };
-  }, [tokens, config.webFonts]);
+  }, [tokens, data.slides, config.webFonts]);
 
   const presenter = config.mode === "presenter" || window.location.hash === "#presenter";
   if (config.mode === "print") {

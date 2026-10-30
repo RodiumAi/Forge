@@ -4,8 +4,9 @@
  * Top bar shared by every project workspace (site and app builder, deck,
  * codelab and design system editors): Forge icon back to the projects, kind
  * tile, inline rename, state pill, a centre slot (view tabs or tools) and a
- * right slot (save status, share, the main action). Language and theme sit
- * here too because the workspace runs without the app shell.
+ * right slot (save status, share, the main action). An options menu beside
+ * the Forge icon gathers the editor's actions and ends with Quit. Language and
+ * theme are chosen in the Forge settings, not here.
  */
 
 import Link from "next/link";
@@ -16,11 +17,10 @@ import { AvatarStack, Avatar } from "@/components/ui/Avatar";
 import { IconButton } from "@/components/ui/Button";
 import { cx } from "@/components/ui/cx";
 import { Glyph } from "@/components/ui/glyph";
-import { Segmented } from "@/components/ui/Tabs";
+import { MenuItem, MenuSeparator, Popover } from "@/components/ui/Popover";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { kindStyle } from "@/lib/kind-style";
 import type { ProjectKindId } from "@/lib/kinds";
-import { useOptionalTheme } from "@/lib/theme/ThemeProvider";
 
 export type WorkspaceState = "new" | "gen" | "draft" | "live" | "err";
 
@@ -38,8 +38,10 @@ type Props = {
   center?: ReactNode;
   /** "Saved", "Forge is writing..." */
   saveStatus?: ReactNode;
-  /** Buttons before the language switch (assistant toggle...). */
+  /** Buttons before the actions (assistant toggle...). */
   tools?: ReactNode;
+  /** Rows of the options menu (MenuItem, MenuSeparator); Quit is added at the bottom. */
+  menu?: (close: () => void) => ReactNode;
   /** Share, Present, Publish or Export. */
   actions?: ReactNode;
   people?: WorkspacePerson[];
@@ -56,14 +58,13 @@ export function WorkspaceBar({
   center,
   saveStatus,
   tools,
+  menu,
   actions,
   people = [],
   backHref = APP_ROUTES.home,
   className,
 }: Props) {
-  const { t, locale, setLocale } = useI18n();
-  const theme = useOptionalTheme();
-  const resolvedTheme = theme?.resolvedTheme;
+  const { t } = useI18n();
   const k = kindStyle(kind);
 
   const pill: Record<WorkspaceState, string> = {
@@ -83,6 +84,25 @@ export function WorkspaceBar({
           {t("bdBackToProjects")}
         </span>
       </Link>
+      {menu ? (
+        <Popover
+          trigger={<IconButton icon="menu" size="sm" plain className="f-bd-menu" label={t("bdMenu")} title={t("bdMenu")} />}
+          role="menu"
+          label={t("bdMenu")}
+          width={260}
+          className="f-bd-menu-pop"
+        >
+          {(close) => (
+            <>
+              {menu(close)}
+              <MenuSeparator />
+              <MenuItem icon="logout" href={backHref} onClick={close}>
+                {t("bdQuit")}
+              </MenuItem>
+            </>
+          )}
+        </Popover>
+      ) : null}
       <div className="f-bd-name">
         <span className="f-bd-kind" style={{ background: k.color }} title={t(k.labelKey)}>
           <Glyph name={k.glyph} size="sm" />
@@ -99,24 +119,6 @@ export function WorkspaceBar({
       <div className="f-bd-right">
         {saveStatus ? <span className="f-bd-save" aria-live="polite">{saveStatus}</span> : null}
         {tools}
-        <Segmented
-          className="f-bd-hide-mob f-bd-lang"
-          label={t("uiLanguage")}
-          value={locale}
-          onChange={(next) => setLocale(next)}
-          items={[
-            { id: "fr", label: "FR" },
-            { id: "en", label: "EN" },
-          ]}
-        />
-        {theme ? (
-          <IconButton
-            className="f-bd-hide-mob"
-            icon={resolvedTheme === "dark" ? "sun" : "moon"}
-            label={resolvedTheme === "dark" ? t("uiThemeLight") : t("uiThemeDark")}
-            onClick={() => theme.setPreference(resolvedTheme === "dark" ? "light" : "dark")}
-          />
-        ) : null}
         {people.length ? <People people={people} /> : null}
         {actions}
       </div>

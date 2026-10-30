@@ -45,6 +45,7 @@ from app.prompts.deck import (
     TARGETED_SLIDE_SYSTEM,
 )
 from app.services.deck_ai import attachments, store
+from app.services.deck_ai.fonts import apply_theme_fonts, check_fonts, fonts_summary
 from app.services.deck_ai.layouts import (
     LAYOUT_NAMES,
     describe_layout,
@@ -56,6 +57,7 @@ from app.services.deck_ai.outline import Outline, check_outline, plan_tasks
 from app.services.deck_ai.targeting import SlideResult, element_from_answer, find_element, slide_from_answer
 from app.services.deck_ai.theme import DeckTheme, load_theme
 from app.services.deck_ai.visuals import drop_placeholders, fill_visual, set_image
+from app.services.design_system.tokens import font_names
 from app.services.document_scaffold import DECK_PATH, DEFAULT_THEME
 from app.services.llm import RodiumError, error_code_for, user_error_message
 from app.services.orchestration.cancel import clear_cancelled, is_cancelled
@@ -765,6 +767,7 @@ class DeckEdit:
     order: list[str]
     slides: dict[str, SlideResult]
     transition: dict[str, Any] | None
+    fonts: dict[str, str] | None = None
 
 
 def _check_deck_edit(data: dict[str, Any], existing: set[str], theme: DeckTheme) -> DeckEdit:
@@ -795,7 +798,9 @@ def _check_deck_edit(data: dict[str, Any], existing: set[str], theme: DeckTheme)
     transition = None
     if isinstance(data.get("transition"), dict):
         transition = dump_document(Transition.model_validate(data["transition"]))
-    return DeckEdit(order=order[:500], slides=slides, transition=transition)
+    return DeckEdit(
+        order=order[:500], slides=slides, transition=transition, fonts=check_fonts(data.get("fonts"))
+    )
 
 
 @dataclass
@@ -804,6 +809,7 @@ class DeckPlan:
     change: list[str]
     new: dict[str, dict[str, str]]
     transition: dict[str, Any] | None
+    fonts: dict[str, str] | None = None
 
 
 def _check_deck_plan(data: dict[str, Any], existing: set[str]) -> DeckPlan:
@@ -844,7 +850,49 @@ def _check_deck_plan(data: dict[str, Any], existing: set[str]) -> DeckPlan:
         change=change,
         new={sid: spec for sid, spec in new.items() if sid in order},
         transition=transition,
+        fonts=check_fonts(data.get("fonts")),
     )
+
+
+def _fonts_line() -> str:
+    return "Supported fonts: " + ", ".join(font_names())
+
+
+def _apply_fonts(pid: str, fonts: dict[str, str] | None, applied: list[dict[str, str]]) -> list[Event]:
+    """The theme files rewritten for a font change, as stream events."""
+    if not fonts:
+        return []
+    events: list[Event] = []
+    for written in apply_theme_fonts(pid, fonts):
+        applied.append({"op": "write", "path": written})
+        events.append({"type": "file_write", "path": written})
+    return events
+
+
+def _edit_summary(
+    locale: str, *, slides: int, fonts: dict[str, str] | None, structure: bool, kept: int = 0
+) -> str:
+    """What the edit changed, in the user's language; never "updated" when nothing did."""
+    parts: list[str] = []
+    if fonts:
+        parts.append(fonts_summary(fonts, locale))
+    if slides:
+        parts.append(f"{slides} slide(s) modifiée(s)." if locale == "fr" else f"{slides} slide(s) changed.")
+    elif structure:
+        parts.append("Présentation mise à jour." if locale == "fr" else "Presentation updated.")
+    if kept:
+        parts.append(
+            f"{kept} slide(s) inchangée(s) : l'IA n'a pas produit de version valide."
+            if locale == "fr"
+            else f"{kept} slide(s) unchanged: the AI did not produce a valid version."
+        )
+    if not parts:
+        return (
+            "Aucune modification : reformulez la demande ou ciblez une slide."
+            if locale == "fr"
+            else "Nothing changed: rephrase the request or target a slide."
+        )
+    return " ".join(parts)
 
 
 async def _planned_deck_edit(
@@ -860,6 +908,8 @@ async def _planned_deck_edit(
         for part in (
             f"Deck outline:\n{outline}",
             "Layouts: " + ", ".join(LAYOUT_NAMES),
+            theme.describe(),
+            _fonts_line(),
             _conversation(ctx.history),
             f"User request:\n{attachments.strip_markers(ctx.prompt)[:MAX_PROMPT_CHARS]}",
             attachments.describe_documents(attachments.documents(ctx.prompt), mode="edit"),
@@ -926,10 +976,14 @@ async def _planned_deck_edit(
         if plan.transition is not None:
             ref["transition"] = dict(plan.transition)
         refs.append(ref)
-    deck = store.write_deck(pid, {**deck, "slides": refs})
-    applied.append({"op": "write", "path": DECK_PATH})
-    yield {"type": "file_write", "path": DECK_PATH}
-    yield {"type": "deck.deck", "run_id": str(ctx.run_pk), "deck": deck}
+    structure = plan.transition is not None or plan.order != list(existing) or bool(plan.new)
+    if structure:
+        deck = store.write_deck(pid, {**deck, "slides": refs})
+        applied.append({"op": "write", "path": DECK_PATH})
+        yield {"type": "file_write", "path": DECK_PATH}
+        yield {"type": "deck.deck", "run_id": str(ctx.run_pk), "deck": deck}
+    for event in _apply_fonts(pid, plan.fonts, applied):
+        yield event
     for sid in existing:
         if sid not in plan.order:
             store.remove_slide_files(pid, sid)
@@ -1017,14 +1071,9 @@ async def _planned_deck_edit(
     yield steps.push("deck_restyle", "done")
     yield {"type": "deck.done", "run_id": str(ctx.run_pk), "slides": written, "warnings": warnings}
     yield steps.push("done", "done")
-    if ctx.locale == "fr":
-        summary = "Présentation mise à jour."
-        if kept:
-            summary += f" {len(kept)} slide(s) inchangée(s) : l'IA n'a pas produit de version valide."
-    else:
-        summary = "Presentation updated."
-        if kept:
-            summary += f" {len(kept)} slide(s) unchanged: the AI did not produce a valid version."
+    summary = _edit_summary(
+        ctx.locale, slides=len(written), fonts=plan.fonts, structure=structure, kept=len(kept)
+    )
     payload = {"summary": summary, "steps": steps.items, "applied": applied}
     _finish_run(ctx.run_pk, payload, ctx.locale)
     yield {"type": "done", **payload, "effort_label": ctx.route_effort}
@@ -1058,6 +1107,7 @@ async def _deck_edit(ctx: DeckContext) -> AsyncIterator[Event]:
             "Slides:\n" + "\n".join(bodies),
             "Layouts: " + ", ".join(LAYOUT_NAMES),
             theme.describe(),
+            _fonts_line(),
             _conversation(ctx.history),
             f"User request:\n{attachments.strip_markers(ctx.prompt)[:MAX_PROMPT_CHARS]}",
             attachments.describe_for_edit(attachments.image_paths(ctx.prompt)),
@@ -1087,10 +1137,13 @@ async def _deck_edit(ctx: DeckContext) -> AsyncIterator[Event]:
         if edit.transition is not None:
             ref["transition"] = dict(edit.transition)
         refs.append(ref)
+    structure = edit.transition is not None or edit.order != list(existing) or bool(edit.slides)
     deck = store.write_deck(pid, {**deck, "slides": refs})
     applied.append({"op": "write", "path": DECK_PATH})
     yield {"type": "file_write", "path": DECK_PATH}
     yield {"type": "deck.deck", "run_id": str(ctx.run_pk), "deck": deck}
+    for event in _apply_fonts(pid, edit.fonts, applied):
+        yield event
     for sid in existing:
         if sid not in edit.order:
             store.remove_slide_files(pid, sid)
@@ -1130,7 +1183,9 @@ async def _deck_edit(ctx: DeckContext) -> AsyncIterator[Event]:
     yield steps.push("deck_restyle", "done")
     yield {"type": "deck.done", "run_id": str(ctx.run_pk), "slides": list(edit.slides), "warnings": []}
     yield steps.push("done", "done")
-    summary = "Présentation mise à jour." if ctx.locale == "fr" else "Presentation updated."
+    summary = _edit_summary(
+        ctx.locale, slides=len(edit.slides), fonts=edit.fonts, structure=structure and not edit.slides
+    )
     payload = {"summary": summary, "steps": steps.items, "applied": applied}
     _finish_run(ctx.run_pk, payload, ctx.locale)
     yield {"type": "done", **payload, "effort_label": ctx.route_effort}

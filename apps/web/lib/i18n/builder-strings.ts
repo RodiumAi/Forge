@@ -5,6 +5,8 @@
 
 export const bdEn = {
   bdBackToProjects: "Back to dashboard",
+  bdMenu: "Options",
+  bdQuit: "Quit",
   bdStateNew: "New",
   bdStateGen: "Forge is building",
   bdStateDraft: "Draft",
@@ -206,6 +208,8 @@ export const bdEn = {
 
 export const bdFr: Record<keyof typeof bdEn, string> = {
   bdBackToProjects: "Retour au tableau de bord",
+  bdMenu: "Options",
+  bdQuit: "Quitter",
   bdStateNew: "Nouveau",
   bdStateGen: "Forge construit",
   bdStateDraft: "Brouillon",
