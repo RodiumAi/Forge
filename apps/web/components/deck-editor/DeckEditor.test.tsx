@@ -194,4 +194,71 @@ describe("DeckEditor", () => {
     expect(calls[0]).toMatchObject({ options: { notes: true, badge: true }, saved: { x: 1001 } });
     expect(await within(dialog).findByRole("link", { name: t("publishPresenter") })).toHaveAttribute("href", "https://deck.example/presenter/");
   });
+
+  it("imports picked PowerPoint slides after the current one, with their notes, and undoes it", async () => {
+    localStorage.setItem("forge_locale", "fr");
+    const server = new MemoryDocServer(deck, slides, { s1: "Notes 1" });
+    const imported = (index: number, text: string) => ({
+      index,
+      title: text,
+      hidden: false,
+      slide: { id: `imported-${index}`, background: { type: "color" as const, token: "#FFFFFF" }, elements: [{ id: "t", type: "text" as const, x: 0, y: 0, w: 500, h: 100, content: [{ type: "paragraph" as const, text }] }] },
+      notes: `Notes ${text}`,
+      warnings: {},
+    });
+    const importPptx = vi.fn(async () => ({ canvas: { width: 1920, height: 1080 }, slides: [imported(1, "Un"), imported(2, "Deux"), imported(3, "Trois")], warnings: {} }));
+    render(
+      <I18nProvider>
+        <DeckEditor
+          projectId="p1"
+          transport={server.transport()}
+          loadTheme={async () => ""}
+          assetUrl={(p) => p}
+          chat={null}
+          images={null}
+          slideImport={{ importPptx }}
+          badgeRemovable={false}
+          backHref="/dashboard"
+        />
+      </I18nProvider>,
+    );
+    await screen.findByText("Test deck");
+    expect(screen.getByRole("button", { name: t("importSlides") })).toBeInTheDocument();
+    const file = new File(["pk"], "deck.pptx", { type: "application/vnd.openxmlformats-officedocument.presentationml.presentation" });
+    fireEvent.change(screen.getByTestId("slide-import-input"), { target: { files: [file] } });
+    const dialog = await screen.findByRole("dialog", { name: t("importTitle") });
+    expect(importPptx).toHaveBeenCalledWith(file);
+    expect(await within(dialog).findByText(t("importCount", { n: 3, total: 3 }))).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("checkbox", { name: t("importSlideLabel", { n: 2, title: "Deux" }) }));
+    fireEvent.click(within(dialog).getByRole("button", { name: t("importRun") }));
+    expect(screen.queryByRole("dialog", { name: t("importTitle") })).not.toBeInTheDocument();
+
+    await wait(AUTOSAVE_DELAY_MS + 200);
+    const ids = server.deck.value.slides.map((r) => r.id);
+    expect(ids).toHaveLength(4);
+    expect([ids[0], ids[3]]).toEqual(["s1", "s2"]);
+    const text = (id: string) => (server.slides.get(id)!.value.elements[0] as { content: { text: string }[] }).content[0].text;
+    expect([text(ids[1]), text(ids[2])]).toEqual(["Un", "Trois"]);
+    expect(server.notes.get(ids[1])?.value).toBe("Notes Un");
+    expect(server.notes.get(ids[2])?.value).toBe("Notes Trois");
+
+    fireEvent.keyDown(window, { key: "z", ctrlKey: true });
+    await wait(AUTOSAVE_DELAY_MS + 200);
+    expect(server.deck.value.slides.map((r) => r.id)).toEqual(["s1", "s2"]);
+  });
+
+  it("refuses a file that is not a PowerPoint presentation without calling the server", async () => {
+    localStorage.setItem("forge_locale", "fr");
+    const server = new MemoryDocServer(deck, slides);
+    const importPptx = vi.fn();
+    render(
+      <I18nProvider>
+        <DeckEditor projectId="p1" transport={server.transport()} loadTheme={async () => ""} assetUrl={(p) => p} chat={null} images={null} slideImport={{ importPptx }} badgeRemovable={false} backHref="/dashboard" />
+      </I18nProvider>,
+    );
+    await screen.findByText("Test deck");
+    fireEvent.change(screen.getByTestId("slide-import-input"), { target: { files: [new File(["x"], "notes.pdf", { type: "application/pdf" })] } });
+    expect(await screen.findByRole("alert")).toHaveTextContent(t("importErrorType"));
+    expect(importPptx).not.toHaveBeenCalled();
+  });
 });

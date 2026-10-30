@@ -341,6 +341,10 @@ export class Autosaver {
     const local = this.hooks.getNotes()[id];
     const base = this.baseNotes.get(id) ?? "";
     if (local === undefined || local === base) return;
+    // Notes of a slide that left the deck (an import or an addition undone) wait
+    // until the slide comes back rather than leaving a stray file.
+    const doc = this.hooks.getDoc();
+    if (doc && !doc.deck.slides.some((ref) => ref.id === id)) return;
     let etag = this.etags.get(key) ?? null;
     if (this.stale.has(key)) {
       const fresh = await this.transport.getNotes(id);
