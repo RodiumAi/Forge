@@ -51,7 +51,6 @@
 .f-bd-people .f-avatar { box-shadow: 0 0 0 2px var(--f-bg-deep); }
 .f-bd-right .f-btn-sm { height: 36px; }
 .f-bd-right .f-btn[aria-disabled="true"], .f-bd-right .f-btn:disabled { opacity: .55; cursor: not-allowed; }
-.f-bd-lang button { height: 28px; padding: 0 9px; font-size: 12.5px; }
 
 /* ---------- Body: chat + stage ---------- */
 .f-bd-body { position: relative; display: grid; grid-template-columns: var(--f-bd-chat-w, 400px) minmax(0, 1fr); min-height: 0; }
@@ -488,7 +487,6 @@ button.f-bd-op:focus-visible { outline: 2px solid var(--f-orange); outline-offse
 }
 @media (max-width: 1060px) {
   .f-bd-tabs .f-tab { padding: 0 9px; }
-  .f-bd-lang { display: none !important; }
 }
 @media (max-width: 900px) {
   .f-bd { grid-template-rows: 56px minmax(0, 1fr) 58px; }

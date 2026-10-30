@@ -4,10 +4,11 @@
  * "Present": the deck player full screen over the editor, from the current
  * slide. The player brings keyboard and remote control support and its own
  * presenter view button (second window, synced over BroadcastChannel).
- * Leaving full screen or pressing Escape returns to the editor.
+ * Leaving full screen or pressing Escape returns to the editor, on the slide
+ * the presentation stopped at, so presenting again resumes there.
  */
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import { DeckPlayer, type AssetUrl, type ThemeTokens } from "@/components/deck-player";
 import type { Deck, Slide } from "@/lib/contracts/forge-design";
@@ -43,11 +44,22 @@ export function PresentOverlay({
   startAt: number;
   badge: boolean;
   locale: DeckLocale;
-  onClose: () => void;
+  /** Called with the id of the slide on screen when the presentation ends. */
+  onClose: (slideId: string | null) => void;
   t: DeckT;
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
   const wasFullscreen = useRef(false);
+  const last = useRef(startAt);
+  const latest = useRef({ deck, onClose });
+  latest.current = { deck, onClose };
+  const close = useCallback(() => {
+    const visible = latest.current.deck.slides.filter((slide) => !slide.hidden);
+    latest.current.onClose(visible[last.current]?.id ?? null);
+  }, []);
+  const track = useCallback((index: number) => {
+    last.current = index;
+  }, []);
 
   useEffect(() => {
     const el = ref.current;
@@ -59,10 +71,10 @@ export function PresentOverlay({
         .catch(() => undefined);
     }
     const onChange = () => {
-      if (wasFullscreen.current && !document.fullscreenElement) onClose();
+      if (wasFullscreen.current && !document.fullscreenElement) close();
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !document.fullscreenElement) onClose();
+      if (e.key === "Escape" && !document.fullscreenElement) close();
     };
     document.addEventListener("fullscreenchange", onChange);
     window.addEventListener("keydown", onKey);
@@ -71,12 +83,12 @@ export function PresentOverlay({
       window.removeEventListener("keydown", onKey);
       if (document.fullscreenElement === el) void document.exitFullscreen().catch(() => undefined);
     };
-  }, [onClose]);
+  }, [close]);
 
   return (
     <div ref={ref} className="de-present" role="dialog" aria-modal="true" aria-label={t("present")}>
-      <DeckPlayer deck={deck} slides={slides} notes={notes} tokens={tokens} assetUrl={assetUrl} startAt={startAt} badge={badge} locale={locale} />
-      <button type="button" className="de-present-close" onClick={onClose} aria-label={t("exitPresent")} title={t("exitPresent")}>
+      <DeckPlayer deck={deck} slides={slides} notes={notes} tokens={tokens} assetUrl={assetUrl} startAt={startAt} badge={badge} locale={locale} onSlideChange={track} />
+      <button type="button" className="de-present-close" onClick={close} aria-label={t("exitPresent")} title={t("exitPresent")}>
         <X size={18} aria-hidden />
       </button>
     </div>

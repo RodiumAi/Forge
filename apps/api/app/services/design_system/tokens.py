@@ -98,7 +98,12 @@ _STACKS: dict[str, list[str]] = {
     "display": ["system-ui", "-apple-system", "Segoe UI", "sans-serif"],
     "mono": ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
 }
-_FONT_KEYS = {name.lower(): name for name in GOOGLE_FONTS}
+#: Families Forge serves itself (category, weights): valid in a design system,
+#: never requested from Google Fonts.
+SELF_HOSTED_FONTS: dict[str, tuple[str, str]] = {
+    "Open Sauce Sans": ("sans", "400;500;600;700"),
+}
+_FONT_KEYS = {name.lower(): name for name in (*GOOGLE_FONTS, *SELF_HOSTED_FONTS)}
 _STEPS: tuple[tuple[str, int], ...] = (
     ("xs", -2),
     ("sm", -1),
@@ -315,7 +320,18 @@ def match_font(raw: Any, fallback: str) -> str:
 
 
 def font_category(family: str) -> str:
-    return GOOGLE_FONTS.get(family, ("sans", ""))[0]
+    return (GOOGLE_FONTS.get(family) or SELF_HOSTED_FONTS.get(family) or ("sans", ""))[0]
+
+
+def known_font(raw: Any) -> str | None:
+    """The catalog spelling of a family name, or None when Forge cannot load it."""
+    name = re.sub(r"[`\"'*]", "", str(raw or "")).split(",")[0].strip()
+    return _FONT_KEYS.get(name.lower())
+
+
+def font_names() -> list[str]:
+    """Every family a design system may use, for prompts."""
+    return sorted({*GOOGLE_FONTS, *SELF_HOSTED_FONTS})
 
 
 def font_stack(family: str) -> list[str]:

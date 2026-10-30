@@ -33,6 +33,7 @@ from app.routers import (
     projects,
     publish,
     seo,
+    share_links,
     sites_v1,
     team,
     templates,
@@ -196,6 +197,8 @@ app.include_router(comments.router)
 app.include_router(publish.router)
 app.include_router(exports.router)
 app.include_router(domains.router)
+app.include_router(share_links.router)
+app.include_router(share_links.public_router)
 app.include_router(sites_v1.router)
 app.include_router(preview.router)
 app.include_router(internal_admin.router)

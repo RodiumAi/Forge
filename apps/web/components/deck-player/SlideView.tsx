@@ -9,6 +9,7 @@ import { ElementList, StageContext, type StageContextValue } from "./elements";
 import { canvasSize, fitCanvas } from "./geometry";
 import type { Box } from "./morph";
 import { buildSchedule } from "./steps";
+import { deckFamilies, ensureFonts } from "./fonts";
 import { colorRef, DEFAULT_TOKENS, fontRef, tokensToStyle } from "./theme";
 import type { AssetUrl, CanvasSize, Deck, PlayerMode, Slide, ThemeTokens } from "./types";
 
@@ -64,6 +65,9 @@ export function SlideCanvas({ slide, size, tokens, mode, assetUrl, step, morphFr
   const effectiveStep = mode === "present" ? (step ?? 0) : Number.POSITIVE_INFINITY;
   const mountStep = useRef(effectiveStep).current;
   const stage: StageContextValue = { mode, assetUrl, schedule, step: effectiveStep, mountStep, morphFrom, morphMs, hideIds };
+  // The theme fonts and the families texts name: requested once per page.
+  const families = useMemo(() => deckFamilies({ ...DEFAULT_TOKENS, ...tokens }, [slide]).join("|"), [tokens, slide]);
+  useEffect(() => ensureFonts(families ? families.split("|") : []), [families]);
   const style: CSSProperties = {
     ...(tokensToStyle({ ...DEFAULT_TOKENS, ...tokens }) as CSSProperties),
     position: "relative",

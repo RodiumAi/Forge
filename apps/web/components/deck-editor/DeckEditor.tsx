@@ -74,6 +74,7 @@ import {
   patchElements,
   setFields,
   setStyle,
+  setStyleOnSlides,
   ungroup,
   zOrder,
   type InsertKind,
@@ -82,6 +83,8 @@ import {
 import { colorTokens } from "./fields";
 import { PresentOverlay, presentIndex } from "./PresentOverlay";
 import { PublishMenu, type DeckPublisher } from "./PublishMenu";
+import { SharePanel } from "./SharePanel";
+import type { ShareLinkClient } from "@/lib/share-links";
 import { SlideImportDialog, type SlideImportState } from "./SlideImportDialog";
 import { importErrorKey, importSlides, insertionIndex, isPptxFile, MAX_SLIDE_IMPORT_BYTES, PPTX_ACCEPT, type ImportedSlide, type SlideImportClient } from "./slide-import";
 import { PropertiesPanel, type ImageTarget, type PanelTab } from "./PropertiesPanel";
@@ -92,6 +95,7 @@ import type { TextCommands, TextMarks } from "./text-style";
 import { useDeckDocument } from "./useDeckDocument";
 import { WorkspaceBar, type WorkspacePerson } from "@/components/builder/WorkspaceBar";
 import { Button, IconButton } from "@/components/ui/Button";
+import { MenuItem, MenuSeparator } from "@/components/ui/Popover";
 import { centerOf, ContextMenu, isContextMenuKey, useContextMenu, type ContextMenuEntry, type Point } from "@/components/ui/ContextMenu";
 import "./deck-editor.css";
 
@@ -114,8 +118,10 @@ export type DeckEditorProps = {
   exportMenu?: ReactNode;
   /** Publish action; hidden when absent. */
   publisher?: DeckPublisher | null;
-  /** Share button (owner only), next to Publish. */
+  /** Invite dialog (owner only), opened from the Share panel. */
   share?: ReactNode;
+  /** Link access settings (owner only), in the Share panel. */
+  shareLink?: ShareLinkClient | null;
   /** Who else works on the deck, shown to guests. */
   people?: WorkspacePerson[];
   readOnly?: boolean;
@@ -159,6 +165,17 @@ export function DeckEditor(props: DeckEditorProps) {
   const [layerHover, setLayerHover] = useState<string | null>(null);
   const [imageTarget, setImageTarget] = useState<ImageTarget | null>(null);
   const [presenting, setPresenting] = useState<number | null>(null);
+  /** Opens a dialog whose trigger sits hidden in the bar (Share panel rows, Options menu). */
+  const openBarSlot = (selector: string) => {
+    requestAnimationFrame(() => document.querySelector<HTMLElement>(`${selector} button`)?.click());
+  };
+  /** Shown after a slide is deleted, with Undo; cleared after a few seconds. */
+  const [deletedToast, setDeletedToast] = useState(0);
+  useEffect(() => {
+    if (!deletedToast) return;
+    const timer = window.setTimeout(() => setDeletedToast(0), 6000);
+    return () => window.clearTimeout(timer);
+  }, [deletedToast]);
   // Badge shown unless the plan allows removing it and the user turned it off.
   const [keepBadge, setKeepBadge] = useState(true);
   const badge = !props.badgeRemovable || keepBadge;
@@ -297,6 +314,7 @@ export function DeckEditor(props: DeckEditorProps) {
       const index = doc.deck.slides.findIndex((r) => r.id === id);
       const nextId = doc.deck.slides[index + 1]?.id ?? doc.deck.slides[index - 1]?.id ?? null;
       dispatch({ type: "edit", recipe: (d) => removeSlide(d, id), slideId: nextId ?? undefined, select: [] });
+      setDeletedToast(Date.now());
     },
     [doc, dispatch],
   );
@@ -689,7 +707,7 @@ export function DeckEditor(props: DeckEditorProps) {
           askAi: () => askChat({ nonce: Date.now(), kind: "focus" }),
           importSlides: importer ? openImport : undefined,
           remove: () => {
-            if (window.confirm(t("confirmDeleteSlide"))) deleteSlide(id);
+            deleteSlide(id);
           },
         },
       }),
@@ -777,14 +795,13 @@ export function DeckEditor(props: DeckEditorProps) {
         dispatch({ type: "edit", recipe: () => result.doc, slideId: result.id, select: [] });
       }}
       onDelete={(id) => {
-        if (window.confirm(t("confirmDeleteSlide"))) deleteSlide(id);
+        deleteSlide(id);
       }}
       onToggleHidden={(id) => run((d) => updateRef(d, id, (ref) => (ref.hidden ? withoutHidden(ref) : { ...ref, hidden: true })))}
       onAdd={addSlide}
       onSlideContextMenu={openSlideMenu}
       pickerAt={pickerAt}
       onPickerAtDone={() => setPickerAt(null)}
-      onImport={importer ? openImport : undefined}
     />
   );
 
@@ -832,21 +849,64 @@ export function DeckEditor(props: DeckEditorProps) {
                 </div>
               ) : null}
             </div>
-            <IconButton
-              icon="layers"
-              size="sm"
-              plain
-              onClick={() => {
-                setImageTarget(null);
-                togglePanel(true);
-                setTab("layers");
-              }}
-              aria-pressed={panelOpen && !imageTarget && tab === "layers"}
-              label={t("layers")}
-            />
-            <IconButton icon="layout" size="sm" plain onClick={() => setTab("deck")} label={t("deckSettings")} />
           </div>
         }
+        menu={(close) => {
+          // Share, Publish and Export keep their own dialogs: the row opens the bar's button.
+          const openSlot = (selector: string) => {
+            close();
+            requestAnimationFrame(() => document.querySelector<HTMLElement>(`${selector} button`)?.click());
+          };
+          const presentNow = () => {
+            close();
+            dispatch({ type: "editText", id: null });
+            setPresenting(presentIndex(doc.deck, state.slideId));
+          };
+          return (
+            <>
+              {importer && !readOnly ? (
+                <MenuItem icon="upload" onClick={() => { close(); openImport(); }}>
+                  {t("importPptx")}
+                </MenuItem>
+              ) : null}
+              {props.exportMenu ? (
+                <MenuItem icon="download" onClick={() => { void docState.flush(); openSlot(".de-export-slot"); }}>
+                  {t("menuExport")}
+                </MenuItem>
+              ) : null}
+              <MenuItem icon="play" disabled={visibleCount === 0} onClick={presentNow}>
+                {t("presentFromHere")}
+              </MenuItem>
+              {props.share ? (
+                <MenuItem icon="share" onClick={() => openSlot(".de-share-slot")}>
+                  {t("menuShare")}
+                </MenuItem>
+              ) : null}
+              {props.publisher && !readOnly ? (
+                <MenuItem icon="globe" onClick={() => openSlot(".de-publish-slot")}>
+                  {t("publishTitle")}
+                </MenuItem>
+              ) : null}
+              <MenuSeparator />
+              <MenuItem icon="undo" disabled={!canUndo(state) || readOnly} meta="Ctrl+Z" onClick={() => { close(); dispatch({ type: "undo" }); }}>
+                {t("undo")}
+              </MenuItem>
+              <MenuItem icon="redo" disabled={!canRedo(state) || readOnly} meta="Ctrl+Shift+Z" onClick={() => { close(); dispatch({ type: "redo" }); }}>
+                {t("redo")}
+              </MenuItem>
+              <MenuSeparator />
+              <MenuItem icon="sparkles" selected={chatOpen} onClick={() => { close(); setChatOpen(!chatOpen); }}>
+                {t("menuAssistant")}
+              </MenuItem>
+              <MenuItem icon="layers" onClick={() => { close(); setImageTarget(null); togglePanel(true); setTab("layers"); }}>
+                {t("layers")}
+              </MenuItem>
+              <MenuItem icon="settings" onClick={() => { close(); togglePanel(true); setTab("deck"); }}>
+                {t("menuDeckSettings")}
+              </MenuItem>
+            </>
+          );
+        }}
         tools={
           <IconButton
             icon="sparkles"
@@ -859,10 +919,6 @@ export function DeckEditor(props: DeckEditorProps) {
         }
         actions={
           <>
-            {props.share}
-            {props.publisher && !readOnly ? (
-              <PublishMenu publisher={props.publisher} badge={keepBadge} onBadgeChange={setKeepBadge} beforePublish={docState.flush} disabled={visibleCount === 0} t={t} />
-            ) : null}
             <Button
               variant="ghost"
               size="sm"
@@ -876,11 +932,35 @@ export function DeckEditor(props: DeckEditorProps) {
             >
               <span className="f-bd-lbl">{t("present")}</span>
             </Button>
-            {props.exportMenu ? (
-              <div className="de-export-slot" onPointerDownCapture={() => void docState.flush()}>
-                {props.exportMenu}
-              </div>
-            ) : null}
+            <SharePanel
+              link={props.shareLink}
+              onInvite={props.share ? () => openBarSlot(".de-share-slot") : undefined}
+              onPresent={() => {
+                dispatch({ type: "editText", id: null });
+                setPresenting(presentIndex(doc.deck, state.slideId));
+              }}
+              presentDisabled={visibleCount === 0}
+              onDownload={
+                props.exportMenu
+                  ? () => {
+                      void docState.flush();
+                      openBarSlot(".de-export-slot");
+                    }
+                  : undefined
+              }
+              onPublish={props.publisher && !readOnly ? () => openBarSlot(".de-publish-slot") : undefined}
+              t={t}
+            />
+            {/* Triggers hidden behind the Share panel; their dialogs open under it. */}
+            <span className="de-bar-slots">
+              {props.share ? <span className="de-share-slot">{props.share}</span> : null}
+              {props.publisher && !readOnly ? (
+                <span className="de-publish-slot">
+                  <PublishMenu publisher={props.publisher} badge={keepBadge} onBadgeChange={setKeepBadge} beforePublish={docState.flush} disabled={visibleCount === 0} t={t} />
+                </span>
+              ) : null}
+              {props.exportMenu ? <span className="de-export-slot">{props.exportMenu}</span> : null}
+            </span>
           </>
         }
       />
@@ -895,6 +975,7 @@ export function DeckEditor(props: DeckEditorProps) {
             onClearTarget={() => dispatch({ type: "focusDeck" })}
             onEvent={docState.applyEvent}
             onNotice={docState.addNotice}
+            onThemeChanged={() => setThemeNonce((n) => n + 1)}
             beforeSend={docState.flush}
             t={t}
             locale={locale}
@@ -953,6 +1034,15 @@ export function DeckEditor(props: DeckEditorProps) {
               disabled={readOnly}
               onEdit={() => dispatch({ type: "editText", id: textSelected.id })}
               onStyle={(patch) => run(setStyle(sid, [textSelected.id], patch), `style:${textSelected.id}`)}
+              onFont={(choice, scope) => {
+                if (scope === "text") {
+                  run(setStyle(sid, [textSelected.id], { font: choice.font, family: choice.family }), `style:${textSelected.id}`);
+                  return;
+                }
+                // Many texts: a family goes on each, a theme role clears them (each text keeps its own role).
+                const ids = scope === "slide" ? [sid] : (doc?.deck.slides ?? []).map((ref) => ref.id);
+                run(setStyleOnSlides(ids, { family: choice.family }));
+              }}
             />
           ) : (
             <div className="de-format de-format-empty">
@@ -964,7 +1054,9 @@ export function DeckEditor(props: DeckEditorProps) {
                   </button>
                 </>
               ) : (
-                <span className="de-hint">{t("shortcuts")}</span>
+                <span className="de-hint" title={t("shortcuts")}>
+                  {t("formatEmpty")}
+                </span>
               )}
             </div>
           )}
@@ -1137,6 +1229,21 @@ export function DeckEditor(props: DeckEditorProps) {
           }}
         />
       ) : null}
+      {deletedToast ? (
+        <p className="f-toast de-undo-toast" role="status">
+          {t("slideDeleted")}
+          <button
+            type="button"
+            className="de-button de-button-ghost"
+            onClick={() => {
+              dispatch({ type: "undo" });
+              setDeletedToast(0);
+            }}
+          >
+            {t("undo")}
+          </button>
+        </p>
+      ) : null}
       {importState ? (
         <SlideImportDialog state={importState} deck={doc.deck} tokens={tokens} assetUrl={assetUrl} t={t} onCancel={closeImport} onImport={applyImport} />
       ) : null}
@@ -1151,7 +1258,11 @@ export function DeckEditor(props: DeckEditorProps) {
           startAt={presenting}
           badge={badge}
           locale={locale}
-          onClose={() => setPresenting(null)}
+          onClose={(slideId) => {
+            // Back on the slide the presentation stopped at: "Present" resumes there.
+            if (slideId) dispatch({ type: "selectSlide", id: slideId });
+            setPresenting(null);
+          }}
           t={t}
         />
       ) : null}

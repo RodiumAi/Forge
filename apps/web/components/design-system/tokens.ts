@@ -7,6 +7,7 @@
  * the API checks and writes.
  */
 
+import { GOOGLE_FONTS, SELF_HOSTED_FONTS, type FontCategory } from "@/components/deck-player/fonts";
 import { tokensFromDesignSystem } from "@/components/deck-player/theme";
 import type { DesignSystem } from "@/lib/contracts/forge-design";
 
@@ -155,58 +156,7 @@ export function removeColor(doc: DesignSystemDoc, name: string): DesignSystemDoc
 
 // ── fonts and type scale ───────────────────────────────────────────────────
 
-export type FontCategory = "sans" | "serif" | "display" | "mono";
-
-/** Curated Google Fonts (same list and weights as the API brand charter). */
-export const GOOGLE_FONTS: Record<string, [FontCategory, string]> = {
-  Inter: ["sans", "400;500;600;700"],
-  Manrope: ["sans", "400;500;600;700"],
-  "DM Sans": ["sans", "400;500;600;700"],
-  "Plus Jakarta Sans": ["sans", "400;500;600;700"],
-  Outfit: ["sans", "400;500;600;700"],
-  Sora: ["sans", "400;500;600;700"],
-  "Space Grotesk": ["sans", "400;500;600;700"],
-  "Work Sans": ["sans", "400;500;600;700"],
-  Figtree: ["sans", "400;500;600;700"],
-  Onest: ["sans", "400;500;600;700"],
-  Urbanist: ["sans", "400;500;600;700"],
-  Lexend: ["sans", "400;500;600;700"],
-  Rubik: ["sans", "400;500;600;700"],
-  "Nunito Sans": ["sans", "400;600;700"],
-  "IBM Plex Sans": ["sans", "400;500;600;700"],
-  Archivo: ["sans", "400;500;600;700"],
-  "Public Sans": ["sans", "400;500;600;700"],
-  "Schibsted Grotesk": ["sans", "400;500;600;700"],
-  "Bricolage Grotesque": ["sans", "400;500;600;700"],
-  "Hanken Grotesk": ["sans", "400;500;600;700"],
-  "Instrument Sans": ["sans", "400;500;600;700"],
-  "Albert Sans": ["sans", "400;500;600;700"],
-  Poppins: ["sans", "400;500;600;700"],
-  Nunito: ["sans", "400;600;700"],
-  Quicksand: ["sans", "400;500;600;700"],
-  Fredoka: ["sans", "400;500;600;700"],
-  "Baloo 2": ["sans", "400;500;600;700"],
-  Fraunces: ["serif", "400;600;700"],
-  "Playfair Display": ["serif", "400;600;700"],
-  "Cormorant Garamond": ["serif", "500;600;700"],
-  "DM Serif Display": ["serif", "400"],
-  Lora: ["serif", "400;500;600;700"],
-  Newsreader: ["serif", "400;500;600"],
-  "Instrument Serif": ["serif", "400"],
-  "EB Garamond": ["serif", "400;500;600"],
-  "Source Serif 4": ["serif", "400;600;700"],
-  "Bodoni Moda": ["serif", "500;600;700"],
-  "Young Serif": ["serif", "400"],
-  "Libre Caslon Text": ["serif", "400;700"],
-  Syne: ["display", "500;600;700;800"],
-  Unbounded: ["display", "500;600;700"],
-  "Bebas Neue": ["display", "400"],
-  Anton: ["display", "400"],
-  "Archivo Black": ["display", "400"],
-  "Space Mono": ["mono", "400;700"],
-  "JetBrains Mono": ["mono", "400;500;700"],
-  "IBM Plex Mono": ["mono", "400;500;600"],
-};
+export { GOOGLE_FONTS, SELF_HOSTED_FONTS, type FontCategory };
 
 const STACKS: Record<FontCategory, string[]> = {
   sans: ["system-ui", "-apple-system", "Segoe UI", "Roboto", "sans-serif"],
@@ -225,22 +175,17 @@ export function fontFamily(doc: DesignSystemDoc, role: FontRole): string {
 }
 
 export function setFont(doc: DesignSystemDoc, role: FontRole, family: string): DesignSystemDoc {
-  if (!GOOGLE_FONTS[family]) return doc;
+  const known = GOOGLE_FONTS[family] ?? SELF_HOSTED_FONTS[family];
+  if (!known) return doc;
   const next = clone(doc);
   const fonts = isObject((next.tokens as Json).font) ? ((next.tokens as Json).font as Json) : { $type: "fontFamily" };
   const current = isObject(fonts[role]) ? (fonts[role] as Json) : {};
-  fonts[role] = { ...current, $value: [family, ...STACKS[GOOGLE_FONTS[family][0]]] };
+  fonts[role] = { ...current, $value: [family, ...STACKS[known[0]]] };
   (next.tokens as Json).font = fonts;
   return next;
 }
 
-/** Google Fonts stylesheet for the curated families (others are skipped). */
-export function googleFontsHref(families: string[]): string | null {
-  const parts = [...new Set(families)]
-    .filter((family) => GOOGLE_FONTS[family])
-    .map((family) => `family=${encodeURIComponent(family).replace(/%20/g, "+")}:wght@${GOOGLE_FONTS[family][1]}`);
-  return parts.length ? `https://fonts.googleapis.com/css2?${parts.join("&")}&display=swap` : null;
-}
+export { googleFontsHref } from "@/components/deck-player/fonts";
 
 export const TYPE_STEPS: readonly [string, number][] = [
   ["xs", -2],

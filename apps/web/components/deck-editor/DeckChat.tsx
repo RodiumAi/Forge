@@ -74,6 +74,8 @@ export type DeckChatProps = {
   onClearTarget: () => void;
   onEvent: (event: DeckEvent) => void;
   onNotice: (notice: SlideNotice) => void;
+  /** The assistant rewrote a theme file (fonts): reload the tokens. */
+  onThemeChanged?: () => void;
   beforeSend: () => Promise<void>;
   t: DeckT;
   locale: DeckLocale;
@@ -157,6 +159,10 @@ export function DeckChat(props: DeckChatProps) {
     (payload: Record<string, unknown>) => {
       const type = String(payload.type ?? "");
       if (typeof payload.run_id === "string") runRef.current = payload.run_id;
+      if (type === "file_write" && /(^|\/)(DESIGN\.md|design-system\.json)$/.test(String(payload.path ?? ""))) {
+        propsRef.current.onThemeChanged?.();
+        return;
+      }
       if (type.startsWith("deck.")) {
         const event = parseDeckEvent(payload);
         if (event) propsRef.current.onEvent(event);

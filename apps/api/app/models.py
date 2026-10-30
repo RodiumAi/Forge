@@ -157,6 +157,11 @@ class Project(Base):
     visibility: Mapped[str] = mapped_column(String(16), nullable=False, default="private")
     billing_policy: Mapped[str] = mapped_column(String(32), nullable=False, default="owner_pays")
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    #: Anyone with the link: "none", "view" (presentation, no account) or "edit"
+    #: (a Forge account joins as editor while the plan has a free seat).
+    link_access: Mapped[str] = mapped_column(String(8), nullable=False, default="none")
+    #: Secret in the share URL; rotated by the owner to cut old links.
+    link_token: Mapped[str | None] = mapped_column(String(64), unique=True, index=True, nullable=True)
     #: The design_system project that dresses this one, and the version of it
     #: last applied (an update is proposed when the design system moves on).
     design_system_project_id: Mapped[uuid.UUID | None] = mapped_column(

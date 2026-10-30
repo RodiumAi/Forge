@@ -22,6 +22,7 @@ export const PATTERNS = {
   ICON: "^[a-z0-9]+(-[a-z0-9]+)*$",
   LANGUAGE: "^[a-z0-9+#-]{1,32}$",
   HIGHLIGHT: "^[0-9]+(-[0-9]+)?(,[0-9]+(-[0-9]+)?)*$",
+  FONT_FAMILY: "^[A-Za-z0-9][A-Za-z0-9 .\\-]{0,79}$",
 } as const;
 
 /** Deepest allowed nesting of `group` elements in a slide. */
@@ -208,6 +209,8 @@ export const textBlockSchema = z.discriminatedUnion("type", [
 
 export const textStyleSchema = z.strictObject({
   font: z.enum(FONT_ROLES).optional(),
+  /** Explicit typeface of this text, over the theme font of its role. */
+  family: z.string().regex(re(PATTERNS.FONT_FAMILY)).optional(),
   size: z.number().min(6).max(400).optional(),
   weight: int(100, 900).optional(),
   color: colorRef.optional(),
@@ -285,6 +288,7 @@ export const tableElementSchema = z.strictObject({
   style: z
     .strictObject({
       size: z.number().min(6).max(200).optional(),
+      family: z.string().regex(re(PATTERNS.FONT_FAMILY)).optional(),
       color: colorRef.optional(),
       headerFill: colorRef.optional(),
       border: colorRef.optional(),

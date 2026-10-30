@@ -223,7 +223,8 @@ describe("DeckEditor", () => {
       </I18nProvider>,
     );
     await screen.findByText("Test deck");
-    expect(screen.getByRole("button", { name: t("importSlides") })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /options/i }));
+    expect(screen.getByRole("menuitem", { name: t("importPptx") })).toBeInTheDocument();
     const file = new File(["pk"], "deck.pptx", { type: "application/vnd.openxmlformats-officedocument.presentationml.presentation" });
     fireEvent.change(screen.getByTestId("slide-import-input"), { target: { files: [file] } });
     const dialog = await screen.findByRole("dialog", { name: t("importTitle") });

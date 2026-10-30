@@ -130,6 +130,9 @@ def init_db() -> None:
         "ALTER TABLE projects ADD COLUMN IF NOT EXISTS template_id VARCHAR(64)",
         "ALTER TABLE projects ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ",
         "ALTER TABLE projects ADD COLUMN IF NOT EXISTS platform VARCHAR(16) NOT NULL DEFAULT 'web'",
+        "ALTER TABLE projects ADD COLUMN IF NOT EXISTS link_access VARCHAR(8) NOT NULL DEFAULT 'none'",
+        "ALTER TABLE projects ADD COLUMN IF NOT EXISTS link_token VARCHAR(64)",
+        "CREATE UNIQUE INDEX IF NOT EXISTS ix_projects_link_token ON projects (link_token)",
         # Site URLs are global ({slug}.lvh.me) — slug must be unique across all users.
         """
         DO $$
