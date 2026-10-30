@@ -76,11 +76,12 @@ async def ask_spec(
             return SpecAnswer(spec=check(parse_json_object(text)), repairs=attempt)
         except (ModelJsonError, ValidationError, ValueError, TypeError, KeyError) as exc:
             errors = describe_errors(exc)
-        messages = [
-            *messages,
-            {"role": "assistant", "content": (text or "")[-12000:]},
-            {"role": "user", "content": REPAIR.format(errors=errors)},
-        ]
+        repair = {"role": "user", "content": REPAIR.format(errors=errors)}
+        if (text or "").strip():
+            messages = [*messages, {"role": "assistant", "content": text[-12000:]}, repair]
+        else:
+            # An empty assistant turn is refused upstream: ask again without it.
+            messages = [*messages[:2], repair]
     raise DesignSystemAnswerError(errors or "no valid design system")
 
 

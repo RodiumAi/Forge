@@ -57,7 +57,7 @@ from app.services.deck_ai.targeting import SlideResult, element_from_answer, fin
 from app.services.deck_ai.theme import DeckTheme, load_theme
 from app.services.deck_ai.visuals import drop_placeholders, fill_visual, set_image
 from app.services.document_scaffold import DECK_PATH, DEFAULT_THEME
-from app.services.llm import RodiumError, error_code_for
+from app.services.llm import RodiumError, error_code_for, user_error_message
 from app.services.orchestration.cancel import clear_cancelled, is_cancelled
 
 logger = logging.getLogger(__name__)
@@ -192,7 +192,7 @@ def _fail_run(run_pk: UUID, code: str, message: str) -> None:
 def error_event(exc: BaseException, locale: str) -> Event:
     if isinstance(exc, DeckAnswerError):
         return {"type": "error", "code": "invalid_model_output", "message": _msg(_INVALID_OUTPUT, locale)}
-    return {"type": "error", "code": error_code_for(exc), "message": str(exc)[:500]}
+    return {"type": "error", "code": error_code_for(exc), "message": user_error_message(exc, locale)}
 
 
 async def _guarded(run_pk: UUID, locale: str, source: AsyncIterator[Event]) -> AsyncIterator[Event]:
