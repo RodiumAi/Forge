@@ -74,6 +74,7 @@ import {
   patchElements,
   setFields,
   setStyle,
+  setStyleOnRole,
   setStyleOnSlides,
   ungroup,
   zOrder,
@@ -95,7 +96,7 @@ import type { TextCommands, TextMarks } from "./text-style";
 import { useDeckDocument } from "./useDeckDocument";
 import { WorkspaceBar, type WorkspacePerson } from "@/components/builder/WorkspaceBar";
 import { Button, IconButton } from "@/components/ui/Button";
-import { MenuItem, MenuSeparator } from "@/components/ui/Popover";
+import { MenuItem, MenuSeparator, Popover } from "@/components/ui/Popover";
 import { centerOf, ContextMenu, isContextMenuKey, useContextMenu, type ContextMenuEntry, type Point } from "@/components/ui/ContextMenu";
 import "./deck-editor.css";
 
@@ -122,6 +123,8 @@ export type DeckEditorProps = {
   share?: ReactNode;
   /** Link access settings (owner only), in the Share panel. */
   shareLink?: ShareLinkClient | null;
+  /** Copies the project (owner only); resolves once the copy is open, rejects with a message. */
+  duplicate?: () => Promise<void>;
   /** Who else works on the deck, shown to guests. */
   people?: WorkspacePerson[];
   readOnly?: boolean;
@@ -165,10 +168,20 @@ export function DeckEditor(props: DeckEditorProps) {
   const [layerHover, setLayerHover] = useState<string | null>(null);
   const [imageTarget, setImageTarget] = useState<ImageTarget | null>(null);
   const [presenting, setPresenting] = useState<number | null>(null);
+  /** True when the current presentation runs with the presenter view. */
+  const [presenterView, setPresenterView] = useState(false);
   /** Opens a dialog whose trigger sits hidden in the bar (Share panel rows, Options menu). */
   const openBarSlot = (selector: string) => {
     requestAnimationFrame(() => document.querySelector<HTMLElement>(`${selector} button`)?.click());
   };
+  /** Message after a failed copy of the project; cleared after a few seconds. */
+  const [copyNotice, setCopyNotice] = useState<string | null>(null);
+  const [copying, setCopying] = useState(false);
+  useEffect(() => {
+    if (!copyNotice) return;
+    const timer = window.setTimeout(() => setCopyNotice(null), 6000);
+    return () => window.clearTimeout(timer);
+  }, [copyNotice]);
   /** Shown after a slide is deleted, with Undo; cleared after a few seconds. */
   const [deletedToast, setDeletedToast] = useState(0);
   useEffect(() => {
@@ -887,6 +900,26 @@ export function DeckEditor(props: DeckEditorProps) {
                   {t("publishTitle")}
                 </MenuItem>
               ) : null}
+              {props.duplicate ? (
+                <MenuItem
+                  icon="copy"
+                  hint={t("duplicateProjectHint")}
+                  disabled={copying}
+                  onClick={() => {
+                    close();
+                    setCopying(true);
+                    setCopyNotice(null);
+                    // Save pending edits first so the copy has them.
+                    void docState
+                      .flush()
+                      .then(() => props.duplicate?.())
+                      .catch((err: unknown) => setCopyNotice((err as Error)?.message || t("duplicateProjectError")))
+                      .finally(() => setCopying(false));
+                  }}
+                >
+                  {t("duplicateProject")}
+                </MenuItem>
+              ) : null}
               <MenuSeparator />
               <MenuItem icon="undo" disabled={!canUndo(state) || readOnly} meta="Ctrl+Z" onClick={() => { close(); dispatch({ type: "undo" }); }}>
                 {t("undo")}
@@ -919,19 +952,48 @@ export function DeckEditor(props: DeckEditorProps) {
         }
         actions={
           <>
-            <Button
-              variant="ghost"
-              size="sm"
-              icon="play"
-              disabled={visibleCount === 0}
-              onClick={() => {
-                dispatch({ type: "editText", id: null });
-                setPresenting(presentIndex(doc.deck, state.slideId));
-              }}
-              title={t("presentFromHere")}
-            >
-              <span className="f-bd-lbl">{t("present")}</span>
-            </Button>
+            <span className="de-present-split">
+              <Button
+                variant="ghost"
+                size="sm"
+                icon="play"
+                disabled={visibleCount === 0}
+                onClick={() => {
+                  dispatch({ type: "editText", id: null });
+                  setPresenterView(false);
+                  setPresenting(presentIndex(doc.deck, state.slideId));
+                }}
+                title={t("presentFromHere")}
+              >
+                <span className="f-bd-lbl">{t("present")}</span>
+              </Button>
+              <Popover
+                role="menu"
+                align="end"
+                label={t("presentModes")}
+                width={300}
+                trigger={<IconButton icon="chevron-down" label={t("presentModes")} size="sm" disabled={visibleCount === 0} />}
+              >
+                {(close) => {
+                  const start = (withPresenter: boolean) => () => {
+                    close();
+                    dispatch({ type: "editText", id: null });
+                    setPresenterView(withPresenter);
+                    setPresenting(presentIndex(doc.deck, state.slideId));
+                  };
+                  return (
+                    <>
+                      <MenuItem icon="expand" hint={t("presentFullscreenHint")} onClick={start(false)}>
+                        {t("presentFullscreen")}
+                      </MenuItem>
+                      <MenuItem icon="presentation" hint={t("presentPresenterHint")} onClick={start(true)}>
+                        {t("presentPresenter")}
+                      </MenuItem>
+                    </>
+                  );
+                }}
+              </Popover>
+            </span>
             <SharePanel
               link={props.shareLink}
               onInvite={props.share ? () => openBarSlot(".de-share-slot") : undefined}
@@ -1034,9 +1096,20 @@ export function DeckEditor(props: DeckEditorProps) {
               disabled={readOnly}
               onEdit={() => dispatch({ type: "editText", id: textSelected.id })}
               onStyle={(patch) => run(setStyle(sid, [textSelected.id], patch), `style:${textSelected.id}`)}
+              onRole={(role) => {
+                // A text style sets the size and weight: drop the ones set by hand.
+                const { size: _size, weight: _weight, ...rest } = textSelected.style ?? {};
+                run(setFields(sid, [textSelected.id], { role, style: rest }), `role:${textSelected.id}`);
+              }}
               onFont={(choice, scope) => {
                 if (scope === "text") {
                   run(setStyle(sid, [textSelected.id], { font: choice.font, family: choice.family }), `style:${textSelected.id}`);
+                  return;
+                }
+                if (scope === "role") {
+                  // Every text of this role in the presentation gets the same font.
+                  const slides = (doc?.deck.slides ?? []).map((ref) => ref.id);
+                  run(setStyleOnRole(slides, textSelected.role ?? "body", { font: choice.font, family: choice.family }));
                   return;
                 }
                 // Many texts: a family goes on each, a theme role clears them (each text keeps its own role).
@@ -1229,6 +1302,11 @@ export function DeckEditor(props: DeckEditorProps) {
           }}
         />
       ) : null}
+      {copying || copyNotice ? (
+        <p className="f-toast de-undo-toast" role={copyNotice ? "alert" : "status"}>
+          {copyNotice ?? t("duplicateProjectBusy")}
+        </p>
+      ) : null}
       {deletedToast ? (
         <p className="f-toast de-undo-toast" role="status">
           {t("slideDeleted")}
@@ -1258,6 +1336,7 @@ export function DeckEditor(props: DeckEditorProps) {
           startAt={presenting}
           badge={badge}
           locale={locale}
+          presenterView={presenterView}
           onClose={(slideId) => {
             // Back on the slide the presentation stopped at: "Present" resumes there.
             if (slideId) dispatch({ type: "selectSlide", id: slideId });

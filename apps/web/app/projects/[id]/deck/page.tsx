@@ -74,6 +74,10 @@ export default function DeckEditorPage() {
   const images = useMemo(() => apiImageClient(projectId), [projectId]);
   const slideImport = useMemo(() => apiSlideImportClient(projectId), [projectId]);
   const shareLink = useMemo(() => apiShareLinkClient(projectId), [projectId]);
+  const duplicate = useCallback(async () => {
+    const copy = await api<Project>(`/projects/${projectId}/duplicate`, { method: "POST" });
+    router.push(editorHref(copy.id, copy.platform));
+  }, [projectId, router]);
   const loadTheme = useCallback((file: string) => readProjectFile(projectId, file), [projectId]);
   // Rebuilt when the media token arrives, so images render once it is known.
   const assetUrl = useMemo(() => {
@@ -127,6 +131,7 @@ export default function DeckEditorPage() {
       readOnly={project.access_role === "viewer"}
       share={project.access_role === "owner" ? <ShareButton projectId={projectId} projectName={project.name} /> : undefined}
       shareLink={project.access_role === "owner" ? shareLink : null}
+      duplicate={project.access_role === "owner" ? duplicate : undefined}
       people={project.access_role === "owner" ? undefined : project.collaborators}
       backHref="/dashboard"
       initialPrompt={bootPrompt}

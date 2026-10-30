@@ -40,6 +40,7 @@ import type { Align } from "./geometry";
 import { elementLabel, findElement, updateRef, type Doc, type SlideRef } from "./model";
 import { patchElements, setFields, setStyle, type Recipe } from "./ops";
 import { LayersPanel } from "./LayersPanel";
+import { ROLE_SIZES } from "./text-style";
 import { AnimationPicker, TransitionPicker } from "./pickers";
 import { applyPreset, applyTransitionToAll, PRESETS, type PresetId } from "./presets";
 import type { DeckLocale, DeckStringKey, DeckT } from "./strings";
@@ -326,6 +327,82 @@ function ElementPanel(props: Props) {
   );
 }
 
+const ROLES = [
+  ["title", "roleTitle"],
+  ["subtitle", "roleSubtitle"],
+  ["heading", "roleHeading"],
+  ["body", "roleBody"],
+  ["quote", "roleQuote"],
+  ["caption", "roleCaption"],
+  ["label", "roleLabel"],
+] as const;
+
+/** Text roles as tiles: a sample at the role's relative size, its name and its size on the slide. */
+function RolePicker({
+  value,
+  tokens,
+  disabled,
+  t,
+  onChange,
+}: {
+  value?: string;
+  tokens: ThemeTokens;
+  disabled?: boolean;
+  t: DeckT;
+  onChange: (role: string | undefined) => void;
+}) {
+  return (
+    <div className="de-field">
+      <span className="de-field-label">{t("role")}</span>
+      <div className="de-roles" role="radiogroup" aria-label={t("role")}>
+        {ROLES.map(([role, label]) => {
+          const size = ROLE_SIZES[role] ?? 32;
+          const display = role === "title" || role === "heading" || role === "subtitle";
+          return (
+            <button
+              key={role}
+              type="button"
+              role="radio"
+              aria-checked={value === role}
+              className={`de-role${value === role ? " is-active" : ""}`}
+              disabled={disabled}
+              onClick={() => onChange(role)}
+              title={`${t(label)} · ${size} px`}
+            >
+              <span
+                className="de-role-sample"
+                aria-hidden
+                style={{
+                  fontFamily: tokens[display ? "--font-display" : "--font-body"],
+                  fontSize: Math.max(10, Math.round(size / 3.4)),
+                  fontWeight: role === "title" || role === "heading" ? 700 : role === "label" ? 600 : 400,
+                  fontStyle: role === "quote" ? "italic" : undefined,
+                  textTransform: role === "label" ? "uppercase" : undefined,
+                  letterSpacing: role === "label" ? "0.08em" : undefined,
+                }}
+              >
+                {role === "quote" ? "“Aa”" : "Aa"}
+              </span>
+              <span className="de-role-name">{t(label)}</span>
+              <span className="de-role-size">{size} px</span>
+            </button>
+          );
+        })}
+        <button
+          type="button"
+          role="radio"
+          aria-checked={!value}
+          className={`de-role de-role-free${!value ? " is-active" : ""}`}
+          disabled={disabled}
+          onClick={() => onChange(undefined)}
+        >
+          <span className="de-role-name">{t("roleNone")}</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function TypeSection(props: Props & { el: SlideElement }) {
   const { el, slide, run, tokens, t, readOnly } = props;
   const sid = slide.id;
@@ -334,16 +411,7 @@ function TypeSection(props: Props & { el: SlideElement }) {
     case "text":
       return (
         <Section title={t("style")}>
-          <SelectField
-            label={t("role")}
-            value={el.role ?? ""}
-            options={[
-              { value: "", label: "-" },
-              ...(["title", "subtitle", "heading", "body", "caption", "quote", "label"] as const).map((r) => ({ value: r, label: r })),
-            ]}
-            onChange={(v) => set({ role: v || undefined })}
-            disabled={readOnly}
-          />
+          <RolePicker value={el.role} tokens={tokens} disabled={readOnly} t={t} onChange={(role) => set({ role })} />
           <ColorField label={t("color")} value={el.style?.color} tokens={tokens} t={t} onChange={(color) => run(setStyle(sid, [el.id], { color }))} />
           <div className="de-row">
             <NumberField label={t("weight")} value={el.style?.weight ?? 400} min={100} max={900} step={100} onChange={(v) => run(setStyle(sid, [el.id], { weight: Math.round(v / 100) * 100 }))} disabled={readOnly} />

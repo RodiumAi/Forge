@@ -2661,3 +2661,250 @@ body.de-resizing iframe { pointer-events: none; }
   font-size: 13px;
   line-height: 1.4;
 }
+
+/* Present + chevron, joined like one button. */
+.de-present-split {
+  display: inline-flex;
+  align-items: center;
+}
+
+.de-present-split > .f-btn,
+.de-present-split > button {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.de-present-split > :last-child button,
+.de-present-split > :last-child.f-btn {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-left: 1px solid var(--f-line, rgba(127, 127, 127, 0.3));
+}
+
+/* Font menu of the format bar. */
+.de-font-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 168px;
+  height: 30px;
+  padding: 0 8px 0 10px;
+  border: 1px solid var(--de-line);
+  border-radius: 8px;
+  background: var(--de-panel);
+  color: var(--f-text);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.de-font-trigger > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.de-font-trigger:hover:not(:disabled) {
+  border-color: var(--f-orange, #eb6118);
+}
+
+.de-font-pop {
+  padding: 0;
+}
+
+.de-font-panel {
+  display: flex;
+  flex-direction: column;
+  max-height: min(460px, 70vh);
+}
+
+.de-font-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px;
+  padding: 0 10px;
+  border: 1px solid var(--de-line, rgba(127, 127, 127, 0.3));
+  border-radius: 10px;
+  opacity: 0.95;
+}
+
+.de-font-search input {
+  flex: 1;
+  min-width: 0;
+  height: 34px;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.de-font-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 6px 8px;
+}
+
+.de-font-group > p {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin: 0;
+  padding: 8px 8px 4px;
+  background: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+
+.de-font-pop .de-font-group > p {
+  background: var(--f-pop-bg, var(--de-panel, #1c1f26));
+}
+
+.de-font-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  font-size: 16px;
+  line-height: 1.3;
+}
+
+.de-font-item[aria-selected="true"] {
+  color: var(--f-orange, #eb6118);
+}
+
+.de-font-empty {
+  margin: 12px 8px;
+  opacity: 0.6;
+}
+
+/* Text role tiles in the Properties panel. */
+.de-roles {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.de-role {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: 34px auto;
+  align-items: end;
+  gap: 2px 6px;
+  padding: 6px 8px;
+  border: 1px solid var(--de-line);
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.de-role:hover:not(:disabled) {
+  border-color: var(--f-orange, #eb6118);
+}
+
+.de-role.is-active {
+  border-color: var(--f-orange, #eb6118);
+  background: rgba(235, 97, 24, 0.12);
+}
+
+.de-role:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.de-role-sample {
+  grid-column: 1 / -1;
+  align-self: end;
+  overflow: hidden;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.de-role-name {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.de-role-size {
+  font-size: 11px;
+  opacity: 0.55;
+  font-variant-numeric: tabular-nums;
+}
+
+.de-role-free {
+  grid-template-rows: auto;
+  align-items: center;
+  justify-items: center;
+  border-style: dashed;
+}
+
+/* Tabs of the font menu: fonts, text styles. */
+.de-font-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin: 6px 8px 0;
+  border-bottom: 1px solid var(--de-line, rgba(127, 127, 127, 0.3));
+}
+
+.de-font-tab {
+  padding: 8px 4px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0.6;
+  cursor: pointer;
+}
+
+.de-font-tab.is-active {
+  border-bottom-color: var(--f-orange, #eb6118);
+  opacity: 1;
+}
+
+.de-style-list {
+  padding-top: 6px;
+}
+
+.de-style-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 14px;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 40px;
+  line-height: 1.15;
+}
+
+.de-style-item > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.de-style-size {
+  font-size: 11px;
+  opacity: 0.55;
+  font-variant-numeric: tabular-nums;
+}
+
+.de-style-item[aria-selected="true"] {
+  color: var(--f-orange, #eb6118);
+}
+
+.de-style-free {
+  margin-top: 4px;
+  border-top: 1px dashed var(--de-line, rgba(127, 127, 127, 0.3));
+  font-size: 13px;
+}

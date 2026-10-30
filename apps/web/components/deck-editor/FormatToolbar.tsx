@@ -8,10 +8,12 @@
  * lists are also available.
  */
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { AlignCenter, AlignJustify, AlignLeft, AlignRight, Bold, Italic, Link2, List, ListOrdered, PencilLine, Underline } from "lucide-react";
-import { fontChoices, type FontCategory, type ThemeTokens } from "@/components/deck-player";
+import type { ThemeTokens } from "@/components/deck-player";
+import { firstFamily } from "@/components/deck-player/fonts";
 import { colorTokens } from "./fields";
+import { FontPicker, TEXT_ROLES } from "./FontPicker";
 import type { TextElement } from "./model";
 import type { DeckT } from "./strings";
 import { ROLE_SIZES, type TextCommands, type TextMarks } from "./text-style";
@@ -19,15 +21,9 @@ import { colorToCss, cssToColor, safeLink } from "./text-model";
 
 const SIZES = [14, 18, 20, 24, 28, 32, 36, 40, 48, 56, 64, 72, 88, 96, 120, 160];
 const LINE_HEIGHTS = [0.9, 1, 1.1, 1.2, 1.35, 1.5, 1.75, 2];
-const FONT_GROUPS: [FontCategory, "fontGroupSans" | "fontGroupSerif" | "fontGroupDisplay" | "fontGroupMono"][] = [
-  ["sans", "fontGroupSans"],
-  ["serif", "fontGroupSerif"],
-  ["display", "fontGroupDisplay"],
-  ["mono", "fontGroupMono"],
-];
 
 /** Where a font choice applies. */
-export type FontScope = "text" | "slide" | "deck";
+export type FontScope = "text" | "role" | "slide" | "deck";
 /** A theme role ("role:display") or an explicit family ("family:Inter"). */
 export type FontChoice = { font?: "display" | "body" | "mono"; family?: string };
 
@@ -47,6 +43,7 @@ export function FormatToolbar({
   marks,
   onStyle,
   onFont,
+  onRole,
   onEdit,
   t,
   disabled,
@@ -59,6 +56,8 @@ export function FormatToolbar({
   onStyle: (patch: Record<string, unknown>) => void;
   /** Font choice for the text, its slide or the whole deck. */
   onFont?: (choice: FontChoice, scope: FontScope) => void;
+  /** Sets the text role (Text styles tab of the font menu). */
+  onRole?: (role: string | undefined) => void;
   onEdit: () => void;
   t: DeckT;
   disabled?: boolean;
@@ -71,7 +70,6 @@ export function FormatToolbar({
   const active = (name: keyof TextMarks, fallback: boolean) => (inline ? !!marks?.[name] : fallback);
   const currentColor = inline ? cssToColor(marks?.color) : style.color;
   const [fontScope, setFontScope] = useState<FontScope>("text");
-  const choices = useMemo(() => fontChoices(), []);
   const fontValue = style.family ? `family:${style.family}` : style.font ? `role:${style.font}` : "";
   const chooseFont = (value: string) => {
     const choice = parseFontChoice(value);
@@ -115,31 +113,16 @@ export function FormatToolbar({
   return (
     <div className="de-format" role="toolbar" aria-label={t("style")}>
       {!editing ? button(t("editText"), false, onEdit, <PencilLine size={16} aria-hidden />) : null}
-      <select
-        className="de-format-font"
-        aria-label={t("font")}
-        title={t("font")}
+      <FontPicker
         value={fontValue}
+        family={style.family ?? firstFamily(tokens[style.font === "mono" ? "--font-mono" : style.font === "body" ? "--font-body" : "--font-display"]) ?? undefined}
+        tokens={tokens}
+        onChange={chooseFont}
+        role={element.role}
+        onRole={onRole}
         disabled={disabled}
-        onChange={(e) => chooseFont(e.target.value)}
-        style={style.family ? { fontFamily: `"${style.family}", sans-serif` } : undefined}
-      >
-        <option value="">{t("font")}</option>
-        <optgroup label={t("fontGroupTheme")}>
-          <option value="role:display">{t("fontDisplay")}</option>
-          <option value="role:body">{t("fontBody")}</option>
-          <option value="role:mono">{t("fontMono")}</option>
-        </optgroup>
-        {FONT_GROUPS.map(([category, label]) => (
-          <optgroup key={category} label={t(label)}>
-            {choices[category].map((family) => (
-              <option key={family} value={`family:${family}`}>
-                {family}
-              </option>
-            ))}
-          </optgroup>
-        ))}
-      </select>
+        t={t}
+      />
       {onFont ? (
         <select
           className="de-format-scope"
@@ -150,6 +133,9 @@ export function FormatToolbar({
           onChange={(e) => setFontScope(e.target.value as FontScope)}
         >
           <option value="text">{t("fontScopeText")}</option>
+          <option value="role">
+            {t("fontScopeRole").replace("{role}", t(TEXT_ROLES.find(([r]) => r === (element.role ?? "body"))?.[1] ?? "roleBody"))}
+          </option>
           <option value="slide">{t("fontScopeSlide")}</option>
           <option value="deck">{t("fontScopeDeck")}</option>
         </select>

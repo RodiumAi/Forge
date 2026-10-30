@@ -3,7 +3,7 @@ import { slideSchema, type Deck, type Slide, type SlideElement } from "@/lib/con
 import { closestAspect } from "./DeckImagePanel";
 import { imagePaths, toPicked } from "./images-client";
 import { findElement, groupElements, scaleChildren, type Doc } from "./model";
-import { align, fillWithImage, insertElement, moveBy, newElement, newImageElement, setStyle, type InsertKind } from "./ops";
+import { align, fillWithImage, insertElement, moveBy, newElement, newImageElement, setStyle, setStyleOnRole, type InsertKind } from "./ops";
 import { presentIndex } from "./PresentOverlay";
 
 const deck: Deck = {
@@ -126,5 +126,29 @@ describe("helpers", () => {
     expect(closestAspect(1920, 1080)).toBe("16:9");
     expect(closestAspect(880, 1080)).toBe("3:4");
     expect(closestAspect(500, 500)).toBe("1:1");
+  });
+});
+
+describe("font by role", () => {
+  const text = (id: string, role?: string): SlideElement =>
+    ({ id, type: "text", x: 0, y: 0, w: 100, h: 40, content: [{ type: "paragraph", text: id }], ...(role ? { role } : {}) }) as SlideElement;
+
+  it("styles every text of the role on every slide, groups included, no role counting as body", () => {
+    const base: Doc = {
+      deck,
+      slides: {
+        s1: { id: "s1", elements: [text("t1", "title"), text("b1", "body"), text("n1")] },
+        s2: { id: "s2", elements: [{ id: "g", type: "group", x: 0, y: 0, w: 100, h: 100, children: [text("b2", "body")] } as SlideElement] },
+        s3: { id: "s3", elements: [text("t3", "title")] },
+      },
+    };
+    const next = setStyleOnRole(["s1", "s2", "s3"], "body", { family: "Inter" })(base);
+    const family = (slide: string, id: string) => (findElement(next.slides[slide], id) as { style?: { family?: string } }).style?.family;
+    expect(family("s1", "b1")).toBe("Inter");
+    expect(family("s1", "n1")).toBe("Inter");
+    expect(family("s2", "b2")).toBe("Inter");
+    expect(family("s1", "t1")).toBeUndefined();
+    expect(family("s3", "t3")).toBeUndefined();
+    expect(next.slides.s3).toBe(base.slides.s3);
   });
 });

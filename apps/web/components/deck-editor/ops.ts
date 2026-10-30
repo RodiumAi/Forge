@@ -74,6 +74,25 @@ export function setStyleOnSlides(slideIds: string[], style: Record<string, unkno
     }, doc);
 }
 
+/** Texts of a role (no role counts as body), in groups too. */
+function textIdsWithRole(elements: SlideElement[], role: string, out: string[] = []): string[] {
+  for (const element of elements) {
+    if (element.type === "text" && (element.role ?? "body") === role) out.push(element.id);
+    if (element.type === "group") textIdsWithRole(element.children, role, out);
+  }
+  return out;
+}
+
+/** Same style on every text of one role, on each listed slide. */
+export function setStyleOnRole(slideIds: string[], role: string, style: Record<string, unknown>): Recipe {
+  return (doc) =>
+    slideIds.reduce((current, id) => {
+      const slide = current.slides[id];
+      const ids = slide ? textIdsWithRole(slide.elements, role) : [];
+      return ids.length ? setStyle(id, ids, style)(current) : current;
+    }, doc);
+}
+
 export function moveBy(slideId: string, ids: string[], dx: number, dy: number, slide: Slide): Recipe {
   const movable = outermost(slide, ids).filter((id) => !locate(slide.elements, id)?.element.locked);
   return patchElements(slideId, movable, (el) => ({ ...el, x: Math.round(el.x + dx), y: Math.round(el.y + dy) }));
