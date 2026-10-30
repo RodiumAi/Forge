@@ -20,6 +20,7 @@ checkpoint, and stream the events described in
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import json
 import logging
@@ -40,6 +41,7 @@ from app.services.design_system.generate import (
     generation_prompt,
 )
 from app.services.design_system.logo import wordmark_svg
+from app.services.design_system.logo_colors import align_palette, measure_logo_colors
 from app.services.design_system.render import design_md
 from app.services.design_system.site_extract import extract_site, screenshot_part
 from app.services.design_system.tokens import (
@@ -287,19 +289,56 @@ def _document_event(
 # ── entry point ────────────────────────────────────────────────────────────
 
 
-async def document_stream(ctx: DesignSystemContext) -> AsyncIterator[str]:
-    yield as_sse({"type": "user_message", "id": ctx.user_msg_id, "run_id": str(ctx.run_pk)})
-    yield as_sse(
-        {
-            "type": "route",
-            "task_class": task_class(ctx.section),
-            "effort_label": ctx.route_effort,
-            "tier": ctx.tier,
-        }
-    )
+async def document_events(ctx: DesignSystemContext) -> AsyncIterator[Event]:
+    yield {"type": "user_message", "id": ctx.user_msg_id, "run_id": str(ctx.run_pk)}
+    yield {
+        "type": "route",
+        "task_class": task_class(ctx.section),
+        "effort_label": ctx.route_effort,
+        "tier": ctx.tier,
+    }
     source = _section_edit(ctx) if ctx.section else _generate(ctx)
     async for event in _guarded(ctx.run_pk, ctx.locale, source):
+        yield event
+
+
+async def document_stream(ctx: DesignSystemContext) -> AsyncIterator[str]:
+    async for event in document_events(ctx):
         yield as_sse(event)
+
+
+def spawn_design_system_job(ctx: DesignSystemContext) -> None:
+    """Run the generation in the background; events go to the run queue.
+
+    The browser follows them through ``iter_run_event_sse`` (the message
+    response, or ``/runs/{id}/events`` after a reload), so closing or
+    reloading the tab no longer stops the design system half way.
+    """
+    from app.services.orchestration import plan_worker, run_queue
+
+    rid = str(ctx.run_pk)
+    existing = plan_worker._running_tasks.get(rid)
+    if existing and not existing.done():
+        return
+
+    async def runner() -> None:
+        run_queue.clear_run_events(rid)
+        run_queue.claim_run(rid)
+        try:
+            try:
+                async for event in document_events(ctx):
+                    run_queue.publish_run_event(rid, event)
+            except asyncio.CancelledError:
+                _fail_run(ctx.run_pk, "cancelled", "cancelled")
+                run_queue.publish_run_event(
+                    rid, {"type": "error", "code": "cancelled", "message": "cancelled"}
+                )
+        finally:
+            run_queue.release_run(rid)
+            plan_worker._running_tasks.pop(rid, None)
+
+    plan_worker._running_tasks[rid] = asyncio.create_task(runner(), name=f"forge-design-system-{rid}")
+    run_queue.enqueue_plan_run(rid)
 
 
 async def _generate(ctx: DesignSystemContext) -> AsyncIterator[Event]:
@@ -343,9 +382,15 @@ async def _generate(ctx: DesignSystemContext) -> AsyncIterator[Event]:
             yield steps.push("ds_capture", "done")
 
     logo_part, logo_path = await _logo_image(pid, prompt, current)
+    logo_colors: list[str] = []
     if logo_part is not None:
         yield steps.push("ds_logo", "running")
         images.append(logo_part)
+        if logo_path:
+            try:
+                logo_colors = measure_logo_colors(safe_resolve(pid, logo_path).read_bytes())
+            except (OSError, ValueError):
+                logo_colors = []
         if logo_path and logo_path != ((current or {}).get("logo") or {}).get("src"):
             yield {"type": "file_write", "path": logo_path}
         yield steps.push("ds_logo", "done")
@@ -360,9 +405,13 @@ async def _generate(ctx: DesignSystemContext) -> AsyncIterator[Event]:
         findings=findings_text,
         has_logo_image=logo_part is not None,
         conversation=_conversation(ctx.history),
+        logo_colors=logo_colors,
     )
     answer = await generate_spec(auth=auth, model=ctx.gen_model, user=user, images=images, locale=ctx.locale)
     spec = answer.spec
+    if logo_colors:
+        # The vision answer drifts from the logo's real colours: bring it back on them.
+        spec.colors = align_palette(spec.colors, logo_colors)
     old_logo = (current or {}).get("logo") or {}
     src = logo_path or old_logo.get("src") or LOGO_PATH
     # A new logo image makes the old dark and icon versions stale.

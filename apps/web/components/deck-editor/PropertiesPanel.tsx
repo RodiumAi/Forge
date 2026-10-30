@@ -13,6 +13,9 @@ import {
   AlignEndVertical,
   AlignStartHorizontal,
   AlignStartVertical,
+  AlignVerticalJustifyCenter,
+  AlignVerticalJustifyEnd,
+  AlignVerticalJustifyStart,
   ArrowDownToLine,
   ArrowUpToLine,
   ChevronDown,
@@ -30,7 +33,7 @@ import {
   AlignVerticalSpaceAround,
   PanelRightClose,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { Point } from "@/components/ui/ContextMenu";
 import type { ThemeTokens } from "@/components/deck-player";
 import { FORMAT_SIZES, PATTERNS, type Deck, type Slide, type SlideElement } from "@/lib/contracts/forge-design";
@@ -39,9 +42,12 @@ import { colorTokens, ColorField, Field, NumberField, Section, SelectField, Text
 import type { Align } from "./geometry";
 import { elementLabel, findElement, updateRef, type Doc, type SlideRef } from "./model";
 import { patchElements, setFields, setStyle, type Recipe } from "./ops";
+import { IconPicker } from "./IconPicker";
 import { LayersPanel } from "./LayersPanel";
+import { ROLE_SIZES } from "./text-style";
+import { firstFamily } from "@/components/deck-player/fonts";
 import { AnimationPicker, TransitionPicker } from "./pickers";
-import { applyPreset, applyTransitionToAll, PRESETS, type PresetId } from "./presets";
+import { applyPreset, applyTransitionToAll, currentPreset, PRESETS, type PresetId } from "./presets";
 import type { DeckLocale, DeckStringKey, DeckT } from "./strings";
 
 export type PanelTab = "element" | "slide" | "layers" | "deck";
@@ -87,28 +93,6 @@ const PRESET_LABELS: Record<PresetId, [DeckStringKey, DeckStringKey]> = {
 };
 
 const ICON_RE = new RegExp(PATTERNS.ICON);
-const COMMON_ICONS = [
-  "star",
-  "check",
-  "circle-check",
-  "arrow-right",
-  "rocket",
-  "lightbulb",
-  "target",
-  "trending-up",
-  "users",
-  "shield-check",
-  "zap",
-  "heart",
-  "globe",
-  "chart-bar",
-  "clock",
-  "mail",
-  "phone",
-  "map-pin",
-  "settings",
-  "sparkles",
-];
 
 function IconButton({ label, onClick, children, disabled, active }: { label: string; onClick: () => void; children: ReactNode; disabled?: boolean; active?: boolean }) {
   return (
@@ -326,6 +310,82 @@ function ElementPanel(props: Props) {
   );
 }
 
+const ROLES = [
+  ["title", "roleTitle"],
+  ["subtitle", "roleSubtitle"],
+  ["heading", "roleHeading"],
+  ["body", "roleBody"],
+  ["quote", "roleQuote"],
+  ["caption", "roleCaption"],
+  ["label", "roleLabel"],
+] as const;
+
+/** Text roles as tiles: a sample at the role's relative size, its name and its size on the slide. */
+function RolePicker({
+  value,
+  tokens,
+  disabled,
+  t,
+  onChange,
+}: {
+  value?: string;
+  tokens: ThemeTokens;
+  disabled?: boolean;
+  t: DeckT;
+  onChange: (role: string | undefined) => void;
+}) {
+  return (
+    <div className="de-field">
+      <span className="de-field-label">{t("role")}</span>
+      <div className="de-roles" role="radiogroup" aria-label={t("role")}>
+        {ROLES.map(([role, label]) => {
+          const size = ROLE_SIZES[role] ?? 32;
+          const display = role === "title" || role === "heading" || role === "subtitle";
+          return (
+            <button
+              key={role}
+              type="button"
+              role="radio"
+              aria-checked={value === role}
+              className={`de-role${value === role ? " is-active" : ""}`}
+              disabled={disabled}
+              onClick={() => onChange(role)}
+              title={`${t(label)} · ${size} px`}
+            >
+              <span
+                className="de-role-sample"
+                aria-hidden
+                style={{
+                  fontFamily: tokens[display ? "--font-display" : "--font-body"],
+                  fontSize: Math.max(10, Math.round(size / 3.4)),
+                  fontWeight: role === "title" || role === "heading" ? 700 : role === "label" ? 600 : 400,
+                  fontStyle: role === "quote" ? "italic" : undefined,
+                  textTransform: role === "label" ? "uppercase" : undefined,
+                  letterSpacing: role === "label" ? "0.08em" : undefined,
+                }}
+              >
+                {role === "quote" ? "“Aa”" : "Aa"}
+              </span>
+              <span className="de-role-name">{t(label)}</span>
+              <span className="de-role-size">{size} px</span>
+            </button>
+          );
+        })}
+        <button
+          type="button"
+          role="radio"
+          aria-checked={!value}
+          className={`de-role de-role-free${!value ? " is-active" : ""}`}
+          disabled={disabled}
+          onClick={() => onChange(undefined)}
+        >
+          <span className="de-role-name">{t("roleNone")}</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function TypeSection(props: Props & { el: SlideElement }) {
   const { el, slide, run, tokens, t, readOnly } = props;
   const sid = slide.id;
@@ -334,32 +394,42 @@ function TypeSection(props: Props & { el: SlideElement }) {
     case "text":
       return (
         <Section title={t("style")}>
-          <SelectField
-            label={t("role")}
-            value={el.role ?? ""}
-            options={[
-              { value: "", label: "-" },
-              ...(["title", "subtitle", "heading", "body", "caption", "quote", "label"] as const).map((r) => ({ value: r, label: r })),
-            ]}
-            onChange={(v) => set({ role: v || undefined })}
-            disabled={readOnly}
-          />
+          <RolePicker value={el.role} tokens={tokens} disabled={readOnly} t={t} onChange={(role) => set({ role })} />
           <ColorField label={t("color")} value={el.style?.color} tokens={tokens} t={t} onChange={(color) => run(setStyle(sid, [el.id], { color }))} />
           <div className="de-row">
             <NumberField label={t("weight")} value={el.style?.weight ?? 400} min={100} max={900} step={100} onChange={(v) => run(setStyle(sid, [el.id], { weight: Math.round(v / 100) * 100 }))} disabled={readOnly} />
             <NumberField label={t("letterSpacing")} value={el.style?.letterSpacing ?? 0} min={-20} max={100} step={0.5} onChange={(v) => run(setStyle(sid, [el.id], { letterSpacing: v || undefined }))} disabled={readOnly} />
           </div>
-          <SelectField
-            label={t("valign")}
-            value={el.style?.valign ?? ""}
-            options={[
-              { value: "", label: t("alignTop") },
-              { value: "middle", label: t("alignVMiddle") },
-              { value: "bottom", label: t("alignBottom") },
-            ]}
-            onChange={(v) => run(setStyle(sid, [el.id], { valign: v || undefined }))}
-            disabled={readOnly}
-          />
+          <div className="de-field">
+            <span className="de-field-label">{t("valign")}</span>
+            <div className="de-segmented de-segmented-icons" role="radiogroup" aria-label={t("valign")}>
+              {(
+                [
+                  [undefined, "alignTop", AlignVerticalJustifyStart, "valignTopShort"],
+                  ["middle", "alignVMiddle", AlignVerticalJustifyCenter, "valignMiddleShort"],
+                  ["bottom", "alignBottom", AlignVerticalJustifyEnd, "valignBottomShort"],
+                ] as const
+              ).map(([v, label, Icon, short]) => {
+                const active = (el.style?.valign ?? undefined) === v || (!v && el.style?.valign === "top");
+                return (
+                  <button
+                    key={label}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    aria-label={t(label)}
+                    title={t(label)}
+                    className={active ? "is-active" : ""}
+                    disabled={readOnly}
+                    onClick={() => run(setStyle(sid, [el.id], { valign: v }))}
+                  >
+                    <Icon size={16} aria-hidden />
+                    <span>{t(short)}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           <Toggle label={t("uppercase")} checked={!!el.style?.uppercase} onChange={(v) => run(setStyle(sid, [el.id], { uppercase: v }))} />
         </Section>
       );
@@ -420,21 +490,14 @@ function TypeSection(props: Props & { el: SlideElement }) {
     case "icon":
       return (
         <Section title={t("icon")}>
-          <TextField
-            label={t("iconName")}
+          <IconPicker
             value={el.icon}
-            onChange={(v) => {
-              const value = v.trim().toLowerCase();
-              if (ICON_RE.test(value) && value.length <= 64) set({ icon: value });
+            disabled={readOnly}
+            t={t}
+            onChange={(name) => {
+              if (ICON_RE.test(name) && name.length <= 64) set({ icon: name });
             }}
           />
-          <div className="de-chips">
-            {COMMON_ICONS.map((name) => (
-              <button key={name} type="button" className={`de-chip${el.icon === name ? " is-active" : ""}`} onClick={() => set({ icon: name })} disabled={readOnly}>
-                {name}
-              </button>
-            ))}
-          </div>
           <ColorField label={t("color")} value={el.color} tokens={tokens} t={t} onChange={(color) => set({ color })} />
           <NumberField label={t("strokeWidth")} value={el.strokeWidth ?? 2} min={0.5} max={4} step={0.25} onChange={(v) => set({ strokeWidth: v })} disabled={readOnly} />
         </Section>
@@ -551,6 +614,7 @@ function SlidePanel(props: Props) {
   const { slide, slideRef, tokens, run, t, locale, readOnly } = props;
   const sid = slide.id;
   const bg = slide.background;
+  const applied = currentPreset(props.doc);
   const setBackground = (background: Slide["background"]) =>
     run((d) => ({ ...d, slides: { ...d.slides, [sid]: background ? { ...d.slides[sid], background } : withoutBackground(d.slides[sid]) } }));
   const swatches = colorTokens(tokens);
@@ -645,11 +709,32 @@ function SlidePanel(props: Props) {
         />
       </Section>
       <Section title={t("presets")}>
-        <div className="de-presets">
+        <p className="de-hint">{t("presetsHint")}</p>
+        <div className="de-presets" role="radiogroup" aria-label={t("presets")}>
           {PRESETS.map((preset) => (
-            <button key={preset} type="button" className="de-preset" data-preset={preset} disabled={readOnly} onClick={() => run((d) => applyPreset(d, preset))}>
-              <strong>{t(PRESET_LABELS[preset][0])}</strong>
-              <span>{t(PRESET_LABELS[preset][1])}</span>
+            <button
+              key={preset}
+              type="button"
+              role="radio"
+              aria-checked={applied === preset}
+              className={`de-preset${applied === preset ? " is-active" : ""}`}
+              data-preset={preset}
+              disabled={readOnly}
+              onClick={() => run((d) => applyPreset(d, preset))}
+            >
+              {/* A mini slide that plays the preset's motion on hover. */}
+              <span className="de-preset-thumb" aria-hidden>
+                <span className="de-preset-page">
+                  <i className="de-preset-title" />
+                  <i className="de-preset-line" />
+                  <i className="de-preset-line de-preset-line-short" />
+                </span>
+              </span>
+              <span className="de-preset-text">
+                <strong>{t(PRESET_LABELS[preset][0])}</strong>
+                <span>{t(PRESET_LABELS[preset][1])}</span>
+              </span>
+              {applied === preset ? <span className="de-preset-badge">{t("presetBadge")}</span> : null}
             </button>
           ))}
         </div>
@@ -666,12 +751,119 @@ function withoutBackground(slide: Slide): Slide {
 
 // ── deck ────────────────────────────────────────────────────────────────────
 
-function DeckPanel(props: Props) {
-  const { doc, run, tokens, themeFile, t, readOnly } = props;
-  const deck = doc.deck;
+/** Readable names of the usual design tokens. */
+const TOKEN_NAMES: Record<string, DeckStringKey> = {
+  "--bg": "tokBg",
+  "--fg": "tokFg",
+  "--accent": "tokAccent",
+  "--accent-contrast": "tokAccentContrast",
+  "--muted": "tokMuted",
+  "--surface": "tokSurface",
+  "--border": "tokBorder",
+  "--danger": "tokDanger",
+  "--info": "tokInfo",
+  "--success": "tokSuccess",
+  "--warning": "tokWarning",
+};
+
+const THEME_FONTS = [
+  ["--font-display", "fontDisplay", "tokFontDisplayUse"],
+  ["--font-body", "fontBody", "tokFontBodyUse"],
+  ["--font-mono", "fontMono", "tokFontMonoUse"],
+] as const;
+
+const ICON_STYLES = ["outline", "filled", "solid", "duotone"];
+
+/** "--brand-light" -> "Brand light". */
+function humanToken(name: string): string {
+  const words = name.replace(/^--/, "").replace(/[-_]+/g, " ").trim();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+/** The project's palette, fonts and icons, written for people rather than as raw tokens. */
+function ThemeOverview({ tokens, t }: { tokens: ThemeTokens; t: DeckT }) {
   const colors = colorTokens(tokens);
-  const fonts = Object.entries(tokens).filter(([k]) => k.startsWith("--font-"));
-  const others = Object.entries(tokens).filter(([k]) => !k.startsWith("--font-") && !colors.some((c) => c.name === k));
+  const [copied, setCopied] = useState<string | null>(null);
+  useEffect(() => {
+    if (!copied) return;
+    const timer = window.setTimeout(() => setCopied(null), 1400);
+    return () => window.clearTimeout(timer);
+  }, [copied]);
+  const fonts = THEME_FONTS.filter(([token]) => tokens[token]);
+  const iconLibrary = tokens["--icon-library"]?.trim();
+  const iconStyle = tokens["--icon-style"]?.trim();
+  const iconStyleKey = iconStyle && ICON_STYLES.includes(iconStyle) ? (`tokIconStyle_${iconStyle}` as DeckStringKey) : null;
+  return (
+    <>
+      {colors.length ? (
+        <>
+          <h4 className="de-subhead">{t("tokenColors")}</h4>
+          <div className="de-palette-strip" aria-hidden>
+            {colors.map((c) => (
+              <span key={c.name} style={{ background: c.value }} />
+            ))}
+          </div>
+          <ul className="de-palette">
+            {colors.map((c) => {
+              const name = TOKEN_NAMES[c.name] ? t(TOKEN_NAMES[c.name]) : humanToken(c.name);
+              return (
+                <li key={c.name}>
+                  <button
+                    type="button"
+                    className="de-palette-item"
+                    title={t("tokCopy")}
+                    onClick={() => {
+                      void navigator.clipboard?.writeText(c.value).then(() => setCopied(c.name), () => undefined);
+                    }}
+                  >
+                    <span className="de-palette-swatch" style={{ background: c.value }} aria-hidden />
+                    <span className="de-palette-text">
+                      <span className="de-palette-name">{name}</span>
+                      <span className="de-palette-value">{copied === c.name ? t("tokCopied") : c.value.toUpperCase()}</span>
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </>
+      ) : null}
+      {fonts.length ? (
+        <>
+          <h4 className="de-subhead">{t("tokenFonts")}</h4>
+          <ul className="de-typefaces">
+            {fonts.map(([token, , use]) => (
+              <li key={token} className="de-typeface">
+                <span className="de-typeface-sample" style={{ fontFamily: tokens[token] }} aria-hidden>
+                  Aa
+                </span>
+                <span className="de-typeface-text">
+                  <span className="de-typeface-family" style={{ fontFamily: tokens[token] }}>
+                    {firstFamily(tokens[token]) ?? tokens[token]}
+                  </span>
+                  <span className="de-typeface-use">{t(use)}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
+      {iconLibrary ? (
+        <p className="de-theme-icons">
+          <span>{t("tokIcons")}</span>
+          <strong>
+            {humanToken(iconLibrary)}
+            {iconStyleKey ? ` · ${t(iconStyleKey)}` : iconStyle ? ` · ${iconStyle}` : ""}
+          </strong>
+        </p>
+      ) : null}
+    </>
+  );
+}
+
+function DeckPanel(props: Props) {
+  const { doc, run, tokens, t, readOnly } = props;
+  const deck = doc.deck;
   return (
     <>
       <Section title={t("deckSettings")}>
@@ -700,39 +892,8 @@ function DeckPanel(props: Props) {
       </Section>
       <Section title={t("theme")}>
         {props.designSystem}
-        <p className="de-hint">{t("themeHint", { file: themeFile })}</p>
-        <h4 className="de-subhead">{t("tokenColors")}</h4>
-        <ul className="de-tokens">
-          {colors.map((c) => (
-            <li key={c.name}>
-              <span className="de-swatch de-swatch-sm" style={{ background: c.value }} aria-hidden />
-              <code>{c.name}</code>
-              <span>{c.value}</span>
-            </li>
-          ))}
-        </ul>
-        <h4 className="de-subhead">{t("tokenFonts")}</h4>
-        <ul className="de-tokens">
-          {fonts.map(([name, value]) => (
-            <li key={name}>
-              <code>{name}</code>
-              <span style={{ fontFamily: value }}>{value}</span>
-            </li>
-          ))}
-        </ul>
-        {others.length ? (
-          <details>
-            <summary>{t("tokenOther")}</summary>
-            <ul className="de-tokens">
-              {others.map(([name, value]) => (
-                <li key={name}>
-                  <code>{name}</code>
-                  <span>{value}</span>
-                </li>
-              ))}
-            </ul>
-          </details>
-        ) : null}
+        <p className="de-hint">{t("themeHint")}</p>
+        <ThemeOverview tokens={tokens} t={t} />
       </Section>
     </>
   );

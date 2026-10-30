@@ -19,6 +19,7 @@ from pydantic import ValidationError
 from app.config import get_settings
 from app.services.deck_ai.jsonio import ModelJsonError, parse_json_object
 from app.services.deck_ai.llm import describe_errors
+from app.services.design_system.logo_colors import logo_colors_prompt
 from app.services.design_system.prompts import (
     GENERATE_SYSTEM,
     REPAIR,
@@ -93,6 +94,7 @@ def generation_prompt(
     findings: str | None,
     has_logo_image: bool,
     conversation: str = "",
+    logo_colors: list[str] | None = None,
 ) -> str:
     parts = [f"Project name: {project_name}", f"Request:\n{brief.strip()[:MAX_BRIEF_CHARS]}"]
     if conversation:
@@ -104,6 +106,8 @@ def generation_prompt(
             "The attached image is the brand logo: analyse its colours, contrast, geometry and mood, "
             "and build the palette and the type pairing from it."
         )
+    if logo_colors:
+        parts.append(logo_colors_prompt(logo_colors))
     if current is not None:
         spec = spec_from_document(current).model_dump()
         parts.append(

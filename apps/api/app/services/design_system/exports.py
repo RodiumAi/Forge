@@ -43,12 +43,16 @@ class ExportFile:
 
 def require_export(db: Session, user: User, fmt: str) -> None:
     """403 FEATURE_NOT_IN_PLAN when the acting user's plan does not include ``fmt``."""
-    from app.services.entitlements import entitlements_apply, get_entitlements, require_feature
+    from app.services.entitlements import entitlements_apply, get_entitlements
 
     if not entitlements_apply(user):
         return
     if fmt == "pdf":
-        require_feature(db, user, "export_pdf")
+        # Same rule as decks and codelabs: PDF from Starter up, even when the
+        # plan's entitlements lack the flag (Pro, Scale, the team plans).
+        from app.services.exports.gating import require_export as require_document_export
+
+        require_document_export(db, user, "pdf")
         return
     row = get_entitlements(db, user)
     slug = (row.plan_slug if row is not None else "free").strip().lower()

@@ -145,3 +145,42 @@ class TestProjectThumbnail:
         session = token_for_user(user)
         res = client.get(f"/projects/{project.id}/thumbnail?access_token={session}")
         assert res.status_code == 401
+
+
+def test_design_system_cards_follow_the_document(tmp_path, monkeypatch):
+    from app.services import project_thumbnail as pt
+
+    (tmp_path / "design-system.json").write_text("{}", encoding="utf-8")
+    (tmp_path / pt.THUMBNAIL_FILENAME).write_bytes(_JPEG)
+    stamp = pt.sources_stamp(tmp_path)
+    (tmp_path / pt.META_FILENAME).write_text(
+        f'{{"v": {pt.CARD_VERSION}, "stamp": {stamp}}}', encoding="utf-8"
+    )
+    assert not pt.is_stale(tmp_path)
+    import os
+
+    os.utime(tmp_path / "design-system.json", (stamp + 5, stamp + 5))
+    assert pt.is_stale(tmp_path)
+
+    calls = []
+    monkeypatch.setattr(pt, "render_guide_thumbnail", lambda pid: calls.append(pid) or True)
+    assert pt.render_thumbnail("p-1", "design_system", "Charte") is True
+    assert calls == ["p-1"]
+
+
+def test_guide_card_needs_a_document(monkeypatch):
+    from app.services import project_thumbnail as pt
+    from app.services.design_system import registry
+
+    monkeypatch.setattr(registry, "read_document", lambda pid: None)
+    assert pt._guide_html("p-1") is None
+    assert pt.render_guide_thumbnail.__name__  # importable without Chromium
+
+
+def test_cover_text_is_cut_at_a_word():
+    from app.services.design_system.guide import _shorten
+
+    assert _shorten("short", 240) == "short"
+    text = "word " * 80
+    out = _shorten(text, 30)
+    assert out.endswith("…") and len(out) <= 31 and "wor…" not in out

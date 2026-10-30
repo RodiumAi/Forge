@@ -152,8 +152,23 @@ export function unshare(id: string): Promise<DesignSystemItem> {
   return api<DesignSystemItem>(`/design-systems/${id}/share`, { method: "DELETE" });
 }
 
-export function publish(projectId: string): Promise<{ public_url: string }> {
-  return api<{ public_url: string }>(`/projects/${projectId}/publish`, { method: "POST", body: "{}" });
+/** The guidelines document (same as the PDF and the published page), as HTML. */
+export async function previewHtml(projectId: string, lang: string): Promise<string> {
+  const body = await api<{ html: string }>(
+    `/projects/${projectId}/design-system/preview?lang=${encodeURIComponent(lang)}`,
+  );
+  return body.html;
+}
+
+export type PublishState = { public_url: string; published_at: string | null };
+
+/** The page address, and when it was last published (null: never). */
+export function publishStatus(projectId: string): Promise<PublishState> {
+  return api<PublishState>(`/projects/${projectId}/publish`);
+}
+
+export function publish(projectId: string, options: { badge?: boolean } = {}): Promise<PublishState> {
+  return api<PublishState>(`/projects/${projectId}/publish`, { method: "POST", body: JSON.stringify(options) });
 }
 
 // ── link from another project ──────────────────────────────────────────────

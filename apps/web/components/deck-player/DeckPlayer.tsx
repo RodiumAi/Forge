@@ -42,6 +42,8 @@ export type DeckPlayerProps = {
   channel?: string;
   /** Open this URL as presenter view instead of rendering it in a popup. */
   presenterUrl?: string;
+  /** Open the presenter view as soon as the player starts. */
+  presenterOnStart?: boolean;
 };
 
 export const BADGE_URL = "https://forge.rodiumai.io";
@@ -87,6 +89,7 @@ export function DeckPlayer({
   controls = true,
   channel,
   presenterUrl,
+  presenterOnStart = false,
 }: DeckPlayerProps) {
   const refs = useMemo(() => deck.slides.filter((ref) => !ref.hidden), [deck]);
   const list = useMemo(() => visibleSlides(deck, slides), [deck, slides]);
@@ -273,8 +276,22 @@ export function DeckPlayer({
     win.document.body.style.margin = "0";
     win.document.body.style.background = "#0B0D12";
     win.document.body.innerHTML = "";
+    win.document.head.querySelectorAll("[data-forge-copied]").forEach((node) => node.remove());
+    document.querySelectorAll<HTMLElement>('link[rel="stylesheet"], style').forEach((node) => {
+      const copy = node.cloneNode(true) as HTMLElement;
+      if (copy instanceof HTMLLinkElement) copy.href = (node as HTMLLinkElement).href;
+      copy.setAttribute("data-forge-copied", "");
+      win.document.head.appendChild(copy);
+    });
     setPresenterWin(win);
   }, [deck.title, labels.presenter, name, presenterUrl, presenterWin]);
+
+  const presenterStarted = useRef(false);
+  useEffect(() => {
+    if (!presenterOnStart || presenterStarted.current) return;
+    presenterStarted.current = true;
+    openPresenter();
+  }, [presenterOnStart, openPresenter]);
 
   useEffect(() => {
     if (!presenterWin) return;

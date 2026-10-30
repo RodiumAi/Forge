@@ -1,17 +1,14 @@
 "use client";
 
-import Link from "next/link";
-import { Download, ExternalLink, Globe, Lock, Share2, Star, UserPlus } from "lucide-react";
+import { FileText } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ShareButton } from "@/components/builder/ShareButton";
 import { WorkspaceBar } from "@/components/builder/WorkspaceBar";
-import { APP_ROUTES } from "@/components/shell/nav";
 import { Icon } from "@/components/ui/icon";
 import { ContextMenu, copyText, useContextMenu, useMenuTrigger } from "@/components/ui/ContextMenu";
 import { designSystemSchema } from "@/lib/contracts/forge-design";
 import { clearBootPrompt, peekBootPrompt } from "@/lib/create-project";
-import { useForgeStatus } from "@/lib/forge-status";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import type { MessageKey } from "@/lib/i18n/dictionaries";
 import {
@@ -19,16 +16,13 @@ import {
   errorCode,
   getDesignSystemItem,
   loadDocument,
-  publish,
   saveDocument,
-  setDefault,
-  share,
-  unshare,
   uploadLogo,
   type DesignSystemItem,
 } from "./api";
 import { DesignSystemChat, type DesignSystemChatHandle } from "./DesignSystemChat";
-import { designSystemExportOptions, type DsExportFormat } from "./exports";
+import { DesignSystemPreview } from "./DesignSystemPreview";
+import { DesignSystemShareHub } from "./DesignSystemShareHub";
 import { takePendingBrandAssets } from "./intake/brand-intake";
 import {
   ColorsSection,
@@ -42,7 +36,6 @@ import {
 import { SECTIONS, cssVars, fontFamily, googleFontsHref, type DesignSystemDoc, type SectionId } from "./tokens";
 
 const SAVE_DELAY_MS = 700;
-const EXPORT_LABELS: Record<DsExportFormat, MessageKey> = { pdf: "apDsExportPdf", md: "apDsExportMd" };
 
 type SaveState = "idle" | "saving" | "saved" | "error" | "conflict" | "invalid";
 
@@ -60,16 +53,16 @@ export function DesignSystemEditor({ projectId }: { projectId: string }) {
   const [item, setItem] = useState<DesignSystemItem | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [section, setSection] = useState<SectionId>("colors");
+  // The document view (what the PDF and the published page show) instead of a section.
+  const [previewing, setPreviewing] = useState(false);
+  const [savedVersion, setSavedVersion] = useState(0);
   const [save, setSave] = useState<SaveState>("idle");
   const [notice, setNotice] = useState<string | null>(null);
-  const [menu, setMenu] = useState<"share" | "export" | null>(null);
-  const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
   const etag = useRef<string | null>(null);
   const timer = useRef<number | null>(null);
   const pending = useRef<DesignSystemDoc | null>(null);
   const editCount = useRef(0);
   const chatRef = useRef<DesignSystemChatHandle>(null);
-  const status = useForgeStatus();
   // The prompt built on the home page (brand intake), sent by the chat on arrival.
   const [bootPrompt] = useState(() => (typeof window === "undefined" ? null : peekBootPrompt(projectId)));
 
@@ -102,6 +95,7 @@ export function DesignSystemEditor({ projectId }: { projectId: string }) {
       // Keep local edits made while the request was in flight.
       if (editCount.current === startedAt) setDoc(saved.doc);
       setSave("saved");
+      setSavedVersion((v) => v + 1);
     } catch (err) {
       if (errorCode(err) === "DOCUMENT_CHANGED") {
         setSave("conflict");
@@ -251,112 +245,19 @@ export function DesignSystemEditor({ projectId }: { projectId: string }) {
           </span>
         }
         actions={
-        <div className="dse-actions">
-          <div className="dse-menu">
-            <button type="button" className="f-btn f-btn-ghost f-btn-sm" aria-expanded={menu === "share"} onClick={() => setMenu(menu === "share" ? null : "share")}>
-              <Icon icon={Share2} className="ui-icon-sm" /> <span className="f-bd-lbl">{t("dsShare")}</span>
-            </button>
-            {menu === "share" && item ? (
-              <div className="dse-pop" role="menu">
-                {item.owner.mine ? (
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={() => void run(async () => setItem(await setDefault(projectId, "user", !item.is_default_user)))}
-                  >
-                    <Icon icon={Star} className="ui-icon-sm" />{" "}
-                    {item.is_default_user ? t("dsDefaultUserOff") : t("dsDefaultUserOn")}
-                  </button>
-                ) : null}
-                {item.can_share ? (
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={() =>
-                      void run(
-                        async () => setItem(await (item.visibility === "team" ? unshare(projectId) : share(projectId))),
-                        item.visibility === "team" ? "dsUnshared" : "dsShared",
-                      )
-                    }
-                  >
-                    <Icon icon={Share2} className="ui-icon-sm" />{" "}
-                    {item.visibility === "team" ? t("dsUnshare") : t("dsShareTeam")}
-                  </button>
-                ) : null}
-                {item.can_set_team_default ? (
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={() => void run(async () => setItem(await setDefault(projectId, "team", !item.is_default_team)))}
-                  >
-                    <Icon icon={Star} className="ui-icon-sm" />{" "}
-                    {item.is_default_team ? t("dsDefaultTeamOff") : t("dsDefaultTeamOn")}
-                  </button>
-                ) : null}
-                {item.owner.mine ? (
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={() => {
-                      setMenu(null);
-                      setInviteRequest((n) => n + 1);
-                    }}
-                  >
-                    <Icon icon={UserPlus} className="ui-icon-sm" /> {t("dsInvitePeople")}
-                  </button>
-                ) : null}
-                <p className="dse-muted">{item.visibility === "team" ? t("dsVisibilityTeam") : t("dsVisibilityPrivate")}</p>
-              </div>
-            ) : null}
-          </div>
-          <div className="dse-menu">
-            <button type="button" className="f-btn f-btn-ghost f-btn-sm" aria-expanded={menu === "export"} onClick={() => setMenu(menu === "export" ? null : "export")}>
-              <Icon icon={Download} className="ui-icon-sm" /> <span className="f-bd-lbl">{t("dsExport")}</span>
-            </button>
-            {menu === "export" ? (
-              <div className="dse-pop" role="menu">
-                {designSystemExportOptions(status).map(({ format, allowed }) => (
-                  <button
-                    key={format}
-                    type="button"
-                    role="menuitem"
-                    aria-disabled={allowed ? undefined : true}
-                    className={allowed ? undefined : "is-locked"}
-                    onClick={() => {
-                      if (!allowed) return;
-                      setMenu(null);
-                      void run(() => downloadExport(projectId, format));
-                    }}
-                  >
-                    {allowed ? null : <Icon icon={Lock} className="ui-icon-sm" />} {t(EXPORT_LABELS[format])}
-                    {allowed ? null : <small className="dse-lock-hint">{t("apDsExportLocked")}</small>}
-                  </button>
-                ))}
-                {designSystemExportOptions(status).some((o) => !o.allowed) ? (
-                  <Link className="dse-plans-link" href={APP_ROUTES.billing} role="menuitem">
-                    {t("apDsExportSeePlans")}
-                  </Link>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
-          {item?.owner.mine ? (
-            <button
-              type="button"
-              className="f-btn f-btn-primary f-btn-sm"
-              onClick={() =>
-                void run(async () => setPublishedUrl((await publish(projectId)).public_url), "dsPublished")
-              }
-            >
-              <Icon icon={Globe} className="ui-icon-sm" /> <span className="f-bd-lbl">{t("dsPublish")}</span>
-            </button>
-          ) : null}
-          {publishedUrl ? (
-            <a className="f-icon-btn f-icon-btn-sm" href={publishedUrl} target="_blank" rel="noopener noreferrer" aria-label={t("dsOpenSite")}>
-              <Icon icon={ExternalLink} />
-            </a>
-          ) : null}
-        </div>
+          <DesignSystemShareHub
+            projectId={projectId}
+            doc={doc}
+            item={item}
+            onItem={setItem}
+            run={run}
+            onInvite={() => setInviteRequest((n) => n + 1)}
+            onDownload={(format) => void run(() => downloadExport(projectId, format))}
+            beforePublish={async () => {
+              if (timer.current) window.clearTimeout(timer.current);
+              await flush();
+            }}
+          />
         }
       />
       {item?.owner.mine ? <ShareButton projectId={projectId} projectName={doc.name} request={inviteRequest} hideButton /> : null}
@@ -367,24 +268,51 @@ export function DesignSystemEditor({ projectId }: { projectId: string }) {
       ) : null}
       <div className="dse-body">
         <nav className="dse-nav" aria-label={t("dsSections")}>
+          <button
+            type="button"
+            aria-current={previewing ? "page" : undefined}
+            className={`dse-nav-preview${previewing ? " is-active" : ""}`}
+            onClick={() => setPreviewing(true)}
+          >
+            <Icon icon={FileText} className="ui-icon-sm" /> {t("dsPreview")}
+          </button>
           {SECTIONS.map((id) => (
             <button
               key={id}
               type="button"
-              aria-current={section === id ? "page" : undefined}
-              className={section === id ? "is-active" : undefined}
+              aria-current={!previewing && section === id ? "page" : undefined}
+              className={!previewing && section === id ? "is-active" : undefined}
               {...navMenu.bind(id)}
-              onClick={() => setSection(id)}
+              onClick={() => {
+                setPreviewing(false);
+                setSection(id);
+              }}
             >
               {t(`dsSection_${id}` as MessageKey)}
             </button>
           ))}
         </nav>
         <ContextMenu request={sectionMenu.request} onClose={sectionMenu.close} />
-        <main className="dse-main">
-          <h2 className="dse-h2">{t(`dsSection_${section}` as MessageKey)}</h2>
-          {readOnly ? <p className="dse-muted">{t("dsReadOnly")}</p> : null}
-          {sectionBody}
+        <main className={`dse-main${previewing ? " is-preview" : ""}`}>
+          {previewing ? (
+            <>
+              <h2 className="dse-h2">{t("dsPreview")}</h2>
+              <DesignSystemPreview
+                projectId={projectId}
+                version={savedVersion}
+                beforeLoad={async () => {
+                  if (timer.current) window.clearTimeout(timer.current);
+                  await flush();
+                }}
+              />
+            </>
+          ) : (
+            <>
+              <h2 className="dse-h2">{t(`dsSection_${section}` as MessageKey)}</h2>
+              {readOnly ? <p className="dse-muted">{t("dsReadOnly")}</p> : null}
+              {sectionBody}
+            </>
+          )}
         </main>
         <DesignSystemChat
           ref={chatRef}

@@ -332,18 +332,13 @@ def _unique_slug_excluding(db: Session, base: str, exclude_id: UUID | None) -> s
         i += 1
 
 
-@router.post("", response_model=ProjectOut, status_code=201)
-async def create_project(
-    body: ProjectCreate,
-    request: Request,
-    user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-) -> ProjectOut:
-    locale = resolve_locale(request)
+def _guard_new_project(request: Request, user: User, db: Session, locale: str) -> None:
+    """Gates every new project (created, forked or duplicated): verified email,
+    RODI for linked accounts, rate limits and the plan's project quota."""
     if user.email_verified_at is None:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=t("email_not_verified", locale),
+            detail=t("email_not_verified", locale),  # type: ignore[arg-type]
         )
     # Linked Rodium accounts must have RODI before creating / forking projects
     # (templates included). Frontend preflights via GET /auth/rodium/account?fresh=1
@@ -391,6 +386,17 @@ async def create_project(
                 "actions": ["upgrade"],
             },
         )
+
+
+@router.post("", response_model=ProjectOut, status_code=201)
+async def create_project(
+    body: ProjectCreate,
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ProjectOut:
+    locale = resolve_locale(request)
+    _guard_new_project(request, user, db, locale)
 
     template_id = (body.template_id or "").strip() or None
     prompt = (body.prompt or "").strip()
@@ -542,6 +548,81 @@ async def create_project(
             "format": deck_ratio,
             "has_design_system": bool(design_system_source),
         },
+    )
+    return _project_out(project)
+
+
+def _copy_name(name: str, locale: str) -> str:
+    suffix = t("project_copy_suffix", locale)  # type: ignore[arg-type]
+    base = (name or "").strip() or t("new_project", locale)  # type: ignore[arg-type]
+    return f"{base[: 200 - len(suffix) - 3]} - {suffix}"
+
+
+def _copy_project_files(source_id: str, dest_id: str) -> None:
+    """Copies the workspace without its history, builds or installed packages,
+    then starts the copy's own history."""
+    import shutil
+
+    from app.services import history
+
+    root = get_settings().projects_path
+    skip = {"node_modules", ".git", "dist", ".vite", "__pycache__"}
+    shutil.copytree(
+        root / source_id, root / dest_id, ignore=lambda _d, names: {n for n in names if n in skip}
+    )
+    # Best effort: snapshot() logs and returns None when history is unavailable.
+    history.snapshot(dest_id, f"copied from project: {source_id}")
+
+
+@router.post("/{project_id}/duplicate", response_model=ProjectOut, status_code=201)
+async def duplicate_project(
+    project_id: UUID,
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ProjectOut:
+    """A private copy of one of the caller's projects: same files, same kind,
+    same design system; no history, sharing, publication or collaborators."""
+    locale = resolve_locale(request)
+    source = _owned_project(db, user, project_id, locale)
+    if not kind_enabled(source.platform):
+        raise SitesError(400, "KIND_DISABLED", "This project type is not available yet.")
+    if not (get_settings().projects_path / str(source.id)).is_dir():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=t("project_not_found", locale))  # type: ignore[arg-type]
+    _guard_new_project(request, user, db, locale)
+
+    name = _copy_name(source.name, locale)
+    project = Project(
+        user_id=user.id,
+        name=name,
+        slug=_unique_slug(db, name),
+        status="ready",
+        template_id=source.template_id,
+        platform=source.platform,
+        design_brief=source.design_brief,
+        design_system_project_id=source.design_system_project_id,
+        design_system_version=source.design_system_version,
+    )
+    db.add(project)
+    db.commit()
+    db.refresh(project)
+    try:
+        # to_thread: copying files and the git snapshot would stall the event loop.
+        await asyncio.to_thread(_copy_project_files, str(source.id), str(project.id))
+    except Exception as exc:
+        import shutil
+
+        shutil.rmtree(get_settings().projects_path / str(project.id), ignore_errors=True)
+        db.delete(project)
+        db.commit()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+
+    db.add(Chat(project_id=project.id, title=t("main_chat", locale)))
+    db.commit()
+    capture_for_user(
+        user,
+        "forge_project_duplicated",
+        {"project_id": str(project.id), "source_project_id": str(source.id), "platform": project.platform},
     )
     return _project_out(project)
 

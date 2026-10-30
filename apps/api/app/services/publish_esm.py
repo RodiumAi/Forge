@@ -391,14 +391,14 @@ def build_design_system_site(
     next to it. Returns the files written, relative to ``out``.
     """
     from app.contracts.forge_design import dump_document, validate_design_system
-    from app.services.design_system.site import brand_site_html
+    from app.services.design_system.guide import brand_guide_html
     from app.services.document_scaffold import DESIGN_SYSTEM_PATH
     from app.services.filesystem import read_file, safe_resolve
 
     document = dump_document(validate_design_system(json.loads(read_file(project_id, DESIGN_SYSTEM_PATH))))
     written: list[str] = []
     logo = document.get("logo") or {}
-    for key in ("src", "darkSrc"):
+    for key in ("src", "darkSrc", "iconSrc"):
         rel = logo.get(key)
         if not rel:
             continue
@@ -417,7 +417,8 @@ def build_design_system_site(
     def asset_url(path: str) -> str:
         return "/" + path.removeprefix("public/")
 
-    html = brand_site_html(document, asset_url=asset_url, lang=lang, badge=badge)
+    # The same document as the PDF export, laid out for the screen.
+    html = brand_guide_html(document, asset_url=asset_url, lang=lang, badge=badge, screen=True)
     (out / "index.html").write_text(html, encoding="utf-8")
     (out / "404.html").write_text(
         html.replace("<head>", '<head><meta name="robots" content="noindex">', 1), "utf-8"
