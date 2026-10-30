@@ -41,6 +41,7 @@ from app.services.design_system.generate import (
     generation_prompt,
 )
 from app.services.design_system.logo import wordmark_svg
+from app.services.design_system.logo_colors import align_palette, measure_logo_colors
 from app.services.design_system.render import design_md
 from app.services.design_system.site_extract import extract_site, screenshot_part
 from app.services.design_system.tokens import (
@@ -329,7 +330,9 @@ def spawn_design_system_job(ctx: DesignSystemContext) -> None:
                     run_queue.publish_run_event(rid, event)
             except asyncio.CancelledError:
                 _fail_run(ctx.run_pk, "cancelled", "cancelled")
-                run_queue.publish_run_event(rid, {"type": "error", "code": "cancelled", "message": "cancelled"})
+                run_queue.publish_run_event(
+                    rid, {"type": "error", "code": "cancelled", "message": "cancelled"}
+                )
         finally:
             run_queue.release_run(rid)
             plan_worker._running_tasks.pop(rid, None)
@@ -379,9 +382,15 @@ async def _generate(ctx: DesignSystemContext) -> AsyncIterator[Event]:
             yield steps.push("ds_capture", "done")
 
     logo_part, logo_path = await _logo_image(pid, prompt, current)
+    logo_colors: list[str] = []
     if logo_part is not None:
         yield steps.push("ds_logo", "running")
         images.append(logo_part)
+        if logo_path:
+            try:
+                logo_colors = measure_logo_colors(safe_resolve(pid, logo_path).read_bytes())
+            except (OSError, ValueError):
+                logo_colors = []
         if logo_path and logo_path != ((current or {}).get("logo") or {}).get("src"):
             yield {"type": "file_write", "path": logo_path}
         yield steps.push("ds_logo", "done")
@@ -396,9 +405,13 @@ async def _generate(ctx: DesignSystemContext) -> AsyncIterator[Event]:
         findings=findings_text,
         has_logo_image=logo_part is not None,
         conversation=_conversation(ctx.history),
+        logo_colors=logo_colors,
     )
     answer = await generate_spec(auth=auth, model=ctx.gen_model, user=user, images=images, locale=ctx.locale)
     spec = answer.spec
+    if logo_colors:
+        # The vision answer drifts from the logo's real colours: bring it back on them.
+        spec.colors = align_palette(spec.colors, logo_colors)
     old_logo = (current or {}).get("logo") or {}
     src = logo_path or old_logo.get("src") or LOGO_PATH
     # A new logo image makes the old dark and icon versions stale.

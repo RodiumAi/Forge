@@ -353,17 +353,25 @@ def test_text_exports(env):
 
 def test_exports_follow_the_plan(env, monkeypatch):
     from app.services import entitlements
+    from app.services.design_system import exports
+    from app.services.exports import gating
 
+    monkeypatch.setattr(exports, "_print_pdf", lambda _html: b"%PDF-1.7 fake")
     alice = env.user("alice")
     ds = env.project(alice, "design_system")
-    plan = SimpleNamespace(plan_slug="free", export_pdf=False)
-    monkeypatch.setattr(entitlements, "entitlements_apply", lambda _u: True)
-    monkeypatch.setattr(entitlements, "get_entitlements", lambda _db, _u: plan)
+    plan = SimpleNamespace(plan_slug="free", export_pdf=False, remove_badge=False)
+    for module in (entitlements, gating):
+        monkeypatch.setattr(module, "entitlements_apply", lambda _u: True)
+        monkeypatch.setattr(module, "get_entitlements", lambda _db, _u: plan)
     client = env.act(alice)
     assert client.get(f"/projects/{ds.id}/design-system/export/css").status_code == 403
+    assert client.get(f"/projects/{ds.id}/design-system/export/pdf").status_code == 403
     plan.plan_slug = "starter"
     assert client.get(f"/projects/{ds.id}/design-system/export/css").status_code == 200
-    assert client.get(f"/projects/{ds.id}/design-system/export/pdf").status_code == 403
+    # PDF from Starter up, like decks: a Pro plan whose row lacks the flag still prints.
+    assert client.get(f"/projects/{ds.id}/design-system/export/pdf").status_code == 200
+    plan.plan_slug = "pro"
+    assert client.get(f"/projects/{ds.id}/design-system/export/pdf").status_code == 200
 
 
 def test_pdf_export_prints_the_guidelines(env, monkeypatch):
