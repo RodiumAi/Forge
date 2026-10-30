@@ -411,6 +411,8 @@ def test_published_site_is_built_from_the_project(project, tmp_path):
     assert {"index.html", "404.html", "brand/logo.svg"} <= set(written)
     html = (out / "index.html").read_text(encoding="utf-8")
     assert "Acme &lt;script&gt;" in html and "<script>" not in html
+    # The same document as the PDF export (A4 pages), laid out for the screen.
+    assert 'class="page' in html and "@media screen" in html and 'name="viewport"' in html
 
 
 def test_generation_runs_in_the_background_and_replays(ds_project, monkeypatch):

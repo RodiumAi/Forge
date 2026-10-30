@@ -886,6 +886,22 @@ def logo_profile(url: str) -> dict[str, Any]:
 
 # ── print document ─────────────────────────────────────────────────────────
 
+# On a screen (the published page) the A4 pages stack like sheets on a desk,
+# scaled down in steps so a page always fits the window width. Print is untouched.
+_SCREEN_STYLE = """
+@media screen{
+html{background:#2b2e35}
+body{background:transparent;padding:40px 16px 56px;display:flex;flex-direction:column;align-items:center;gap:32px}
+.page{flex:none;border-radius:6px;box-shadow:0 18px 50px rgba(0,0,0,.4)}
+}
+@media screen and (max-width:1200px){body{zoom:.84;gap:28px}}
+@media screen and (max-width:1020px){body{zoom:.7}}
+@media screen and (max-width:860px){body{zoom:.58;padding:24px 12px 40px;gap:22px}}
+@media screen and (max-width:720px){body{zoom:.48}}
+@media screen and (max-width:600px){body{zoom:.4}}
+@media screen and (max-width:500px){body{zoom:.32;padding:16px 8px 28px}}
+"""
+
 _STYLE = """
 @page{size:297mm 210mm;margin:0}
 *{box-sizing:border-box}
@@ -1084,8 +1100,12 @@ def brand_guide_html(
     badge: bool = True,
     remote_fonts: bool = True,
     now: datetime | None = None,
+    screen: bool = False,
 ) -> str:
-    """The brand guidelines as print pages (A4 landscape, one topic per page)."""
+    """The brand guidelines as print pages (A4 landscape, one topic per page).
+
+    ``screen`` adds the viewport and the on-screen layout, for the published page.
+    """
     lang = _lang(lang)
     labels = _labels(lang)
     raw_name = _clean(document.get("name")) or "Design system"
@@ -1692,8 +1712,9 @@ def brand_guide_html(
     root = "".join(f"{key}:{value};" for key, value in variables.items())
     return (
         f'<!doctype html><html lang="{lang}"><head><meta charset="utf-8">'
-        f"<title>{name} · {labels['guidelines']}</title>"
-        f"{fonts_link}<style>:root{{{root}{guide_vars}}}{_STYLE}</style></head><body>"
+        + ('<meta name="viewport" content="width=device-width,initial-scale=1">' if screen else "")
+        + f"<title>{name} · {labels['guidelines']}</title>"
+        f"{fonts_link}<style>:root{{{root}{guide_vars}}}{_STYLE}{_SCREEN_STYLE if screen else ''}</style></head><body>"
         + "".join(body)
         + "</body></html>"
     )
