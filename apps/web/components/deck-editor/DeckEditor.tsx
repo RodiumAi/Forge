@@ -82,6 +82,8 @@ import {
 import { colorTokens } from "./fields";
 import { PresentOverlay, presentIndex } from "./PresentOverlay";
 import { PublishMenu, type DeckPublisher } from "./PublishMenu";
+import { SlideImportDialog, type SlideImportState } from "./SlideImportDialog";
+import { importErrorKey, importSlides, insertionIndex, isPptxFile, MAX_SLIDE_IMPORT_BYTES, PPTX_ACCEPT, type ImportedSlide, type SlideImportClient } from "./slide-import";
 import { PropertiesPanel, type ImageTarget, type PanelTab } from "./PropertiesPanel";
 import { SlideRail, LayoutPicker } from "./SlideRail";
 import { canRedo, canUndo } from "./state";
@@ -104,6 +106,8 @@ export type DeckEditorProps = {
   assetUrl: AssetUrl;
   chat: ChatClient | null;
   images: ImageClient | null;
+  /** Converts PowerPoint files into slides; the "Import slides" entries are hidden when absent. */
+  slideImport?: SlideImportClient | null;
   /** Whether this plan may hide the "Made with Forge" badge (`remove_badge`). */
   badgeRemovable: boolean;
   /** Export menu mounted in the top bar (pending edits are saved when it is opened). */
@@ -250,6 +254,42 @@ export function DeckEditor(props: DeckEditorProps) {
     },
     [doc, dispatch, locale],
   );
+
+  // ── import slides from a PowerPoint file ─────────────────────────────────
+  const importInput = useRef<HTMLInputElement | null>(null);
+  const [importState, setImportState] = useState<SlideImportState | null>(null);
+  const importRun = useRef(0);
+  const importer = readOnly ? null : (props.slideImport ?? null);
+  const openImport = useCallback(() => importInput.current?.click(), []);
+  const importMb = Math.floor(MAX_SLIDE_IMPORT_BYTES / (1024 * 1024));
+
+  const readImport = async (file: File) => {
+    if (!importer) return;
+    const run = ++importRun.current;
+    if (!isPptxFile(file)) return setImportState({ status: "error", name: file.name, message: t("importErrorType") });
+    if (file.size > MAX_SLIDE_IMPORT_BYTES) return setImportState({ status: "error", name: file.name, message: t("importErrorSize", { n: importMb }) });
+    setImportState({ status: "reading", name: file.name });
+    try {
+      const result = await importer.importPptx(file);
+      if (run === importRun.current) setImportState({ status: "ready", name: file.name, result });
+    } catch (error) {
+      if (run === importRun.current) setImportState({ status: "error", name: file.name, message: t(importErrorKey(error), { n: importMb }) });
+    }
+  };
+
+  const closeImport = () => {
+    importRun.current += 1;
+    setImportState(null);
+  };
+
+  const applyImport = (picks: ImportedSlide[], keepTheme: boolean) => {
+    closeImport();
+    if (!doc) return;
+    const result = importSlides(doc, picks, insertionIndex(doc, state.slideId), { keepTheme });
+    if (!result.ids.length) return;
+    dispatch({ type: "edit", recipe: () => result.doc, slideId: result.ids[0], select: [] });
+    for (const [id, markdown] of Object.entries(result.notes)) docState.setNotes(id, markdown);
+  };
 
   const deleteSlide = useCallback(
     (id: string) => {
@@ -647,6 +687,7 @@ export function DeckEditor(props: DeckEditorProps) {
             setPresenting(presentIndex(doc.deck, id));
           },
           askAi: () => askChat({ nonce: Date.now(), kind: "focus" }),
+          importSlides: importer ? openImport : undefined,
           remove: () => {
             if (window.confirm(t("confirmDeleteSlide"))) deleteSlide(id);
           },
@@ -743,6 +784,7 @@ export function DeckEditor(props: DeckEditorProps) {
       onSlideContextMenu={openSlideMenu}
       pickerAt={pickerAt}
       onPickerAtDone={() => setPickerAt(null)}
+      onImport={importer ? openImport : undefined}
     />
   );
 
@@ -1080,6 +1122,24 @@ export function DeckEditor(props: DeckEditorProps) {
       ) : null}
 
       <ContextMenu request={menu.request} onClose={menu.close} />
+
+      {importer ? (
+        <input
+          ref={importInput}
+          type="file"
+          accept={PPTX_ACCEPT}
+          hidden
+          data-testid="slide-import-input"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = "";
+            if (file) void readImport(file);
+          }}
+        />
+      ) : null}
+      {importState ? (
+        <SlideImportDialog state={importState} deck={doc.deck} tokens={tokens} assetUrl={assetUrl} t={t} onCancel={closeImport} onImport={applyImport} />
+      ) : null}
 
       {presenting !== null ? (
         <PresentOverlay

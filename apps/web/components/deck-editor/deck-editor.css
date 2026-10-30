@@ -1972,7 +1972,7 @@
 /* properties panel: segmented tabs, airy sections, orange selected tiles */
 .de-panel { width: 300px; background: var(--f-bg); }
 .de-root .de-tabs {
-  margin: 10px 12px 4px;
+  margin: 10px 8px 4px;
   padding: 3px;
   gap: 2px;
   border: 0;
@@ -1980,7 +1980,13 @@
   background: var(--f-surface-2);
 }
 .de-root .de-tab {
-  flex: 1;
+  /* Sized to the label: "Présentation" needs more room than "Slide". */
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   height: 32px;
   border: 0;
   border-radius: var(--f-r-pill);
@@ -2319,3 +2325,68 @@ body.de-resizing iframe { pointer-events: none; }
 @keyframes de-spin { to { transform: rotate(360deg); } }
 .de-msg-images { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .de-msg-images img { width: 64px; height: 64px; object-fit: cover; border-radius: 8px; }
+
+/* import slides from a PowerPoint file */
+.de-root .de-modal.de-import,
+.de-modal.de-import {
+  width: min(1040px, 94vw);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.de-import-head h2 { margin: 0; }
+.de-import-file { margin: 2px 0 0; color: var(--f-muted); font-size: 13px; overflow-wrap: anywhere; }
+.de-import-status { display: flex; align-items: center; gap: 8px; margin: 12px 0; }
+.de-import-status.is-error { color: var(--f-danger); }
+.de-import-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.de-import-count { margin-right: auto; font-weight: 600; font-size: 13px; }
+.de-import-grid {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 2px;
+  list-style: none;
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
+}
+.de-import-item { display: flex; flex-direction: column; gap: 6px; cursor: pointer; }
+.de-import-item > input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.de-import-thumb {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: 8px;
+  outline: 2px solid var(--de-line);
+  outline-offset: 0;
+  pointer-events: none;
+}
+.de-import-item.is-checked .de-import-thumb { outline-color: var(--de-accent); outline-width: 3px; }
+.de-import-item > input:focus-visible + .de-import-thumb { box-shadow: 0 0 0 4px var(--f-orange-soft); }
+.de-import-check {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 1.5px solid rgba(255, 255, 255, 0.9);
+  background: rgba(0, 0, 0, 0.35);
+  color: #fff;
+}
+.de-import-item.is-checked .de-import-check { background: var(--de-accent); border-color: var(--de-accent); }
+.de-import-caption { display: flex; align-items: baseline; gap: 6px; font-size: 12px; min-width: 0; }
+.de-import-n { flex: none; color: var(--f-muted); font-variant-numeric: tabular-nums; }
+.de-import-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.de-import-hidden { flex: none; margin-left: auto; color: var(--f-muted); font-style: italic; }
+.de-import-theme { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; cursor: pointer; }
+.de-import-theme input { margin-top: 2px; }
+.de-import-theme small { display: block; color: var(--f-muted); }
+.de-import-warnings { font-size: 12px; color: var(--f-muted); }
+.de-import-warnings p { margin: 0 0 4px; }
+.de-import-warnings ul { margin: 0; padding-left: 18px; }
+.de-import .de-row { display: flex; gap: 8px; margin-top: 0; }
+.de-rail-add > .de-rail-import { flex: none; width: auto; padding: 0 10px; }

@@ -13,14 +13,16 @@ change made meanwhile by another tab, a collaborator or the agent.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 import threading
 import time
+import uuid
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Body, Depends, Header, Request
+from fastapi import APIRouter, Body, Depends, File, Header, Request, UploadFile
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, ValidationError
@@ -28,6 +30,7 @@ from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
 from app.contracts.forge_design import (
+    FORMAT_SIZES,
     ID_PATTERN,
     validate_codelab,
     validate_deck,
@@ -39,7 +42,7 @@ from app.errors import SitesError
 from app.i18n import resolve_locale
 from app.kinds import kind_enabled, resolve_kind
 from app.models import Project, User
-from app.services import history
+from app.services import history, rate_limit
 from app.services.document_scaffold import (
     CODELAB_PATH,
     DECK_PATH,
@@ -48,7 +51,9 @@ from app.services.document_scaffold import (
     design_md_from_design_system,
 )
 from app.services.filesystem import content_version, read_file, write_file
+from app.services.pptx_import import MAX_PPTX_BYTES, PptxError, convert_pptx
 from app.services.project_access import accessible_project
+from app.services.project_media import record_media, save_webp_with_variants
 
 router = APIRouter(prefix="/projects", tags=["documents"])
 
@@ -272,6 +277,51 @@ def patch_slide_element(
     _checkpoint(pid, "before slide edit")
     _write_json(pid, relative, slide)
     return _respond(pid, relative, slide)
+
+
+# ── PowerPoint import ──────────────────────────────────────────────────────
+
+IMPORT_FOLDER = "public/images/imported"
+IMPORTS_PER_USER_PER_MINUTE = 6
+
+
+@router.post("/{project_id}/slides/import/pptx")
+async def import_pptx_slides(
+    project_id: UUID,
+    request: Request,
+    file: UploadFile = File(...),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    """Convert the slides of a .pptx into Forge slides, without adding them.
+
+    The editor previews the result and inserts the slides the user picks
+    through its own document operations (undo, autosave). Pictures are stored
+    as project images under ``public/images/imported/<batch>/``.
+    """
+    _document_project(db, user, project_id, request, "slides", require_edit=True)
+    rate_limit.enforce(request, "deck_import", IMPORTS_PER_USER_PER_MINUTE, 60, subject=str(user.id))
+    pid = str(project_id)
+    # One byte past the limit is enough to know it is too large.
+    raw = await file.read(MAX_PPTX_BYTES + 1)
+    if len(raw) > MAX_PPTX_BYTES:
+        raise SitesError(413, "PPTX_TOO_LARGE", "The file is too large.")
+    deck = _read_json(pid, DECK_PATH)
+    ratio = (deck.get("format") or {}).get("ratio")
+    canvas = FORMAT_SIZES.get(ratio if isinstance(ratio, str) else "", FORMAT_SIZES["16:9"])
+    folder = f"{IMPORT_FOLDER}/{uuid.uuid4().hex[:10]}"
+
+    def save_image(data: bytes, stem: str) -> dict[str, Any]:
+        entry = save_webp_with_variants(pid, data, stem=stem, folder=folder)
+        entry.kind = "upload"
+        record_media(pid, entry, extra={"credit": {"source": "upload"}})
+        return {"path": "public" + entry.path, "width": entry.width, "height": entry.height}
+
+    try:
+        result = await asyncio.to_thread(convert_pptx, raw, canvas=canvas, save_image=save_image)
+    except PptxError as exc:
+        raise SitesError(exc.status, exc.code, exc.message) from exc
+    return JSONResponse(content=result, headers={"Cache-Control": "no-store"})
 
 
 # ── Speaker notes ──────────────────────────────────────────────────────────

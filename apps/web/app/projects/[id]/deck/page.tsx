@@ -11,6 +11,7 @@ import { useParams, useRouter } from "next/navigation";
 import { DeckEditor } from "@/components/deck-editor/DeckEditor";
 import { apiChatClient } from "@/components/deck-editor/chat-client";
 import { apiImageClient } from "@/components/deck-editor/images-client";
+import { apiSlideImportClient } from "@/components/deck-editor/slide-import";
 import { documentTransport, readProjectFile } from "@/components/deck-editor/transport";
 import { useDeckStrings } from "@/components/deck-editor/strings";
 import { api, getToken } from "@/lib/api";
@@ -70,6 +71,7 @@ export default function DeckEditorPage() {
   const transport = useMemo(() => documentTransport(projectId), [projectId]);
   const chat = useMemo(() => apiChatClient(projectId), [projectId]);
   const images = useMemo(() => apiImageClient(projectId), [projectId]);
+  const slideImport = useMemo(() => apiSlideImportClient(projectId), [projectId]);
   const loadTheme = useCallback((file: string) => readProjectFile(projectId, file), [projectId]);
   // Rebuilt when the media token arrives, so images render once it is known.
   const assetUrl = useMemo(() => {
@@ -107,6 +109,7 @@ export default function DeckEditorPage() {
       assetUrl={assetUrl}
       chat={chat}
       images={images}
+      slideImport={slideImport}
       badgeRemovable={removable}
       exportMenu={
         <ExportMenu
