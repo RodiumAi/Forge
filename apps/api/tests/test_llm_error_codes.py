@@ -54,3 +54,25 @@ def test_upstream_error_without_status_is_not_transient() -> None:
     from app.services.llm import is_transient_network_error
 
     assert not is_transient_network_error(RodiumError("model refused", None, ERR_UPSTREAM))
+
+
+def test_the_provider_body_never_reaches_the_message() -> None:
+    body = (
+        '{"error":{"message":"messages: text content blocks must be non-empty",'
+        '"type":"invalid_request_error","code":"invalid_parameter"}}'
+    )
+    with pytest.raises(RodiumError) as caught:
+        _raise_rodium_error(_response(400, body), "fr")
+    assert caught.value.code == ERR_UPSTREAM
+    assert "{" not in str(caught.value) and "400" not in str(caught.value)
+    assert caught.value.detail == body
+
+
+def test_user_error_message_hides_internal_errors() -> None:
+    from app.services.llm import user_error_message
+
+    assert "Traceback" not in user_error_message(KeyError("slides"), "fr")
+    assert user_error_message(KeyError("slides"), "en") == (
+        "Something went wrong on our side. Please try again in a moment."
+    )
+    assert user_error_message(RodiumError("Session expirée.", 401), "fr") == "Session expirée."

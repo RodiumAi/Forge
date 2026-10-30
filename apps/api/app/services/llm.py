@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import re
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
@@ -12,6 +13,8 @@ from app.config import get_settings
 from app.i18n import Locale, t
 from app.services.frodi_cycle import current_frodi_cycle_key
 from app.services.rodium_generation import RodiumGenerationAuth
+
+logger = logging.getLogger(__name__)
 
 
 def _current_frodi_cycle_key() -> str:
@@ -91,8 +94,12 @@ class RodiumError(Exception):
         message: str,
         status_code: int | None = None,
         code: str = "upstream",
+        detail: str = "",
     ):
         super().__init__(message)
+
+        #: The provider's raw answer: logged and classified, never shown.
+        self.detail = detail
 
         self.status_code = status_code
 
@@ -179,11 +186,8 @@ def _raise_rodium_error(response: httpx.Response, locale: Locale) -> None:
     if response.status_code == 413 or "entity too large" in lower or "payload_too_large" in lower:
         raise RodiumError(t("rodium_payload_too_large", locale), 413, ERR_PAYLOAD_TOO_LARGE)
 
-    raise RodiumError(
-        t("rodium_error", locale, code=response.status_code, body=text),
-        response.status_code,
-        ERR_UPSTREAM,
-    )
+    logger.warning("rodium upstream error status=%s body=%s", response.status_code, text)
+    raise RodiumError(t("rodium_error", locale), response.status_code, ERR_UPSTREAM, detail=text)
 
 
 def _parse_stream_line(line: str, meta: dict[str, Any] | None = None) -> StreamChunk | None:
@@ -249,9 +253,10 @@ def is_transient_network_error(exc: BaseException) -> bool:
         # message often carries no marker (str(ReadTimeout()) is empty).
         if exc.code in (ERR_TIMEOUT, ERR_NETWORK):
             return True
-        return any(marker in str(exc).lower() for marker in _TRANSIENT_NETWORK_MARKERS)
+        text = f"{exc} {exc.detail}".lower()
+        return any(marker in text for marker in _TRANSIENT_NETWORK_MARKERS)
 
-    text = str(exc).lower()
+    text = f"{exc} {getattr(exc, 'detail', '')}".lower()
 
     return any(marker in text for marker in _TRANSIENT_NETWORK_MARKERS)
 
@@ -274,12 +279,20 @@ def error_code_for(exc: BaseException) -> str:
     return ERR_INTERNAL
 
 
+def user_error_message(exc: BaseException, locale: str = "fr") -> str:
+    """The sentence an error frame shows: never a raw provider body or a traceback."""
+    if isinstance(exc, RodiumError):
+        return str(exc)[:500]
+    return t("generation_failed", locale)  # type: ignore[arg-type]
+
+
 def _network_rodium_error(exc: BaseException, locale: Locale) -> RodiumError:
 
     return RodiumError(
-        t("rodium_error", locale, code="network", body=str(exc)[:200]),
+        t("rodium_error", locale),
         None,
         ERR_TIMEOUT if isinstance(exc, httpx.ReadTimeout | httpx.ConnectTimeout) else ERR_NETWORK,
+        detail=f"{exc.__class__.__name__}: {exc}"[:200],
     )
 
 
@@ -758,6 +771,10 @@ async def stream_with_continuation(
                 )
             return
         yield StreamChunk(kind="notice", content=json.dumps({"event": "continue", "open": open_paths}))
+        if not text.strip():
+            # Nothing visible to continue from (the budget went to reasoning), and
+            # an empty assistant turn is refused upstream: stop here.
+            return
         convo = [
             *messages,
             {"role": "assistant", "content": text[-_CONTINUATION_ASSISTANT_MAX_CHARS:]},

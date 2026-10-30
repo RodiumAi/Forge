@@ -80,9 +80,10 @@ async def ask_json[T](
             return Answer(value=check(data), repairs=attempt)
         except (ModelJsonError, ValidationError, ValueError, TypeError, KeyError) as exc:
             errors = describe_errors(exc)
-        messages = [
-            *messages,
-            {"role": "assistant", "content": (text or "")[-12000:]},
-            {"role": "user", "content": REPAIR_PROMPT.format(errors=errors)},
-        ]
+        repair = {"role": "user", "content": REPAIR_PROMPT.format(errors=errors)}
+        if (text or "").strip():
+            messages = [*messages, {"role": "assistant", "content": text[-12000:]}, repair]
+        else:
+            # An empty assistant turn is refused upstream: ask again without it.
+            messages = [*messages[:2], repair]
     raise DeckAnswerError("no valid answer after repairs", errors)

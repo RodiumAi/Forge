@@ -38,6 +38,7 @@ from app.services.llm import (
     is_transient_network_error,
     stream_chat_completion,
     stream_with_continuation,
+    user_error_message,
 )
 from app.services.orchestration.cancel import clear_cancelled, is_cancelled, mark_cancelled
 from app.services.orchestration.context import build_llm_messages
@@ -199,7 +200,7 @@ def _error_sse(exc: BaseException, *, plan: list | None = None) -> str:
     payload: dict = {
         "type": "error",
         "code": error_code_for(exc),
-        "message": str(exc)[:500],
+        "message": user_error_message(exc),
     }
     if plan is not None:
         payload["plan"] = plan

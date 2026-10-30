@@ -11,7 +11,7 @@
 import { describe, expect, it } from "vitest";
 
 import { ApiError, detailFromBody } from "@/lib/api";
-import { classifyChatError, isRecoverableStreamError } from "@/lib/chat-errors";
+import { classifyChatError, isRecoverableStreamError, isTechnicalMessage, readableMessage } from "@/lib/chat-errors";
 
 describe("reading an API error body", () => {
   it("reads the API's own {code, message} shape", () => {
@@ -154,5 +154,29 @@ describe("deciding whether to reconnect silently", () => {
     expect(isRecoverableStreamError(new ApiError("…", 402, "INSUFFICIENT_RODI"))).toBe(false);
     expect(isRecoverableStreamError(new Error("…"), "auth_expired")).toBe(false);
     expect(isRecoverableStreamError(new Error("…"), "payload_too_large")).toBe(false);
+  });
+});
+
+describe("technical messages never reach the screen", () => {
+  const raw =
+    'Erreur RodiumAi (400) : {"error":{"message":"messages: text content blocks must be non-empty","type":"invalid_request_error","param":null,"code":"invalid_parameter"}}';
+
+  it("spots a provider body, a status line and a JSON payload", () => {
+    expect(isTechnicalMessage(raw)).toBe(true);
+    expect(isTechnicalMessage('{"detail": "boom"}')).toBe(true);
+    expect(isTechnicalMessage("502 Bad Gateway")).toBe(true);
+    expect(isTechnicalMessage("Le service IA n'a pas pu répondre. Réessayez dans un instant.")).toBe(false);
+  });
+
+  it("falls back to our own sentence", () => {
+    expect(readableMessage(raw, "Réessayez.")).toBe("Réessayez.");
+    expect(readableMessage("Slide introuvable.", "Réessayez.")).toBe("Slide introuvable.");
+    expect(readableMessage("", "Réessayez.")).toBe("Réessayez.");
+  });
+
+  it("classifies an uncoded technical message as a service error", () => {
+    const info = classifyChatError(new Error(raw), "invalid_parameter");
+    expect(info.labelKey).toBe("streamErrorService");
+    expect(info.message).toBe("");
   });
 });

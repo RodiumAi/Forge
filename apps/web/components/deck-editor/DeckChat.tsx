@@ -17,6 +17,7 @@ import { VoiceButton, VoiceStatus } from "@/components/composer/VoiceInput";
 import { ChatMarkdown } from "@/components/chat/ChatMarkdown";
 import { rodiumRechargeUrl } from "@/lib/constants/rodium-links";
 import { getSessionSnapshot } from "@/lib/session-cache";
+import { readableMessage } from "@/lib/chat-errors";
 import {
   confirmPlanBody,
   messageBody,
@@ -194,7 +195,7 @@ export function DeckChat(props: DeckChatProps) {
         const message = typeof payload.message === "string" ? payload.message : "";
         if (code === "kind_not_available") setError({ text: propsRef.current.t("kindNotAvailable") });
         else if (code === "INSUFFICIENT_CREDITS" || code === "INSUFFICIENT_RODI") setError({ text: propsRef.current.t("insufficientCredits"), credits: true });
-        else setError({ text: message || propsRef.current.t("aiError") });
+        else setError({ text: readableMessage(message, propsRef.current.t("aiError")) });
         return;
       }
       if (type === "done") {
@@ -225,7 +226,7 @@ export function DeckChat(props: DeckChatProps) {
         if (!(err instanceof Error && err.name === "AbortError")) {
           const e = err as { message?: string; code?: string; status?: number };
           if (e?.code === "INSUFFICIENT_CREDITS" || e?.code === "INSUFFICIENT_RODI" || e?.status === 402) setError({ text: t("insufficientCredits"), credits: true });
-          else setError({ text: e?.message || t("aiError") });
+          else setError({ text: readableMessage(e?.message, t("aiError")) });
         }
       } finally {
         if (abortRef.current === ctrl) abortRef.current = null;

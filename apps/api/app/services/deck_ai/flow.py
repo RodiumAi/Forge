@@ -8,7 +8,9 @@ Three entry points, picked by ``document_stream``:
   background, reconnectable through ``/runs/{id}/events`` like a site build;
 * a target (slide or element) or a quick action: one edit restricted to the
   target, enforced server-side;
-* anything else: a deck-level edit (add, remove, reorder, restyle slides).
+* anything else: a deck-level edit (add, remove, reorder, restyle slides),
+  in one answer for a small deck, planned then written slide by slide for a
+  deck too big for one answer (an imported PowerPoint, for example).
 
 Flows yield event dicts; ``as_sse`` serializes them for the inline streams and
 the background job publishes them to the run queue. The event shapes the web
@@ -34,6 +36,8 @@ from app.db import SessionLocal
 from app.models import AgentRun
 from app.prompts.deck import (
     DECK_EDIT_SYSTEM,
+    DECK_PLAN_SYSTEM,
+    DECK_SLIDE_PASS,
     OUTLINE_SYSTEM,
     QUICK_ACTION_INSTRUCTIONS,
     SLIDE_SYSTEM,
@@ -53,7 +57,7 @@ from app.services.deck_ai.targeting import SlideResult, element_from_answer, fin
 from app.services.deck_ai.theme import DeckTheme, load_theme
 from app.services.deck_ai.visuals import drop_placeholders, fill_visual, set_image
 from app.services.document_scaffold import DECK_PATH, DEFAULT_THEME
-from app.services.llm import RodiumError, error_code_for
+from app.services.llm import RodiumError, error_code_for, user_error_message
 from app.services.orchestration.cancel import clear_cancelled, is_cancelled
 
 logger = logging.getLogger(__name__)
@@ -65,6 +69,11 @@ DEFAULT_TRANSITION = {"type": "fade", "durationMs": 500}
 #: Context budget of a deck-level edit (characters of slide JSON).
 MAX_DECK_CONTEXT_CHARS = 60_000
 MAX_PROMPT_CHARS = 12_000
+#: Above this much slide JSON, one answer cannot rewrite the deck (the model's
+#: output is capped): the edit is planned, then written slide by slide.
+MAX_ONE_SHOT_DECK_CHARS = 16_000
+#: Slides a planned deck edit rewrites at the same time.
+DECK_EDIT_CONCURRENCY = 3
 
 _LABELS: dict[str, tuple[str, str]] = {
     "deck_outline": ("Plan de la présentation", "Planning the deck"),
@@ -183,7 +192,7 @@ def _fail_run(run_pk: UUID, code: str, message: str) -> None:
 def error_event(exc: BaseException, locale: str) -> Event:
     if isinstance(exc, DeckAnswerError):
         return {"type": "error", "code": "invalid_model_output", "message": _msg(_INVALID_OUTPUT, locale)}
-    return {"type": "error", "code": error_code_for(exc), "message": str(exc)[:500]}
+    return {"type": "error", "code": error_code_for(exc), "message": user_error_message(exc, locale)}
 
 
 async def _guarded(run_pk: UUID, locale: str, source: AsyncIterator[Event]) -> AsyncIterator[Event]:
@@ -789,6 +798,238 @@ def _check_deck_edit(data: dict[str, Any], existing: set[str], theme: DeckTheme)
     return DeckEdit(order=order[:500], slides=slides, transition=transition)
 
 
+@dataclass
+class DeckPlan:
+    order: list[str]
+    change: list[str]
+    new: dict[str, dict[str, str]]
+    transition: dict[str, Any] | None
+
+
+def _check_deck_plan(data: dict[str, Any], existing: set[str]) -> DeckPlan:
+    from app.services.deck_ai.targeting import valid_target_id
+
+    new: dict[str, dict[str, str]] = {}
+    for entry in data.get("new") or []:
+        if not isinstance(entry, dict):
+            raise ValueError("each entry of new must be an object")
+        sid = valid_target_id(entry.get("id"))
+        if sid is None or sid in existing:
+            raise ValueError(f"a new slide needs a new id: {entry.get('id')!r}")
+        new[sid] = {
+            "title": str(entry.get("title") or "")[:200],
+            "idea": str(entry.get("idea") or "")[:1000],
+            "layout": normalize_layout(entry.get("layout")),
+        }
+    raw_order = data.get("order")
+    if not isinstance(raw_order, list) or not raw_order:
+        raise ValueError('"order" must be a non-empty list of slide ids')
+    order: list[str] = []
+    for item in raw_order:
+        sid = valid_target_id(item)
+        if sid is None or (sid not in existing and sid not in new):
+            raise ValueError(f"order lists a slide that does not exist: {item!r}")
+        if sid not in order:
+            order.append(sid)
+    change: list[str] = []
+    for item in data.get("change") or []:
+        sid = valid_target_id(item)
+        if sid in existing and sid in order and sid not in change:
+            change.append(sid)
+    transition = None
+    if isinstance(data.get("transition"), dict):
+        transition = dump_document(Transition.model_validate(data["transition"]))
+    return DeckPlan(
+        order=order[:500],
+        change=change,
+        new={sid: spec for sid, spec in new.items() if sid in order},
+        transition=transition,
+    )
+
+
+async def _planned_deck_edit(
+    ctx: DeckContext, steps: _Steps, *, auth: Any, theme: DeckTheme, deck: dict[str, Any]
+) -> AsyncIterator[Event]:
+    """A deck edit too big for one answer: plan it, then rewrite the slides one by one."""
+    pid = ctx.project_id
+    existing = {ref["id"]: ref for ref in deck.get("slides") or []}
+    ratio = deck["format"]["ratio"]
+    outline = _outline_text(deck, _deck_titles(pid, deck))
+    user = "\n\n".join(
+        part
+        for part in (
+            f"Deck outline:\n{outline}",
+            "Layouts: " + ", ".join(LAYOUT_NAMES),
+            _conversation(ctx.history),
+            f"User request:\n{attachments.strip_markers(ctx.prompt)[:MAX_PROMPT_CHARS]}",
+            attachments.describe_documents(attachments.documents(ctx.prompt), mode="edit"),
+        )
+        if part
+    )
+    plan = (
+        await ask_json(
+            auth=auth,
+            model=ctx.edit_model,
+            system=DECK_PLAN_SYSTEM,
+            user=user,
+            check=lambda data: _check_deck_plan(data, set(existing)),
+            locale=ctx.locale,
+            max_repairs=1,
+        )
+    ).value
+    instruction = _instruction(ctx)
+
+    async def rewrite(sid: str) -> tuple[str, Any, DeckAnswerError | None]:
+        spec = plan.new.get(sid)
+        if spec is not None:
+            layout, original, notes = spec["layout"], {"id": sid, "elements": []}, ""
+            task = f'Create this new slide: "{spec["title"]}". {spec["idea"]}'
+        else:
+            layout, original = existing[sid]["layout"], store.read_slide(pid, sid)
+            notes, task = store.read_notes(pid, sid)[:2000], DECK_SLIDE_PASS
+        prompt = "\n\n".join(
+            [
+                "Read-only context:",
+                outline,
+                theme.describe(),
+                describe_layout(layout, ratio),
+                f"Speaker notes of the slide:\n{notes}",
+                f'The slide to change (id "{sid}"):\n{json.dumps(original, ensure_ascii=False)}',
+                task,
+                instruction,
+            ]
+        )
+        try:
+            answer = await ask_json(
+                auth=auth,
+                model=ctx.edit_model,
+                system=TARGETED_SLIDE_SYSTEM,
+                user=prompt,
+                check=lambda data: slide_from_answer(data, sid, theme),
+                locale=ctx.locale,
+            )
+        except DeckAnswerError as exc:
+            return sid, None, exc
+        return sid, answer, None
+
+    store.begin_run(pid, "before deck edit")
+    applied: list[dict[str, str]] = []
+    refs = []
+    for sid in plan.order:
+        spec = plan.new.get(sid)
+        if spec is not None:
+            ref = {"id": sid, "layout": spec["layout"], "transition": dict(DEFAULT_TRANSITION)}
+            # An empty body first: the player renders the deck while it fills.
+            store.write_slide(pid, {"id": sid, "elements": []})
+        else:
+            ref = dict(existing[sid])
+        if plan.transition is not None:
+            ref["transition"] = dict(plan.transition)
+        refs.append(ref)
+    deck = store.write_deck(pid, {**deck, "slides": refs})
+    applied.append({"op": "write", "path": DECK_PATH})
+    yield {"type": "file_write", "path": DECK_PATH}
+    yield {"type": "deck.deck", "run_id": str(ctx.run_pk), "deck": deck}
+    for sid in existing:
+        if sid not in plan.order:
+            store.remove_slide_files(pid, sid)
+            applied.append({"op": "delete", "path": store.slide_path(sid)})
+            yield {"type": "file_delete", "path": store.slide_path(sid)}
+            yield {"type": "deck.slide_removed", "run_id": str(ctx.run_pk), "slide_id": sid}
+
+    order = [ref["id"] for ref in deck["slides"]]
+    work = [sid for sid in order if sid in plan.new or sid in plan.change]
+    generate = wants_generated_images(ctx.prompt)
+    uploads = attachments.existing_images(pid, ctx.prompt)
+    gate = asyncio.Semaphore(DECK_EDIT_CONCURRENCY)
+
+    async def limited(sid: str) -> tuple[str, Any, DeckAnswerError | None]:
+        async with gate:
+            return await rewrite(sid)
+
+    jobs = [asyncio.create_task(limited(sid)) for sid in work]
+    written: list[str] = []
+    kept: list[str] = []
+    warnings: list[str] = []
+    layouts: dict[str, str] = {}
+    try:
+        for job in asyncio.as_completed(jobs):
+            sid, answer, error = await job
+            fallback = False
+            if answer is None:
+                spec = plan.new.get(sid)
+                if spec is None:
+                    # A slide the model could not rewrite stays as it was.
+                    kept.append(sid)
+                    continue
+                fallback = True
+                warnings.append(f"{sid}: {error.last_errors[:300] if error else ''}")
+                yield {
+                    "type": "warning",
+                    "message": f"SLIDE_FALLBACK: {sid}",
+                    "violation": {"code": "SLIDE_FALLBACK", "path": store.slide_path(sid)},
+                }
+                result = SlideResult(
+                    slide=fallback_slide(sid, spec["layout"], ratio, title=spec["title"], idea=spec["idea"]),
+                    notes=spec["idea"],
+                )
+                repairs = 0
+            else:
+                result, repairs = answer.value, answer.repairs
+            slide, image_path = await _place_visual(
+                pid, result, generate=generate, auth=auth, locale=ctx.locale, uploads=uploads
+            )
+            slide = store.write_slide(pid, slide)
+            notes = store.read_notes(pid, sid)
+            if result.notes is not None:
+                notes = store.write_notes(pid, sid, result.notes)
+                applied.append({"op": "write", "path": store.notes_path(sid)})
+            for path in (store.slide_path(sid), image_path):
+                if path:
+                    applied.append({"op": "write", "path": path})
+                    yield {"type": "file_write", "path": path}
+            if result.layout and sid not in plan.new:
+                layouts[sid] = normalize_layout(result.layout)
+            written.append(sid)
+            yield {
+                "type": "deck.slide",
+                "run_id": str(ctx.run_pk),
+                "slide_id": sid,
+                "index": order.index(sid),
+                "total": len(order),
+                "slide": slide,
+                "notes": notes,
+                "repaired": repairs > 0,
+                "fallback": fallback,
+            }
+    finally:
+        for job in jobs:
+            job.cancel()
+    if work and not written:
+        raise DeckAnswerError("no slide of the deck edit was valid")
+    if layouts:
+        for ref in deck["slides"]:
+            if ref["id"] in layouts:
+                ref["layout"] = layouts[ref["id"]]
+        deck = store.write_deck(pid, deck)
+        yield {"type": "file_write", "path": DECK_PATH}
+        yield {"type": "deck.deck", "run_id": str(ctx.run_pk), "deck": deck}
+    yield steps.push("deck_restyle", "done")
+    yield {"type": "deck.done", "run_id": str(ctx.run_pk), "slides": written, "warnings": warnings}
+    yield steps.push("done", "done")
+    if ctx.locale == "fr":
+        summary = "Présentation mise à jour."
+        if kept:
+            summary += f" {len(kept)} slide(s) inchangée(s) : l'IA n'a pas produit de version valide."
+    else:
+        summary = "Presentation updated."
+        if kept:
+            summary += f" {len(kept)} slide(s) unchanged: the AI did not produce a valid version."
+    payload = {"summary": summary, "steps": steps.items, "applied": applied}
+    _finish_run(ctx.run_pk, payload, ctx.locale)
+    yield {"type": "done", **payload, "effort_label": ctx.route_effort}
+
+
 async def _deck_edit(ctx: DeckContext) -> AsyncIterator[Event]:
     steps = _Steps(ctx.locale)
     yield steps.push("deck_restyle", "running")
@@ -797,6 +1038,11 @@ async def _deck_edit(ctx: DeckContext) -> AsyncIterator[Event]:
     theme = load_theme(pid)
     deck = _read_deck_or_default(pid)
     existing = {ref["id"]: ref for ref in deck.get("slides") or []}
+    size = sum(len(json.dumps(store.read_slide(pid, sid), ensure_ascii=False)) for sid in existing)
+    if size > MAX_ONE_SHOT_DECK_CHARS:
+        async for event in _planned_deck_edit(ctx, steps, auth=auth, theme=theme, deck=deck):
+            yield event
+        return
     bodies: list[str] = []
     budget = MAX_DECK_CONTEXT_CHARS
     for ref in deck.get("slides") or []:

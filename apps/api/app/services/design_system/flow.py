@@ -53,7 +53,7 @@ from app.services.design_system.tokens import (
 )
 from app.services.document_scaffold import DEFAULT_TOKENS, DESIGN_MD_PATH, DESIGN_SYSTEM_PATH
 from app.services.filesystem import read_file, safe_resolve, write_bytes, write_file
-from app.services.llm import RodiumError, error_code_for
+from app.services.llm import RodiumError, error_code_for, user_error_message
 
 logger = logging.getLogger(__name__)
 
@@ -168,7 +168,7 @@ def _fail_run(run_pk: UUID, code: str, message: str) -> None:
 def error_event(exc: BaseException, locale: str) -> Event:
     if isinstance(exc, DesignSystemAnswerError):
         return {"type": "error", "code": "invalid_model_output", "message": _msg(_INVALID, locale)}
-    return {"type": "error", "code": error_code_for(exc), "message": str(exc)[:500]}
+    return {"type": "error", "code": error_code_for(exc), "message": user_error_message(exc, locale)}
 
 
 async def _guarded(run_pk: UUID, locale: str, source: AsyncIterator[Event]) -> AsyncIterator[Event]:

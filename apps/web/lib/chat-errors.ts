@@ -141,6 +141,28 @@ function codeFromLooseMessage(raw: string): string | null {
   return null;
 }
 
+/**
+ * True when a message is a raw technical payload rather than a sentence for a
+ * person: JSON, a provider error body, an HTTP status line or a traceback.
+ * Those never reach the screen, whatever the API version that sent them.
+ */
+export function isTechnicalMessage(raw: string): boolean {
+  const text = raw.trim();
+  if (!text) return false;
+  return (
+    /[{[]\s*"[A-Za-z_]+"\s*:/.test(text) ||
+    /\b(invalid_request_error|invalid_parameter|traceback|stack trace|status_?code)\b/i.test(text) ||
+    /\b(rodiumai error|erreur rodiumai)\s*\(/i.test(text) ||
+    /\b[1-5]\d\d\s+(bad request|unauthorized|forbidden|not found|internal server error|bad gateway|service unavailable)\b/i.test(text)
+  );
+}
+
+/** `message` when a person can read it, `fallback` otherwise. */
+export function readableMessage(message: string | undefined | null, fallback: string): string {
+  const text = (message ?? "").trim();
+  return text && !isTechnicalMessage(text) ? text : fallback;
+}
+
 /** HTTP status as a coarse fallback when there is no code and no match. */
 function codeFromStatus(status: number): string | null {
   if (status === 402) return "quota";
@@ -195,6 +217,9 @@ export function classifyChatError(
   // Unknown cause: the server's own sentence beats anything we could invent,
   // and it is never an HTTP status line any more — `readApiError` reads the
   // body first. Plain Retry, because we cannot promise anything better.
+  if (isTechnicalMessage(message)) {
+    return { labelKey: "streamErrorService", message: "", action: { kind: "retry" }, code };
+  }
   return { labelKey: message ? null : "streamError", message, action: { kind: "retry" }, code };
 }
 
