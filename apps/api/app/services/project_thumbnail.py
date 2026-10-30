@@ -7,6 +7,9 @@ home page once in headless Chromium, frames the capture in a 16:9 card (a
 browser window for sites, a phone for apps) with the project name, and saves
 it as ``thumbnail.jpg``. Cards only ever show that image.
 
+A design system card is the cover page of its guidelines document (the same
+document as the PDF and the published page), laid out at the card's size.
+
 A capture is redone when the project's sources are newer than the image
 (``thumbnail.json`` keeps the sources' stamp). Requests are queued and run one
 at a time in a background thread, so neither the listing nor a chat run waits.
@@ -45,9 +48,9 @@ _ALLOWED_HOSTS = frozenset(
 )
 _BUDGET_S = 60.0
 _CARD_W, _CARD_H = 1280, 720
-_KINDS = ("web", "mobile")
+_KINDS = ("web", "mobile", "design_system")
 _SOURCE_DIRS = ("src", "public")
-_SOURCE_FILES = ("index.html", "package.json")
+_SOURCE_FILES = ("index.html", "package.json", "design-system.json")
 _CHILD_ENV_KEYS = (
     "PATH",
     "SYSTEMROOT",
@@ -271,13 +274,133 @@ def _render_sync(
             browser.close()
 
 
+# The cover page only, reflowed to the card's 16:9 frame (the page keeps its
+# own layout: flex column, accent shape, logo top, title at the bottom).
+_COVER_ONLY = (
+    "body{margin:0;padding:0;background:#111318}"
+    f".page{{width:{_CARD_W}px!important;height:{_CARD_H}px!important;border-radius:0!important;"
+    "box-shadow:none!important;margin:0!important}.page~.page{display:none!important}"
+)
+
+
+def _render_guide_sync(guide: Path, out: Path) -> None:
+    from playwright.sync_api import sync_playwright
+
+    html_doc = guide.read_text(encoding="utf-8").replace("</head>", f"<style>{_COVER_ONLY}</style></head>", 1)
+    with sync_playwright() as p:
+        browser = None
+        for kwargs in ({}, {"channel": "chrome"}, {"channel": "msedge"}):
+            try:
+                browser = p.chromium.launch(headless=True, **kwargs)
+                break
+            except Exception:
+                continue
+        if browser is None:
+            raise RuntimeError("no Chromium available")
+        try:
+            page = browser.new_page(viewport={"width": _CARD_W, "height": _CARD_H}, device_scale_factor=1)
+            page.route(
+                "**/*",
+                lambda r: (
+                    r.continue_()
+                    if (urlparse(r.request.url).hostname or "") in _ALLOWED_HOSTS
+                    or r.request.url.startswith("data:")
+                    else r.abort()
+                ),
+            )
+            page.set_content(html_doc, wait_until="load", timeout=15_000)
+            page.evaluate("document.fonts.ready")
+            cover = page.locator(".page").first
+            cover.screenshot(path=str(out), type="jpeg", quality=82)
+        finally:
+            browser.close()
+
+
 def _child_main(argv: list[str]) -> None:
+    if argv and argv[0] == "--guide":
+        _render_guide_sync(Path(argv[1]), Path(argv[2]))
+        return
     shell, public, runner, kind, name, out = argv
     _render_sync(Path(shell), Path(public), Path(runner), kind, name, Path(out))
 
 
+def _guide_html(project_id: str) -> str | None:
+    """The guidelines document of a design system project, assets inlined."""
+    from app.contracts.forge_design import dump_document, validate_design_system
+    from app.services.design_system.guide import brand_guide_html
+    from app.services.design_system.registry import read_document
+    from app.services.design_system.site import local_asset_url
+
+    raw = read_document(project_id)
+    if raw is None:
+        return None
+    try:
+        document = dump_document(validate_design_system(raw))
+    except Exception:
+        return None
+    return brand_guide_html(document, asset_url=local_asset_url(project_id), badge=False)
+
+
+def _run_child(args: list[str], project_id: str) -> bool:
+    env = {k: os.environ[k] for k in _CHILD_ENV_KEYS if k in os.environ}
+    api_root = Path(__file__).resolve().parents[2]
+    try:
+        proc = subprocess.run(
+            [
+                sys.executable,
+                "-I",
+                "-c",
+                "import sys; sys.path.insert(0, sys.argv[1]); "
+                "from app.services.project_thumbnail import _child_main; _child_main(sys.argv[2:])",
+                str(api_root),
+                *args,
+            ],
+            cwd=tempfile.gettempdir(),
+            env=env,
+            capture_output=True,
+            timeout=_BUDGET_S,
+        )
+    except subprocess.TimeoutExpired:
+        logger.warning("thumbnail timed out for %s", project_id)
+        return False
+    if proc.returncode != 0:
+        logger.warning(
+            "thumbnail failed for %s: %s", project_id, proc.stderr.decode("utf-8", "replace")[-400:]
+        )
+        return False
+    return True
+
+
+def _save(project_id: str, data: bytes, stamp: float) -> None:
+    from app.services.filesystem import write_bytes
+
+    write_bytes(project_id, THUMBNAIL_FILENAME, data)
+    write_bytes(project_id, META_FILENAME, json.dumps({"v": CARD_VERSION, "stamp": stamp}).encode("utf-8"))
+
+
+def render_guide_thumbnail(project_id: str) -> bool:
+    """Capture the cover of a design system's guidelines as its card."""
+    from app.services.filesystem import project_dir
+
+    stamp = sources_stamp(project_dir(project_id))
+    guide = _guide_html(project_id)
+    if guide is None:
+        return False
+    with tempfile.TemporaryDirectory(prefix="forge-thumb-") as tmp:
+        source = Path(tmp) / "guide.html"
+        source.write_text(guide, encoding="utf-8")
+        out = Path(tmp) / THUMBNAIL_FILENAME
+        if not _run_child(["--guide", str(source), str(out)], project_id) or not out.is_file():
+            return False
+        data = out.read_bytes()
+    _save(project_id, data, stamp)
+    return True
+
+
 def render_thumbnail(project_id: str, kind: str, name: str) -> bool:
     """Capture and save the card of one project. False when it could not render."""
+    if kind == "design_system":
+        return render_guide_thumbnail(project_id)
     from app.services import preview_babel
     from app.services.filesystem import project_dir
     from app.services.project_packages import extra_import_map

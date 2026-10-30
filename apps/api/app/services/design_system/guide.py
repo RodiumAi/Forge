@@ -1092,6 +1092,15 @@ def _theme(colors: dict[str, str]) -> dict[str, str]:
     }
 
 
+def _shorten(text: str, limit: int) -> str:
+    """At most ``limit`` characters, cut at a word with an ellipsis."""
+    text = text.strip()
+    if len(text) <= limit:
+        return text
+    cut = text[:limit].rsplit(" ", 1)[0].rstrip(" ,;:.")
+    return f"{cut}…"
+
+
 def brand_guide_html(
     document: dict[str, Any],
     *,
@@ -1673,7 +1682,7 @@ def brand_guide_html(
         f'<div class="kicker">{labels["version"]} 1.0 · {escape(_month_year(lang, now))}</div>'
         f"<h1>{labels['cover_title']}</h1>"
         f'<div class="sub clamp4"><b style="color:#fff">{name}</b>'
-        + (f" · {escape(cover_sub[:240])}" if cover_sub else "")
+        + (f" · {escape(_shorten(cover_sub, 240))}" if cover_sub else "")
         + "</div></div>"
         + (
             f'<span class="badge-forge" aria-label="{labels["made_with"]}">{FORGE_MARK_SVG}By Forge</span>'
