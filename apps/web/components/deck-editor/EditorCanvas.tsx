@@ -288,12 +288,13 @@ export function EditorCanvas(props: CanvasProps) {
         const groupBox = absoluteBox(slide, groupScope);
         if (groupBox && !rectsIntersect(aabb(groupBox), { x: p.x, y: p.y, w: 1, h: 1 })) dispatch({ type: "enterGroup", id: null });
       }
-      const additive = e.shiftKey;
+      // Shift, Ctrl or Cmd add to the selection.
+      const additive = e.shiftKey || e.ctrlKey || e.metaKey;
       if (!additive) dispatch({ type: "select", ids: [] });
       gesture.current = { kind: "marquee", start: p, current: p, additive, base: additive ? selection : [] };
       return;
     }
-    if (e.shiftKey) {
+    if (e.shiftKey || e.ctrlKey || e.metaKey) {
       dispatch({ type: "select", ids: [hit.id], additive: true });
       return;
     }

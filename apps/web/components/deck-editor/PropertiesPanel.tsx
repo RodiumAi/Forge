@@ -30,7 +30,7 @@ import {
   AlignVerticalSpaceAround,
   PanelRightClose,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { Point } from "@/components/ui/ContextMenu";
 import type { ThemeTokens } from "@/components/deck-player";
 import { FORMAT_SIZES, PATTERNS, type Deck, type Slide, type SlideElement } from "@/lib/contracts/forge-design";
@@ -41,6 +41,7 @@ import { elementLabel, findElement, updateRef, type Doc, type SlideRef } from ".
 import { patchElements, setFields, setStyle, type Recipe } from "./ops";
 import { LayersPanel } from "./LayersPanel";
 import { ROLE_SIZES } from "./text-style";
+import { firstFamily } from "@/components/deck-player/fonts";
 import { AnimationPicker, TransitionPicker } from "./pickers";
 import { applyPreset, applyTransitionToAll, PRESETS, type PresetId } from "./presets";
 import type { DeckLocale, DeckStringKey, DeckT } from "./strings";
@@ -734,12 +735,119 @@ function withoutBackground(slide: Slide): Slide {
 
 // ── deck ────────────────────────────────────────────────────────────────────
 
-function DeckPanel(props: Props) {
-  const { doc, run, tokens, themeFile, t, readOnly } = props;
-  const deck = doc.deck;
+/** Readable names of the usual design tokens. */
+const TOKEN_NAMES: Record<string, DeckStringKey> = {
+  "--bg": "tokBg",
+  "--fg": "tokFg",
+  "--accent": "tokAccent",
+  "--accent-contrast": "tokAccentContrast",
+  "--muted": "tokMuted",
+  "--surface": "tokSurface",
+  "--border": "tokBorder",
+  "--danger": "tokDanger",
+  "--info": "tokInfo",
+  "--success": "tokSuccess",
+  "--warning": "tokWarning",
+};
+
+const THEME_FONTS = [
+  ["--font-display", "fontDisplay", "tokFontDisplayUse"],
+  ["--font-body", "fontBody", "tokFontBodyUse"],
+  ["--font-mono", "fontMono", "tokFontMonoUse"],
+] as const;
+
+const ICON_STYLES = ["outline", "filled", "solid", "duotone"];
+
+/** "--brand-light" -> "Brand light". */
+function humanToken(name: string): string {
+  const words = name.replace(/^--/, "").replace(/[-_]+/g, " ").trim();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+/** The project's palette, fonts and icons, written for people rather than as raw tokens. */
+function ThemeOverview({ tokens, t }: { tokens: ThemeTokens; t: DeckT }) {
   const colors = colorTokens(tokens);
-  const fonts = Object.entries(tokens).filter(([k]) => k.startsWith("--font-"));
-  const others = Object.entries(tokens).filter(([k]) => !k.startsWith("--font-") && !colors.some((c) => c.name === k));
+  const [copied, setCopied] = useState<string | null>(null);
+  useEffect(() => {
+    if (!copied) return;
+    const timer = window.setTimeout(() => setCopied(null), 1400);
+    return () => window.clearTimeout(timer);
+  }, [copied]);
+  const fonts = THEME_FONTS.filter(([token]) => tokens[token]);
+  const iconLibrary = tokens["--icon-library"]?.trim();
+  const iconStyle = tokens["--icon-style"]?.trim();
+  const iconStyleKey = iconStyle && ICON_STYLES.includes(iconStyle) ? (`tokIconStyle_${iconStyle}` as DeckStringKey) : null;
+  return (
+    <>
+      {colors.length ? (
+        <>
+          <h4 className="de-subhead">{t("tokenColors")}</h4>
+          <div className="de-palette-strip" aria-hidden>
+            {colors.map((c) => (
+              <span key={c.name} style={{ background: c.value }} />
+            ))}
+          </div>
+          <ul className="de-palette">
+            {colors.map((c) => {
+              const name = TOKEN_NAMES[c.name] ? t(TOKEN_NAMES[c.name]) : humanToken(c.name);
+              return (
+                <li key={c.name}>
+                  <button
+                    type="button"
+                    className="de-palette-item"
+                    title={t("tokCopy")}
+                    onClick={() => {
+                      void navigator.clipboard?.writeText(c.value).then(() => setCopied(c.name), () => undefined);
+                    }}
+                  >
+                    <span className="de-palette-swatch" style={{ background: c.value }} aria-hidden />
+                    <span className="de-palette-text">
+                      <span className="de-palette-name">{name}</span>
+                      <span className="de-palette-value">{copied === c.name ? t("tokCopied") : c.value.toUpperCase()}</span>
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </>
+      ) : null}
+      {fonts.length ? (
+        <>
+          <h4 className="de-subhead">{t("tokenFonts")}</h4>
+          <ul className="de-typefaces">
+            {fonts.map(([token, , use]) => (
+              <li key={token} className="de-typeface">
+                <span className="de-typeface-sample" style={{ fontFamily: tokens[token] }} aria-hidden>
+                  Aa
+                </span>
+                <span className="de-typeface-text">
+                  <span className="de-typeface-family" style={{ fontFamily: tokens[token] }}>
+                    {firstFamily(tokens[token]) ?? tokens[token]}
+                  </span>
+                  <span className="de-typeface-use">{t(use)}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
+      {iconLibrary ? (
+        <p className="de-theme-icons">
+          <span>{t("tokIcons")}</span>
+          <strong>
+            {humanToken(iconLibrary)}
+            {iconStyleKey ? ` · ${t(iconStyleKey)}` : iconStyle ? ` · ${iconStyle}` : ""}
+          </strong>
+        </p>
+      ) : null}
+    </>
+  );
+}
+
+function DeckPanel(props: Props) {
+  const { doc, run, tokens, t, readOnly } = props;
+  const deck = doc.deck;
   return (
     <>
       <Section title={t("deckSettings")}>
@@ -768,39 +876,8 @@ function DeckPanel(props: Props) {
       </Section>
       <Section title={t("theme")}>
         {props.designSystem}
-        <p className="de-hint">{t("themeHint", { file: themeFile })}</p>
-        <h4 className="de-subhead">{t("tokenColors")}</h4>
-        <ul className="de-tokens">
-          {colors.map((c) => (
-            <li key={c.name}>
-              <span className="de-swatch de-swatch-sm" style={{ background: c.value }} aria-hidden />
-              <code>{c.name}</code>
-              <span>{c.value}</span>
-            </li>
-          ))}
-        </ul>
-        <h4 className="de-subhead">{t("tokenFonts")}</h4>
-        <ul className="de-tokens">
-          {fonts.map(([name, value]) => (
-            <li key={name}>
-              <code>{name}</code>
-              <span style={{ fontFamily: value }}>{value}</span>
-            </li>
-          ))}
-        </ul>
-        {others.length ? (
-          <details>
-            <summary>{t("tokenOther")}</summary>
-            <ul className="de-tokens">
-              {others.map(([name, value]) => (
-                <li key={name}>
-                  <code>{name}</code>
-                  <span>{value}</span>
-                </li>
-              ))}
-            </ul>
-          </details>
-        ) : null}
+        <p className="de-hint">{t("themeHint")}</p>
+        <ThemeOverview tokens={tokens} t={t} />
       </Section>
     </>
   );

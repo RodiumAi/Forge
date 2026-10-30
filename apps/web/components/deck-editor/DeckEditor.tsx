@@ -780,7 +780,12 @@ export function DeckEditor(props: DeckEditorProps) {
   }
 
   const single = selection.length === 1 && slide ? findElement(slide, selection[0]) : null;
-  const textSelected = single?.type === "text" ? (single as TextElement) : null;
+  // Several texts selected: the format bar shows the first one and styles them all.
+  const selectedTexts = slide ? selection.map((id) => findElement(slide, id)).filter((el): el is TextElement => el?.type === "text") : [];
+  const allTexts = selectedTexts.length > 0 && selectedTexts.length === selection.length;
+  const textSelected = single?.type === "text" ? (single as TextElement) : allTexts ? selectedTexts[0] : null;
+  const textIds = allTexts ? selectedTexts.map((el) => el.id) : textSelected ? [textSelected.id] : [];
+  const textKey = textIds.join(",");
   const editingEl = state.editingText && slide ? findElement(slide, state.editingText) : null;
   const editingBox = editingEl && slide ? absoluteBox(slide, editingEl.id) : null;
   const saveLabel = { saved: t("saved"), pending: t("pending"), saving: t("saving"), error: t("saveError"), conflict: t("saveConflict") }[docState.save];
@@ -1089,21 +1094,27 @@ export function DeckEditor(props: DeckEditorProps) {
             <FormatToolbar
               element={textSelected}
               tokens={tokens}
-              editing={state.editingText === textSelected.id}
+              editing={textIds.length === 1 && state.editingText === textSelected.id}
               commands={commands}
               marks={marks}
               t={t}
               disabled={readOnly}
               onEdit={() => dispatch({ type: "editText", id: textSelected.id })}
-              onStyle={(patch) => run(setStyle(sid, [textSelected.id], patch), `style:${textSelected.id}`)}
+              onStyle={(patch) => run(setStyle(sid, textIds, patch), `style:${textKey}`)}
               onRole={(role) => {
                 // A text style sets the size and weight: drop the ones set by hand.
-                const { size: _size, weight: _weight, ...rest } = textSelected.style ?? {};
-                run(setFields(sid, [textSelected.id], { role, style: rest }), `role:${textSelected.id}`);
+                run(
+                  patchElements(sid, textIds, (el) => {
+                    if (el.type !== "text") return el;
+                    const { size: _size, weight: _weight, ...rest } = el.style ?? {};
+                    return { ...el, role, style: rest } as SlideElement;
+                  }),
+                  `role:${textKey}`,
+                );
               }}
               onFont={(choice, scope) => {
                 if (scope === "text") {
-                  run(setStyle(sid, [textSelected.id], { font: choice.font, family: choice.family }), `style:${textSelected.id}`);
+                  run(setStyle(sid, textIds, { font: choice.font, family: choice.family }), `style:${textKey}`);
                   return;
                 }
                 if (scope === "role") {

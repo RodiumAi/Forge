@@ -2,14 +2,31 @@
 
 /**
  * Text formatting bar above the canvas when one text element is selected.
- * Font, size, alignment and line height apply to the whole element (its
+ * Font, size, alignment and spacing apply to the whole element (its
  * `style`); bold, italic, underline and color apply to the whole element too,
  * or to the selected words while the text is being edited, where links and
  * lists are also available.
  */
 
 import { useState } from "react";
-import { AlignCenter, AlignJustify, AlignLeft, AlignRight, Bold, Italic, Link2, List, ListOrdered, PencilLine, Underline } from "lucide-react";
+import {
+  AlignCenter,
+  AlignJustify,
+  AlignLeft,
+  AlignRight,
+  AlignVerticalJustifyCenter,
+  AlignVerticalJustifyEnd,
+  AlignVerticalJustifyStart,
+  Bold,
+  Italic,
+  Link2,
+  List,
+  ListOrdered,
+  PencilLine,
+  Underline,
+  UnfoldVertical,
+} from "lucide-react";
+import { Popover } from "@/components/ui/Popover";
 import type { ThemeTokens } from "@/components/deck-player";
 import { firstFamily } from "@/components/deck-player/fonts";
 import { colorTokens } from "./fields";
@@ -20,7 +37,63 @@ import { ROLE_SIZES, type TextCommands, type TextMarks } from "./text-style";
 import { colorToCss, cssToColor, safeLink } from "./text-model";
 
 const SIZES = [14, 18, 20, 24, 28, 32, 36, 40, 48, 56, 64, 72, 88, 96, 120, 160];
-const LINE_HEIGHTS = [0.9, 1, 1.1, 1.2, 1.35, 1.5, 1.75, 2];
+
+/** A slider with its value field, as in the spacing menu. */
+function SpacingSlider({
+  label,
+  value,
+  min,
+  max,
+  step,
+  onChange,
+  disabled,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  onChange: (value: number) => void;
+  disabled?: boolean;
+}) {
+  const clamp = (v: number) => Math.min(max, Math.max(min, Math.round(v / step) * step));
+  const [draft, setDraft] = useState<string | null>(null);
+  return (
+    <div className="de-spacing-row">
+      <span className="de-spacing-label">{label}</span>
+      <div className="de-spacing-control">
+        <input
+          type="range"
+          aria-label={label}
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          disabled={disabled}
+          style={{ ["--de-range" as string]: `${((value - min) / (max - min)) * 100}%` }}
+          onChange={(e) => onChange(clamp(Number(e.target.value)))}
+        />
+        <input
+          type="text"
+          inputMode="decimal"
+          className="de-spacing-value"
+          aria-label={label}
+          disabled={disabled}
+          value={draft ?? String(Number(value.toFixed(2)))}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={() => {
+            const v = Number((draft ?? "").replace(",", "."));
+            if (draft !== null && Number.isFinite(v)) onChange(clamp(v));
+            setDraft(null);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+          }}
+        />
+      </div>
+    </div>
+  );
+}
 
 /** Where a font choice applies. */
 export type FontScope = "text" | "role" | "slide" | "deck";
@@ -189,19 +262,69 @@ export function FormatToolbar({
           </span>
         );
       })}
-      <select
-        aria-label={t("lineHeight")}
-        title={t("lineHeight")}
-        value={String(style.lineHeight ?? 1.2)}
-        disabled={disabled}
-        onChange={(e) => onStyle({ lineHeight: Number(e.target.value) })}
+      <Popover
+        role="dialog"
+        label={t("spacing")}
+        width={300}
+        className="de-spacing-pop"
+        trigger={
+          <button type="button" className="de-tool" title={t("spacing")} aria-label={t("spacing")} disabled={disabled}>
+            <UnfoldVertical size={16} aria-hidden />
+          </button>
+        }
       >
-        {[...new Set([...LINE_HEIGHTS, style.lineHeight ?? 1.2])].sort((a, b) => a - b).map((lh) => (
-          <option key={lh} value={String(lh)}>
-            {lh}
-          </option>
-        ))}
-      </select>
+        {() => (
+          <div className="de-spacing">
+            <SpacingSlider
+              label={t("letterSpacingFull")}
+              value={style.letterSpacing ?? 0}
+              min={-20}
+              max={100}
+              step={0.5}
+              disabled={disabled}
+              onChange={(v) => onStyle({ letterSpacing: v || undefined })}
+            />
+            <SpacingSlider
+              label={t("lineHeight")}
+              value={style.lineHeight ?? 1.2}
+              min={0.5}
+              max={3}
+              step={0.01}
+              disabled={disabled}
+              onChange={(v) => onStyle({ lineHeight: v })}
+            />
+            <div className="de-spacing-anchor">
+              <span className="de-spacing-label">{t("anchorText")}</span>
+              <span className="de-spacing-anchors" role="radiogroup" aria-label={t("anchorText")}>
+                {(
+                  [
+                    ["top", "alignTop", AlignVerticalJustifyStart],
+                    ["middle", "alignVMiddle", AlignVerticalJustifyCenter],
+                    ["bottom", "alignBottom", AlignVerticalJustifyEnd],
+                  ] as const
+                ).map(([v, label, Icon]) => {
+                  const active = (style.valign ?? "top") === v;
+                  return (
+                    <button
+                      key={v}
+                      type="button"
+                      role="radio"
+                      aria-checked={active}
+                      aria-label={t(label)}
+                      title={t(label)}
+                      className={`de-tool${active ? " is-active" : ""}`}
+                      disabled={disabled}
+                      onClick={() => onStyle({ valign: v === "top" ? undefined : v })}
+                    >
+                      <Icon size={16} aria-hidden />
+                    </button>
+                  );
+                })}
+              </span>
+            </div>
+          </div>
+        )}
+      </Popover>
       <span className="de-format-sep" />
       <span className="de-format-colors" role="group" aria-label={t("color")}>
         {colorTokens(tokens)
