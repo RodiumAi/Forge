@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Download, Lock, Share2, Star, UserPlus } from "lucide-react";
+import { Download, FileText, Lock, Share2, Star, UserPlus } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ShareButton } from "@/components/builder/ShareButton";
@@ -27,6 +27,7 @@ import {
   type DesignSystemItem,
 } from "./api";
 import { DesignSystemChat, type DesignSystemChatHandle } from "./DesignSystemChat";
+import { DesignSystemPreview } from "./DesignSystemPreview";
 import { DesignSystemPublish } from "./DesignSystemPublish";
 import { designSystemExportOptions, type DsExportFormat } from "./exports";
 import { takePendingBrandAssets } from "./intake/brand-intake";
@@ -60,6 +61,9 @@ export function DesignSystemEditor({ projectId }: { projectId: string }) {
   const [item, setItem] = useState<DesignSystemItem | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [section, setSection] = useState<SectionId>("colors");
+  // The document view (what the PDF and the published page show) instead of a section.
+  const [previewing, setPreviewing] = useState(false);
+  const [savedVersion, setSavedVersion] = useState(0);
   const [save, setSave] = useState<SaveState>("idle");
   const [notice, setNotice] = useState<string | null>(null);
   const [menu, setMenu] = useState<"share" | "export" | null>(null);
@@ -101,6 +105,7 @@ export function DesignSystemEditor({ projectId }: { projectId: string }) {
       // Keep local edits made while the request was in flight.
       if (editCount.current === startedAt) setDoc(saved.doc);
       setSave("saved");
+      setSavedVersion((v) => v + 1);
     } catch (err) {
       if (errorCode(err) === "DOCUMENT_CHANGED") {
         setSave("conflict");
@@ -360,24 +365,51 @@ export function DesignSystemEditor({ projectId }: { projectId: string }) {
       ) : null}
       <div className="dse-body">
         <nav className="dse-nav" aria-label={t("dsSections")}>
+          <button
+            type="button"
+            aria-current={previewing ? "page" : undefined}
+            className={`dse-nav-preview${previewing ? " is-active" : ""}`}
+            onClick={() => setPreviewing(true)}
+          >
+            <Icon icon={FileText} className="ui-icon-sm" /> {t("dsPreview")}
+          </button>
           {SECTIONS.map((id) => (
             <button
               key={id}
               type="button"
-              aria-current={section === id ? "page" : undefined}
-              className={section === id ? "is-active" : undefined}
+              aria-current={!previewing && section === id ? "page" : undefined}
+              className={!previewing && section === id ? "is-active" : undefined}
               {...navMenu.bind(id)}
-              onClick={() => setSection(id)}
+              onClick={() => {
+                setPreviewing(false);
+                setSection(id);
+              }}
             >
               {t(`dsSection_${id}` as MessageKey)}
             </button>
           ))}
         </nav>
         <ContextMenu request={sectionMenu.request} onClose={sectionMenu.close} />
-        <main className="dse-main">
-          <h2 className="dse-h2">{t(`dsSection_${section}` as MessageKey)}</h2>
-          {readOnly ? <p className="dse-muted">{t("dsReadOnly")}</p> : null}
-          {sectionBody}
+        <main className={`dse-main${previewing ? " is-preview" : ""}`}>
+          {previewing ? (
+            <>
+              <h2 className="dse-h2">{t("dsPreview")}</h2>
+              <DesignSystemPreview
+                projectId={projectId}
+                version={savedVersion}
+                beforeLoad={async () => {
+                  if (timer.current) window.clearTimeout(timer.current);
+                  await flush();
+                }}
+              />
+            </>
+          ) : (
+            <>
+              <h2 className="dse-h2">{t(`dsSection_${section}` as MessageKey)}</h2>
+              {readOnly ? <p className="dse-muted">{t("dsReadOnly")}</p> : null}
+              {sectionBody}
+            </>
+          )}
         </main>
         <DesignSystemChat
           ref={chatRef}

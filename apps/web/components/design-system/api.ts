@@ -152,6 +152,14 @@ export function unshare(id: string): Promise<DesignSystemItem> {
   return api<DesignSystemItem>(`/design-systems/${id}/share`, { method: "DELETE" });
 }
 
+/** The guidelines document (same as the PDF and the published page), as HTML. */
+export async function previewHtml(projectId: string, lang: string): Promise<string> {
+  const body = await api<{ html: string }>(
+    `/projects/${projectId}/design-system/preview?lang=${encodeURIComponent(lang)}`,
+  );
+  return body.html;
+}
+
 export type PublishState = { public_url: string; published_at: string | null };
 
 /** The page address, and when it was last published (null: never). */

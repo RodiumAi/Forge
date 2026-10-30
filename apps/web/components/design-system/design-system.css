@@ -319,3 +319,15 @@
   .dsp-link.is-fresh { animation: dsp-in 0.35s ease-out; }
 }
 @keyframes dsp-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+/* Document preview: the guidelines document in a frame, as printed and published. */
+.dse-nav .dse-nav-preview { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding-bottom: 10px; border-bottom: 1px solid var(--f-line); border-radius: 8px 8px 0 0; }
+.dse-main.is-preview { display: flex; flex-direction: column; }
+.dsv { display: flex; flex: 1; flex-direction: column; gap: 12px; min-height: 0; }
+.dsv-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.dsv-hint { margin: 0; font-size: 0.8rem; color: var(--f-faint); }
+.dsv-frame { flex: 1; width: 100%; min-height: 560px; border: 1px solid var(--f-line); border-radius: 12px; background: #2b2e35; transition: opacity 0.2s; }
+.dsv-frame.is-loading { opacity: 0.6; }
+.dsv-skeleton { animation: dsv-pulse 1.2s ease-in-out infinite alternate; }
+@keyframes dsv-pulse { from { opacity: 0.5; } to { opacity: 0.85; } }
+@media (max-width: 900px) { .dse-nav .dse-nav-preview { margin: 0 8px 0 0; padding: 0 12px 0 0; border-bottom: 0; border-right: 1px solid var(--f-line); white-space: nowrap; } }

@@ -391,6 +391,18 @@ def test_pdf_export_prints_the_guidelines(env, monkeypatch):
     assert "Acme" in seen["html"] and "data:image/svg+xml;base64," in seen["html"]
 
 
+def test_preview_is_the_guidelines_document(env):
+    alice, mallory = env.user("alice"), env.user("mallory")
+    ds = env.project(alice, "design_system", "Acme")
+    r = env.act(alice).get(f"/projects/{ds.id}/design-system/preview?lang=fr")
+    assert r.status_code == 200 and r.headers["cache-control"] == "no-store"
+    html = r.json()["html"]
+    # Same pages as the PDF, laid out for the screen, logo inlined (no server behind the frame).
+    assert 'lang="fr"' in html and 'class="page' in html and "@media screen" in html
+    assert "data:image/svg+xml;base64," in html and "<script" not in html
+    assert env.act(mallory).get(f"/projects/{ds.id}/design-system/preview").status_code == 404
+
+
 def test_put_refreshes_the_contrast_notes(env):
     alice = env.user("alice")
     ds = env.project(alice, "design_system")
