@@ -161,6 +161,13 @@ export function DeckEditor(props: DeckEditorProps) {
   const [layerHover, setLayerHover] = useState<string | null>(null);
   const [imageTarget, setImageTarget] = useState<ImageTarget | null>(null);
   const [presenting, setPresenting] = useState<number | null>(null);
+  /** Shown after a slide is deleted, with Undo; cleared after a few seconds. */
+  const [deletedToast, setDeletedToast] = useState(0);
+  useEffect(() => {
+    if (!deletedToast) return;
+    const timer = window.setTimeout(() => setDeletedToast(0), 6000);
+    return () => window.clearTimeout(timer);
+  }, [deletedToast]);
   // Badge shown unless the plan allows removing it and the user turned it off.
   const [keepBadge, setKeepBadge] = useState(true);
   const badge = !props.badgeRemovable || keepBadge;
@@ -299,6 +306,7 @@ export function DeckEditor(props: DeckEditorProps) {
       const index = doc.deck.slides.findIndex((r) => r.id === id);
       const nextId = doc.deck.slides[index + 1]?.id ?? doc.deck.slides[index - 1]?.id ?? null;
       dispatch({ type: "edit", recipe: (d) => removeSlide(d, id), slideId: nextId ?? undefined, select: [] });
+      setDeletedToast(Date.now());
     },
     [doc, dispatch],
   );
@@ -691,7 +699,7 @@ export function DeckEditor(props: DeckEditorProps) {
           askAi: () => askChat({ nonce: Date.now(), kind: "focus" }),
           importSlides: importer ? openImport : undefined,
           remove: () => {
-            if (window.confirm(t("confirmDeleteSlide"))) deleteSlide(id);
+            deleteSlide(id);
           },
         },
       }),
@@ -779,7 +787,7 @@ export function DeckEditor(props: DeckEditorProps) {
         dispatch({ type: "edit", recipe: () => result.doc, slideId: result.id, select: [] });
       }}
       onDelete={(id) => {
-        if (window.confirm(t("confirmDeleteSlide"))) deleteSlide(id);
+        deleteSlide(id);
       }}
       onToggleHidden={(id) => run((d) => updateRef(d, id, (ref) => (ref.hidden ? withoutHidden(ref) : { ...ref, hidden: true })))}
       onAdd={addSlide}
@@ -1194,6 +1202,21 @@ export function DeckEditor(props: DeckEditorProps) {
             if (file) void readImport(file);
           }}
         />
+      ) : null}
+      {deletedToast ? (
+        <p className="f-toast de-undo-toast" role="status">
+          {t("slideDeleted")}
+          <button
+            type="button"
+            className="de-button de-button-ghost"
+            onClick={() => {
+              dispatch({ type: "undo" });
+              setDeletedToast(0);
+            }}
+          >
+            {t("undo")}
+          </button>
+        </p>
       ) : null}
       {importState ? (
         <SlideImportDialog state={importState} deck={doc.deck} tokens={tokens} assetUrl={assetUrl} t={t} onCancel={closeImport} onImport={applyImport} />
