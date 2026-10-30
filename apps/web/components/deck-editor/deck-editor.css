@@ -2389,3 +2389,103 @@ body.de-resizing iframe { pointer-events: none; }
 .de-import-warnings p { margin: 0 0 4px; }
 .de-import-warnings ul { margin: 0; padding-left: 18px; }
 .de-import .de-row { display: flex; gap: 8px; margin-top: 0; }
+
+/* Share panel (deck bar). Export, Publish and Invite triggers stay mounted but
+   hidden: their dialogs open under the Share button. */
+.de-bar-slots {
+  position: relative;
+  display: inline-flex;
+  width: 0;
+  align-self: stretch;
+}
+
+.de-bar-slots > span > button,
+.de-bar-slots > span > div > button:first-child,
+.de-bar-slots > span > [data-deck-export-menu] > button {
+  display: none;
+}
+
+.de-share {
+  display: grid;
+  gap: 2px;
+  padding: 6px;
+}
+
+.de-share-title {
+  padding: 6px 10px 8px;
+  font-size: 15px;
+}
+
+.de-share-link {
+  display: grid;
+  gap: 8px;
+  padding: 8px 10px 10px;
+}
+
+.de-share-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.de-share-select,
+.de-share-url {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--f-line, rgba(127, 127, 127, 0.3));
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.de-share-select option {
+  color: #111;
+}
+
+.de-share-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.de-share-reset {
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  opacity: 0.7;
+  font: inherit;
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.de-share-reset:hover {
+  opacity: 1;
+}
+
+/* Presentation opened from a share link (/s/[token]). */
+.de-shared-bar {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100vw - 24px);
+}
+
+.de-shared-note {
+  margin: 0;
+  max-width: 360px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.72);
+  color: #f2f0ec;
+  font-size: 13px;
+  line-height: 1.4;
+}

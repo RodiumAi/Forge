@@ -1050,6 +1050,36 @@ def _share_seat_limit(db: Session, user: User) -> int | None:
     return _SHARE_SEATS[row.plan_slug]
 
 
+def _occupied_emails(db: Session, project: Project) -> set[str]:
+    """Emails holding a seat on the project: collaborators and live invites."""
+    from app.models import ProjectCollaborator, ProjectInvite
+
+    collab_emails = {
+        str(member.email).lower()
+        for member in (
+            db.query(User)
+            .join(ProjectCollaborator, ProjectCollaborator.user_id == User.id)
+            .filter(ProjectCollaborator.project_id == project.id)
+            .all()
+        )
+        if getattr(member, "email", None)
+    }
+    now = datetime.now(UTC)
+    pending_emails = {
+        invite.email.lower()
+        for invite in db.query(ProjectInvite)
+        .filter(
+            ProjectInvite.project_id == project.id,
+            ProjectInvite.declined_at.is_(None),
+            ProjectInvite.accepted_at.is_(None),
+            ProjectInvite.expires_at > now,
+        )
+        .all()
+        if isinstance(invite, ProjectInvite)
+    }
+    return collab_emails | pending_emails
+
+
 @router.post("/{project_id}/share")
 def share_project(
     project_id: UUID,
@@ -1076,30 +1106,7 @@ def share_project(
         raise HTTPException(status_code=422, detail=t("share_not_in_plan", locale))
     already_known = False
     if limit is not None:
-        collab_emails = {
-            str(member.email).lower()
-            for member in (
-                db.query(User)
-                .join(ProjectCollaborator, ProjectCollaborator.user_id == User.id)
-                .filter(ProjectCollaborator.project_id == project.id)
-                .all()
-            )
-            if getattr(member, "email", None)
-        }
-        now_limit = datetime.now(UTC)
-        pending_emails = {
-            invite.email.lower()
-            for invite in db.query(ProjectInvite)
-            .filter(
-                ProjectInvite.project_id == project.id,
-                ProjectInvite.declined_at.is_(None),
-                ProjectInvite.accepted_at.is_(None),
-                ProjectInvite.expires_at > now_limit,
-            )
-            .all()
-            if isinstance(invite, ProjectInvite)
-        }
-        occupied = collab_emails | pending_emails
+        occupied = _occupied_emails(db, project)
         already_known = email in occupied
         if not already_known and len(occupied) >= limit:
             raise HTTPException(status_code=422, detail=t("share_limit", locale, n=limit))
