@@ -75,7 +75,7 @@ class TestDeckFonts:
 
     async def test_the_planned_path_applies_fonts_without_rewriting_slides(
         self,
-        two_slides,
+        two_slides,  # noqa: F811
         monkeypatch,
         run_log,  # noqa: F811
     ):
