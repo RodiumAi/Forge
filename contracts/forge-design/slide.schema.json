@@ -182,6 +182,11 @@
       "additionalProperties": false,
       "properties": {
         "font": { "enum": ["display", "body", "mono"] },
+        "family": {
+          "description": "Explicit typeface of this text, over the theme font of its role.",
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9 .\\-]{0,79}$"
+        },
         "size": { "type": "number", "minimum": 6, "maximum": 400 },
         "weight": { "type": "integer", "minimum": 100, "maximum": 900 },
         "color": { "$ref": "#/$defs/colorRef" },
@@ -315,6 +320,7 @@
           "additionalProperties": false,
           "properties": {
             "size": { "type": "number", "minimum": 6, "maximum": 200 },
+            "family": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9 .\\-]{0,79}$" },
             "color": { "$ref": "#/$defs/colorRef" },
             "headerFill": { "$ref": "#/$defs/colorRef" },
             "border": { "$ref": "#/$defs/colorRef" }

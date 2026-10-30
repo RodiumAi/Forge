@@ -46,6 +46,8 @@ const LOCAL_FAMILIES = new Set(
     "sf pro display",
     "sf pro text",
     "aptos",
+    // Served by the Forge app itself, not by Google Fonts.
+    "open sauce sans",
   ].map((f) => f.toLowerCase()),
 );
 
@@ -57,11 +59,24 @@ export function firstFamily(stack: string | undefined): string | null {
   return first;
 }
 
-/** Google Fonts families a theme needs, in role order, without duplicates. */
-export function googleFamilies(tokens: ThemeTokens): string[] {
+/** Families texts name over their theme role (`style.family`), groups included. */
+export function slideFamilies(slides: Iterable<{ elements?: unknown[] }>): string[] {
+  const out = new Set<string>();
+  const walk = (elements: unknown[] | undefined) => {
+    for (const element of elements ?? []) {
+      const el = element as { style?: { family?: unknown }; children?: unknown[] };
+      if (typeof el.style?.family === "string") out.add(el.style.family);
+      if (Array.isArray(el.children)) walk(el.children);
+    }
+  };
+  for (const slide of slides) walk(slide.elements);
+  return [...out];
+}
+
+/** Google Fonts families a theme (and the texts' own families) need, in role order, without duplicates. */
+export function googleFamilies(tokens: ThemeTokens, extra: string[] = []): string[] {
   const out: string[] = [];
-  for (const role of FONT_ROLES) {
-    const family = firstFamily(tokens[role]);
+  for (const family of [...FONT_ROLES.map((role) => firstFamily(tokens[role])), ...extra]) {
     if (!family || LOCAL_FAMILIES.has(family.toLowerCase())) continue;
     if (!/^[A-Za-z0-9 ]{1,60}$/.test(family)) continue;
     if (!out.includes(family)) out.push(family);
@@ -73,8 +88,8 @@ export function googleFamilies(tokens: ThemeTokens): string[] {
  * One css2 URL per family (regular and bold). Separate links on purpose: css2
  * fails the whole request when one family lacks a requested weight.
  */
-export function googleFontsHrefs(tokens: ThemeTokens): string[] {
-  return googleFamilies(tokens).map(
+export function googleFontsHrefs(tokens: ThemeTokens, extra: string[] = []): string[] {
+  return googleFamilies(tokens, extra).map(
     (f) => `https://fonts.googleapis.com/css2?family=${f.trim().replace(/ +/g, "+")}:wght@400;700&display=swap`,
   );
 }

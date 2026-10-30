@@ -112,11 +112,16 @@ slide. Answer with ONE JSON object and nothing else:
 {{
   "order": ["s1", "s3", "new1"],
   "slides": [ {{"slide": {{...}}, "layout": "...", "notes"?: "...", "visual"?: {{...}}}} ],
-  "transition"?: {{"type": "fade|push|slide|wipe|zoom-in|zoom-out|dissolve|curtain|cube|morph|none"}}
+  "transition"?: {{"type": "fade|push|slide|wipe|zoom-in|zoom-out|dissolve|curtain|cube|morph|none"}},
+  "fonts"?: {{"display"?: "Family", "body"?: "Family", "mono"?: "Family"}}
 }}
 - "order" lists the slides of the final deck. A slide missing from "order" is removed.
 - "slides" holds ONLY the slides you create or change (full slide JSON). New slides get new ids.
 - "transition", when present, is applied to every slide.
+- "fonts", when present, changes the typeface of the whole deck through its theme: give it
+  ONLY when the user asks for another font. Roles: "display" (titles), "body" (text), "mono"
+  (code). Use a family from the supported list. Slides keep referring to the roles, so a
+  font change alone needs no slide in "slides".
 
 {DECK_WRITING_RULES}
 {SLIDE_CONTRACT}
@@ -131,14 +136,19 @@ by one, with the request. Answer with ONE JSON object and nothing else:
   "order": ["s1", "s3", "new1"],
   "change": ["s1", "s3"],
   "new": [{"id": "new1", "title": "...", "idea": "what the slide says", "layout": "..."}],
-  "transition"?: {"type": "fade|push|slide|wipe|zoom-in|zoom-out|dissolve|curtain|cube|morph|none"}
+  "transition"?: {"type": "fade|push|slide|wipe|zoom-in|zoom-out|dissolve|curtain|cube|morph|none"},
+  "fonts"?: {"display"?: "Family", "body"?: "Family", "mono"?: "Family"}
 }
 - "order" lists the slides of the final deck. A slide missing from "order" is removed: remove
   only when the user asks for it.
 - "change" lists the existing slides the request applies to. A request about the whole deck
-  (style, fonts, colours, tone, language) lists every slide.
+  (style, colours, tone, language) lists every slide.
 - "new" holds the slides to create, each listed in "order". New slides get new ids.
 - "transition", when present, is applied to every slide.
+- "fonts", when present, changes the typeface of the whole deck through its theme: give it
+  ONLY when the user asks for another font. Roles: "display" (titles), "body" (text), "mono"
+  (code). Use a family from the supported list. Slides keep referring to the roles, so a
+  font change alone needs no slide in "change".
 """
 
 DECK_SLIDE_PASS = """This request applies to the whole deck: apply it to this slide only, so the

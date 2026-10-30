@@ -173,10 +173,11 @@ export function colorRef(ref: string | undefined, fallback = "currentColor"): st
   return ref.startsWith("--") ? `var(${ref})` : ref;
 }
 
-/** Text font role to a CSS font-family. */
-export function fontRef(role: string | undefined): string {
+/** Text font role to a CSS font-family; an explicit `family` comes first, the role's font backs it up. */
+export function fontRef(role: string | undefined, family?: string): string {
   const key = role ?? "body";
-  return `var(--font-${key}, ${FONT_FALLBACK[key] ?? FONT_FALLBACK.body})`;
+  const themed = `var(--font-${key}, ${FONT_FALLBACK[key] ?? FONT_FALLBACK.body})`;
+  return family ? `${quoteFamily(family)}, ${themed}` : themed;
 }
 
 /** Tokens as a React style object (custom properties on the canvas root). */

@@ -65,6 +65,15 @@ export function setStyle(slideId: string, ids: string[], style: Record<string, u
   });
 }
 
+/** `setStyle` on every text and table of the given slides (any depth). */
+export function setStyleOnSlides(slideIds: string[], style: Record<string, unknown>): Recipe {
+  return (doc) =>
+    slideIds.reduce((current, id) => {
+      const slide = current.slides[id];
+      return slide ? setStyle(id, [...allElementIds(slide.elements)], style)(current) : current;
+    }, doc);
+}
+
 export function moveBy(slideId: string, ids: string[], dx: number, dy: number, slide: Slide): Recipe {
   const movable = outermost(slide, ids).filter((id) => !locate(slide.elements, id)?.element.locked);
   return patchElements(slideId, movable, (el) => ({ ...el, x: Math.round(el.x + dx), y: Math.round(el.y + dy) }));

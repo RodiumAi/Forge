@@ -663,7 +663,7 @@ class TestTargets:
             assert read_file(two_slides, f"notes/{sid}.md") == f"notes {sid}"
         assert sorted(e["slide_id"] for e in events if e["type"] == "deck.slide") == ["new1", "s1", "s2"]
         assert events[-1]["type"] == "done"
-        assert run_log["finished"]["summary"] == "Présentation mise à jour."
+        assert run_log["finished"]["summary"] == "3 slide(s) modifiée(s)."
 
     async def test_a_slide_the_model_cannot_rewrite_stays_as_it_was(self, two_slides, monkeypatch, run_log):
         monkeypatch.setattr(flow, "MAX_ONE_SHOT_DECK_CHARS", 10)

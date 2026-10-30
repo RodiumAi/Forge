@@ -9,6 +9,7 @@ export { DeckPlayer, BADGE_URL, type DeckPlayerProps } from "./DeckPlayer";
 export { PresenterView, visibleSlides, type PresenterViewProps } from "./PresenterView";
 export { themeTokensFromDesign, tokensFromDesignSystem, colorRef, fontRef, DEFAULT_TOKENS } from "./theme";
 export { canvasSize, fitCanvas, type Fit } from "./geometry";
+export { GOOGLE_FONTS, SELF_HOSTED_FONTS, fontChoices, deckFamilies, ensureFonts, type FontCategory } from "./fonts";
 export { buildSchedule, stepCount, nextPosition, previousPosition, type Schedule, type Position } from "./steps";
 export { mapKey, resolveKey, type PlayerAction } from "./keys";
 export { matchMorph } from "./morph";

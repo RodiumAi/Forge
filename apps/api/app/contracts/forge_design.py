@@ -25,6 +25,7 @@ DOWNLOAD_PATH_PATTERN = r"^files/(?!.*\.\.)[A-Za-z0-9_./-]+$"
 ICON_PATTERN = r"^[a-z0-9]+(-[a-z0-9]+)*$"
 LANGUAGE_PATTERN = r"^[a-z0-9+#-]{1,32}$"
 HIGHLIGHT_PATTERN = r"^[0-9]+(-[0-9]+)?(,[0-9]+(-[0-9]+)?)*$"
+FONT_FAMILY_PATTERN = r"^[A-Za-z0-9][A-Za-z0-9 .\-]{0,79}$"
 
 #: Deepest allowed nesting of `group` elements in a slide.
 MAX_GROUP_DEPTH = 4
@@ -252,6 +253,8 @@ TextBlock = Annotated[Paragraph | TextList, Field(discriminator="type")]
 
 class TextStyle(_Doc):
     font: FontRole | None = None
+    #: Explicit typeface of this text, over the theme font of its role.
+    family: str | None = Field(default=None, pattern=FONT_FAMILY_PATTERN)
     size: float | None = Field(default=None, ge=6, le=400)
     weight: int | None = Field(default=None, ge=100, le=900)
     color: ColorRef | None = None
@@ -323,6 +326,7 @@ class IconElement(_ElementBase):
 
 class TableStyle(_Doc):
     size: float | None = Field(default=None, ge=6, le=200)
+    family: str | None = Field(default=None, pattern=FONT_FAMILY_PATTERN)
     color: ColorRef | None = None
     headerFill: ColorRef | None = None
     border: ColorRef | None = None

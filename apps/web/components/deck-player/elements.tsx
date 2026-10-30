@@ -223,7 +223,7 @@ function TextView({ element }: { element: TextElement }) {
     display: "flex",
     flexDirection: "column",
     justifyContent: justify,
-    fontFamily: fontRef(font),
+    fontFamily: fontRef(font, style.family),
     fontSize: size,
     fontWeight: style.weight ?? (element.role === "title" || element.role === "heading" ? 700 : 400),
     fontStyle: style.italic || element.role === "quote" ? "italic" : undefined,
@@ -418,7 +418,7 @@ function TableView({ element }: { element: TableElement }) {
         height: "100%",
         borderCollapse: "collapse",
         tableLayout: "fixed",
-        fontFamily: fontRef("body"),
+        fontFamily: fontRef("body", style.family),
         fontSize: style.size ?? 24,
         color: colorRef(style.color ?? "--fg"),
       }}

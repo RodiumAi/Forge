@@ -42,7 +42,7 @@ export function textBoxStyle(element: TextElement): CSSProperties {
     display: "flex",
     flexDirection: "column",
     justifyContent: style.valign === "middle" ? "center" : style.valign === "bottom" ? "flex-end" : "flex-start",
-    fontFamily: fontRef(font),
+    fontFamily: fontRef(font, style.family),
     fontSize: style.size ?? ROLE_SIZES[role] ?? 32,
     fontWeight: style.weight ?? (role === "title" || role === "heading" ? 700 : 400),
     fontStyle: style.italic || role === "quote" ? "italic" : undefined,
