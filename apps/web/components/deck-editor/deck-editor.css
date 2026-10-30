@@ -3224,3 +3224,80 @@ body.de-resizing iframe { pointer-events: none; }
 .de-segmented-icons button + button {
   border-left: 1px solid var(--de-line);
 }
+
+/* Icon picker of the Properties panel. */
+.de-icon-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.de-icon-current {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--de-line);
+  border-radius: 10px;
+}
+
+.de-icon-current-glyph {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: rgba(235, 97, 24, 0.14);
+  color: var(--f-orange, #eb6118);
+}
+
+.de-icon-current-name {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.de-icon-search {
+  margin: 0;
+}
+
+.de-icon-caption {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.55;
+}
+
+.de-icon-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(38px, 1fr));
+  gap: 4px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.de-icon-tile {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: rgba(127, 127, 127, 0.08);
+  color: inherit;
+  cursor: pointer;
+}
+
+.de-icon-tile:hover:not(:disabled) {
+  border-color: var(--de-line);
+  background: rgba(127, 127, 127, 0.16);
+}
+
+.de-icon-tile.is-active {
+  border-color: var(--f-orange, #eb6118);
+  background: rgba(235, 97, 24, 0.14);
+  color: var(--f-orange, #eb6118);
+}

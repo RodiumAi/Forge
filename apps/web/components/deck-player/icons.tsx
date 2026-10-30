@@ -18,6 +18,19 @@ export function lucideIcon(name: string): LucideIcon | null {
   return table[pascalIconName(name)] ?? null;
 }
 
+let names: string[] | null = null;
+
+/** Every lucide icon as a kebab-case name ("ChartBar" -> "chart-bar"), sorted. */
+export function lucideIconNames(): string[] {
+  if (!names) {
+    names = Object.keys(icons)
+      .map((key) => key.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase())
+      .filter((name) => /^[a-z0-9]+(-[a-z0-9]+)*$/.test(name) && lucideIcon(name))
+      .sort();
+  }
+  return names;
+}
+
 /** Drawn when the icon name is unknown: a neutral circle, never a crash. */
 export function FallbackIcon({ color, strokeWidth }: { color: string; strokeWidth: number }) {
   return (

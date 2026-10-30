@@ -42,6 +42,7 @@ import { colorTokens, ColorField, Field, NumberField, Section, SelectField, Text
 import type { Align } from "./geometry";
 import { elementLabel, findElement, updateRef, type Doc, type SlideRef } from "./model";
 import { patchElements, setFields, setStyle, type Recipe } from "./ops";
+import { IconPicker } from "./IconPicker";
 import { LayersPanel } from "./LayersPanel";
 import { ROLE_SIZES } from "./text-style";
 import { firstFamily } from "@/components/deck-player/fonts";
@@ -92,28 +93,6 @@ const PRESET_LABELS: Record<PresetId, [DeckStringKey, DeckStringKey]> = {
 };
 
 const ICON_RE = new RegExp(PATTERNS.ICON);
-const COMMON_ICONS = [
-  "star",
-  "check",
-  "circle-check",
-  "arrow-right",
-  "rocket",
-  "lightbulb",
-  "target",
-  "trending-up",
-  "users",
-  "shield-check",
-  "zap",
-  "heart",
-  "globe",
-  "chart-bar",
-  "clock",
-  "mail",
-  "phone",
-  "map-pin",
-  "settings",
-  "sparkles",
-];
 
 function IconButton({ label, onClick, children, disabled, active }: { label: string; onClick: () => void; children: ReactNode; disabled?: boolean; active?: boolean }) {
   return (
@@ -511,21 +490,14 @@ function TypeSection(props: Props & { el: SlideElement }) {
     case "icon":
       return (
         <Section title={t("icon")}>
-          <TextField
-            label={t("iconName")}
+          <IconPicker
             value={el.icon}
-            onChange={(v) => {
-              const value = v.trim().toLowerCase();
-              if (ICON_RE.test(value) && value.length <= 64) set({ icon: value });
+            disabled={readOnly}
+            t={t}
+            onChange={(name) => {
+              if (ICON_RE.test(name) && name.length <= 64) set({ icon: name });
             }}
           />
-          <div className="de-chips">
-            {COMMON_ICONS.map((name) => (
-              <button key={name} type="button" className={`de-chip${el.icon === name ? " is-active" : ""}`} onClick={() => set({ icon: name })} disabled={readOnly}>
-                {name}
-              </button>
-            ))}
-          </div>
           <ColorField label={t("color")} value={el.color} tokens={tokens} t={t} onChange={(color) => set({ color })} />
           <NumberField label={t("strokeWidth")} value={el.strokeWidth ?? 2} min={0.5} max={4} step={0.25} onChange={(v) => set({ strokeWidth: v })} disabled={readOnly} />
         </Section>
