@@ -1269,16 +1269,16 @@
 }
 
 .de-presets {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .de-preset {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 8px 6px;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
   border: 1px solid var(--de-line);
   border-radius: 8px;
   background: transparent;
@@ -1292,10 +1292,6 @@
   border-color: var(--de-accent);
 }
 
-.de-preset span {
-  color: var(--f-muted);
-  font-size: 11px;
-}
 
 /* ── transition and animation tiles, with a hover preview ────────────────── */
 
@@ -3300,4 +3296,147 @@ body.de-resizing iframe { pointer-events: none; }
   border-color: var(--f-orange, #eb6118);
   background: rgba(235, 97, 24, 0.14);
   color: var(--f-orange, #eb6118);
+}
+
+/* Presets: a card per preset with a mini slide that plays its motion on hover. */
+.de-root .de-presets {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.de-root .de-preset {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 8px;
+  text-align: left;
+}
+
+.de-preset-thumb {
+  flex: none;
+  width: 72px;
+  height: 44px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #2a2f3a, #14171d);
+}
+
+.de-preset-page {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  height: 100%;
+  padding: 8px 9px;
+}
+
+.de-preset-page i {
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.de-preset-page .de-preset-title {
+  width: 70%;
+  height: 7px;
+  margin-bottom: 2px;
+  background: var(--f-orange, #eb6118);
+}
+
+.de-preset-page .de-preset-line-short {
+  width: 55%;
+}
+
+.de-preset-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.de-preset-text strong {
+  font-size: 13px;
+}
+
+.de-preset-text span {
+  font-size: 11.5px;
+  opacity: 0.65;
+}
+
+.de-preset-badge {
+  flex: none;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--f-orange-soft, rgba(235, 97, 24, 0.16));
+  color: var(--f-orange, #eb6118);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .de-preset:hover .de-preset-page,
+  .de-preset:focus-visible .de-preset-page {
+    animation: 1.8s ease-in-out infinite;
+  }
+
+  .de-preset[data-preset="sober"]:hover .de-preset-page,
+  .de-preset[data-preset="sober"]:focus-visible .de-preset-page {
+    animation-name: de-preset-fade;
+  }
+
+  .de-preset[data-preset="dynamic"]:hover .de-preset-page,
+  .de-preset[data-preset="dynamic"]:focus-visible .de-preset-page {
+    animation-name: de-preset-push;
+  }
+
+  .de-preset[data-preset="dynamic"]:hover .de-preset-page i,
+  .de-preset[data-preset="dynamic"]:focus-visible .de-preset-page i {
+    animation: de-preset-rise 1.8s ease-out infinite;
+  }
+
+  .de-preset[data-preset="dynamic"]:hover .de-preset-page i:nth-child(2) {
+    animation-delay: 0.15s;
+  }
+
+  .de-preset[data-preset="dynamic"]:hover .de-preset-page i:nth-child(3) {
+    animation-delay: 0.3s;
+  }
+
+  .de-preset[data-preset="elegant"]:hover .de-preset-page,
+  .de-preset[data-preset="elegant"]:focus-visible .de-preset-page {
+    animation-name: de-preset-morph;
+  }
+
+  .de-preset[data-preset="elegant"]:hover .de-preset-line,
+  .de-preset[data-preset="elegant"]:focus-visible .de-preset-line {
+    animation: de-preset-reveal 1.8s ease-in-out infinite;
+  }
+}
+
+@keyframes de-preset-fade {
+  0%, 15% { opacity: 0; }
+  45%, 100% { opacity: 1; }
+}
+
+@keyframes de-preset-push {
+  0%, 10% { transform: translateX(100%); }
+  40%, 100% { transform: translateX(0); }
+}
+
+@keyframes de-preset-rise {
+  0%, 35% { opacity: 0; transform: translateY(6px); }
+  60%, 100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes de-preset-morph {
+  0%, 10% { transform: scale(0.82); opacity: 0.4; border-radius: 12px; }
+  45%, 100% { transform: scale(1); opacity: 1; border-radius: 0; }
+}
+
+@keyframes de-preset-reveal {
+  0%, 35% { clip-path: inset(0 100% 0 0); }
+  70%, 100% { clip-path: inset(0 0 0 0); }
 }

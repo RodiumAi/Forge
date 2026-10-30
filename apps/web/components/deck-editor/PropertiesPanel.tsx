@@ -47,7 +47,7 @@ import { LayersPanel } from "./LayersPanel";
 import { ROLE_SIZES } from "./text-style";
 import { firstFamily } from "@/components/deck-player/fonts";
 import { AnimationPicker, TransitionPicker } from "./pickers";
-import { applyPreset, applyTransitionToAll, PRESETS, type PresetId } from "./presets";
+import { applyPreset, applyTransitionToAll, currentPreset, PRESETS, type PresetId } from "./presets";
 import type { DeckLocale, DeckStringKey, DeckT } from "./strings";
 
 export type PanelTab = "element" | "slide" | "layers" | "deck";
@@ -614,6 +614,7 @@ function SlidePanel(props: Props) {
   const { slide, slideRef, tokens, run, t, locale, readOnly } = props;
   const sid = slide.id;
   const bg = slide.background;
+  const applied = currentPreset(props.doc);
   const setBackground = (background: Slide["background"]) =>
     run((d) => ({ ...d, slides: { ...d.slides, [sid]: background ? { ...d.slides[sid], background } : withoutBackground(d.slides[sid]) } }));
   const swatches = colorTokens(tokens);
@@ -708,11 +709,32 @@ function SlidePanel(props: Props) {
         />
       </Section>
       <Section title={t("presets")}>
-        <div className="de-presets">
+        <p className="de-hint">{t("presetsHint")}</p>
+        <div className="de-presets" role="radiogroup" aria-label={t("presets")}>
           {PRESETS.map((preset) => (
-            <button key={preset} type="button" className="de-preset" data-preset={preset} disabled={readOnly} onClick={() => run((d) => applyPreset(d, preset))}>
-              <strong>{t(PRESET_LABELS[preset][0])}</strong>
-              <span>{t(PRESET_LABELS[preset][1])}</span>
+            <button
+              key={preset}
+              type="button"
+              role="radio"
+              aria-checked={applied === preset}
+              className={`de-preset${applied === preset ? " is-active" : ""}`}
+              data-preset={preset}
+              disabled={readOnly}
+              onClick={() => run((d) => applyPreset(d, preset))}
+            >
+              {/* A mini slide that plays the preset's motion on hover. */}
+              <span className="de-preset-thumb" aria-hidden>
+                <span className="de-preset-page">
+                  <i className="de-preset-title" />
+                  <i className="de-preset-line" />
+                  <i className="de-preset-line de-preset-line-short" />
+                </span>
+              </span>
+              <span className="de-preset-text">
+                <strong>{t(PRESET_LABELS[preset][0])}</strong>
+                <span>{t(PRESET_LABELS[preset][1])}</span>
+              </span>
+              {applied === preset ? <span className="de-preset-badge">{t("presetBadge")}</span> : null}
             </button>
           ))}
         </div>
