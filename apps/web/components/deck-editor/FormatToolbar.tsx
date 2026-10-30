@@ -22,6 +22,8 @@ import {
   Link2,
   List,
   ListOrdered,
+  Minus,
+  Plus,
   PencilLine,
   Underline,
   UnfoldVertical,
@@ -37,6 +39,84 @@ import { ROLE_SIZES, type TextCommands, type TextMarks } from "./text-style";
 import { colorToCss, cssToColor, safeLink } from "./text-model";
 
 const SIZES = [14, 18, 20, 24, 28, 32, 36, 40, 48, 56, 64, 72, 88, 96, 120, 160];
+
+/** Font size: minus, the value (typing or picking from the list), plus. */
+function SizeControl({ value, onChange, disabled, t }: { value: number; onChange: (size: number) => void; disabled?: boolean; t: DeckT }) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+  const set = (v: number) => onChange(Math.min(400, Math.max(6, Math.round(v))));
+  const prev = [...SIZES].reverse().find((s) => s < value) ?? Math.max(6, value - 1);
+  const next = SIZES.find((s) => s > value) ?? Math.min(400, value + 1);
+  const commit = () => {
+    const v = Number((draft ?? "").replace(",", "."));
+    if (draft !== null && Number.isFinite(v) && v > 0) set(v);
+    setDraft(null);
+  };
+  return (
+    <span className="de-size" role="group" aria-label={t("size")}>
+      <button type="button" className="de-size-step" aria-label={t("sizeDown")} title={t("sizeDown")} disabled={disabled || value <= 6} onClick={() => set(prev)}>
+        <Minus size={14} aria-hidden />
+      </button>
+      <input
+        type="text"
+        inputMode="numeric"
+        className="de-size-value"
+        aria-label={t("size")}
+        title={t("size")}
+        disabled={disabled}
+        value={draft ?? String(Math.round(value * 10) / 10)}
+        onFocus={(e) => {
+          e.target.select();
+          setOpen(true);
+        }}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={() => {
+          commit();
+          setOpen(false);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+          if (e.key === "Escape") {
+            setDraft(null);
+            (e.target as HTMLInputElement).blur();
+          }
+          if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+            e.preventDefault();
+            setDraft(null);
+            set(e.key === "ArrowUp" ? next : prev);
+          }
+        }}
+      />
+      {open ? (
+        <ul className="de-size-list" role="listbox" aria-label={t("size")}>
+          {SIZES.map((s) => (
+            <li key={s}>
+              <button
+                type="button"
+                role="option"
+                aria-selected={s === value}
+                className={s === value ? "is-active" : undefined}
+                // Pick before the input loses focus.
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  setDraft(null);
+                  set(s);
+                  setOpen(false);
+                  (document.activeElement as HTMLElement | null)?.blur();
+                }}
+              >
+                {s}
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      <button type="button" className="de-size-step" aria-label={t("sizeUp")} title={t("sizeUp")} disabled={disabled || value >= 400} onClick={() => set(next)}>
+        <Plus size={14} aria-hidden />
+      </button>
+    </span>
+  );
+}
 
 /** A slider with its value field, as in the spacing menu. */
 function SpacingSlider({
@@ -213,26 +293,7 @@ export function FormatToolbar({
           <option value="deck">{t("fontScopeDeck")}</option>
         </select>
       ) : null}
-      <input
-        className="de-format-size"
-        type="number"
-        min={6}
-        max={400}
-        aria-label={t("size")}
-        title={t("size")}
-        list="de-sizes"
-        value={size}
-        disabled={disabled}
-        onChange={(e) => {
-          const value = Number(e.target.value);
-          if (Number.isFinite(value) && value >= 6 && value <= 400) onStyle({ size: value });
-        }}
-      />
-      <datalist id="de-sizes">
-        {SIZES.map((s) => (
-          <option key={s} value={s} />
-        ))}
-      </datalist>
+      <SizeControl value={size} disabled={disabled} t={t} onChange={(v) => onStyle({ size: v })} />
       <span className="de-format-sep" />
       {button(t("bold"), active("bold", weight >= 600), () => toggle("bold"), <Bold size={16} aria-hidden />)}
       {button(t("italic"), active("italic", !!style.italic), () => toggle("italic"), <Italic size={16} aria-hidden />)}

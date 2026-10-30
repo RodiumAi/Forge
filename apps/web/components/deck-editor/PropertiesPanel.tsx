@@ -13,6 +13,9 @@ import {
   AlignEndVertical,
   AlignStartHorizontal,
   AlignStartVertical,
+  AlignVerticalJustifyCenter,
+  AlignVerticalJustifyEnd,
+  AlignVerticalJustifyStart,
   ArrowDownToLine,
   ArrowUpToLine,
   ChevronDown,
@@ -418,17 +421,36 @@ function TypeSection(props: Props & { el: SlideElement }) {
             <NumberField label={t("weight")} value={el.style?.weight ?? 400} min={100} max={900} step={100} onChange={(v) => run(setStyle(sid, [el.id], { weight: Math.round(v / 100) * 100 }))} disabled={readOnly} />
             <NumberField label={t("letterSpacing")} value={el.style?.letterSpacing ?? 0} min={-20} max={100} step={0.5} onChange={(v) => run(setStyle(sid, [el.id], { letterSpacing: v || undefined }))} disabled={readOnly} />
           </div>
-          <SelectField
-            label={t("valign")}
-            value={el.style?.valign ?? ""}
-            options={[
-              { value: "", label: t("alignTop") },
-              { value: "middle", label: t("alignVMiddle") },
-              { value: "bottom", label: t("alignBottom") },
-            ]}
-            onChange={(v) => run(setStyle(sid, [el.id], { valign: v || undefined }))}
-            disabled={readOnly}
-          />
+          <div className="de-field">
+            <span className="de-field-label">{t("valign")}</span>
+            <div className="de-segmented de-segmented-icons" role="radiogroup" aria-label={t("valign")}>
+              {(
+                [
+                  [undefined, "alignTop", AlignVerticalJustifyStart, "valignTopShort"],
+                  ["middle", "alignVMiddle", AlignVerticalJustifyCenter, "valignMiddleShort"],
+                  ["bottom", "alignBottom", AlignVerticalJustifyEnd, "valignBottomShort"],
+                ] as const
+              ).map(([v, label, Icon, short]) => {
+                const active = (el.style?.valign ?? undefined) === v || (!v && el.style?.valign === "top");
+                return (
+                  <button
+                    key={label}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    aria-label={t(label)}
+                    title={t(label)}
+                    className={active ? "is-active" : ""}
+                    disabled={readOnly}
+                    onClick={() => run(setStyle(sid, [el.id], { valign: v }))}
+                  >
+                    <Icon size={16} aria-hidden />
+                    <span>{t(short)}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           <Toggle label={t("uppercase")} checked={!!el.style?.uppercase} onChange={(v) => run(setStyle(sid, [el.id], { uppercase: v }))} />
         </Section>
       );

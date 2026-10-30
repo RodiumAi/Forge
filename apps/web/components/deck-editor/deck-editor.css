@@ -3123,3 +3123,104 @@ body.de-resizing iframe { pointer-events: none; }
   display: flex;
   gap: 4px;
 }
+
+/* Font size of the format bar: - value +, with a size list. */
+.de-size {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  border: 1px solid var(--de-line);
+  border-radius: 8px;
+  background: var(--de-panel);
+}
+
+.de-size-step {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.75;
+}
+
+.de-size-step:hover:not(:disabled) {
+  opacity: 1;
+  color: var(--f-orange, #eb6118);
+}
+
+.de-size-step:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.de-format .de-size-value {
+  width: 42px;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-inline: 1px solid var(--de-line);
+  border-radius: 0;
+  background: transparent;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.de-size-value:focus {
+  outline: none;
+  background: rgba(127, 127, 127, 0.12);
+}
+
+.de-size-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  z-index: 50;
+  width: 72px;
+  max-height: 260px;
+  margin: 0;
+  padding: 4px;
+  overflow-y: auto;
+  list-style: none;
+  transform: translateX(-50%);
+  border: 1px solid var(--de-line);
+  border-radius: 10px;
+  background: var(--de-panel);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.de-size-list button {
+  width: 100%;
+  padding: 5px 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.de-size-list button:hover,
+.de-size-list button.is-active {
+  background: rgba(235, 97, 24, 0.16);
+  color: var(--f-orange, #eb6118);
+}
+
+/* Segmented control with an icon above each label (vertical alignment). */
+.de-segmented-icons button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 7px 4px;
+  font-size: 11px;
+}
+
+.de-segmented-icons button + button {
+  border-left: 1px solid var(--de-line);
+}
