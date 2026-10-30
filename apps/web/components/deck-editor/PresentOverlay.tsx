@@ -6,6 +6,8 @@
  * presenter view button (second window, synced over BroadcastChannel).
  * Leaving full screen or pressing Escape returns to the editor, on the slide
  * the presentation stopped at, so presenting again resumes there.
+ * In presenter view the presenter window opens at once and the audience view
+ * stays in the tab, ready to be moved to the projector.
  */
 
 import { useCallback, useEffect, useRef } from "react";
@@ -33,6 +35,7 @@ export function PresentOverlay({
   startAt,
   badge,
   locale,
+  presenterView = false,
   onClose,
   t,
 }: {
@@ -44,6 +47,8 @@ export function PresentOverlay({
   startAt: number;
   badge: boolean;
   locale: DeckLocale;
+  /** Open the presenter view (notes, next slide, timer) in a second window. */
+  presenterView?: boolean;
   /** Called with the id of the slide on screen when the presentation ends. */
   onClose: (slideId: string | null) => void;
   t: DeckT;
@@ -63,7 +68,7 @@ export function PresentOverlay({
 
   useEffect(() => {
     const el = ref.current;
-    if (el?.requestFullscreen && !document.fullscreenElement) {
+    if (!presenterView && el?.requestFullscreen && !document.fullscreenElement) {
       el.requestFullscreen()
         .then(() => {
           wasFullscreen.current = true;
@@ -83,11 +88,11 @@ export function PresentOverlay({
       window.removeEventListener("keydown", onKey);
       if (document.fullscreenElement === el) void document.exitFullscreen().catch(() => undefined);
     };
-  }, [close]);
+  }, [close, presenterView]);
 
   return (
     <div ref={ref} className="de-present" role="dialog" aria-modal="true" aria-label={t("present")}>
-      <DeckPlayer deck={deck} slides={slides} notes={notes} tokens={tokens} assetUrl={assetUrl} startAt={startAt} badge={badge} locale={locale} onSlideChange={track} />
+      <DeckPlayer deck={deck} slides={slides} notes={notes} tokens={tokens} assetUrl={assetUrl} startAt={startAt} badge={badge} locale={locale} presenterOnStart={presenterView} onSlideChange={track} />
       <button type="button" className="de-present-close" onClick={close} aria-label={t("exitPresent")} title={t("exitPresent")}>
         <X size={18} aria-hidden />
       </button>

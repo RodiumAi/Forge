@@ -97,11 +97,13 @@ export function useElementSize<T extends HTMLElement>(): [RefObject<T | null>, C
     if (!el) return;
     const read = () => setSize({ width: el.clientWidth, height: el.clientHeight });
     read();
-    if (typeof ResizeObserver === "undefined") {
-      window.addEventListener("resize", read);
-      return () => window.removeEventListener("resize", read);
+    // In the presenter popup the element lives in another window: use its own.
+    const win = (el.ownerDocument?.defaultView ?? window) as typeof window;
+    if (typeof win.ResizeObserver === "undefined") {
+      win.addEventListener("resize", read);
+      return () => win.removeEventListener("resize", read);
     }
-    const observer = new ResizeObserver(read);
+    const observer = new win.ResizeObserver(read);
     observer.observe(el);
     return () => observer.disconnect();
   }, []);

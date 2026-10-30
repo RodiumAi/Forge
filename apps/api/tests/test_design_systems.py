@@ -353,17 +353,25 @@ def test_text_exports(env):
 
 def test_exports_follow_the_plan(env, monkeypatch):
     from app.services import entitlements
+    from app.services.design_system import exports
+    from app.services.exports import gating
 
+    monkeypatch.setattr(exports, "_print_pdf", lambda _html: b"%PDF-1.7 fake")
     alice = env.user("alice")
     ds = env.project(alice, "design_system")
-    plan = SimpleNamespace(plan_slug="free", export_pdf=False)
-    monkeypatch.setattr(entitlements, "entitlements_apply", lambda _u: True)
-    monkeypatch.setattr(entitlements, "get_entitlements", lambda _db, _u: plan)
+    plan = SimpleNamespace(plan_slug="free", export_pdf=False, remove_badge=False)
+    for module in (entitlements, gating):
+        monkeypatch.setattr(module, "entitlements_apply", lambda _u: True)
+        monkeypatch.setattr(module, "get_entitlements", lambda _db, _u: plan)
     client = env.act(alice)
     assert client.get(f"/projects/{ds.id}/design-system/export/css").status_code == 403
+    assert client.get(f"/projects/{ds.id}/design-system/export/pdf").status_code == 403
     plan.plan_slug = "starter"
     assert client.get(f"/projects/{ds.id}/design-system/export/css").status_code == 200
-    assert client.get(f"/projects/{ds.id}/design-system/export/pdf").status_code == 403
+    # PDF from Starter up, like decks: a Pro plan whose row lacks the flag still prints.
+    assert client.get(f"/projects/{ds.id}/design-system/export/pdf").status_code == 200
+    plan.plan_slug = "pro"
+    assert client.get(f"/projects/{ds.id}/design-system/export/pdf").status_code == 200
 
 
 def test_pdf_export_prints_the_guidelines(env, monkeypatch):
@@ -381,6 +389,18 @@ def test_pdf_export_prints_the_guidelines(env, monkeypatch):
     r = env.act(alice).get(f"/projects/{ds.id}/design-system/export/pdf")
     assert r.status_code == 200 and r.content.startswith(b"%PDF")
     assert "Acme" in seen["html"] and "data:image/svg+xml;base64," in seen["html"]
+
+
+def test_preview_is_the_guidelines_document(env):
+    alice, mallory = env.user("alice"), env.user("mallory")
+    ds = env.project(alice, "design_system", "Acme")
+    r = env.act(alice).get(f"/projects/{ds.id}/design-system/preview?lang=fr")
+    assert r.status_code == 200 and r.headers["cache-control"] == "no-store"
+    html = r.json()["html"]
+    # Same pages as the PDF, laid out for the screen, logo inlined (no server behind the frame).
+    assert 'lang="fr"' in html and 'class="page' in html and "@media screen" in html
+    assert "data:image/svg+xml;base64," in html and "<script" not in html
+    assert env.act(mallory).get(f"/projects/{ds.id}/design-system/preview").status_code == 404
 
 
 def test_put_refreshes_the_contrast_notes(env):

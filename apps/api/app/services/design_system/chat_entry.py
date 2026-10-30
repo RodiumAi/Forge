@@ -14,7 +14,8 @@ from sqlalchemy.orm import Session
 
 from app.models import AgentRun, Chat, Message, Project, User
 from app.services.deck_ai.routing import deck_routes
-from app.services.design_system.flow import DesignSystemContext, document_stream, task_class
+from app.services.design_system.flow import DesignSystemContext, spawn_design_system_job, task_class
+from app.services.orchestration.plan_worker import iter_run_event_sse
 
 
 def _history(db: Session, chat_id) -> list[tuple[str, str]]:
@@ -94,4 +95,11 @@ def start_message(
     )
     # The stream runs for a while: release the request's DB connection now.
     db.close()
-    return event_stream(document_stream(ctx))
+    # In the background, like a deck: reloading the page must not kill the run.
+    spawn_design_system_job(ctx)
+
+    async def stream():
+        async for chunk in iter_run_event_sse(str(ctx.run_pk)):
+            yield chunk
+
+    return event_stream(stream())

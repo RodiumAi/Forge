@@ -79,33 +79,34 @@ describe("design system export gating", () => {
   });
 });
 
-describe("design system editor export menu", () => {
+describe("design system share panel downloads", () => {
   beforeEach(() => {
     currentStatus = null;
   });
 
-  async function openMenu() {
+  async function openDownloads() {
     const { DesignSystemEditor } = await import("./DesignSystemEditor");
     const view = renderWithProviders(<DesignSystemEditor projectId="p-1" />);
-    await view.user.click(await screen.findByRole("button", { name: /Exporter/ }));
+    await view.user.click(await screen.findByRole("button", { name: /Partager/ }));
+    await view.user.click(await screen.findByRole("button", { name: /Télécharger/ }));
     return view;
   }
 
   it("shows the two formats, unlocked on a paid plan", async () => {
     currentStatus = status("builder", { export_pdf: true });
-    await openMenu();
-    const items = screen.getAllByRole("menuitem");
-    expect(items.map((i) => i.textContent?.trim())).toEqual(["Charte graphique (PDF)", "Charte graphique (Markdown)"]);
+    await openDownloads();
+    expect(screen.getByRole("button", { name: /Charte graphique \(PDF\)/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Charte graphique \(Markdown\)/ })).toBeTruthy();
     expect(screen.queryByText("Disponible dès le plan Starter")).toBeNull();
   });
 
   it("locks both with a hint on Free", async () => {
     currentStatus = status("free");
-    const { user } = await openMenu();
+    const { user } = await openDownloads();
     expect(screen.getAllByText("Disponible dès le plan Starter")).toHaveLength(2);
-    expect(screen.getByRole("menuitem", { name: "Voir les offres" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Voir les offres" })).toBeTruthy();
     const { downloadExport } = await import("./api");
-    await user.click(screen.getByRole("menuitem", { name: /Charte graphique \(PDF\)/ }));
+    await user.click(screen.getByRole("button", { name: /Charte graphique \(PDF\)/ }));
     expect(downloadExport).not.toHaveBeenCalled();
   });
 });

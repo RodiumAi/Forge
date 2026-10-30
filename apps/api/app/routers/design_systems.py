@@ -320,6 +320,32 @@ async def export(
     )
 
 
+@router.get("/projects/{project_id}/design-system/preview")
+async def preview(
+    project_id: UUID,
+    request: Request,
+    lang: str | None = None,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    """The guidelines document as the PDF and the published page show it (assets inlined)."""
+    from app.services.design_system.guide import brand_guide_html
+    from app.services.design_system.site import local_asset_url
+
+    _require_enabled()
+    project = registry.design_system_project(db, user, project_id)
+    document = _document(project)
+    badge = show_badge(db, user)
+    html = brand_guide_html(
+        document,
+        asset_url=local_asset_url(str(project.id)),
+        lang=lang if lang in ("fr", "en") else resolve_locale(request),
+        badge=badge,
+        screen=True,
+    )
+    return JSONResponse({"html": html}, headers={"Cache-Control": "no-store"})
+
+
 # ── logo and brand assets ──────────────────────────────────────────────────
 
 MAX_LOGO_BYTES = 4 * 1024 * 1024

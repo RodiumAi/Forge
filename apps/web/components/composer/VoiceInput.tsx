@@ -5,12 +5,18 @@
  * button, then while listening a strip with live bars, the time, Cancel and
  * Done. The words appear in the field as they are recognised (see
  * lib/speech-input). Hidden where the browser has no speech recognition.
+ *
+ * Switched off for now on every prompt box: flip VOICE_INPUT_ENABLED to bring
+ * the button back. Nothing else needs to change.
  */
 
 import { cx } from "@/components/ui/cx";
 import { Glyph } from "@/components/ui/glyph";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { SPEECH_MAX_SECONDS, type SpeechInput, type SpeechInputError } from "@/lib/speech-input";
+
+/** Dictation is paused across Forge until it is ready to ship again. */
+export const VOICE_INPUT_ENABLED = false;
 
 const ERROR_KEY = {
   denied: "uiVoiceErrDenied",
@@ -39,7 +45,7 @@ export function VoiceButton({
   size?: "sm";
 }) {
   const { t } = useI18n();
-  if (!voice.supported) return null;
+  if (!VOICE_INPUT_ENABLED || !voice.supported) return null;
   const label = voice.listening ? t("uiVoiceStop") : t("uiVoiceStart");
   return (
     <button

@@ -20,6 +20,13 @@ const TRANSITIONS: Record<PresetId, Transition> = {
   elegant: { type: "morph", durationMs: 900, easing: "ease-in-out" },
 };
 
+/** The preset every slide's transition matches, if any. */
+export function currentPreset(doc: { deck: { slides: { transition?: Transition }[] } }): PresetId | null {
+  const slides = doc.deck.slides;
+  if (!slides.length) return null;
+  return PRESETS.find((preset) => slides.every((ref) => ref.transition?.type === TRANSITIONS[preset].type)) ?? null;
+}
+
 function isTitle(element: SlideElement): boolean {
   return element.type === "text" && (element.role === "title" || element.role === "heading");
 }

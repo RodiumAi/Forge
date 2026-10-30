@@ -28,6 +28,10 @@ const LABELS = {
     blackScreen: "Écran noir",
     whiteScreen: "Écran blanc",
     step: "Étape",
+    endPresentation: "Fermer la vue présentateur",
+    notesSize: "Taille du texte des notes",
+    notesSmaller: "Réduire le texte des notes",
+    notesLarger: "Agrandir le texte des notes",
   },
   en: {
     previous: "Previous",
@@ -51,6 +55,10 @@ const LABELS = {
     blackScreen: "Black screen",
     whiteScreen: "White screen",
     step: "Step",
+    endPresentation: "Close the presenter view",
+    notesSize: "Notes text size",
+    notesSmaller: "Smaller notes text",
+    notesLarger: "Larger notes text",
   },
 } as const;
 

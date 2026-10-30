@@ -10,7 +10,7 @@ import type { ThemeTokens } from "@/components/deck-player";
 import type { DeckT } from "./strings";
 
 const HEX_RE = /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$/;
-const NON_COLOR = /^--(font|radius|space|spacing|shadow|duration|ease|size|line|letter|weight|z)/;
+const NON_COLOR = /^--(font|radius|space|spacing|shadow|duration|ease|size|line|letter|weight|z|icon)/;
 
 /** Theme tokens that hold a color, in a stable order (the common roles first). */
 export function colorTokens(tokens: ThemeTokens): { name: string; value: string }[] {
