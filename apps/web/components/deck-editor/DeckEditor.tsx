@@ -83,6 +83,8 @@ import {
 import { colorTokens } from "./fields";
 import { PresentOverlay, presentIndex } from "./PresentOverlay";
 import { PublishMenu, type DeckPublisher } from "./PublishMenu";
+import { SharePanel } from "./SharePanel";
+import type { ShareLinkClient } from "@/lib/share-links";
 import { SlideImportDialog, type SlideImportState } from "./SlideImportDialog";
 import { importErrorKey, importSlides, insertionIndex, isPptxFile, MAX_SLIDE_IMPORT_BYTES, PPTX_ACCEPT, type ImportedSlide, type SlideImportClient } from "./slide-import";
 import { PropertiesPanel, type ImageTarget, type PanelTab } from "./PropertiesPanel";
@@ -116,8 +118,10 @@ export type DeckEditorProps = {
   exportMenu?: ReactNode;
   /** Publish action; hidden when absent. */
   publisher?: DeckPublisher | null;
-  /** Share button (owner only), next to Publish. */
+  /** Invite dialog (owner only), opened from the Share panel. */
   share?: ReactNode;
+  /** Link access settings (owner only), in the Share panel. */
+  shareLink?: ShareLinkClient | null;
   /** Who else works on the deck, shown to guests. */
   people?: WorkspacePerson[];
   readOnly?: boolean;
@@ -161,6 +165,10 @@ export function DeckEditor(props: DeckEditorProps) {
   const [layerHover, setLayerHover] = useState<string | null>(null);
   const [imageTarget, setImageTarget] = useState<ImageTarget | null>(null);
   const [presenting, setPresenting] = useState<number | null>(null);
+  /** Opens a dialog whose trigger sits hidden in the bar (Share panel rows, Options menu). */
+  const openBarSlot = (selector: string) => {
+    requestAnimationFrame(() => document.querySelector<HTMLElement>(`${selector} button`)?.click());
+  };
   /** Shown after a slide is deleted, with Undo; cleared after a few seconds. */
   const [deletedToast, setDeletedToast] = useState(0);
   useEffect(() => {
@@ -862,7 +870,7 @@ export function DeckEditor(props: DeckEditorProps) {
                 </MenuItem>
               ) : null}
               {props.exportMenu ? (
-                <MenuItem icon="download" onClick={() => openSlot(".de-export-slot")}>
+                <MenuItem icon="download" onClick={() => { void docState.flush(); openSlot(".de-export-slot"); }}>
                   {t("menuExport")}
                 </MenuItem>
               ) : null}
@@ -911,12 +919,6 @@ export function DeckEditor(props: DeckEditorProps) {
         }
         actions={
           <>
-            {props.share ? <span className="de-share-slot">{props.share}</span> : null}
-            {props.publisher && !readOnly ? (
-              <span className="de-publish-slot">
-                <PublishMenu publisher={props.publisher} badge={keepBadge} onBadgeChange={setKeepBadge} beforePublish={docState.flush} disabled={visibleCount === 0} t={t} />
-              </span>
-            ) : null}
             <Button
               variant="ghost"
               size="sm"
@@ -930,11 +932,35 @@ export function DeckEditor(props: DeckEditorProps) {
             >
               <span className="f-bd-lbl">{t("present")}</span>
             </Button>
-            {props.exportMenu ? (
-              <div className="de-export-slot" onPointerDownCapture={() => void docState.flush()}>
-                {props.exportMenu}
-              </div>
-            ) : null}
+            <SharePanel
+              link={props.shareLink}
+              onInvite={props.share ? () => openBarSlot(".de-share-slot") : undefined}
+              onPresent={() => {
+                dispatch({ type: "editText", id: null });
+                setPresenting(presentIndex(doc.deck, state.slideId));
+              }}
+              presentDisabled={visibleCount === 0}
+              onDownload={
+                props.exportMenu
+                  ? () => {
+                      void docState.flush();
+                      openBarSlot(".de-export-slot");
+                    }
+                  : undefined
+              }
+              onPublish={props.publisher && !readOnly ? () => openBarSlot(".de-publish-slot") : undefined}
+              t={t}
+            />
+            {/* Triggers hidden behind the Share panel; their dialogs open under it. */}
+            <span className="de-bar-slots">
+              {props.share ? <span className="de-share-slot">{props.share}</span> : null}
+              {props.publisher && !readOnly ? (
+                <span className="de-publish-slot">
+                  <PublishMenu publisher={props.publisher} badge={keepBadge} onBadgeChange={setKeepBadge} beforePublish={docState.flush} disabled={visibleCount === 0} t={t} />
+                </span>
+              ) : null}
+              {props.exportMenu ? <span className="de-export-slot">{props.exportMenu}</span> : null}
+            </span>
           </>
         }
       />

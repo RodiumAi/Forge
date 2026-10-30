@@ -24,6 +24,7 @@ import { useForgeStatus } from "@/lib/forge-status";
 import { clearBootPrompt, peekBootPrompt } from "@/lib/create-project";
 import { editorHref, type ProjectKindId } from "@/lib/kinds";
 import { useMediaToken } from "@/lib/media-token";
+import { apiShareLinkClient } from "@/lib/share-links";
 
 type Project = {
   id: string;
@@ -72,6 +73,7 @@ export default function DeckEditorPage() {
   const chat = useMemo(() => apiChatClient(projectId), [projectId]);
   const images = useMemo(() => apiImageClient(projectId), [projectId]);
   const slideImport = useMemo(() => apiSlideImportClient(projectId), [projectId]);
+  const shareLink = useMemo(() => apiShareLinkClient(projectId), [projectId]);
   const loadTheme = useCallback((file: string) => readProjectFile(projectId, file), [projectId]);
   // Rebuilt when the media token arrives, so images render once it is known.
   const assetUrl = useMemo(() => {
@@ -124,6 +126,7 @@ export default function DeckEditorPage() {
       publisher={project.access_role === "viewer" ? null : publisher}
       readOnly={project.access_role === "viewer"}
       share={project.access_role === "owner" ? <ShareButton projectId={projectId} projectName={project.name} /> : undefined}
+      shareLink={project.access_role === "owner" ? shareLink : null}
       people={project.access_role === "owner" ? undefined : project.collaborators}
       backHref="/dashboard"
       initialPrompt={bootPrompt}

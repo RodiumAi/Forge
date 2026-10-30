@@ -45,7 +45,8 @@ export function logoutToHome(reason?: string) {
   resetPosthogUser();
   setToken(null);
   const path = window.location.pathname;
-  if (path === "/" || path.startsWith("/auth") || SELF_HANDLING_AUTH_PATHS.includes(path)) return;
+  // A shared link (/s/...) keeps the viewer on the presentation; it handles the 401 itself.
+  if (path === "/" || path.startsWith("/auth") || path.startsWith("/s/") || SELF_HANDLING_AUTH_PATHS.includes(path)) return;
   const url = reason ? `/?auth=${encodeURIComponent(reason)}` : "/";
   window.location.replace(url);
 }
