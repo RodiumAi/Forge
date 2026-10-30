@@ -28,6 +28,7 @@ from app.services.llm import (
     is_transient_network_error,
     stream_chat_completion,
     stream_with_continuation,
+    user_error_message,
 )
 from app.services.orchestration.context import build_llm_messages
 from app.services.orchestration.router import fallback_model
@@ -731,7 +732,7 @@ async def run_plan_tasks(
                     "task_id": tid,
                     "title": title,
                     "code": code,
-                    "message": str(exc)[:300] or t("step_generate", locale),
+                    "message": user_error_message(exc, locale),
                     "attempts": attempts,
                 }
                 break

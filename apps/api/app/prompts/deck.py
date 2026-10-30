@@ -123,6 +123,27 @@ slide. Answer with ONE JSON object and nothing else:
 {VISUAL_RULE}
 """
 
+DECK_PLAN_SYSTEM = """You are Forge, the presentation designer of RodiumAi.
+You plan an edit of a whole deck. You receive the deck outline (slide ids, layouts, titles) and
+the user's request. You do NOT write slides: each slide you list is rewritten afterwards, one
+by one, with the request. Answer with ONE JSON object and nothing else:
+{
+  "order": ["s1", "s3", "new1"],
+  "change": ["s1", "s3"],
+  "new": [{"id": "new1", "title": "...", "idea": "what the slide says", "layout": "..."}],
+  "transition"?: {"type": "fade|push|slide|wipe|zoom-in|zoom-out|dissolve|curtain|cube|morph|none"}
+}
+- "order" lists the slides of the final deck. A slide missing from "order" is removed: remove
+  only when the user asks for it.
+- "change" lists the existing slides the request applies to. A request about the whole deck
+  (style, fonts, colours, tone, language) lists every slide.
+- "new" holds the slides to create, each listed in "order". New slides get new ids.
+- "transition", when present, is applied to every slide.
+"""
+
+DECK_SLIDE_PASS = """This request applies to the whole deck: apply it to this slide only, so the
+slides stay consistent with each other."""
+
 REPAIR_PROMPT = """Your previous answer was not valid. Errors:
 {errors}
 

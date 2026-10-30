@@ -18,10 +18,7 @@ async def verify_rodium_api_key(api_key: str, locale: Locale = "fr") -> None:
             raise RodiumError(t("rodium_invalid_key", locale), response.status_code)
         if response.status_code >= 400:
             text = response.text[:500]
-            raise RodiumError(
-                t("rodium_error", locale, code=response.status_code, body=text),
-                response.status_code,
-            )
+            raise RodiumError(t("rodium_error", locale), response.status_code, detail=text)
 
 
 async def fetch_wallet_balance_by_api_key(api_key: str, locale: Locale = "fr") -> dict:
@@ -36,13 +33,12 @@ async def fetch_wallet_balance_by_api_key(api_key: str, locale: Locale = "fr") -
             raise RodiumError(t("rodium_invalid_key", locale), response.status_code)
         if response.status_code >= 400:
             text = response.text[:500]
-            raise RodiumError(
-                t("rodium_error", locale, code=response.status_code, body=text),
-                response.status_code,
-            )
+            raise RodiumError(t("rodium_error", locale), response.status_code, detail=text)
         data = response.json()
         if not isinstance(data, dict):
             raise RodiumError(
-                t("rodium_error", locale, code=502, body="invalid wallet payload"),
+                t("rodium_error", locale),
+                502,
+                detail="invalid wallet payload",
             )
         return data

@@ -12,7 +12,7 @@ from uuid import UUID
 from app.db import SessionLocal
 from app.i18n import Locale
 from app.models import AgentRun, User
-from app.services.llm import error_code_for
+from app.services.llm import error_code_for, user_error_message
 from app.services.orchestration import run_queue
 from app.services.orchestration.cancel import clear_cancelled
 from app.services.orchestration.dispatcher import run_plan_tasks
@@ -131,7 +131,7 @@ async def _execute_plan_job(
             pass
         run_queue.publish_run_event(
             rid,
-            {"type": "error", "code": code, "message": str(exc)[:500], "plan": tasks},
+            {"type": "error", "code": code, "message": user_error_message(exc, locale), "plan": tasks},
         )
     finally:
         run_queue.release_run(rid)

@@ -4,6 +4,7 @@ import { Send, Sparkles } from "lucide-react";
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 
 import { Icon } from "@/components/ui/icon";
+import { readableMessage } from "@/lib/chat-errors";
 import { ContextMenu, copyText, useContextMenu, useMenuTrigger, type ContextMenuEntry } from "@/components/ui/ContextMenu";
 import { api, readApiError } from "@/lib/api";
 import { useI18n } from "@/lib/i18n/I18nProvider";
@@ -111,13 +112,13 @@ export const DesignSystemChat = forwardRef<DesignSystemChatHandle, Props>(functi
           else if (type === "design_system.document" && event.document) onDocument(event.document as DesignSystemDoc);
           else if (type === "error") {
             ok = false;
-            push({ role: "error", text: String(event.message ?? t("dsChatFailed")) });
+            push({ role: "error", text: readableMessage(String(event.message ?? ""), t("dsChatFailed")) });
           }
           else if (type === "done") push({ role: "assistant", text: String(event.summary ?? "") });
         });
       } catch (err) {
         ok = false;
-        push({ role: "error", text: err instanceof Error ? err.message : t("dsChatFailed") });
+        push({ role: "error", text: readableMessage(err instanceof Error ? err.message : "", t("dsChatFailed")) });
       } finally {
         setBusy(false);
       }

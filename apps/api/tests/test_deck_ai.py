@@ -630,6 +630,68 @@ class TestTargets:
             read_file(two_slides, "slides/s1.json")
         assert read_file(two_slides, "notes/new1.md") == "n"
 
+    async def test_a_large_deck_is_planned_then_rewritten_slide_by_slide(
+        self, two_slides, monkeypatch, run_log
+    ):
+        monkeypatch.setattr(flow, "MAX_ONE_SHOT_DECK_CHARS", 10)
+        prompts: list[str] = []
+
+        async def fake(*, messages, **_kwargs):
+            user = messages[1]["content"]
+            prompts.append(user)
+            if "Deck outline:" in user:
+                return json.dumps(
+                    {
+                        "order": ["s1", "s2", "new1"],
+                        "change": ["s1", "s2", "ghost"],
+                        "new": [{"id": "new1", "title": "Merci", "idea": "Contact", "layout": "title"}],
+                        "transition": {"type": "push", "direction": "left"},
+                    }
+                )
+            sid = next(s for s in ("s1", "s2", "new1") if f'(id "{s}")' in user)
+            return json.dumps({"slide": text_slide(sid, f"Restylée {sid}"), "notes": f"notes {sid}"})
+
+        monkeypatch.setattr(deck_llm, "complete_chat", fake)
+        events = await events_of(flow.document_stream(ctx(two_slides, prompt="Change la police partout")))
+        assert len(prompts) == 4 and all("Change la police partout" in p for p in prompts)
+        refs = store.read_deck(two_slides)["slides"]
+        assert [r["id"] for r in refs] == ["s1", "s2", "new1"]
+        assert all(r["transition"] == {"type": "push", "direction": "left"} for r in refs)
+        for sid in ("s1", "s2", "new1"):
+            slide = json.loads(read_file(two_slides, f"slides/{sid}.json"))
+            assert slide["elements"][0]["content"][0]["text"] == f"Restylée {sid}"
+            assert read_file(two_slides, f"notes/{sid}.md") == f"notes {sid}"
+        assert sorted(e["slide_id"] for e in events if e["type"] == "deck.slide") == ["new1", "s1", "s2"]
+        assert events[-1]["type"] == "done"
+        assert run_log["finished"]["summary"] == "Présentation mise à jour."
+
+    async def test_a_slide_the_model_cannot_rewrite_stays_as_it_was(self, two_slides, monkeypatch, run_log):
+        monkeypatch.setattr(flow, "MAX_ONE_SHOT_DECK_CHARS", 10)
+        before = read_file(two_slides, "slides/s2.json")
+
+        async def fake(*, messages, **_kwargs):
+            user = messages[1]["content"]
+            if "Deck outline:" in user:
+                return json.dumps({"order": ["s1", "s2"], "change": ["s1", "s2"]})
+            if '(id "s2")' in user:
+                return "pas du JSON"
+            return json.dumps({"slide": text_slide("s1", "Restylée")})
+
+        monkeypatch.setattr(deck_llm, "complete_chat", fake)
+        events = await events_of(flow.document_stream(ctx(two_slides, prompt="Plus sobre")))
+        assert read_file(two_slides, "slides/s2.json") == before
+        assert [e["slide_id"] for e in events if e["type"] == "deck.slide"] == ["s1"]
+        assert "1 slide(s) inchangée(s)" in run_log["finished"]["summary"]
+
+    async def test_an_empty_answer_is_asked_again_without_an_empty_turn(
+        self, two_slides, monkeypatch, run_log
+    ):
+        calls = script(monkeypatch, "", {"slide": text_slide("s2", "Après")})
+        await events_of(flow.document_stream(ctx(two_slides, target_slide="s2")))
+        assert len(calls) == 2
+        assert all(m["role"] != "assistant" for m in calls[1])
+        assert calls[1][-1]["role"] == "user" and "not valid" in calls[1][-1]["content"]
+
 
 # ── background job ─────────────────────────────────────────────────────────
 
