@@ -411,3 +411,32 @@ def test_published_site_is_built_from_the_project(project, tmp_path):
     assert {"index.html", "404.html", "brand/logo.svg"} <= set(written)
     html = (out / "index.html").read_text(encoding="utf-8")
     assert "Acme &lt;script&gt;" in html and "<script>" not in html
+
+
+def test_generation_runs_in_the_background_and_replays(ds_project, monkeypatch):
+    """A reload reattaches to the run: the events stay in the run queue."""
+    from app.services.orchestration import plan_worker, run_queue
+
+    async def fake_complete(**_kwargs):
+        return json.dumps(SPEC)
+
+    async def no_logo(*_a, **_k):
+        return None, None
+
+    monkeypatch.setattr(run_queue, "_redis", lambda: None)
+    monkeypatch.setattr(generate_mod, "complete_chat", fake_complete)
+    monkeypatch.setattr(flow_mod, "_logo_image", no_logo)
+    ctx = _ctx(ds_project)
+
+    async def follow(after=0):
+        chunks = [chunk async for chunk in plan_worker.iter_run_event_sse(str(ctx.run_pk), start_after=after)]
+        return [json.loads(chunk[len("data: ") :]) for chunk in chunks]
+
+    async def scenario():
+        flow_mod.spawn_design_system_job(ctx)
+        return await follow(), await follow()
+
+    first, replay = asyncio.run(scenario())
+    assert [e["type"] for e in first][:2] == ["user_message", "route"]
+    assert first[-1]["type"] == "done"
+    assert replay == first

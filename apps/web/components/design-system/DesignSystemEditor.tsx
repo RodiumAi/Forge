@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Download, ExternalLink, Globe, Lock, Share2, Star, UserPlus } from "lucide-react";
+import { Download, Lock, Share2, Star, UserPlus } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ShareButton } from "@/components/builder/ShareButton";
@@ -19,7 +19,6 @@ import {
   errorCode,
   getDesignSystemItem,
   loadDocument,
-  publish,
   saveDocument,
   setDefault,
   share,
@@ -28,6 +27,7 @@ import {
   type DesignSystemItem,
 } from "./api";
 import { DesignSystemChat, type DesignSystemChatHandle } from "./DesignSystemChat";
+import { DesignSystemPublish } from "./DesignSystemPublish";
 import { designSystemExportOptions, type DsExportFormat } from "./exports";
 import { takePendingBrandAssets } from "./intake/brand-intake";
 import {
@@ -63,7 +63,6 @@ export function DesignSystemEditor({ projectId }: { projectId: string }) {
   const [save, setSave] = useState<SaveState>("idle");
   const [notice, setNotice] = useState<string | null>(null);
   const [menu, setMenu] = useState<"share" | "export" | null>(null);
-  const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
   const etag = useRef<string | null>(null);
   const timer = useRef<number | null>(null);
   const pending = useRef<DesignSystemDoc | null>(null);
@@ -341,20 +340,14 @@ export function DesignSystemEditor({ projectId }: { projectId: string }) {
             ) : null}
           </div>
           {item?.owner.mine ? (
-            <button
-              type="button"
-              className="f-btn f-btn-primary f-btn-sm"
-              onClick={() =>
-                void run(async () => setPublishedUrl((await publish(projectId)).public_url), "dsPublished")
-              }
-            >
-              <Icon icon={Globe} className="ui-icon-sm" /> <span className="f-bd-lbl">{t("dsPublish")}</span>
-            </button>
-          ) : null}
-          {publishedUrl ? (
-            <a className="f-icon-btn f-icon-btn-sm" href={publishedUrl} target="_blank" rel="noopener noreferrer" aria-label={t("dsOpenSite")}>
-              <Icon icon={ExternalLink} />
-            </a>
+            <DesignSystemPublish
+              projectId={projectId}
+              doc={doc}
+              beforePublish={async () => {
+                if (timer.current) window.clearTimeout(timer.current);
+                await flush();
+              }}
+            />
           ) : null}
         </div>
         }
