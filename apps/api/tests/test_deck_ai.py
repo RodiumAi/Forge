@@ -206,6 +206,19 @@ class TestRouting:
         downgraded = _apply_tier_entitlements(writing, cached)
         assert downgraded.tier == "primary" and downgraded.model != writing.model
 
+    def test_a_downgrade_uses_the_admin_default_model(self, monkeypatch):
+        from app.routers import chats
+        from app.services.deck_ai.routing import deck_routes
+
+        writing, _ = deck_routes()
+        settings = SimpleNamespace(
+            default_model="google/env-default", effective_default_model="google/admin-default"
+        )
+        monkeypatch.setattr(chats, "get_settings", lambda: settings)
+        cached = SimpleNamespace(allowed_model_tiers=json.dumps(["primary"]), priority_generation=False)
+        downgraded = chats._apply_tier_entitlements(writing, cached)
+        assert downgraded.model == "google/admin-default"
+
     def test_an_imported_document_rebuilds_the_whole_deck(self):
         doc = "Refais ces slides\n[Document: deck.pptx | pptx]\n--- Slide 1 ---\nTitle: Hello\n[/Document]"
         selected = SimpleNamespace(target=SimpleNamespace(slideId="s1", elementId="title"), action=None)
