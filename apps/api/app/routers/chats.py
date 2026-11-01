@@ -118,7 +118,9 @@ def _apply_tier_entitlements(route, cached):
         getattr(cached, "priority_generation", False)
     )
     if tier_blocked or escalation_blocked:
-        return replace(route, model=get_settings().default_model, tier="primary")
+        # The admin override, not the raw .env value: plain ``default_model``
+        # ignores the Default models page and fell back to a hardcoded slug.
+        return replace(route, model=get_settings().effective_default_model, tier="primary")
     return route
 
 
