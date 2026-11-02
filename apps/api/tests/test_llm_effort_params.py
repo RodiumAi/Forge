@@ -15,8 +15,13 @@ def test_older_claude_keeps_temperature_and_gets_effort() -> None:
     assert params == {"temperature": 0.4, "reasoning_effort": "low"}
 
 
-def test_other_models_keep_temperature_and_get_no_effort() -> None:
+def test_a_flagged_gemini_keeps_temperature_and_gets_effort() -> None:
     params = _generation_params(0.4, 100, model="google/gemini-3.7-flash", reasoning_effort="medium")
+    assert params == {"temperature": 0.4, "max_tokens": 100, "reasoning_effort": "medium"}
+
+
+def test_an_unflagged_model_keeps_temperature_and_gets_no_effort() -> None:
+    params = _generation_params(0.4, 100, model="google/gemini-3.1-flash-lite", reasoning_effort="medium")
     assert params == {"temperature": 0.4, "max_tokens": 100}
 
 

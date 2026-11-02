@@ -205,6 +205,7 @@ def init_db() -> None:
             max_output_tokens INTEGER NOT NULL DEFAULT 0,
             price_in_per_m DOUBLE PRECISION,
             price_out_per_m DOUBLE PRECISION,
+            supports_reasoning BOOLEAN NOT NULL DEFAULT false,
             created_at TIMESTAMPTZ NOT NULL DEFAULT now()
         )
         """,
@@ -421,6 +422,30 @@ def init_db() -> None:
         """,
         "ALTER TABLE projects ADD COLUMN IF NOT EXISTS design_system_version INTEGER",
         "CREATE INDEX IF NOT EXISTS ix_projects_design_system_project_id ON projects (design_system_project_id)",
+        # Models that take `reasoning_effort`. The admin catalogue owns the flag
+        # from now on; the backfill below runs once and only names the seed rows
+        # known to support it (it is a data fix, not a rule applied at runtime).
+        "ALTER TABLE model_catalog ADD COLUMN IF NOT EXISTS supports_reasoning BOOLEAN NOT NULL DEFAULT false",
+        """
+        DO $$
+        BEGIN
+          PERFORM pg_advisory_xact_lock(hashtext('forge-model-catalog-reasoning-v1'));
+          IF NOT EXISTS (
+            SELECT 1 FROM forge_schema_migrations WHERE version = 'model-catalog-reasoning-v1'
+          ) THEN
+            UPDATE model_catalog
+               SET supports_reasoning = true
+             WHERE slug IN (
+               'google/gemini-3.7-flash',
+               'google/gemini-3.1-pro',
+               'anthropic/claude-sonnet-5-5',
+               'anthropic/claude-sonnet-4-6',
+               'openai/gpt-5.6-terra'
+             );
+            INSERT INTO forge_schema_migrations (version) VALUES ('model-catalog-reasoning-v1');
+          END IF;
+        END $$;
+        """,
     ]
     with engine.begin() as conn:
         for sql in statements:

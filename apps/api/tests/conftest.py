@@ -53,6 +53,18 @@ def seed_image_catalog(monkeypatch):
     catalog.invalidate_image_model_cache()
 
 
+@pytest.fixture(autouse=True)
+def seed_reasoning_catalog(monkeypatch):
+    """Reasoning flags from the seed list instead of the database catalogue."""
+    from app.services.orchestration import catalog
+
+    flagged = frozenset(row["slug"] for row in catalog.CATALOG_SEED if row.get("supports_reasoning"))
+    monkeypatch.setattr(catalog, "_load_reasoning_slugs_from_db", lambda: flagged)
+    catalog.invalidate_reasoning_model_cache()
+    yield
+    catalog.invalidate_reasoning_model_cache()
+
+
 @pytest.fixture
 def project(tmp_path_factory, monkeypatch):
     """An isolated project id whose files live in a temp directory."""

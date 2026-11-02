@@ -24,6 +24,7 @@ CATALOG_SEED: list[dict] = [
         "max_output_tokens": 64_000,
         "price_in_per_m": 0.25,
         "price_out_per_m": 1.50,
+        "supports_reasoning": False,
     },
     {
         "slug": "google/gemini-3.7-flash",
@@ -35,6 +36,7 @@ CATALOG_SEED: list[dict] = [
         "max_output_tokens": 64_000,
         "price_in_per_m": 0.75,
         "price_out_per_m": 3.75,
+        "supports_reasoning": True,
     },
     {
         "slug": "google/gemini-3.1-pro",
@@ -46,6 +48,7 @@ CATALOG_SEED: list[dict] = [
         "max_output_tokens": 64_000,
         "price_in_per_m": 2.0,
         "price_out_per_m": 12.0,
+        "supports_reasoning": True,
     },
     {
         "slug": "anthropic/claude-sonnet-5-5",
@@ -57,6 +60,7 @@ CATALOG_SEED: list[dict] = [
         "max_output_tokens": 128_000,
         "price_in_per_m": 2.0,
         "price_out_per_m": 10.0,
+        "supports_reasoning": True,
     },
     {
         "slug": "anthropic/claude-sonnet-4-6",
@@ -68,6 +72,7 @@ CATALOG_SEED: list[dict] = [
         "max_output_tokens": 64_000,
         "price_in_per_m": 3.0,
         "price_out_per_m": 15.0,
+        "supports_reasoning": True,
     },
     {
         "slug": "openai/gpt-image-2",
@@ -79,6 +84,7 @@ CATALOG_SEED: list[dict] = [
         "max_output_tokens": 0,
         "price_in_per_m": None,
         "price_out_per_m": None,
+        "supports_reasoning": False,
     },
     {
         "slug": "google/gemini-3.1-flash-image",
@@ -90,6 +96,7 @@ CATALOG_SEED: list[dict] = [
         "max_output_tokens": 0,
         "price_in_per_m": None,
         "price_out_per_m": None,
+        "supports_reasoning": False,
     },
     {
         "slug": "google/gemini-3-pro-image",
@@ -101,6 +108,7 @@ CATALOG_SEED: list[dict] = [
         "max_output_tokens": 0,
         "price_in_per_m": None,
         "price_out_per_m": None,
+        "supports_reasoning": False,
     },
     {
         "slug": "openai/gpt-5.6-terra",
@@ -112,6 +120,7 @@ CATALOG_SEED: list[dict] = [
         "max_output_tokens": 64_000,
         "price_in_per_m": 2.0,
         "price_out_per_m": 12.0,
+        "supports_reasoning": True,
     },
 ]
 
@@ -165,6 +174,54 @@ def invalidate_image_model_cache() -> None:
         _image_slugs = None
 
 
+# Same pattern for the `supports_reasoning` flag: the catalogue says which models
+# take `reasoning_effort`, cached a minute. None means "unknown" (the database
+# could not be read and nothing was cached yet): the caller then falls back to
+# its built-in rule. An empty set is a real answer (no model is flagged).
+_reasoning_slugs_lock = Lock()
+_reasoning_slugs_at: float = 0.0
+_reasoning_slugs: frozenset[str] | None = None
+
+
+def _load_reasoning_slugs_from_db() -> frozenset[str]:
+    """Every catalogue slug flagged `supports_reasoning`, whatever its status."""
+    from app.db import SessionLocal
+
+    with SessionLocal() as db:
+        rows = db.query(ModelCatalog.slug).filter(ModelCatalog.supports_reasoning.is_(True)).all()
+    return frozenset(row[0] for row in rows)
+
+
+def reasoning_model_slugs() -> frozenset[str] | None:
+    """Slugs flagged as taking a reasoning effort, cached for a minute.
+
+    Returns the last good answer when a refresh fails, and None when the
+    database has never been read successfully.
+    """
+    global _reasoning_slugs_at, _reasoning_slugs
+    now = time.monotonic()
+    with _reasoning_slugs_lock:
+        if _reasoning_slugs is not None and now - _reasoning_slugs_at < _IMAGE_SLUGS_TTL_SECONDS:
+            return _reasoning_slugs
+        previous = _reasoning_slugs
+    try:
+        slugs: frozenset[str] | None = _load_reasoning_slugs_from_db()
+    except Exception:
+        logger.warning("catalog: failed to load reasoning models, using the built-in rule", exc_info=True)
+        slugs = previous
+    with _reasoning_slugs_lock:
+        _reasoning_slugs = slugs
+        _reasoning_slugs_at = now
+    return slugs
+
+
+def invalidate_reasoning_model_cache() -> None:
+    global _reasoning_slugs_at, _reasoning_slugs
+    with _reasoning_slugs_lock:
+        _reasoning_slugs_at = 0.0
+        _reasoning_slugs = None
+
+
 def is_image_model(slug: str | None) -> bool:
     """An image-generation model: the chat endpoint cannot serve it."""
     from app.config import get_settings
@@ -187,3 +244,4 @@ def seed_model_catalog(db: Session) -> None:
                 setattr(existing, key, value)
     db.commit()
     invalidate_image_model_cache()
+    invalidate_reasoning_model_cache()
