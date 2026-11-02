@@ -278,6 +278,10 @@ class ModelCatalog(Base):
     max_output_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     price_in_per_m: Mapped[float | None] = mapped_column(Float, nullable=True)
     price_out_per_m: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # The model takes `reasoning_effort` (Forge sends it only when this is set).
+    supports_reasoning: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

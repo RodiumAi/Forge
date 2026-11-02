@@ -296,12 +296,61 @@ def _network_rodium_error(exc: BaseException, locale: Locale) -> RodiumError:
     )
 
 
-# Claude models that answer 400 to any sampling parameter (Opus 4.7+, Sonnet 5+, Haiku 5+, Fable).
-_CLAUDE_NO_SAMPLING_RE = re.compile(
-    r"claude-(opus-4-[7-9]|opus-[5-9]|sonnet-[5-9]|haiku-[5-9]|fable|mythos)", re.IGNORECASE
-)
+# Same rule as the gateway: only legacy Claude keeps temperature / top_p, that is
+# Claude 1-3.x and Opus / Sonnet / Haiku 4, 4.1, 4.5 and 4.6. Every other Claude
+# model (Opus 4.7+, Sonnet 4.7+, Haiku 4.7+, 5+, Fable, Mythos...) answers 400 to
+# any sampling parameter. Dots and dashes are the same separator ("4.7" == "4-7").
+_CLAUDE_NAMED_RE = re.compile(r"claude-(?:opus|sonnet|haiku)-(\d+)(?:-(\d{1,2})(?!\d))?")
+_CLAUDE_NUMBERED_RE = re.compile(r"claude-(\d+)(?!\d)")
+_CLAUDE_LEGACY_4_MINORS = frozenset({None, "0", "1", "5", "6"})
 _CLAUDE_RE = re.compile(r"(^|[/.])claude-", re.IGNORECASE)
+
+
+def claude_rejects_sampling(model: str) -> bool:
+    """True for a Claude model that refuses temperature and top_p."""
+    name = (model or "").lower().replace(".", "-")
+    if "claude-" not in name:
+        return False
+    numbered = _CLAUDE_NUMBERED_RE.search(name)
+    if numbered:  # claude-3-5-sonnet, claude-3.7-sonnet, claude-2.1...
+        return int(numbered.group(1)) > 3
+    named = _CLAUDE_NAMED_RE.search(name)
+    if named:
+        major = int(named.group(1))
+        if major < 4:
+            return False
+        if major == 4:
+            return named.group(2) not in _CLAUDE_LEGACY_4_MINORS
+        return True
+    return True
+
+
 EFFORT_LEVELS = ("low", "medium", "high", "xhigh", "max")
+
+
+def model_supports_reasoning(model: str) -> bool:
+    """The catalogue flags this model as taking `reasoning_effort`.
+
+    Read from `model_catalog.supports_reasoning` (cached a minute). When the
+    database has never been readable, the former rule applies: Claude only.
+    May hit the database, so async code calls it through a thread.
+    """
+    from app.services.orchestration.catalog import reasoning_model_slugs
+
+    value = (model or "").strip()
+    if not value:
+        return False
+    slugs = reasoning_model_slugs()
+    if slugs is None:
+        return bool(_CLAUDE_RE.search(value))
+    return value in slugs
+
+
+async def _reasoning_flag(model: str, reasoning_effort: str | None) -> bool:
+    """Catalogue lookup off the event loop, skipped when no effort is asked."""
+    if reasoning_effort not in EFFORT_LEVELS:
+        return False
+    return await asyncio.to_thread(model_supports_reasoning, model)
 
 
 def _generation_params(
@@ -310,23 +359,27 @@ def _generation_params(
     *,
     model: str = "",
     reasoning_effort: str | None = None,
+    supports_reasoning: bool | None = None,
 ) -> dict[str, Any]:
     """Sampling fields for the OpenAI-shaped gateway payloads.
 
     Without `max_tokens` the gateway falls back to a 4096-token output cap for
     Claude and Gemini, which cut multi-file tasks in the middle of a file.
-    Recent Claude models refuse sampling parameters and take an effort level
-    instead (`reasoning_effort`, mapped to Anthropic's effort by the gateway).
-    Other models keep their temperature and get no effort, so a Gemini or
-    OpenAI route behaves as before.
+    Recent Claude models refuse sampling parameters. The effort level
+    (`reasoning_effort`, mapped per provider by the gateway) goes to every
+    model the catalogue flags `supports_reasoning`; `supports_reasoning` lets
+    an async caller pass the flag it already looked up off the event loop.
     """
     params: dict[str, Any] = {}
-    if temperature is not None and not _CLAUDE_NO_SAMPLING_RE.search(model):
+    if temperature is not None and not claude_rejects_sampling(model):
         params["temperature"] = temperature
     if max_tokens:
         params["max_tokens"] = int(max_tokens)
-    if reasoning_effort in EFFORT_LEVELS and _CLAUDE_RE.search(model):
-        params["reasoning_effort"] = reasoning_effort
+    if reasoning_effort in EFFORT_LEVELS:
+        if supports_reasoning is None:
+            supports_reasoning = model_supports_reasoning(model)
+        if supports_reasoning:
+            params["reasoning_effort"] = reasoning_effort
     return params
 
 
@@ -402,7 +455,13 @@ async def _stream_secret_chat(
         "model": model,
         "messages": messages,
         "stream": True,
-        **_generation_params(temperature, max_tokens, model=model, reasoning_effort=reasoning_effort),
+        **_generation_params(
+            temperature,
+            max_tokens,
+            model=model,
+            reasoning_effort=reasoning_effort,
+            supports_reasoning=await _reasoning_flag(model, reasoning_effort),
+        ),
     }
 
     try:
@@ -514,7 +573,13 @@ async def _stream_frodi_chat(
         "model": model,
         "messages": messages,
         "stream": True,
-        **_generation_params(temperature, max_tokens, model=model, reasoning_effort=reasoning_effort),
+        **_generation_params(
+            temperature,
+            max_tokens,
+            model=model,
+            reasoning_effort=reasoning_effort,
+            supports_reasoning=await _reasoning_flag(model, reasoning_effort),
+        ),
     }
     if actor_uid and actor_uid != billing_uid:
         payload["actor_uid"] = actor_uid
@@ -551,7 +616,8 @@ async def stream_chat_completion(
     from app.services.orchestration.catalog import is_image_model
 
     settings = get_settings()
-    if is_image_model(model):
+    # The catalogue lookup may hit the database (cached a minute): off the loop.
+    if await asyncio.to_thread(is_image_model, model):
         # A run routed to image generation still writes code with a text
         # model; the chat endpoint refuses an image model outright.
         model = settings.effective_default_model
