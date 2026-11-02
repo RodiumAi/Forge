@@ -236,6 +236,17 @@ class TestImageModelOnChat:
     """A run routed to image generation must not reach the chat endpoint with
     the image model: the provider refuses it and the user sees a server error."""
 
+    @pytest.fixture(autouse=True)
+    def catalog_images(self, monkeypatch):
+        """The database catalogue's image rows, without a database."""
+        from app.services.orchestration import catalog
+
+        slugs = set(catalog.IMAGE_MODEL_SLUGS)
+        monkeypatch.setattr(catalog, "_load_image_slugs_from_db", lambda: frozenset(slugs))
+        catalog.invalidate_image_model_cache()
+        yield slugs
+        catalog.invalidate_image_model_cache()
+
     def _chat_with(self, auth: RodiumGenerationAuth, model: str) -> str:
         async def run():
             out = []
@@ -280,3 +291,14 @@ class TestImageModelOnChat:
         assert is_image_model("acme/pixels-1")
         assert not is_image_model("google/gemini-3.7-flash")
         assert not is_image_model("")
+
+    def test_an_image_model_added_in_the_catalogue_is_swapped(self, cloud, catalog_images):
+        from app.config import get_settings
+        from app.services import platform_settings
+
+        catalog_images.add("acme/brand-new-image")
+        cloud.setattr(platform_settings, "get_platform_overrides", dict)
+        up = Upstream({"/v1/chat/completions": _sse("ok")})
+        up.install(cloud)
+        assert self._chat_with(_user(), "acme/brand-new-image") == "ok"
+        assert up.calls[0][2]["model"] == get_settings().effective_default_model

@@ -2,9 +2,15 @@
 
 from __future__ import annotations
 
+import logging
+import time
+from threading import Lock
+
 from sqlalchemy.orm import Session
 
 from app.models import ModelCatalog
+
+logger = logging.getLogger(__name__)
 
 # Stable seed — no timestamps. Order is deterministic.
 CATALOG_SEED: list[dict] = [
@@ -109,7 +115,54 @@ CATALOG_SEED: list[dict] = [
     },
 ]
 
+# Fallback only: the database catalogue (`model_catalog.role`) is the source of
+# truth, so an image model an admin adds there is recognised without a deploy.
 IMAGE_MODEL_SLUGS = frozenset(row["slug"] for row in CATALOG_SEED if row["role"] == "image")
+
+_IMAGE_SLUGS_TTL_SECONDS = 60.0
+_image_slugs_lock = Lock()
+_image_slugs_at: float = 0.0
+_image_slugs: frozenset[str] | None = None
+
+
+def _load_image_slugs_from_db() -> frozenset[str]:
+    """Every catalogue slug with the image role, whatever its status."""
+    from app.db import SessionLocal
+
+    with SessionLocal() as db:
+        rows = db.query(ModelCatalog.slug).filter(ModelCatalog.role == "image").all()
+    return frozenset(row[0] for row in rows)
+
+
+def image_model_slugs() -> frozenset[str]:
+    """Image slugs of the catalogue, cached for a minute.
+
+    Falls back to the seed list when the database cannot be read (keeping the
+    last good answer if there is one), or when the catalogue holds no image row
+    yet (a fresh clone before the seed ran).
+    """
+    global _image_slugs_at, _image_slugs
+    now = time.monotonic()
+    with _image_slugs_lock:
+        if _image_slugs is not None and now - _image_slugs_at < _IMAGE_SLUGS_TTL_SECONDS:
+            return _image_slugs
+        previous = _image_slugs
+    try:
+        slugs = _load_image_slugs_from_db() or IMAGE_MODEL_SLUGS
+    except Exception:
+        logger.warning("catalog: failed to load image models, using the seed list", exc_info=True)
+        slugs = previous or IMAGE_MODEL_SLUGS
+    with _image_slugs_lock:
+        _image_slugs = slugs
+        _image_slugs_at = now
+    return slugs
+
+
+def invalidate_image_model_cache() -> None:
+    global _image_slugs_at, _image_slugs
+    with _image_slugs_lock:
+        _image_slugs_at = 0.0
+        _image_slugs = None
 
 
 def is_image_model(slug: str | None) -> bool:
@@ -119,7 +172,7 @@ def is_image_model(slug: str | None) -> bool:
     value = (slug or "").strip()
     if not value:
         return False
-    return value in IMAGE_MODEL_SLUGS or value == get_settings().effective_default_image_model.strip()
+    return value in image_model_slugs() or value == get_settings().effective_default_image_model.strip()
 
 
 def seed_model_catalog(db: Session) -> None:
@@ -133,3 +186,4 @@ def seed_model_catalog(db: Session) -> None:
                     continue
                 setattr(existing, key, value)
     db.commit()
+    invalidate_image_model_cache()

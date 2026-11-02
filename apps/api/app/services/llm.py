@@ -296,11 +296,35 @@ def _network_rodium_error(exc: BaseException, locale: Locale) -> RodiumError:
     )
 
 
-# Claude models that answer 400 to any sampling parameter (Opus 4.7+, Sonnet 5+, Haiku 5+, Fable).
-_CLAUDE_NO_SAMPLING_RE = re.compile(
-    r"claude-(opus-4-[7-9]|opus-[5-9]|sonnet-[5-9]|haiku-[5-9]|fable|mythos)", re.IGNORECASE
-)
+# Same rule as the gateway: only legacy Claude keeps temperature / top_p, that is
+# Claude 1-3.x and Opus / Sonnet / Haiku 4, 4.1, 4.5 and 4.6. Every other Claude
+# model (Opus 4.7+, Sonnet 4.7+, Haiku 4.7+, 5+, Fable, Mythos...) answers 400 to
+# any sampling parameter. Dots and dashes are the same separator ("4.7" == "4-7").
+_CLAUDE_NAMED_RE = re.compile(r"claude-(?:opus|sonnet|haiku)-(\d+)(?:-(\d{1,2})(?!\d))?")
+_CLAUDE_NUMBERED_RE = re.compile(r"claude-(\d+)(?!\d)")
+_CLAUDE_LEGACY_4_MINORS = frozenset({None, "0", "1", "5", "6"})
 _CLAUDE_RE = re.compile(r"(^|[/.])claude-", re.IGNORECASE)
+
+
+def claude_rejects_sampling(model: str) -> bool:
+    """True for a Claude model that refuses temperature and top_p."""
+    name = (model or "").lower().replace(".", "-")
+    if "claude-" not in name:
+        return False
+    numbered = _CLAUDE_NUMBERED_RE.search(name)
+    if numbered:  # claude-3-5-sonnet, claude-3.7-sonnet, claude-2.1...
+        return int(numbered.group(1)) > 3
+    named = _CLAUDE_NAMED_RE.search(name)
+    if named:
+        major = int(named.group(1))
+        if major < 4:
+            return False
+        if major == 4:
+            return named.group(2) not in _CLAUDE_LEGACY_4_MINORS
+        return True
+    return True
+
+
 EFFORT_LEVELS = ("low", "medium", "high", "xhigh", "max")
 
 
@@ -321,7 +345,7 @@ def _generation_params(
     OpenAI route behaves as before.
     """
     params: dict[str, Any] = {}
-    if temperature is not None and not _CLAUDE_NO_SAMPLING_RE.search(model):
+    if temperature is not None and not claude_rejects_sampling(model):
         params["temperature"] = temperature
     if max_tokens:
         params["max_tokens"] = int(max_tokens)
@@ -551,7 +575,8 @@ async def stream_chat_completion(
     from app.services.orchestration.catalog import is_image_model
 
     settings = get_settings()
-    if is_image_model(model):
+    # The catalogue lookup may hit the database (cached a minute): off the loop.
+    if await asyncio.to_thread(is_image_model, model):
         # A run routed to image generation still writes code with a text
         # model; the chat endpoint refuses an image model outright.
         model = settings.effective_default_model

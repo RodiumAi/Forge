@@ -38,6 +38,21 @@ def isolated_rate_limits(monkeypatch):
     rate_limit._local_hits.clear()
 
 
+@pytest.fixture(autouse=True)
+def seed_image_catalog(monkeypatch):
+    """Image models from the seed list instead of the database catalogue.
+
+    No test has a database behind it; a test that needs other image rows
+    patches `_load_image_slugs_from_db` itself.
+    """
+    from app.services.orchestration import catalog
+
+    monkeypatch.setattr(catalog, "_load_image_slugs_from_db", lambda: catalog.IMAGE_MODEL_SLUGS)
+    catalog.invalidate_image_model_cache()
+    yield
+    catalog.invalidate_image_model_cache()
+
+
 @pytest.fixture
 def project(tmp_path_factory, monkeypatch):
     """An isolated project id whose files live in a temp directory."""
