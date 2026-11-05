@@ -467,6 +467,43 @@ const STRINGS = {
     "Account emails (verification, invites, receipts) are sent by RodiumAi.",
     "Les e-mails du compte (vérification, invitations, reçus) sont envoyés par RodiumAi.",
   ],
+  apForgeEmails: ["Forge emails", "E-mails Forge"],
+  apForgeEmailsLead: [
+    "Choose which Forge emails you receive. Everything is on by default.",
+    "Choisissez les e-mails Forge que vous recevez. Tout est activé par défaut.",
+  ],
+  apForgeEmailsBilling: ["Subscription and payment reminders", "Rappels d'abonnement et de paiement"],
+  apForgeEmailsBillingDesc: [
+    "Renewal reminders, failed payments, grace period and expiry.",
+    "Rappels de renouvellement, paiements échoués, période de grâce et expiration.",
+  ],
+  apForgeEmailsCredits: ["New FRODI credit", "Nouveau crédit FRODI"],
+  apForgeEmailsCreditsDesc: [
+    "New FRODI credit, and a low or expiring balance.",
+    "Nouveau crédit FRODI, et un solde bas ou bientôt expiré.",
+  ],
+  apForgeEmailsTeam: ["Team changes", "Changements d'équipe"],
+  apForgeEmailsTeamDesc: [
+    "When someone joins or leaves your team.",
+    "Quand quelqu'un rejoint ou quitte votre équipe.",
+  ],
+  apForgeEmailsProduct: ["Tips and offers", "Conseils et offres"],
+  apForgeEmailsProductDesc: [
+    "Getting started tips and plan offers.",
+    "Conseils pour bien démarrer et offres sur les formules.",
+  ],
+  apForgeEmailsProjects: ["Project changes", "Changements de projets"],
+  apForgeEmailsProjectsDesc: [
+    "When projects are locked after a plan change.",
+    "Quand des projets sont verrouillés après un changement de formule.",
+  ],
+  apForgeEmailsReceipts: ["Payment receipts are always sent.", "Les reçus de paiement sont toujours envoyés."],
+  apForgeEmailsSaved: ["Email preferences saved", "Préférences d'e-mail enregistrées"],
+  apForgeEmailsUnavailable: [
+    "Email preferences are not available for this account yet.",
+    "Les préférences d'e-mail ne sont pas encore disponibles pour ce compte.",
+  ],
+  apForgeEmailsLoading: ["Loading email preferences...", "Chargement des préférences d'e-mail..."],
 
   // integrations
   apIntegLead: [
