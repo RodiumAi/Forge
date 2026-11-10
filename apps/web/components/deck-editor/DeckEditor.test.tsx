@@ -262,4 +262,37 @@ describe("DeckEditor", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(t("importErrorType"));
     expect(importPptx).not.toHaveBeenCalled();
   });
+
+  it("offers \"Delete project\" in the project menu only when the page allows it", async () => {
+    localStorage.setItem("forge_locale", "fr");
+    const onDeleteProject = vi.fn();
+    const props = {
+      projectId: "p1",
+      loadTheme: async () => "",
+      assetUrl: (p: string) => p,
+      chat: null,
+      images: null,
+      badgeRemovable: false,
+      backHref: "/dashboard",
+    };
+    const { unmount } = render(
+      <I18nProvider>
+        <DeckEditor {...props} transport={new MemoryDocServer(deck, slides).transport()} onDeleteProject={onDeleteProject} />
+      </I18nProvider>,
+    );
+    await screen.findByText("Test deck");
+    fireEvent.click(screen.getByRole("button", { name: /options/i }));
+    fireEvent.click(screen.getByRole("menuitem", { name: new RegExp(t("deleteProject")) }));
+    expect(onDeleteProject).toHaveBeenCalledTimes(1);
+    unmount();
+
+    render(
+      <I18nProvider>
+        <DeckEditor {...props} transport={new MemoryDocServer(deck, slides).transport()} />
+      </I18nProvider>,
+    );
+    await screen.findByText("Test deck");
+    fireEvent.click(screen.getByRole("button", { name: /options/i }));
+    expect(screen.queryByRole("menuitem", { name: new RegExp(t("deleteProject")) })).toBeNull();
+  });
 });

@@ -5,6 +5,7 @@
  * go back to the builder at `/projects/[id]`.
  */
 
+import { useDeleteProject } from "@/components/app/DeleteProjectDialog";
 import { ShareButton } from "@/components/builder/ShareButton";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -85,6 +86,8 @@ export default function DeckEditorPage() {
     return (path: string) => projectPublicUrl(projectId, path) ?? "";
   }, [projectId, mediaToken]);
 
+  const removal = useDeleteProject(project, "/dashboard");
+
   const removable = badgeRemovable(status);
   const publisher = useMemo<DeckPublisher>(
     () => ({
@@ -107,35 +110,39 @@ export default function DeckEditorPage() {
     return <div className="de-root de-center">{t("loading")}</div>;
   }
   return (
-    <DeckEditor
-      projectId={projectId}
-      projectName={project.name}
-      transport={transport}
-      loadTheme={loadTheme}
-      assetUrl={assetUrl}
-      chat={chat}
-      images={images}
-      slideImport={slideImport}
-      badgeRemovable={removable}
-      exportMenu={
-        <ExportMenu
-          projectId={projectId}
-          projectName={project.name}
-          status={status}
-          onUpgrade={() => {
-            window.location.href = rodiumUpgradeUrl();
-          }}
-        />
-      }
-      publisher={project.access_role === "viewer" ? null : publisher}
-      readOnly={project.access_role === "viewer"}
-      share={project.access_role === "owner" ? <ShareButton projectId={projectId} projectName={project.name} /> : undefined}
-      shareLink={project.access_role === "owner" ? shareLink : null}
-      duplicate={project.access_role === "owner" ? duplicate : undefined}
-      people={project.access_role === "owner" ? undefined : project.collaborators}
-      backHref="/dashboard"
-      initialPrompt={bootPrompt}
-      onInitialPromptUsed={() => clearBootPrompt(projectId)}
-    />
+    <>
+      <DeckEditor
+        projectId={projectId}
+        projectName={project.name}
+        transport={transport}
+        loadTheme={loadTheme}
+        assetUrl={assetUrl}
+        chat={chat}
+        images={images}
+        slideImport={slideImport}
+        badgeRemovable={removable}
+        exportMenu={
+          <ExportMenu
+            projectId={projectId}
+            projectName={project.name}
+            status={status}
+            onUpgrade={() => {
+              window.location.href = rodiumUpgradeUrl();
+            }}
+          />
+        }
+        publisher={project.access_role === "viewer" ? null : publisher}
+        readOnly={project.access_role === "viewer"}
+        share={project.access_role === "owner" ? <ShareButton projectId={projectId} projectName={project.name} /> : undefined}
+        shareLink={project.access_role === "owner" ? shareLink : null}
+        duplicate={project.access_role === "owner" ? duplicate : undefined}
+        onDeleteProject={project.access_role === "owner" ? removal.request : undefined}
+        people={project.access_role === "owner" ? undefined : project.collaborators}
+        backHref="/dashboard"
+        initialPrompt={bootPrompt}
+        onInitialPromptUsed={() => clearBootPrompt(projectId)}
+      />
+      {removal.dialog}
+    </>
   );
 }
