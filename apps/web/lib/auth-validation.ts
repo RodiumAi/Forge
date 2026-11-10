@@ -9,6 +9,7 @@
 import { useCallback, useState } from "react";
 
 import type { MessageKey } from "@/lib/i18n/dictionaries";
+import { signupEmailProblem } from "@/lib/signup-email";
 
 export const MIN_PASSWORD = 8;
 
@@ -22,6 +23,14 @@ export function emailError(value: string): MessageKey | null {
   if (!value.trim()) return "lndAuthEmailRequired";
   if (!isEmail(value)) return "lndAuthEmailInvalid";
   return null;
+}
+
+/**
+ * Sign-up only: also refuses reserved and placeholder addresses (rodiumai,
+ * example.com, test@...). Never used on sign-in.
+ */
+export function signupEmailError(value: string): MessageKey | null {
+  return emailError(value) ?? (signupEmailProblem(value) ? "authEmailReserved" : null);
 }
 
 /** `minLength` 0 only checks presence (sign in), otherwise the length rule. */

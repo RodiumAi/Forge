@@ -81,6 +81,7 @@ from app.services.rodium_oidc import (
     resolve_rodium_profile,
     revoke_token,
 )
+from app.services.signup_email import signup_email_problem
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 logger = logging.getLogger("auth")
@@ -858,6 +859,12 @@ def register(body: RegisterRequest, request: Request, db: Session = Depends(get_
     rate_limit.enforce(request, "register", limit=5, window_seconds=3600)
 
     email = body.email.strip().lower()
+    # Reserved and placeholder addresses (rodiumai, example.com, test@...)
+    # never open an account; checked before any lookup or mail.
+    if signup_email_problem(email):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=t("invalid_email_address", locale)
+        )
     existing = db.query(User).filter(User.email == email).first()
     if existing is not None and existing.password_hash is None and existing.email_verified_at is None:
         existing.password_hash = hash_password(body.password)
@@ -1157,6 +1164,12 @@ async def oauth_firebase(
                 )
             user = existing
         else:
+            # Only a brand-new account is refused; an existing one keeps
+            # signing in with Google/GitHub whatever its address.
+            if signup_email_problem(identity.email):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST, detail=t("invalid_email_address", locale)
+                )
             user = User(
                 email=identity.email,
                 password_hash=None,
