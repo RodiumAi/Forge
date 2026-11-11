@@ -239,6 +239,16 @@ class TestRodiumCallbackLinking:
         # Coming through the issuer proves the address.
         assert created.email_verified_at is not None
 
+    def test_a_rodiumai_staff_account_signs_in_through_the_issuer(self, monkeypatch):
+        # The RodiumAi account already exists (created from the admin); the
+        # reserved-address rule only applies to sign-ups, not to this path.
+        db = _FakeDb()
+
+        result = _run_callback(db, monkeypatch, email="ops@rodiumai.io")
+
+        assert result.access_token == "forge-jwt"
+        assert db.users[0].email == "ops@rodiumai.io"
+
     def test_an_already_linked_account_matches_on_sub_not_email(self, monkeypatch):
         linked = _make_user("old@example.com", verified=True, rodium_sub="rodium-sub-1")
         db = _FakeDb(users=[linked])
@@ -325,12 +335,34 @@ class TestFirebaseLinking:
     def test_it_creates_a_verified_account_when_nothing_matches(self, monkeypatch):
         db = _FakeDb()
 
-        result = _run_firebase(db, monkeypatch)
+        result = _run_firebase(db, monkeypatch, identity=_identity(email="ada@lovelace.dev"))
 
         assert result.email_verified is True
         created = db.users[0]
         assert created.password_hash is None
         assert created.email_verified_at is not None
+
+    @pytest.mark.parametrize("email", ["ops@rodiumai.io", "test@gmail.com", "jane@example.com"])
+    def test_it_refuses_to_create_an_account_for_a_reserved_address(self, monkeypatch, email):
+        db = _FakeDb()
+
+        with pytest.raises(HTTPException) as exc:
+            _run_firebase(db, monkeypatch, identity=_identity(email=email))
+
+        assert exc.value.status_code == 400
+        assert exc.value.detail == "Merci d'entrer une adresse email valide."
+        assert db.users == []
+        assert db.links == []
+
+    def test_an_existing_rodiumai_account_still_signs_in(self, monkeypatch):
+        staff = _make_user("ops@rodiumai.io", verified=True)
+        db = _FakeDb(users=[staff])
+
+        result = _run_firebase(db, monkeypatch, identity=_identity(email="ops@rodiumai.io"))
+
+        assert result.access_token == "forge-jwt"
+        assert len(db.users) == 1
+        assert db.links[0].user_id == staff.id
 
     def test_it_reports_503_when_firebase_is_not_configured(self, monkeypatch):
         monkeypatch.setattr(firebase_auth, "enabled", lambda: False)
@@ -399,13 +431,13 @@ class TestVerificationGate:
         monkeypatch.setattr(auth_mod, "_send_verification_email", lambda *a, **k: sent.append(a))
 
         with pytest.raises(HTTPException) as exc:
-            _run_firebase(db, monkeypatch, identity=_identity(verified=False))
+            _run_firebase(db, monkeypatch, identity=_identity("ada@lovelace.dev", verified=False))
 
         assert exc.value.status_code == 403
         # ...but a link goes out, so they are not stuck.
         assert len(sent) == 1
 
     def test_a_verified_social_account_still_gets_one(self, monkeypatch):
-        result = _run_firebase(_FakeDb(), monkeypatch)
+        result = _run_firebase(_FakeDb(), monkeypatch, identity=_identity("ada@lovelace.dev"))
         assert result.access_token == "forge-jwt"
         assert result.email_verified is True
