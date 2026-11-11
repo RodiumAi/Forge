@@ -3,9 +3,11 @@
 import { FileText } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { useDeleteProject } from "@/components/app/DeleteProjectDialog";
 import { ShareButton } from "@/components/builder/ShareButton";
 import { WorkspaceBar } from "@/components/builder/WorkspaceBar";
 import { Icon } from "@/components/ui/icon";
+import { MenuItem } from "@/components/ui/Popover";
 import { ContextMenu, copyText, useContextMenu, useMenuTrigger } from "@/components/ui/ContextMenu";
 import { designSystemSchema } from "@/lib/contracts/forge-design";
 import { clearBootPrompt, peekBootPrompt } from "@/lib/create-project";
@@ -191,6 +193,10 @@ export function DesignSystemEditor({ projectId }: { projectId: string }) {
     );
   });
 
+  // Only the owner deletes the design system (the project behind it).
+  const owner = !!item?.owner.mine;
+  const removal = useDeleteProject(owner ? { id: projectId, name: doc?.name || item?.name || "" } : null, "/dashboard?tab=design_systems");
+
   if (loadError) return <div className="dse-page dse-error">{loadError}</div>;
   if (!doc) return <div className="dse-page dse-muted">{t("dsLoading")}</div>;
 
@@ -239,6 +245,23 @@ export function DesignSystemEditor({ projectId }: { projectId: string }) {
                 return next.slice(0, 120);
               }
         }
+        menu={
+          owner
+            ? (close) => (
+                <MenuItem
+                  icon="trash"
+                  danger
+                  hint={t("dsDeleteProjectHint")}
+                  onClick={() => {
+                    close();
+                    removal.request();
+                  }}
+                >
+                  {t("dsDeleteProject")}
+                </MenuItem>
+              )
+            : undefined
+        }
         saveStatus={
           <span className={`dse-save is-${save}`} role="status">
             {save === "idle" ? "" : t(`dsSave_${save}` as MessageKey)}
@@ -260,6 +283,7 @@ export function DesignSystemEditor({ projectId }: { projectId: string }) {
           />
         }
       />
+      {removal.dialog}
       {item?.owner.mine ? <ShareButton projectId={projectId} projectName={doc.name} request={inviteRequest} hideButton /> : null}
       {notice ? (
         <p className="dse-notice" role="status">
