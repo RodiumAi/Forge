@@ -301,6 +301,33 @@ class PaymentCountryOut(BaseModel):
     iso2: str | None = None
 
 
+class EmailPreferencesValues(BaseModel):
+    forge_billing: bool = True
+    forge_credits: bool = True
+    forge_team: bool = True
+    forge_product: bool = True
+    forge_projects: bool = True
+
+
+class EmailPreferencesOut(BaseModel):
+    #: False when the account has no RodiumAi link or the platform cannot
+    #: answer yet. The page then shows `message` instead of the switches.
+    available: bool
+    reason: str | None = None
+    message: str | None = None
+    preferences: EmailPreferencesValues | None = None
+
+
+class EmailPreferencesUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    forge_billing: bool | None = None
+    forge_credits: bool | None = None
+    forge_team: bool | None = None
+    forge_product: bool | None = None
+    forge_projects: bool | None = None
+
+
 class RodiumKeyOut(BaseModel):
     configured: bool
     managed: bool = False

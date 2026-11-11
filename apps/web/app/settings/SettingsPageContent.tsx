@@ -8,6 +8,7 @@ import "@/styles/forge/pages.css";
 import { legacySettingsAnchor } from "@/components/app/legacy-routes";
 import { ConsentSettingsBlock } from "@/components/consent/ConsentSettingsBlock";
 import { RodiumGenerationPanel } from "@/components/RodiumGenerationPanel";
+import { ForgeEmailPreferences } from "@/components/settings/ForgeEmailPreferences";
 import { AppShell } from "@/components/shell/AppShell";
 import { Avatar } from "@/components/ui/Avatar";
 import { Tag } from "@/components/ui/Badge";
@@ -354,6 +355,7 @@ export default function SettingsPageContent() {
                       <ConsentSettingsBlock />
                     </>
                   ) : null}
+                  <ForgeEmailPreferences />
                 </Panel>
               </section>
             </>
