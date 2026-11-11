@@ -11,6 +11,9 @@ from app.db import get_db
 from app.i18n import resolve_locale, t
 from app.models import User, UserSettings
 from app.schemas import (
+    EmailPreferencesOut,
+    EmailPreferencesUpdate,
+    EmailPreferencesValues,
     PaymentCountryOut,
     PaymentCountryUpdate,
     RodiumKeyOut,
@@ -20,6 +23,11 @@ from app.schemas import (
     RodiumWalletByKeyOut,
     SettingsOut,
     SettingsUpdate,
+)
+from app.services.email_preferences import (
+    EmailPreferencesUnavailable,
+    read_preferences,
+    write_preferences,
 )
 from app.services.llm import RodiumError
 from app.services.rodium import fetch_wallet_balance_by_api_key, verify_rodium_api_key
@@ -123,6 +131,64 @@ async def _remember_platform_country(access: str, iso2: str) -> None:
             json={"countryIso2": iso2},
             headers={"Authorization": f"Bearer {access}"},
         )
+
+
+_PREF_FIELDS = {
+    "forge_billing": "forgeBilling",
+    "forge_credits": "forgeCredits",
+    "forge_team": "forgeTeam",
+    "forge_product": "forgeProduct",
+    "forge_projects": "forgeProjects",
+}
+
+_UNAVAILABLE_MESSAGE = {
+    "not_linked": "email_prefs_not_linked",
+    "not_available": "email_prefs_unavailable",
+    "unreachable": "email_prefs_unreachable",
+}
+
+
+def _preferences_out(values: dict[str, bool]) -> EmailPreferencesOut:
+    return EmailPreferencesOut(
+        available=True,
+        preferences=EmailPreferencesValues(**{snake: values[camel] for snake, camel in _PREF_FIELDS.items()}),
+    )
+
+
+@router.get("/email-preferences", response_model=EmailPreferencesOut)
+def get_email_preferences(
+    request: Request,
+    user: User = Depends(get_current_user),
+) -> EmailPreferencesOut:
+    """Which Forge emails this person receives. Stored on the RodiumAi account."""
+    try:
+        return _preferences_out(read_preferences(user))
+    except EmailPreferencesUnavailable as exc:
+        locale = resolve_locale(request)
+        return EmailPreferencesOut(
+            available=False,
+            reason=exc.reason,
+            message=t(_UNAVAILABLE_MESSAGE[exc.reason], locale),
+        )
+
+
+@router.patch("/email-preferences", response_model=EmailPreferencesOut)
+def update_email_preferences(
+    body: EmailPreferencesUpdate,
+    request: Request,
+    user: User = Depends(get_current_user),
+) -> EmailPreferencesOut:
+    locale = resolve_locale(request)
+    changes = {
+        camel: value for snake, camel in _PREF_FIELDS.items() if (value := getattr(body, snake)) is not None
+    }
+    if not changes:
+        raise HTTPException(status_code=422, detail=t("email_prefs_empty", locale))
+    try:
+        return _preferences_out(write_preferences(user, changes))
+    except EmailPreferencesUnavailable as exc:
+        status = 503 if exc.reason == "unreachable" else 409
+        raise HTTPException(status_code=status, detail=t(_UNAVAILABLE_MESSAGE[exc.reason], locale)) from None
 
 
 @router.get("/rodium", response_model=RodiumKeyOut)

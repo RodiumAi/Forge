@@ -5,6 +5,7 @@
  * kinds go to their own editor.
  */
 
+import { deleteProject } from "@/components/app/DeleteProjectDialog";
 import { ShareButton } from "@/components/builder/ShareButton";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -19,7 +20,6 @@ import { badgeRemovable, publishDeck } from "@/lib/deck-exports";
 import { useForgeStatus } from "@/lib/forge-status";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { editorHref, type ProjectKindId } from "@/lib/kinds";
-import { removeProject } from "@/lib/lists-cache";
 import { useMediaToken } from "@/lib/media-token";
 
 type Project = {
@@ -82,10 +82,8 @@ export default function CodelabEditorPage() {
     [projectId, removable],
   );
 
-  const deleteProject = useCallback(async () => {
-    await api(`/projects/${projectId}`, { method: "DELETE" });
-    clearBootPrompt(projectId);
-    removeProject(locale, projectId);
+  const removeThisProject = useCallback(async () => {
+    await deleteProject(projectId, locale);
     router.replace("/dashboard");
   }, [projectId, locale, router]);
 
@@ -112,7 +110,7 @@ export default function CodelabEditorPage() {
       backHref="/dashboard"
       initialPrompt={bootPrompt}
       onInitialPromptUsed={() => clearBootPrompt(projectId)}
-      onDelete={project.access_role === "owner" ? deleteProject : undefined}
+      onDelete={project.access_role === "owner" ? removeThisProject : undefined}
       publicUrl={project.published_at && project.sites_url ? project.sites_url : undefined}
       share={project.access_role === "owner" ? <ShareButton projectId={projectId} projectName={project.name} /> : undefined}
       people={project.access_role === "owner" ? undefined : project.collaborators}

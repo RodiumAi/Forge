@@ -5,16 +5,16 @@ import { useEffect, useState, type ReactNode } from "react";
 
 import { ShareProjectModal } from "@/components/builder/ShareProjectModal";
 import { useFavorites, useLastOpened } from "@/components/home/use-home-prefs";
-import { invalidateThumbCache } from "@/components/SiteThumb";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { Field, Input } from "@/components/ui/Input";
 import { api, ApiError } from "@/lib/api";
 import { shareSeatLimit, useForgeStatus } from "@/lib/forge-status";
 import { useI18n } from "@/lib/i18n/I18nProvider";
-import { patchProject, prependProject, removeProject } from "@/lib/lists-cache";
+import { patchProject, prependProject } from "@/lib/lists-cache";
 import { getSessionSnapshot, subscribeSession } from "@/lib/session-cache";
 
+import { DeleteProjectDialog } from "./DeleteProjectDialog";
 import { projectHref, type AppProject } from "./project-data";
 import type { ProjectCardActions } from "./ProjectCard";
 import { useToast } from "./useToast";
@@ -59,53 +59,6 @@ function RenameDialog({ project, onClose, onSaved }: { project: AppProject; onCl
       >
         <Field label={t("homeRenameLabel")} error={error}>
           <Input data-autofocus value={value} onChange={(e) => setValue(e.target.value)} maxLength={200} disabled={busy} />
-        </Field>
-      </form>
-    </Dialog>
-  );
-}
-
-function DeleteDialog({ project, onClose, onDeleted }: { project: AppProject; onClose: () => void; onDeleted: () => void }) {
-  const { t } = useI18n();
-  const [confirm, setConfirm] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const ok = confirm.trim() === project.name.trim();
-  return (
-    <Dialog
-      open
-      onClose={() => !busy && onClose()}
-      title={t("homeDeleteTitle").replace("{name}", project.name)}
-      description={t("optionsDangerHelp")}
-      closeLabel={t("uiClose")}
-      footer={
-        <>
-          <Button variant="ghost" onClick={onClose} disabled={busy}>
-            {t("homeCancel")}
-          </Button>
-          <Button variant="danger" type="submit" form="f-delete-form" icon="trash" loading={busy} disabled={!ok}>
-            {busy ? t("optionsDangerDeleting") : t("optionsDangerDelete")}
-          </Button>
-        </>
-      }
-    >
-      <form
-        id="f-delete-form"
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (!ok || busy) return;
-          setBusy(true);
-          setError(null);
-          api(`/projects/${project.id}`, { method: "DELETE" })
-            .then(onDeleted)
-            .catch((err: unknown) => {
-              setError(err instanceof Error ? err.message : t("errorGeneric"));
-              setBusy(false);
-            });
-        }}
-      >
-        <Field label={t("optionsDangerConfirm").replace("{name}", project.name)} error={error}>
-          <Input data-autofocus value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="off" disabled={busy} />
         </Field>
       </form>
     </Dialog>
@@ -195,12 +148,10 @@ export function useProjectActions(onChange: (change: { removed?: string; added?:
         />
       ) : null}
       {deleting ? (
-        <DeleteDialog
+        <DeleteProjectDialog
           project={deleting}
           onClose={() => setDeleting(null)}
           onDeleted={() => {
-            removeProject(locale, deleting.id);
-            invalidateThumbCache(deleting.id);
             onChange({ removed: deleting.id });
             setDeleting(null);
             notify(t("apDeleted"), "trash");

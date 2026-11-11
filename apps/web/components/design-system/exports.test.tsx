@@ -14,6 +14,13 @@ vi.mock("@/lib/forge-status", async (importOriginal) => {
   return { ...actual, useForgeStatus: () => currentStatus };
 });
 
+// The editor's "delete project" action uses the app router.
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace: vi.fn(), push: vi.fn(), refresh: vi.fn() }),
+  usePathname: () => "/projects/p1",
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 vi.mock("./api", () => ({
   loadDocument: vi.fn(async () => ({
     doc: JSON.parse(

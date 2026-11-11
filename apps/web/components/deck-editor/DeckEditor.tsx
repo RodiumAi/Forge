@@ -125,6 +125,8 @@ export type DeckEditorProps = {
   shareLink?: ShareLinkClient | null;
   /** Copies the project (owner only); resolves once the copy is open, rejects with a message. */
   duplicate?: () => Promise<void>;
+  /** Opens the "delete project" confirmation (owner only); hidden when absent. */
+  onDeleteProject?: () => void;
   /** Who else works on the deck, shown to guests. */
   people?: WorkspacePerson[];
   readOnly?: boolean;
@@ -923,6 +925,19 @@ export function DeckEditor(props: DeckEditorProps) {
                   }}
                 >
                   {t("duplicateProject")}
+                </MenuItem>
+              ) : null}
+              {props.onDeleteProject ? (
+                <MenuItem
+                  icon="trash"
+                  danger
+                  hint={t("deleteProjectHint")}
+                  onClick={() => {
+                    close();
+                    props.onDeleteProject?.();
+                  }}
+                >
+                  {t("deleteProject")}
                 </MenuItem>
               ) : null}
               <MenuSeparator />

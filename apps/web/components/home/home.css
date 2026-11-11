@@ -779,21 +779,13 @@
   height: fit-content;
 }
 
+/* Always visible, on desktop too: the star and the menu are the card's actions. */
 .fdh-card-tools {
   position: absolute;
   top: 0.45rem;
   right: 0.45rem;
   display: flex;
   gap: 0.2rem;
-  opacity: 0;
-  transition: opacity 0.15s ease;
-}
-
-.fdh-card:hover .fdh-card-tools,
-.fdh-card:focus-within .fdh-card-tools,
-.fdh-card-tools:has(.fdh-star.is-on),
-.fdh-card-tools:has([aria-expanded="true"]) {
-  opacity: 1;
 }
 
 .fdh-card-tools .fdh-icon-btn {
@@ -1063,23 +1055,12 @@
     display: none;
   }
 
-  /* No hover on touch: the star and the menu stay visible. */
-  .fdh-card-tools {
-    opacity: 1;
-  }
-
   .fdh-send .lp-send-label {
     display: none;
   }
 
   .fdh-ds-current {
     max-width: 6rem;
-  }
-}
-
-@media (hover: none) {
-  .fdh-card-tools {
-    opacity: 1;
   }
 }
 

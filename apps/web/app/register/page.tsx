@@ -27,7 +27,7 @@ import { Input } from "@/components/ui/Input";
 import { api, getToken } from "@/lib/api";
 import {
   MIN_PASSWORD,
-  emailError,
+  signupEmailError,
   focusFirstInvalid,
   passwordError,
   requiredError,
@@ -84,7 +84,7 @@ function RegisterInner() {
     event.preventDefault();
     check.markSubmitted();
     const errs: [string, unknown][] = [
-      ["register-email", emailError(email)],
+      ["register-email", signupEmailError(email)],
       ["register-name", requiredError(name, "lndAuthNameRequired")],
       ["register-password", passwordError(password, MIN_PASSWORD)],
     ];
@@ -124,7 +124,7 @@ function RegisterInner() {
     );
   }
 
-  const emailErr = check.show("email") ? emailError(email) : null;
+  const emailErr = check.show("email") ? signupEmailError(email) : null;
   const nameErr = check.show("name") ? requiredError(name, "lndAuthNameRequired") : null;
   const passErr = check.show("password") ? passwordError(password, MIN_PASSWORD) : null;
   const emailOk = !lockedEmail && check.show("email") && !emailErr ? t("lndAuthEmailOk") : null;
