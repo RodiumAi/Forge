@@ -68,6 +68,7 @@ from app.services.orchestration.router import (
     strip_attachment_noise,
 )
 from app.services.orchestration.stale_runs import expire_if_stale
+from app.services.plan_models import bind_plan_models
 from app.services.rodium_generation import resolve_generation_auth
 from app.services.sse import with_sse_heartbeats
 from app.services.tags import op_text, parse_forge_tags
@@ -1105,7 +1106,7 @@ def get_active_run(
     )
 
 
-@router.post("/projects/{project_id}/chats/{chat_id}/messages")
+@router.post("/projects/{project_id}/chats/{chat_id}/messages", dependencies=[Depends(bind_plan_models)])
 async def send_message(
     project_id: UUID,
     chat_id: UUID,
@@ -1536,7 +1537,9 @@ async def send_message(
     return _event_stream(plan_stream())
 
 
-@router.post("/projects/{project_id}/chats/{chat_id}/runs/{run_id}/clarify")
+@router.post(
+    "/projects/{project_id}/chats/{chat_id}/runs/{run_id}/clarify", dependencies=[Depends(bind_plan_models)]
+)
 async def submit_clarify(
     project_id: UUID,
     chat_id: UUID,
@@ -1672,7 +1675,10 @@ async def submit_clarify(
     return _event_stream(stream())
 
 
-@router.post("/projects/{project_id}/chats/{chat_id}/runs/{run_id}/confirm-plan")
+@router.post(
+    "/projects/{project_id}/chats/{chat_id}/runs/{run_id}/confirm-plan",
+    dependencies=[Depends(bind_plan_models)],
+)
 async def confirm_plan(
     project_id: UUID,
     chat_id: UUID,
@@ -1810,7 +1816,9 @@ def cancel_run(
     return {"ok": True}
 
 
-@router.post("/projects/{project_id}/chats/{chat_id}/messages/branch")
+@router.post(
+    "/projects/{project_id}/chats/{chat_id}/messages/branch", dependencies=[Depends(bind_plan_models)]
+)
 async def branch_messages(
     project_id: UUID,
     chat_id: UUID,

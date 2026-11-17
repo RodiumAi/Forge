@@ -36,6 +36,7 @@ from app.services.capabilities import require_rodi_for_paid_capability
 from app.services.document_scaffold import apply_design_system
 from app.services.filesystem import list_files, project_dir, write_bytes
 from app.services.frodi_cycle import current_frodi_cycle_key
+from app.services.plan_models import bind_plan_models
 from app.services.posthog_client import capture_for_user
 from app.services.project_access import accessible_project
 from app.services.project_delete import delete_project_full, purge_site_prefix
@@ -388,7 +389,7 @@ def _guard_new_project(request: Request, user: User, db: Session, locale: str) -
         )
 
 
-@router.post("", response_model=ProjectOut, status_code=201)
+@router.post("", response_model=ProjectOut, status_code=201, dependencies=[Depends(bind_plan_models)])
 async def create_project(
     body: ProjectCreate,
     request: Request,
@@ -988,7 +989,7 @@ async def put_project_thumbnail(
     return {"ok": True, "has_thumbnail": True, "updated_at": project.updated_at.isoformat()}
 
 
-@router.post("/{project_id}/security-review")
+@router.post("/{project_id}/security-review", dependencies=[Depends(bind_plan_models)])
 async def security_review_project(
     project_id: UUID,
     request: Request,

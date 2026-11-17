@@ -30,6 +30,7 @@ from app.services.email_preferences import (
     write_preferences,
 )
 from app.services.llm import RodiumError
+from app.services.plan_models import plan_default_model
 from app.services.rodium import fetch_wallet_balance_by_api_key, verify_rodium_api_key
 from app.services.rodium_generation import has_generation_key
 
@@ -39,7 +40,7 @@ router = APIRouter(prefix="/settings", tags=["settings"])
 def _get_or_create_settings(db: Session, user: User) -> UserSettings:
     settings_row = db.get(UserSettings, user.id)
     if settings_row is None:
-        settings_row = UserSettings(user_id=user.id, default_model=get_settings().effective_default_model)
+        settings_row = UserSettings(user_id=user.id, default_model=plan_default_model(db, user))
         db.add(settings_row)
         db.commit()
         db.refresh(settings_row)

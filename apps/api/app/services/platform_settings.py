@@ -84,6 +84,9 @@ def invalidate_platform_settings_cache() -> None:
     global _cache_at, _cache_overrides
     _cache_at = 0.0
     _cache_overrides = None
+    from app.services.plan_models import invalidate_plan_models_cache
+
+    invalidate_plan_models_cache()
 
 
 def effective_model(key: PlatformModelKey, env_fallback: str) -> str:
