@@ -335,6 +335,7 @@ def init_db() -> None:
         "ALTER TABLE forge_entitlement_cache ADD COLUMN IF NOT EXISTS export_pptx BOOLEAN NOT NULL DEFAULT false",
         "ALTER TABLE forge_entitlement_cache ADD COLUMN IF NOT EXISTS remove_badge BOOLEAN NOT NULL DEFAULT false",
         "ALTER TABLE forge_entitlement_cache ADD COLUMN IF NOT EXISTS design_system_sharing BOOLEAN NOT NULL DEFAULT false",
+        "ALTER TABLE forge_entitlement_cache ADD COLUMN IF NOT EXISTS default_models TEXT",
         """
         CREATE TABLE IF NOT EXISTS project_collaborators (
             project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,

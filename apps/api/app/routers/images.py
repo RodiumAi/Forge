@@ -28,6 +28,7 @@ from app.services import image_bank, rate_limit
 from app.services.capabilities import require_rodi_for_paid_capability
 from app.services.llm import ERR_QUOTA, RodiumError
 from app.services.orchestration.images import generate_project_image
+from app.services.plan_models import bind_plan_models
 from app.services.project_access import accessible_project
 from app.services.project_media import record_media, save_webp_with_variants
 from app.services.rodium_generation import resolve_generation_auth
@@ -163,7 +164,7 @@ async def search_images(
     return ImageSearchOut.model_validate(result)
 
 
-@router.get("/images/models", response_model=list[ImageModelOut])
+@router.get("/images/models", response_model=list[ImageModelOut], dependencies=[Depends(bind_plan_models)])
 def list_image_models(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -260,7 +261,11 @@ async def import_uploaded_image(
     )
 
 
-@router.post("/projects/{project_id}/images/generate", response_model=ProjectImageOut)
+@router.post(
+    "/projects/{project_id}/images/generate",
+    response_model=ProjectImageOut,
+    dependencies=[Depends(bind_plan_models)],
+)
 async def generate_image(
     project_id: UUID,
     body: ImageGenerateRequest,

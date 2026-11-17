@@ -67,6 +67,10 @@ def upsert_entitlements(db: Session, user: User, payload: dict) -> ForgeEntitlem
     row.design_system_sharing = bool(ents.get("design_system_sharing"))
     tiers = ents.get("allowed_model_tiers")
     row.allowed_model_tiers = json.dumps(tiers) if isinstance(tiers, list) else None
+    from app.services.plan_models import clean_default_models
+
+    defaults = clean_default_models(ents.get("default_models"))
+    row.default_models = json.dumps(defaults, sort_keys=True) if defaults else None
     try:
         row.frodi_balance = int(float(payload.get("frodi") or 0))
     except (TypeError, ValueError):

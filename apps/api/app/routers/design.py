@@ -21,6 +21,7 @@ from app.services.design_colors import apply_brand_color, merge_palettes, parse_
 from app.services.filesystem import project_dir, read_file, write_bytes, write_file
 from app.services.llm import RodiumError
 from app.services.orchestration.context import DESIGN_PATH
+from app.services.plan_models import bind_plan_models
 from app.services.rodium_generation import resolve_generation_auth
 
 router = APIRouter(prefix="/projects", tags=["design"])
@@ -244,7 +245,11 @@ def patch_design_color(
     )
 
 
-@router.post("/{project_id}/design-charter", response_model=DesignCharterResponse)
+@router.post(
+    "/{project_id}/design-charter",
+    response_model=DesignCharterResponse,
+    dependencies=[Depends(bind_plan_models)],
+)
 async def generate_design_charter(
     project_id: UUID,
     body: DesignCharterRequest,
