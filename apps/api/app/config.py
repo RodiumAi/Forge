@@ -427,27 +427,39 @@ class Settings(BaseSettings):
 
     @property
     def effective_default_model(self) -> str:
+        from app.services.plan_models import active_plan_model
         from app.services.platform_settings import effective_model
 
-        return effective_model("default_model", self.default_model)
+        # Plan default bound to this request (admin "Defaults by plan"), else global.
+        return active_plan_model("default_model") or effective_model("default_model", self.default_model)
 
     @property
     def effective_default_image_model(self) -> str:
+        from app.services.plan_models import active_plan_model
         from app.services.platform_settings import effective_model
 
-        return effective_model("default_image_model", self.default_image_model)
+        # Plan default bound to this request (admin "Defaults by plan"), else global.
+        return active_plan_model("default_image_model") or effective_model(
+            "default_image_model", self.default_image_model
+        )
 
     @property
     def effective_lite_model(self) -> str:
+        from app.services.plan_models import active_plan_model
         from app.services.platform_settings import effective_model
 
-        return effective_model("lite_model", self.lite_model)
+        # Plan default bound to this request (admin "Defaults by plan"), else global.
+        return active_plan_model("lite_model") or effective_model("lite_model", self.lite_model)
 
     @property
     def effective_escalation_model(self) -> str:
+        from app.services.plan_models import active_plan_model
         from app.services.platform_settings import effective_model
 
-        return effective_model("escalation_model", self.escalation_model)
+        # Plan default bound to this request (admin "Defaults by plan"), else global.
+        return active_plan_model("escalation_model") or effective_model(
+            "escalation_model", self.escalation_model
+        )
 
 
 _DEV_SECRET_KEYS = {"dev-secret-change-me", "dev-secret-forge-web", "", None}

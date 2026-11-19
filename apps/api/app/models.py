@@ -420,6 +420,8 @@ class ForgeEntitlementCache(Base):
     history_limit: Mapped[int | None] = mapped_column(Integer, nullable=True)
     priority_generation: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     allowed_model_tiers: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Per-plan model defaults (JSON object, see services/plan_models.py).
+    default_models: Mapped[str | None] = mapped_column(Text, nullable=True)
     frodi_balance: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     # Forge Design rights.
     export_pdf: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

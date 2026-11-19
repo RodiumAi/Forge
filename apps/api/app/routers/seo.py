@@ -14,6 +14,7 @@ from app.models import Project, User
 from app.services.capabilities import require_rodi_for_paid_capability
 from app.services.llm import RodiumError, complete_chat
 from app.services.orchestration.images import request_image_bytes
+from app.services.plan_models import bind_plan_models
 from app.services.project_access import accessible_project
 from app.services.rodium_generation import resolve_generation_auth
 from app.services.seo_meta import (
@@ -194,7 +195,9 @@ async def upload_seo_asset(
     )
 
 
-@router.post("/{project_id}/seo/generate-copy", response_model=SeoMetaOut)
+@router.post(
+    "/{project_id}/seo/generate-copy", response_model=SeoMetaOut, dependencies=[Depends(bind_plan_models)]
+)
 async def generate_seo_copy(
     project_id: UUID,
     request: Request,
@@ -275,7 +278,11 @@ async def generate_seo_copy(
     return _to_out(current)
 
 
-@router.post("/{project_id}/seo/generate-image", response_model=SeoAssetResponse)
+@router.post(
+    "/{project_id}/seo/generate-image",
+    response_model=SeoAssetResponse,
+    dependencies=[Depends(bind_plan_models)],
+)
 async def generate_seo_image(
     project_id: UUID,
     request: Request,
