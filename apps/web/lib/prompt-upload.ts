@@ -58,7 +58,8 @@ export async function uploadPromptAttachments(
     }
     const fd = new FormData();
     fd.append("file", item.file);
-    const uploadUrl = `${apiBase()}/projects/${projectId}/files/upload`;
+    // purpose=prompt: the API applies the chat limit (6 MB) instead of the asset one.
+    const uploadUrl = `${apiBase()}/projects/${projectId}/files/upload?purpose=prompt`;
     const report = (pct: number) => onProgress?.(item.id, pct);
     let res: { status: number; body: string };
     try {
