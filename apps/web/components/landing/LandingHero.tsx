@@ -161,8 +161,10 @@ export function LandingHero({ templates }: { templates: GalleryTemplate[] }) {
 
   function addFiles(list: File[]) {
     setFiles((prev) => {
-      const { next, rejected } = mergePromptAttachments(prev, list);
-      setFileError(rejected.length ? t("promptFileTypeError") : null);
+      const { next, rejected, tooLarge } = mergePromptAttachments(prev, list);
+      setFileError(
+        rejected.length ? t("promptFileTypeError") : tooLarge.length ? t("promptFileTooLarge") : null,
+      );
       return next;
     });
   }

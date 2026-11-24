@@ -1232,9 +1232,12 @@ export default function ProjectPage() {
           setFileError(
             t("promptFilesTooMany").replace("{max}", String(MAX_PROMPT_FILES)),
           );
-        } else if (added === 0 && result.rejected.length > 0) {
+        } else if (result.rejected.length > 0) {
           setFileNotice(null);
           setFileError(t("promptFileTypeError"));
+        } else if (result.tooLarge.length > 0) {
+          setFileNotice(null);
+          setFileError(t("promptFileTooLarge"));
         }
         return result.next;
       });

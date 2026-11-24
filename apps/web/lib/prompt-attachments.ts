@@ -8,8 +8,16 @@ import {
 
 export const MAX_PROMPT_FILES = 5;
 
+/** Largest file a prompt accepts. Bigger mockups failed the generation. */
+export const MAX_PROMPT_FILE_BYTES = 6 * 1024 * 1024;
+
+/**
+ * New attachments are images (read by the model) and Markdown (read here and
+ * sent as text). PDF and plain text are no longer accepted: a PDF mockup is
+ * not readable as a design and its extracted text was mostly noise.
+ */
 export const PROMPT_FILE_ACCEPT =
-  ".md,.markdown,.txt,.pdf,.png,.jpg,.jpeg,.gif,.webp,.ico,image/png,image/jpeg,image/gif,image/webp,image/x-icon,image/vnd.microsoft.icon,text/markdown,text/plain,application/pdf";
+  ".md,.markdown,.png,.jpg,.jpeg,.gif,.webp,.ico,image/png,image/jpeg,image/gif,image/webp,image/x-icon,image/vnd.microsoft.icon,text/markdown";
 
 export type PromptAttachmentKind = "image" | "md" | "pdf" | "txt";
 
@@ -118,18 +126,12 @@ export function promptAttachmentKind(file: File): PromptAttachmentKind | null {
   if (type === "text/markdown" || type === "text/x-markdown" || ext === "md" || ext === "markdown") {
     return "md";
   }
-  if (type === "text/plain" || ext === "txt") {
-    return "txt";
-  }
-  if (type === "application/pdf" || ext === "pdf") {
-    return "pdf";
-  }
   return null;
 }
 
 export function createPromptAttachment(file: File): LocalPromptAttachment | null {
   const kind = promptAttachmentKind(file);
-  if (!kind) return null;
+  if (!kind || file.size > MAX_PROMPT_FILE_BYTES) return null;
   return {
     source: "local",
     id: `${file.name}-${file.size}-${file.lastModified}-${Math.random().toString(36).slice(2, 8)}`,
@@ -179,15 +181,20 @@ export function mergePromptAttachments(
   prev: PromptAttachment[],
   incoming: FileList | File[],
   max = MAX_PROMPT_FILES,
-): { next: PromptAttachment[]; rejected: string[]; overflow: string[] } {
+): { next: PromptAttachment[]; rejected: string[]; tooLarge: string[]; overflow: string[] } {
   const next = [...prev];
   const rejected: string[] = [];
+  const tooLarge: string[] = [];
   // Files dropped because the cap was reached used to vanish with no message.
   const overflow: string[] = [];
   for (const file of Array.from(incoming)) {
     const kind = promptAttachmentKind(file);
     if (!kind) {
       rejected.push(file.name);
+      continue;
+    }
+    if (file.size > MAX_PROMPT_FILE_BYTES) {
+      tooLarge.push(file.name);
       continue;
     }
     if (next.length >= max) {
@@ -197,7 +204,7 @@ export function mergePromptAttachments(
     const created = createPromptAttachment(file);
     if (created) next.push(created);
   }
-  return { next, rejected, overflow };
+  return { next, rejected, tooLarge, overflow };
 }
 
 async function readTextFile(file: File): Promise<string> {
