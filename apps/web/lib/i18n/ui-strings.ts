@@ -29,7 +29,7 @@ export const uiEn = {
 
   uiComposerLabel: "Describe what you want to make",
   uiAttach: "Attach",
-  uiAttachHint: "File (PDF, DOCX, PPTX, image)",
+  uiAttachHint: "Image or Markdown file (6 MB max)",
   uiVoiceStart: "Dictate",
   uiVoiceStartHint: "Dictate your prompt (the text appears in the field, you read it over before sending)",
   uiVoiceStop: "Stop dictating",
@@ -171,7 +171,7 @@ export const uiFr: Record<keyof typeof uiEn, string> = {
 
   uiComposerLabel: "Décrivez ce que vous voulez créer",
   uiAttach: "Joindre",
-  uiAttachHint: "Fichier (PDF, DOCX, PPTX, image)",
+  uiAttachHint: "Image ou fichier Markdown (6 Mo max)",
   uiVoiceStart: "Dicter",
   uiVoiceStartHint: "Dicter votre demande (le texte s'écrit dans le champ, vous le relisez avant d'envoyer)",
   uiVoiceStop: "Arrêter la dictée",

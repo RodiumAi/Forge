@@ -1,7 +1,8 @@
 import logging
+from typing import Annotated, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import RedirectResponse, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
@@ -478,6 +479,12 @@ def stream_asset_content(
     )
 
 
+#: Site assets (logo, images placed in the site) keep 8 MB.
+MAX_ASSET_UPLOAD_BYTES = 8 * 1024 * 1024
+#: Images attached to a chat prompt: larger mockups failed the generation.
+MAX_PROMPT_UPLOAD_BYTES = 6 * 1024 * 1024
+
+
 @router.post("/{project_id}/files/upload", response_model=FileUploadResponse)
 async def upload_project_image(
     project_id: UUID,
@@ -485,15 +492,17 @@ async def upload_project_image(
     file: UploadFile = File(...),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    purpose: Annotated[Literal["asset", "prompt"], Query()] = "asset",
 ) -> FileUploadResponse:
     locale = resolve_locale(request)
     project = _owned(db, user, project_id, locale, require_edit=True)
     filename = (file.filename or "image.png").replace("\\", "/").split("/")[-1]
     # Read one byte past the limit: enough to detect "too large" without ever
     # buffering an attacker-sized body in memory.
-    body = await file.read(8 * 1024 * 1024 + 1)
-    if len(body) > 8 * 1024 * 1024:
-        raise HTTPException(status_code=400, detail="Image too large (max 8 MB)")
+    limit = MAX_PROMPT_UPLOAD_BYTES if purpose == "prompt" else MAX_ASSET_UPLOAD_BYTES
+    body = await file.read(limit + 1)
+    if len(body) > limit:
+        raise HTTPException(status_code=400, detail=f"Image too large (max {limit // (1024 * 1024)} MB)")
     # Validate the actual bytes, never the extension or the client-declared
     # Content-Type: both are attacker-controlled, and trusting them let a
     # text/html body dressed as `evil.png` be stored and re-served as text/html
